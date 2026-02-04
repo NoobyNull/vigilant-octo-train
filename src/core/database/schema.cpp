@@ -1,0 +1,139 @@
+#include "schema.h"
+
+#include "../utils/log.h"
+
+namespace dw {
+
+bool Schema::initialize(Database& db) {
+    if (!db.isOpen()) {
+        log::error("Cannot initialize schema: database not open");
+        return false;
+    }
+
+    // Check if already initialized
+    if (isInitialized(db)) {
+        int version = getVersion(db);
+        if (version == CURRENT_VERSION) {
+            log::debug("Schema already up to date");
+            return true;
+        }
+        // Note: We don't do migrations, just recreate if needed
+        log::warningf("Schema version mismatch: %d vs %d", version, CURRENT_VERSION);
+    }
+
+    return createTables(db);
+}
+
+bool Schema::isInitialized(Database& db) {
+    auto stmt = db.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='schema_version'");
+    return stmt.step();
+}
+
+int Schema::getVersion(Database& db) {
+    auto stmt = db.prepare("SELECT version FROM schema_version LIMIT 1");
+    if (stmt.step()) {
+        return static_cast<int>(stmt.getInt(0));
+    }
+    return 0;
+}
+
+bool Schema::setVersion(Database& db, int version) {
+    db.execute("DELETE FROM schema_version");
+    auto stmt = db.prepare("INSERT INTO schema_version (version) VALUES (?)");
+    stmt.bindInt(1, version);
+    return stmt.execute();
+}
+
+bool Schema::createTables(Database& db) {
+    Transaction txn(db);
+
+    // Schema version table
+    if (!db.execute(R"(
+        CREATE TABLE IF NOT EXISTS schema_version (
+            version INTEGER NOT NULL
+        )
+    )")) {
+        return false;
+    }
+
+    // Models table - the library backbone
+    if (!db.execute(R"(
+        CREATE TABLE IF NOT EXISTS models (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            hash TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            file_format TEXT NOT NULL,
+            file_size INTEGER DEFAULT 0,
+            vertex_count INTEGER DEFAULT 0,
+            triangle_count INTEGER DEFAULT 0,
+            bounds_min_x REAL DEFAULT 0,
+            bounds_min_y REAL DEFAULT 0,
+            bounds_min_z REAL DEFAULT 0,
+            bounds_max_x REAL DEFAULT 0,
+            bounds_max_y REAL DEFAULT 0,
+            bounds_max_z REAL DEFAULT 0,
+            thumbnail_path TEXT,
+            imported_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            tags TEXT DEFAULT '[]'
+        )
+    )")) {
+        return false;
+    }
+
+    // Projects table
+    if (!db.execute(R"(
+        CREATE TABLE IF NOT EXISTS projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            file_path TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            modified_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    )")) {
+        return false;
+    }
+
+    // Project-Model junction table
+    if (!db.execute(R"(
+        CREATE TABLE IF NOT EXISTS project_models (
+            project_id INTEGER NOT NULL,
+            model_id INTEGER NOT NULL,
+            sort_order INTEGER DEFAULT 0,
+            added_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (project_id, model_id),
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+            FOREIGN KEY (model_id) REFERENCES models(id) ON DELETE CASCADE
+        )
+    )")) {
+        return false;
+    }
+
+    // Create indexes for common queries
+    db.execute("CREATE INDEX IF NOT EXISTS idx_models_hash ON models(hash)");
+    db.execute("CREATE INDEX IF NOT EXISTS idx_models_name ON models(name)");
+    db.execute("CREATE INDEX IF NOT EXISTS idx_models_format ON models(file_format)");
+    db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_project_models_project ON "
+        "project_models(project_id)");
+    db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_project_models_model ON "
+        "project_models(model_id)");
+
+    // Set schema version
+    if (!setVersion(db, CURRENT_VERSION)) {
+        return false;
+    }
+
+    if (!txn.commit()) {
+        log::error("Failed to commit schema creation");
+        return false;
+    }
+
+    log::info("Database schema initialized successfully");
+    return true;
+}
+
+}  // namespace dw

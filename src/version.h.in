@@ -1,0 +1,11 @@
+#pragma once
+
+// Digital Workshop - Version Header
+// Generated at build time by cmake/GitVersion.cmake
+
+namespace dw {
+
+constexpr const char* VERSION = "@DW_GIT_HASH@";
+constexpr const char* BUILD_DATE = "@DW_BUILD_DATE@";
+
+} // namespace dw

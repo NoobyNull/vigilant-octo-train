@@ -1,0 +1,74 @@
+# Digital Workshop - Git Ignore
+
+# Build directories
+build/
+cmake-build-*/
+out/
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Compiled objects
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+
+# CMake generated
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
+
+# Package managers
+vcpkg_installed/
+_deps/
+
+# Testing artifacts
+Testing/
+CTestTestfile.cmake
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Debug files
+*.dSYM/
+*.pdb
+
+# Generated files
+src/version.h
+
+# User-specific
+*.user
+*.suo
+
+# Database (can be freely deleted - no migrations)
+*.db
+*.sqlite
+*.sqlite3
+
+# Configuration (can be freely deleted)
+config.json
+settings.json
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Claude/Ralph directories (keep in git)
+!.claude/
+!.ralph/

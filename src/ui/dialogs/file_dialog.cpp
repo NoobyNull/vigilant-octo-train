@@ -1,0 +1,296 @@
+#include "file_dialog.h"
+
+#include "../../core/utils/file_utils.h"
+#include "../icons.h"
+
+#include <algorithm>
+#include <imgui.h>
+
+namespace dw {
+
+FileDialog::FileDialog() : Dialog("File Dialog") {
+    m_currentPath = file::currentDirectory().string();
+}
+
+void FileDialog::render() {
+    if (!m_open) {
+        return;
+    }
+
+    ImGui::OpenPopup(m_title.c_str());
+
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(600, 450), ImGuiCond_Appearing);
+
+    if (ImGui::BeginPopupModal(m_title.c_str(), &m_open)) {
+        // Path bar
+        ImGui::Text("%s", m_currentPath.c_str());
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 80);
+        if (ImGui::Button("Up")) {
+            std::string parent = file::getParent(m_currentPath).string();
+            if (!parent.empty() && parent != m_currentPath) {
+                m_currentPath = parent;
+                refreshDirectory();
+            }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Home")) {
+            m_currentPath = file::homeDirectory().string();
+            refreshDirectory();
+        }
+
+        ImGui::Separator();
+
+        // File list
+        ImGui::BeginChild("FileList", ImVec2(0, -80), true);
+
+        for (const auto& entry : m_entries) {
+            bool isSelected = (entry.name == m_selectedFile);
+            std::string label;
+
+            if (entry.isDirectory) {
+                label = std::string(Icons::Folder) + " " + entry.name;
+            } else {
+                label = std::string(Icons::File) + " " + entry.name;
+            }
+
+            if (ImGui::Selectable(label.c_str(), isSelected,
+                                  ImGuiSelectableFlags_AllowDoubleClick)) {
+                m_selectedFile = entry.name;
+                if (m_mode == FileDialogMode::Save) {
+                    m_inputFileName = entry.name;
+                }
+
+                if (ImGui::IsMouseDoubleClicked(0)) {
+                    if (entry.isDirectory) {
+                        m_currentPath = m_currentPath + "/" + entry.name;
+                        refreshDirectory();
+                        m_selectedFile.clear();
+                    } else if (m_mode == FileDialogMode::Open) {
+                        std::string fullPath =
+                            m_currentPath + "/" + m_selectedFile;
+                        m_open = false;
+                        if (m_callback) {
+                            m_callback(fullPath);
+                        }
+                    }
+                }
+            }
+        }
+
+        ImGui::EndChild();
+
+        // Bottom section
+        ImGui::Separator();
+
+        if (m_mode == FileDialogMode::Save) {
+            ImGui::SetNextItemWidth(400);
+            ImGui::InputText("Filename", m_inputFileName.data(), 256);
+        }
+
+        // Filter dropdown
+        if (!m_filters.empty() && m_mode != FileDialogMode::SelectFolder) {
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(150);
+            if (ImGui::BeginCombo("##Filter",
+                                  m_filters[m_selectedFilter].name.c_str())) {
+                for (size_t i = 0; i < m_filters.size(); ++i) {
+                    if (ImGui::Selectable(m_filters[i].name.c_str(),
+                                          i == static_cast<size_t>(m_selectedFilter))) {
+                        m_selectedFilter = static_cast<int>(i);
+                        refreshDirectory();
+                    }
+                }
+                ImGui::EndCombo();
+            }
+        }
+
+        ImGui::Spacing();
+
+        // Buttons
+        float buttonWidth = 100.0f;
+
+        if (m_mode == FileDialogMode::Open) {
+            if (ImGui::Button("Open", ImVec2(buttonWidth, 0))) {
+                if (!m_selectedFile.empty()) {
+                    std::string fullPath =
+                        m_currentPath + "/" + m_selectedFile;
+                    m_open = false;
+                    if (m_callback) {
+                        m_callback(fullPath);
+                    }
+                }
+            }
+        } else if (m_mode == FileDialogMode::Save) {
+            if (ImGui::Button("Save", ImVec2(buttonWidth, 0))) {
+                if (!m_inputFileName.empty()) {
+                    std::string fullPath =
+                        m_currentPath + "/" + m_inputFileName;
+                    m_open = false;
+                    if (m_callback) {
+                        m_callback(fullPath);
+                    }
+                }
+            }
+        } else {
+            if (ImGui::Button("Select", ImVec2(buttonWidth, 0))) {
+                m_open = false;
+                if (m_callback) {
+                    m_callback(m_currentPath);
+                }
+            }
+        }
+
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(buttonWidth, 0))) {
+            m_open = false;
+            if (m_callback) {
+                m_callback("");
+            }
+        }
+
+        ImGui::EndPopup();
+    }
+}
+
+void FileDialog::showOpen(const std::string& title,
+                           const std::vector<FileFilter>& filters,
+                           std::function<void(const std::string&)> callback) {
+    m_title = title;
+    m_mode = FileDialogMode::Open;
+    m_filters = filters;
+    m_selectedFilter = 0;
+    m_callback = std::move(callback);
+    m_selectedFile.clear();
+    refreshDirectory();
+    m_open = true;
+}
+
+void FileDialog::showSave(const std::string& title,
+                           const std::vector<FileFilter>& filters,
+                           const std::string& defaultName,
+                           std::function<void(const std::string&)> callback) {
+    m_title = title;
+    m_mode = FileDialogMode::Save;
+    m_filters = filters;
+    m_selectedFilter = 0;
+    m_inputFileName = defaultName;
+    m_callback = std::move(callback);
+    m_selectedFile.clear();
+    refreshDirectory();
+    m_open = true;
+}
+
+void FileDialog::showFolder(const std::string& title,
+                             std::function<void(const std::string&)> callback) {
+    m_title = title;
+    m_mode = FileDialogMode::SelectFolder;
+    m_filters.clear();
+    m_callback = std::move(callback);
+    m_selectedFile.clear();
+    refreshDirectory();
+    m_open = true;
+}
+
+void FileDialog::refreshDirectory() {
+    m_entries.clear();
+
+    auto names = file::listEntries(m_currentPath);
+
+    for (const auto& name : names) {
+        if (name.empty() || name[0] == '.') {
+            continue;  // Skip hidden files
+        }
+
+        std::string fullPath = m_currentPath + "/" + name;
+        DirEntry entry;
+        entry.name = name;
+        entry.isDirectory = file::isDirectory(fullPath);
+        entry.size = entry.isDirectory ? 0 : file::fileSize(fullPath);
+
+        // Filter files
+        if (!entry.isDirectory && m_mode != FileDialogMode::SelectFolder) {
+            if (!matchesFilter(name)) {
+                continue;
+            }
+        }
+
+        m_entries.push_back(std::move(entry));
+    }
+
+    // Sort: directories first, then alphabetically
+    std::sort(m_entries.begin(), m_entries.end(),
+              [](const DirEntry& a, const DirEntry& b) {
+                  if (a.isDirectory != b.isDirectory) {
+                      return a.isDirectory > b.isDirectory;
+                  }
+                  return a.name < b.name;
+              });
+}
+
+bool FileDialog::matchesFilter(const std::string& filename) const {
+    if (m_filters.empty() ||
+        m_selectedFilter >= static_cast<int>(m_filters.size())) {
+        return true;
+    }
+
+    const auto& filter = m_filters[m_selectedFilter];
+    if (filter.extensions == "*" || filter.extensions == "*.*") {
+        return true;
+    }
+
+    // Parse extensions from filter (e.g., "*.stl;*.obj")
+    std::string exts = filter.extensions;
+    size_t pos = 0;
+    while (pos < exts.size()) {
+        size_t next = exts.find(';', pos);
+        std::string pattern = exts.substr(pos, next - pos);
+
+        // Remove leading "*."
+        if (pattern.size() > 2 && pattern[0] == '*' && pattern[1] == '.') {
+            std::string ext = pattern.substr(1);  // ".stl"
+            if (filename.size() >= ext.size()) {
+                std::string fileExt =
+                    filename.substr(filename.size() - ext.size());
+                // Case-insensitive comparison
+                std::transform(fileExt.begin(), fileExt.end(), fileExt.begin(),
+                               ::tolower);
+                std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+                if (fileExt == ext) {
+                    return true;
+                }
+            }
+        }
+
+        if (next == std::string::npos) {
+            break;
+        }
+        pos = next + 1;
+    }
+
+    return false;
+}
+
+std::vector<FileFilter> FileDialog::modelFilters() {
+    return {{"3D Models", "*.stl;*.obj;*.3mf"},
+            {"STL Files", "*.stl"},
+            {"OBJ Files", "*.obj"},
+            {"3MF Files", "*.3mf"},
+            {"All Files", "*.*"}};
+}
+
+std::vector<FileFilter> FileDialog::projectFilters() {
+    return {{"Digital Workshop Projects", "*.dwproj"},
+            {"All Files", "*.*"}};
+}
+
+std::vector<FileFilter> FileDialog::archiveFilters() {
+    return {{"Project Archives", "*.dwp"}, {"All Files", "*.*"}};
+}
+
+std::vector<FileFilter> FileDialog::allFilters() {
+    return {{"All Files", "*.*"}};
+}
+
+}  // namespace dw
