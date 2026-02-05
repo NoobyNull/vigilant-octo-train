@@ -12,7 +12,7 @@ namespace file {
 Result<std::string> readText(const Path& path) {
     std::ifstream file(path, std::ios::in);
     if (!file.is_open()) {
-        log::errorf("Failed to open file for reading: %s", path.string().c_str());
+        log::errorf("FileIO", "Failed to open for reading: %s", path.string().c_str());
         return std::nullopt;
     }
 
@@ -24,7 +24,7 @@ Result<std::string> readText(const Path& path) {
 Result<ByteBuffer> readBinary(const Path& path) {
     std::ifstream file(path, std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
-        log::errorf("Failed to open file for reading: %s", path.string().c_str());
+        log::errorf("FileIO", "Failed to open for reading: %s", path.string().c_str());
         return std::nullopt;
     }
 
@@ -34,7 +34,7 @@ Result<ByteBuffer> readBinary(const Path& path) {
     ByteBuffer buffer(static_cast<usize>(size));
     if (!file.read(reinterpret_cast<char*>(buffer.data()),
                    static_cast<std::streamsize>(size))) {
-        log::errorf("Failed to read file: %s", path.string().c_str());
+        log::errorf("FileIO", "Failed to read: %s", path.string().c_str());
         return std::nullopt;
     }
 
@@ -44,7 +44,7 @@ Result<ByteBuffer> readBinary(const Path& path) {
 bool writeText(const Path& path, std::string_view content) {
     std::ofstream file(path, std::ios::out | std::ios::trunc);
     if (!file.is_open()) {
-        log::errorf("Failed to open file for writing: %s", path.string().c_str());
+        log::errorf("FileIO", "Failed to open for writing: %s", path.string().c_str());
         return false;
     }
 
@@ -59,7 +59,7 @@ bool writeBinary(const Path& path, const ByteBuffer& data) {
 bool writeBinary(const Path& path, const void* data, usize size) {
     std::ofstream file(path, std::ios::binary | std::ios::out | std::ios::trunc);
     if (!file.is_open()) {
-        log::errorf("Failed to open file for writing: %s", path.string().c_str());
+        log::errorf("FileIO", "Failed to open for writing: %s", path.string().c_str());
         return false;
     }
 
@@ -86,7 +86,7 @@ bool createDirectory(const Path& path) {
     std::error_code ec;
     bool result = fs::create_directory(path, ec);
     if (ec) {
-        log::errorf("Failed to create directory: %s (%s)", path.string().c_str(),
+        log::errorf("FileIO", "Failed to create directory: %s (%s)", path.string().c_str(),
                     ec.message().c_str());
     }
     return result || file::exists(path);
@@ -96,7 +96,7 @@ bool createDirectories(const Path& path) {
     std::error_code ec;
     bool result = fs::create_directories(path, ec);
     if (ec) {
-        log::errorf("Failed to create directories: %s (%s)", path.string().c_str(),
+        log::errorf("FileIO", "Failed to create directories: %s (%s)", path.string().c_str(),
                     ec.message().c_str());
     }
     return result || file::exists(path);
@@ -106,7 +106,7 @@ bool remove(const Path& path) {
     std::error_code ec;
     bool result = fs::remove(path, ec);
     if (ec) {
-        log::errorf("Failed to remove: %s (%s)", path.string().c_str(),
+        log::errorf("FileIO", "Failed to remove: %s (%s)", path.string().c_str(),
                     ec.message().c_str());
     }
     return result;
@@ -116,7 +116,7 @@ bool copy(const Path& from, const Path& to) {
     std::error_code ec;
     fs::copy(from, to, fs::copy_options::overwrite_existing, ec);
     if (ec) {
-        log::errorf("Failed to copy %s to %s: %s", from.string().c_str(),
+        log::errorf("FileIO", "Failed to copy %s to %s: %s", from.string().c_str(),
                     to.string().c_str(), ec.message().c_str());
         return false;
     }
@@ -127,7 +127,7 @@ bool move(const Path& from, const Path& to) {
     std::error_code ec;
     fs::rename(from, to, ec);
     if (ec) {
-        log::errorf("Failed to move %s to %s: %s", from.string().c_str(),
+        log::errorf("FileIO", "Failed to move %s to %s: %s", from.string().c_str(),
                     to.string().c_str(), ec.message().c_str());
         return false;
     }

@@ -26,6 +26,19 @@ LoadResult STLLoader::load(const Path& path) {
     return loadAscii(content);
 }
 
+LoadResult STLLoader::loadFromBuffer(const ByteBuffer& data) {
+    if (data.empty()) {
+        return LoadResult{nullptr, "Empty buffer"};
+    }
+
+    if (isBinary(data)) {
+        return loadBinary(data);
+    }
+
+    std::string content(reinterpret_cast<const char*>(data.data()), data.size());
+    return loadAscii(content);
+}
+
 bool STLLoader::supports(const std::string& extension) const {
     return str::toLower(extension) == "stl";
 }
@@ -127,7 +140,7 @@ LoadResult STLLoader::loadBinary(const ByteBuffer& data) {
 
     mesh->recalculateBounds();
 
-    log::infof("Loaded binary STL: %u vertices, %u triangles", mesh->vertexCount(),
+    log::infof("STL", "Loaded binary: %u vertices, %u triangles", mesh->vertexCount(),
                mesh->triangleCount());
 
     return LoadResult{mesh, ""};
@@ -186,7 +199,7 @@ LoadResult STLLoader::loadAscii(const std::string& content) {
 
     mesh->recalculateBounds();
 
-    log::infof("Loaded ASCII STL: %u vertices, %u triangles", mesh->vertexCount(),
+    log::infof("STL", "Loaded ASCII: %u vertices, %u triangles", mesh->vertexCount(),
                mesh->triangleCount());
 
     return LoadResult{mesh, ""};

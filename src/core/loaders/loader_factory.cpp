@@ -4,6 +4,7 @@
 #include "../utils/string_utils.h"
 #include "obj_loader.h"
 #include "stl_loader.h"
+#include "threemf_loader.h"
 
 namespace dw {
 
@@ -21,6 +22,9 @@ std::unique_ptr<MeshLoader> LoaderFactory::getLoaderByExtension(const std::strin
     if (lower == "obj") {
         return std::make_unique<OBJLoader>();
     }
+    if (lower == "3mf") {
+        return std::make_unique<ThreeMFLoader>();
+    }
 
     return nullptr;
 }
@@ -34,13 +38,23 @@ LoadResult LoaderFactory::load(const Path& path) {
     return loader->load(path);
 }
 
+LoadResult LoaderFactory::loadFromBuffer(const ByteBuffer& data,
+                                         const std::string& extension) {
+    auto loader = getLoaderByExtension(extension);
+    if (!loader) {
+        return LoadResult{nullptr, "Unsupported file format"};
+    }
+
+    return loader->loadFromBuffer(data);
+}
+
 bool LoaderFactory::isSupported(const std::string& extension) {
     auto loader = getLoaderByExtension(extension);
     return loader != nullptr;
 }
 
 std::vector<std::string> LoaderFactory::supportedExtensions() {
-    return {"stl", "obj"};
+    return {"stl", "obj", "3mf"};
 }
 
 }  // namespace dw

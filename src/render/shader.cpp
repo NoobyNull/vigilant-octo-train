@@ -51,7 +51,7 @@ bool Shader::compile(const std::string& vertexSource, const std::string& fragmen
     if (!success) {
         char infoLog[512];
         glGetProgramInfoLog(m_program, sizeof(infoLog), nullptr, infoLog);
-        log::errorf("Shader link error: %s", infoLog);
+        log::errorf("Shader", "Link error: %s", infoLog);
         glDeleteProgram(m_program);
         m_program = 0;
     }
@@ -83,7 +83,7 @@ GLuint Shader::compileShader(GLenum type, const std::string& source) {
         char infoLog[512];
         glGetShaderInfoLog(shader, sizeof(infoLog), nullptr, infoLog);
         const char* typeStr = (type == GL_VERTEX_SHADER) ? "vertex" : "fragment";
-        log::errorf("Shader compile error (%s): %s", typeStr, infoLog);
+        log::errorf("Shader", "Compile error (%s): %s", typeStr, infoLog);
         glDeleteShader(shader);
         return 0;
     }

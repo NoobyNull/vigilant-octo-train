@@ -14,7 +14,18 @@ LoadResult OBJLoader::load(const Path& path) {
     if (!content) {
         return LoadResult{nullptr, "Failed to read file"};
     }
+    return parseContent(*content);
+}
 
+LoadResult OBJLoader::loadFromBuffer(const ByteBuffer& data) {
+    if (data.empty()) {
+        return LoadResult{nullptr, "Empty buffer"};
+    }
+    std::string content(reinterpret_cast<const char*>(data.data()), data.size());
+    return parseContent(content);
+}
+
+LoadResult OBJLoader::parseContent(const std::string& content) {
     auto mesh = std::make_shared<Mesh>();
 
     // Temporary storage for OBJ data
@@ -71,7 +82,7 @@ LoadResult OBJLoader::load(const Path& path) {
         return index;
     };
 
-    std::istringstream stream(*content);
+    std::istringstream stream(content);
     std::string line;
 
     while (std::getline(stream, line)) {
@@ -168,7 +179,7 @@ LoadResult OBJLoader::load(const Path& path) {
 
     mesh->recalculateBounds();
 
-    log::infof("Loaded OBJ: %u vertices, %u triangles", mesh->vertexCount(),
+    log::infof("OBJ", "Loaded: %u vertices, %u triangles", mesh->vertexCount(),
                mesh->triangleCount());
 
     return LoadResult{mesh, ""};

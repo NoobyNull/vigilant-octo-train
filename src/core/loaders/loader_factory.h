@@ -18,6 +18,10 @@ public:
     // Load file directly (convenience function)
     static LoadResult load(const Path& path);
 
+    // Load from byte buffer with known extension
+    static LoadResult loadFromBuffer(const ByteBuffer& data,
+                                     const std::string& extension);
+
     // Check if a file format is supported
     static bool isSupported(const std::string& extension);
 

@@ -54,7 +54,7 @@ bool Renderer::initialize() {
     createAxisMesh(2.0f);
 
     m_initialized = true;
-    log::info("Renderer initialized");
+    log::info("Renderer", "Initialized");
     return true;
 }
 
@@ -221,17 +221,17 @@ GPUMesh Renderer::uploadMesh(const Mesh& mesh) {
 
 bool Renderer::createShaders() {
     if (!m_meshShader.compile(shaders::MESH_VERTEX, shaders::MESH_FRAGMENT)) {
-        log::error("Failed to compile mesh shader");
+        log::error("Renderer", "Failed to compile mesh shader");
         return false;
     }
 
     if (!m_flatShader.compile(shaders::FLAT_VERTEX, shaders::FLAT_FRAGMENT)) {
-        log::error("Failed to compile flat shader");
+        log::error("Renderer", "Failed to compile flat shader");
         return false;
     }
 
     if (!m_gridShader.compile(shaders::GRID_VERTEX, shaders::GRID_FRAGMENT)) {
-        log::error("Failed to compile grid shader");
+        log::error("Renderer", "Failed to compile grid shader");
         return false;
     }
 

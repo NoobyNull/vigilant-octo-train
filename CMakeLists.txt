@@ -31,6 +31,9 @@ include(GitVersion)
 # Main executable sources will be in src/
 add_subdirectory(src)
 
+# Settings application (separate process)
+add_subdirectory(settings)
+
 # Tests
 if(DW_BUILD_TESTS)
     enable_testing()

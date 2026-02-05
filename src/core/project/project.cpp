@@ -57,7 +57,7 @@ std::shared_ptr<Project> ProjectManager::create(const std::string& name) {
 
     auto id = m_projectRepo.insert(record);
     if (!id) {
-        log::error("Failed to create project in database");
+        log::error("Project", "Failed to create in database");
         return nullptr;
     }
 
@@ -65,7 +65,7 @@ std::shared_ptr<Project> ProjectManager::create(const std::string& name) {
     project->record().id = *id;
     project->record().name = name;
 
-    log::infof("Created project: %s (ID: %lld)", name.c_str(),
+    log::infof("Project", "Created: %s (ID: %lld)", name.c_str(),
                static_cast<long long>(*id));
 
     return project;
@@ -74,7 +74,7 @@ std::shared_ptr<Project> ProjectManager::create(const std::string& name) {
 std::shared_ptr<Project> ProjectManager::open(i64 projectId) {
     auto record = m_projectRepo.findById(projectId);
     if (!record) {
-        log::errorf("Project not found: %lld", static_cast<long long>(projectId));
+        log::errorf("Project", "Not found: %lld", static_cast<long long>(projectId));
         return nullptr;
     }
 
@@ -88,7 +88,7 @@ std::shared_ptr<Project> ProjectManager::open(i64 projectId) {
     }
     project->clearModified();
 
-    log::infof("Opened project: %s (ID: %lld)", record->name.c_str(),
+    log::infof("Project", "Opened: %s (ID: %lld)", record->name.c_str(),
                static_cast<long long>(projectId));
 
     return project;
@@ -97,7 +97,7 @@ std::shared_ptr<Project> ProjectManager::open(i64 projectId) {
 bool ProjectManager::save(Project& project) {
     // Update project record
     if (!m_projectRepo.update(project.record())) {
-        log::error("Failed to update project record");
+        log::error("Project", "Failed to update record");
         return false;
     }
 
@@ -123,27 +123,27 @@ bool ProjectManager::save(Project& project) {
     }
 
     project.clearModified();
-    log::infof("Saved project: %s", project.name().c_str());
+    log::infof("Project", "Saved: %s", project.name().c_str());
     return true;
 }
 
 bool ProjectManager::close(Project& project) {
     if (project.isModified()) {
         // Caller should handle save confirmation
-        log::warning("Closing modified project without saving");
+        log::warning("Project", "Closing modified project without saving");
     }
 
-    log::infof("Closed project: %s", project.name().c_str());
+    log::infof("Project", "Closed: %s", project.name().c_str());
     return true;
 }
 
 bool ProjectManager::remove(i64 projectId) {
     if (!m_projectRepo.remove(projectId)) {
-        log::errorf("Failed to remove project: %lld", static_cast<long long>(projectId));
+        log::errorf("Project", "Failed to remove: %lld", static_cast<long long>(projectId));
         return false;
     }
 
-    log::infof("Removed project: %lld", static_cast<long long>(projectId));
+    log::infof("Project", "Removed: %lld", static_cast<long long>(projectId));
     return true;
 }
 
@@ -157,7 +157,7 @@ std::optional<ProjectRecord> ProjectManager::getProjectInfo(i64 projectId) {
 
 bool ProjectManager::addModelToProject(i64 modelId) {
     if (!m_currentProject) {
-        log::warning("No project open");
+        log::warning("Project", "No project open");
         return false;
     }
 
@@ -167,7 +167,7 @@ bool ProjectManager::addModelToProject(i64 modelId) {
 
 bool ProjectManager::removeModelFromProject(i64 modelId) {
     if (!m_currentProject) {
-        log::warning("No project open");
+        log::warning("Project", "No project open");
         return false;
     }
 

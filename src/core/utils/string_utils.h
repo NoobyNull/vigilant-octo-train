@@ -43,6 +43,7 @@ std::string formatNumber(int64_t number);
 
 // Parse number from string
 bool parseInt(std::string_view s, int& out);
+bool parseInt64(std::string_view s, int64_t& out);
 bool parseFloat(std::string_view s, float& out);
 bool parseDouble(std::string_view s, double& out);
 

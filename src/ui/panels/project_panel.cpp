@@ -60,7 +60,11 @@ void ProjectPanel::renderProjectInfo() {
 
         // Quick actions
         if (ImGui::Button("Save")) {
-            m_projectManager->save(*project);
+            if (m_saveProjectCallback) {
+                m_saveProjectCallback();
+            } else {
+                m_projectManager->save(*project);
+            }
         }
         ImGui::SameLine();
         if (ImGui::Button("Close")) {
@@ -133,7 +137,9 @@ void ProjectPanel::renderNoProject() {
     ImGui::SameLine();
 
     if (ImGui::Button("Open Project")) {
-        // TODO: Show project open dialog
+        if (m_openProjectCallback) {
+            m_openProjectCallback();
+        }
     }
 
     ImGui::Spacing();
@@ -142,7 +148,7 @@ void ProjectPanel::renderNoProject() {
 
     // Recent projects
     ImGui::Text("Recent Projects");
-    ImGui::TextDisabled("(Not yet implemented)");
+    ImGui::TextDisabled("No recent projects");
 }
 
 }  // namespace dw

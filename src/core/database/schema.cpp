@@ -6,7 +6,7 @@ namespace dw {
 
 bool Schema::initialize(Database& db) {
     if (!db.isOpen()) {
-        log::error("Cannot initialize schema: database not open");
+        log::error("Schema", "Cannot initialize: database not open");
         return false;
     }
 
@@ -14,11 +14,11 @@ bool Schema::initialize(Database& db) {
     if (isInitialized(db)) {
         int version = getVersion(db);
         if (version == CURRENT_VERSION) {
-            log::debug("Schema already up to date");
+            log::debug("Schema", "Already up to date");
             return true;
         }
         // Note: We don't do migrations, just recreate if needed
-        log::warningf("Schema version mismatch: %d vs %d", version, CURRENT_VERSION);
+        log::warningf("Schema", "Version mismatch: %d vs %d", version, CURRENT_VERSION);
     }
 
     return createTables(db);
@@ -128,11 +128,11 @@ bool Schema::createTables(Database& db) {
     }
 
     if (!txn.commit()) {
-        log::error("Failed to commit schema creation");
+        log::error("Schema", "Failed to commit creation");
         return false;
     }
 
-    log::info("Database schema initialized successfully");
+    log::info("Schema", "Database schema initialized successfully");
     return true;
 }
 

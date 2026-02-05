@@ -92,6 +92,9 @@ if(NOT SQLite3_FOUND)
     add_library(SQLite::SQLite3 ALIAS sqlite3)
 endif()
 
+# zlib - Compression (needed for deflate in ZIP/3MF files)
+find_package(ZLIB REQUIRED)
+
 # GoogleTest (for testing only)
 if(DW_BUILD_TESTS)
     FetchContent_Declare(
@@ -112,3 +115,4 @@ message(STATUS "  ImGui:    docking branch")
 message(STATUS "  OpenGL:   ${OPENGL_gl_LIBRARY}")
 message(STATUS "  GLM:      1.0.1")
 message(STATUS "  SQLite3:  3.45.0")
+message(STATUS "  zlib:     ${ZLIB_VERSION_STRING}")

@@ -21,7 +21,7 @@ std::optional<i64> ProjectRepository::insert(const ProjectRecord& project) {
     stmt.bindText(3, project.filePath.string());
 
     if (!stmt.execute()) {
-        log::errorf("Failed to insert project: %s", m_db.lastError().c_str());
+        log::errorf("ProjectRepo", "Failed to insert project: %s", m_db.lastError().c_str());
         return std::nullopt;
     }
 

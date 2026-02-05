@@ -46,7 +46,9 @@ void FileDialog::render() {
         ImGui::BeginChild("FileList", ImVec2(0, -80), true);
 
         for (const auto& entry : m_entries) {
-            bool isSelected = (entry.name == m_selectedFile);
+            bool isSelected = m_multiSelect
+                ? (m_selectedFiles.count(entry.name) > 0)
+                : (entry.name == m_selectedFile);
             std::string label;
 
             if (entry.isDirectory) {
@@ -57,9 +59,24 @@ void FileDialog::render() {
 
             if (ImGui::Selectable(label.c_str(), isSelected,
                                   ImGuiSelectableFlags_AllowDoubleClick)) {
-                m_selectedFile = entry.name;
-                if (m_mode == FileDialogMode::Save) {
-                    m_inputFileName = entry.name;
+                if (m_multiSelect && !entry.isDirectory) {
+                    // Ctrl+click toggles selection
+                    if (ImGui::GetIO().KeyCtrl) {
+                        if (m_selectedFiles.count(entry.name) > 0) {
+                            m_selectedFiles.erase(entry.name);
+                        } else {
+                            m_selectedFiles.insert(entry.name);
+                        }
+                    } else {
+                        m_selectedFiles.clear();
+                        m_selectedFiles.insert(entry.name);
+                    }
+                    m_selectedFile = entry.name;
+                } else {
+                    m_selectedFile = entry.name;
+                    if (m_mode == FileDialogMode::Save) {
+                        m_inputFileName = entry.name;
+                    }
                 }
 
                 if (ImGui::IsMouseDoubleClicked(0)) {
@@ -67,7 +84,8 @@ void FileDialog::render() {
                         m_currentPath = m_currentPath + "/" + entry.name;
                         refreshDirectory();
                         m_selectedFile.clear();
-                    } else if (m_mode == FileDialogMode::Open) {
+                        m_selectedFiles.clear();
+                    } else if (m_mode == FileDialogMode::Open && !m_multiSelect) {
                         std::string fullPath =
                             m_currentPath + "/" + m_selectedFile;
                         m_open = false;
@@ -111,15 +129,22 @@ void FileDialog::render() {
         // Buttons
         float buttonWidth = 100.0f;
 
+        if (m_multiSelect && !m_selectedFiles.empty()) {
+            ImGui::Text("%d file(s) selected", static_cast<int>(m_selectedFiles.size()));
+            ImGui::SameLine();
+        }
+
         if (m_mode == FileDialogMode::Open) {
             if (ImGui::Button("Open", ImVec2(buttonWidth, 0))) {
-                if (!m_selectedFile.empty()) {
-                    std::string fullPath =
-                        m_currentPath + "/" + m_selectedFile;
-                    m_open = false;
-                    if (m_callback) {
-                        m_callback(fullPath);
+                m_open = false;
+                if (m_multiSelect && m_multiCallback) {
+                    std::vector<std::string> paths;
+                    for (const auto& name : m_selectedFiles) {
+                        paths.push_back(m_currentPath + "/" + name);
                     }
+                    m_multiCallback(paths);
+                } else if (!m_selectedFile.empty() && m_callback) {
+                    m_callback(m_currentPath + "/" + m_selectedFile);
                 }
             }
         } else if (m_mode == FileDialogMode::Save) {
@@ -145,7 +170,9 @@ void FileDialog::render() {
         ImGui::SameLine();
         if (ImGui::Button("Cancel", ImVec2(buttonWidth, 0))) {
             m_open = false;
-            if (m_callback) {
+            if (m_multiSelect && m_multiCallback) {
+                m_multiCallback({});
+            } else if (m_callback) {
                 m_callback("");
             }
         }
@@ -159,10 +186,29 @@ void FileDialog::showOpen(const std::string& title,
                            std::function<void(const std::string&)> callback) {
     m_title = title;
     m_mode = FileDialogMode::Open;
+    m_multiSelect = false;
     m_filters = filters;
     m_selectedFilter = 0;
     m_callback = std::move(callback);
+    m_multiCallback = nullptr;
     m_selectedFile.clear();
+    m_selectedFiles.clear();
+    refreshDirectory();
+    m_open = true;
+}
+
+void FileDialog::showOpenMulti(const std::string& title,
+                                const std::vector<FileFilter>& filters,
+                                std::function<void(const std::vector<std::string>&)> callback) {
+    m_title = title;
+    m_mode = FileDialogMode::Open;
+    m_multiSelect = true;
+    m_filters = filters;
+    m_selectedFilter = 0;
+    m_callback = nullptr;
+    m_multiCallback = std::move(callback);
+    m_selectedFile.clear();
+    m_selectedFiles.clear();
     refreshDirectory();
     m_open = true;
 }
@@ -287,6 +333,11 @@ std::vector<FileFilter> FileDialog::projectFilters() {
 
 std::vector<FileFilter> FileDialog::archiveFilters() {
     return {{"Project Archives", "*.dwp"}, {"All Files", "*.*"}};
+}
+
+std::vector<FileFilter> FileDialog::gcodeFilters() {
+    return {{"G-code Files", "*.gcode;*.nc;*.ngc;*.tap"},
+            {"All Files", "*.*"}};
 }
 
 std::vector<FileFilter> FileDialog::allFilters() {

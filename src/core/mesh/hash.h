@@ -18,6 +18,9 @@ u64 computeBytes(const void* data, usize size);
 // Compute hash of a file
 std::string computeFile(const Path& path);
 
+// Compute hash of a byte buffer (returns hex string)
+std::string computeBuffer(const ByteBuffer& buffer);
+
 // Compute hash of mesh geometry
 std::string computeMesh(const Mesh& mesh);
 

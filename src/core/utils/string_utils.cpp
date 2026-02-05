@@ -192,6 +192,11 @@ bool parseInt(std::string_view s, int& out) {
     return result.ec == std::errc{} && result.ptr == s.data() + s.size();
 }
 
+bool parseInt64(std::string_view s, int64_t& out) {
+    auto result = std::from_chars(s.data(), s.data() + s.size(), out);
+    return result.ec == std::errc{} && result.ptr == s.data() + s.size();
+}
+
 bool parseFloat(std::string_view s, float& out) {
     char* end = nullptr;
     std::string str(s);

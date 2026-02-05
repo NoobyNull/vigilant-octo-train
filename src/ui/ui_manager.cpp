@@ -40,7 +40,7 @@ bool UIManager::initialize(SDL_Window* window, void* glContext) {
     initializeStyle();
 
     m_initialized = true;
-    log::info("UI Manager initialized");
+    log::info("UI", "Initialized");
     return true;
 }
 

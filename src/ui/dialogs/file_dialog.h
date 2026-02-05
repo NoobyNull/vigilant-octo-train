@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -26,10 +27,15 @@ public:
 
     void render() override;
 
-    // Show open file dialog
+    // Show open file dialog (single file)
     void showOpen(const std::string& title,
                   const std::vector<FileFilter>& filters,
                   std::function<void(const std::string&)> callback);
+
+    // Show open file dialog (multi-select)
+    void showOpenMulti(const std::string& title,
+                       const std::vector<FileFilter>& filters,
+                       std::function<void(const std::vector<std::string>&)> callback);
 
     // Show save file dialog
     void showSave(const std::string& title,
@@ -45,6 +51,7 @@ public:
     static std::vector<FileFilter> modelFilters();
     static std::vector<FileFilter> projectFilters();
     static std::vector<FileFilter> archiveFilters();
+    static std::vector<FileFilter> gcodeFilters();
     static std::vector<FileFilter> allFilters();
 
 private:
@@ -52,6 +59,7 @@ private:
     bool matchesFilter(const std::string& filename) const;
 
     FileDialogMode m_mode = FileDialogMode::Open;
+    bool m_multiSelect = false;
     std::string m_currentPath;
     std::string m_selectedFile;
     std::string m_inputFileName;
@@ -64,8 +72,10 @@ private:
         uint64_t size;
     };
     std::vector<DirEntry> m_entries;
+    std::set<std::string> m_selectedFiles;  // Multi-select set
 
     std::function<void(const std::string&)> m_callback;
+    std::function<void(const std::vector<std::string>&)> m_multiCallback;
 };
 
 }  // namespace dw

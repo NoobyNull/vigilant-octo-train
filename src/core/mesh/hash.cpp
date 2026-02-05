@@ -35,6 +35,14 @@ std::string computeFile(const Path& path) {
     return toHex(hash);
 }
 
+std::string computeBuffer(const ByteBuffer& buffer) {
+    if (buffer.empty()) {
+        return "";
+    }
+    u64 h = computeBytes(buffer.data(), buffer.size());
+    return toHex(h);
+}
+
 std::string computeMesh(const Mesh& mesh) {
     // Hash vertex data
     u64 hash = FNV_OFFSET_BASIS;

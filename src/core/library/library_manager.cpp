@@ -1,5 +1,6 @@
 #include "library_manager.h"
 
+#include "../../render/thumbnail_generator.h"
 #include "../loaders/loader_factory.h"
 #include "../mesh/hash.h"
 #include "../paths/app_paths.h"
@@ -16,7 +17,7 @@ ImportResult LibraryManager::importModel(const Path& sourcePath) {
     // Check file exists
     if (!file::exists(sourcePath)) {
         result.error = "File does not exist: " + sourcePath.string();
-        log::error(result.error);
+        log::error("Library", result.error);
         return result;
     }
 
@@ -24,7 +25,7 @@ ImportResult LibraryManager::importModel(const Path& sourcePath) {
     std::string fileHash = computeFileHash(sourcePath);
     if (fileHash.empty()) {
         result.error = "Failed to compute file hash";
-        log::error(result.error);
+        log::error("Library", result.error);
         return result;
     }
 
@@ -37,12 +38,12 @@ ImportResult LibraryManager::importModel(const Path& sourcePath) {
             // Ask user what to do with duplicate
             if (m_duplicateHandler && !m_duplicateHandler(*existing)) {
                 result.error = "Import cancelled: duplicate model";
-                log::info("Import cancelled: duplicate model");
+                log::info("Library", "Import cancelled: duplicate model");
                 return result;
             }
 
             // User wants to re-import (or no handler set)
-            log::infof("Re-importing duplicate model: %s", existing->name.c_str());
+            log::infof("Library", "Re-importing duplicate model: %s", existing->name.c_str());
             m_modelRepo.removeByHash(fileHash);
         }
     }
@@ -51,7 +52,7 @@ ImportResult LibraryManager::importModel(const Path& sourcePath) {
     auto loadResult = LoaderFactory::load(sourcePath);
     if (!loadResult) {
         result.error = "Failed to load model: " + loadResult.error;
-        log::error(result.error);
+        log::error("Library", result.error);
         return result;
     }
 
@@ -76,7 +77,7 @@ ImportResult LibraryManager::importModel(const Path& sourcePath) {
     auto modelId = m_modelRepo.insert(record);
     if (!modelId) {
         result.error = "Failed to save model to database";
-        log::error(result.error);
+        log::error("Library", result.error);
         return result;
     }
 
@@ -86,7 +87,7 @@ ImportResult LibraryManager::importModel(const Path& sourcePath) {
     result.success = true;
     result.modelId = *modelId;
 
-    log::infof("Imported model: %s (ID: %lld, %u triangles)", record.name.c_str(),
+    log::infof("Library", "Imported model: %s (ID: %lld, %u triangles)", record.name.c_str(),
                static_cast<long long>(*modelId), record.triangleCount);
 
     return result;
@@ -127,7 +128,7 @@ MeshPtr LibraryManager::loadMesh(i64 modelId) {
 MeshPtr LibraryManager::loadMesh(const ModelRecord& record) {
     auto loadResult = LoaderFactory::load(record.filePath);
     if (!loadResult) {
-        log::errorf("Failed to load mesh: %s", loadResult.error.c_str());
+        log::errorf("Library", "Failed to load mesh: %s", loadResult.error.c_str());
         return nullptr;
     }
 
@@ -170,14 +171,31 @@ std::string LibraryManager::computeFileHash(const Path& path) {
 }
 
 bool LibraryManager::generateThumbnail(i64 modelId, const Mesh& mesh) {
-    // Thumbnail generation requires the renderer which would create a circular
-    // dependency. For now, this is a placeholder. The actual implementation
-    // will be done in the UI layer where the renderer is available.
+    if (!m_thumbnailGen) {
+        return true;  // No generator set - skip silently
+    }
 
-    // Path thumbnailPath = paths::getThumbnailDir() / (std::to_string(modelId) + ".png");
-    // ... render to framebuffer and save ...
-    // m_modelRepo.updateThumbnail(modelId, thumbnailPath);
+    // Ensure thumbnail directory exists
+    Path thumbnailDir = paths::getThumbnailDir();
+    if (!file::exists(thumbnailDir)) {
+        file::createDirectories(thumbnailDir);
+    }
 
+    Path thumbnailPath = thumbnailDir / (std::to_string(modelId) + ".tga");
+
+    ThumbnailSettings settings;
+    settings.width = 256;
+    settings.height = 256;
+
+    if (!m_thumbnailGen->generate(mesh, thumbnailPath, settings)) {
+        log::warningf("Library", "Failed to generate thumbnail for model %lld", static_cast<long long>(modelId));
+        return false;
+    }
+
+    // Update database with thumbnail path
+    m_modelRepo.updateThumbnail(modelId, thumbnailPath);
+
+    log::infof("Library", "Generated thumbnail: %s", thumbnailPath.string().c_str());
     return true;
 }
 

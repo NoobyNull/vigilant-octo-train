@@ -109,7 +109,7 @@ ArchiveResult ProjectArchive::create(const std::string& archivePath,
         // Read file content
         auto content = file::readBinary(filePath);
         if (!content) {
-            log::warningf("Failed to read file: %s", filePath.c_str());
+            log::warningf("Archive", "Failed to read file: %s", filePath.c_str());
             continue;
         }
 
@@ -136,7 +136,7 @@ ArchiveResult ProjectArchive::create(const std::string& archivePath,
         return ArchiveResult::fail("Failed to finalize archive");
     }
 
-    log::infof("Created archive with %zu files: %s", archivedFiles.size(),
+    log::infof("Archive", "Created with %zu files: %s", archivedFiles.size(),
                archivePath.c_str());
 
     return ArchiveResult::ok(std::move(archivedFiles));
@@ -213,7 +213,7 @@ ArchiveResult ProjectArchive::extract(const std::string& archivePath,
         extractedFiles.push_back(relativePath);
     }
 
-    log::infof("Extracted %zu files to: %s", extractedFiles.size(),
+    log::infof("Archive", "Extracted %zu files to: %s", extractedFiles.size(),
                outputDir.c_str());
 
     return ArchiveResult::ok(std::move(extractedFiles));

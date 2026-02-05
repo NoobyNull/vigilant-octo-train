@@ -73,18 +73,9 @@ Program Parser::parse(const std::string& content) {
                 if (cmd.hasZ()) targetPos.z += cmd.z;
             }
 
-            PathSegment segment;
-            segment.start = currentPos;
-            segment.end = targetPos;
-            segment.isRapid = (cmd.type == CommandType::G0);
-            segment.feedRate = cmd.hasF() ? cmd.f : currentFeedRate;
-            segment.lineNumber = lineNumber;
-
-            program.path.push_back(segment);
-
-            // Update bounds
+            // Lambda to update bounding box
             auto updateBounds = [&](const Vec3& p) {
-                if (program.path.size() == 1) {
+                if (program.path.empty()) {
                     program.boundsMin = p;
                     program.boundsMax = p;
                 } else {
@@ -97,10 +88,102 @@ Program Parser::parse(const std::string& content) {
                 }
             };
 
-            updateBounds(currentPos);
-            updateBounds(targetPos);
+            f32 segFeedRate = cmd.hasF() ? cmd.f : currentFeedRate;
 
-            currentPos = targetPos;
+            if ((cmd.type == CommandType::G2 || cmd.type == CommandType::G3) &&
+                (cmd.hasI() || cmd.hasJ())) {
+                // Arc move (G2 = clockwise, G3 = counter-clockwise)
+                // Arc center is at current position + (I, J) offset
+                f32 iOff = cmd.hasI() ? cmd.i : 0.0f;
+                f32 jOff = cmd.hasJ() ? cmd.j : 0.0f;
+
+                f32 centerX = currentPos.x + iOff;
+                f32 centerY = currentPos.y + jOff;
+
+                // Compute start and end angles relative to center
+                f32 startAngle = std::atan2(currentPos.y - centerY,
+                                            currentPos.x - centerX);
+                f32 endAngle = std::atan2(targetPos.y - centerY,
+                                          targetPos.x - centerX);
+
+                // Determine sweep direction
+                constexpr f32 PI2 = 2.0f * 3.14159265358979323846f;
+                f32 sweep;
+                if (cmd.type == CommandType::G2) {
+                    // Clockwise: sweep should be negative
+                    sweep = endAngle - startAngle;
+                    if (sweep >= 0.0f) {
+                        sweep -= PI2;
+                    }
+                } else {
+                    // Counter-clockwise: sweep should be positive
+                    sweep = endAngle - startAngle;
+                    if (sweep <= 0.0f) {
+                        sweep += PI2;
+                    }
+                }
+
+                // Radius from start point (use this for the arc)
+                f32 radius = std::sqrt((currentPos.x - centerX) * (currentPos.x - centerX) +
+                                       (currentPos.y - centerY) * (currentPos.y - centerY));
+
+                // Number of segments: ~1 per 5 degrees, max 72 per full circle
+                constexpr f32 DEG_PER_SEG = 5.0f * 3.14159265358979323846f / 180.0f;
+                int numSegments = static_cast<int>(std::ceil(std::fabs(sweep) / DEG_PER_SEG));
+                if (numSegments < 1) numSegments = 1;
+                if (numSegments > 72) numSegments = 72;
+
+                f32 angleStep = sweep / static_cast<f32>(numSegments);
+                f32 startZ = currentPos.z;
+                f32 endZ = targetPos.z;
+
+                Vec3 prevPoint = currentPos;
+                updateBounds(prevPoint);
+
+                for (int seg = 1; seg <= numSegments; ++seg) {
+                    f32 t = static_cast<f32>(seg) / static_cast<f32>(numSegments);
+                    f32 angle = startAngle + angleStep * static_cast<f32>(seg);
+
+                    Vec3 point;
+                    if (seg == numSegments) {
+                        // Last segment snaps exactly to the target endpoint
+                        point = targetPos;
+                    } else {
+                        point.x = centerX + radius * std::cos(angle);
+                        point.y = centerY + radius * std::sin(angle);
+                        point.z = startZ + (endZ - startZ) * t;
+                    }
+
+                    PathSegment arcSeg;
+                    arcSeg.start = prevPoint;
+                    arcSeg.end = point;
+                    arcSeg.isRapid = false;  // Arcs are cutting moves
+                    arcSeg.feedRate = segFeedRate;
+                    arcSeg.lineNumber = lineNumber;
+
+                    program.path.push_back(arcSeg);
+                    updateBounds(point);
+
+                    prevPoint = point;
+                }
+
+                currentPos = targetPos;
+            } else {
+                // Linear move (G0 rapid or G1 cutting) or G2/G3 fallback without I/J
+                PathSegment segment;
+                segment.start = currentPos;
+                segment.end = targetPos;
+                segment.isRapid = (cmd.type == CommandType::G0);
+                segment.feedRate = segFeedRate;
+                segment.lineNumber = lineNumber;
+
+                program.path.push_back(segment);
+
+                updateBounds(currentPos);
+                updateBounds(targetPos);
+
+                currentPos = targetPos;
+            }
         }
 
         program.commands.push_back(cmd);
@@ -113,7 +196,7 @@ Program Parser::parseFile(const Path& path) {
     auto content = file::readText(path);
     if (!content) {
         m_lastError = "Failed to read file: " + path.string();
-        log::error(m_lastError);
+        log::error("GCode", m_lastError);
         return Program{};
     }
 

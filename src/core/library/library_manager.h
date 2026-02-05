@@ -13,6 +13,9 @@
 
 namespace dw {
 
+// Forward declaration
+class ThumbnailGenerator;
+
 // Import result
 struct ImportResult {
     bool success = false;
@@ -68,6 +71,9 @@ public:
     using DuplicateHandler = std::function<bool(const ModelRecord& existing)>;
     void setDuplicateHandler(DuplicateHandler handler) { m_duplicateHandler = handler; }
 
+    // Set thumbnail generator (optional, owned externally)
+    void setThumbnailGenerator(ThumbnailGenerator* generator) { m_thumbnailGen = generator; }
+
 private:
     std::string computeFileHash(const Path& path);
     bool generateThumbnail(i64 modelId, const Mesh& mesh);
@@ -75,6 +81,7 @@ private:
     Database& m_db;
     ModelRepository m_modelRepo;
     DuplicateHandler m_duplicateHandler;
+    ThumbnailGenerator* m_thumbnailGen = nullptr;
 };
 
 }  // namespace dw

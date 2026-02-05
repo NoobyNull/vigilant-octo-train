@@ -26,7 +26,7 @@ bool checkError(const char* operation) {
                 errorStr = "GL_INVALID_FRAMEBUFFER_OPERATION";
                 break;
         }
-        log::errorf("OpenGL error %s at: %s", errorStr, operation);
+        log::errorf("GL", "Error %s at: %s", errorStr, operation);
         return false;
     }
     return true;

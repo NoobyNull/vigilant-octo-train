@@ -93,7 +93,7 @@ ExportResult ModelExporter::exportSTLBinary(const Mesh& mesh, const Path& path) 
         file.write(reinterpret_cast<const char*>(&attrByteCount), 2);
     }
 
-    log::infof("Exported binary STL: %s (%u triangles)", path.string().c_str(),
+    log::infof("Export", "Binary STL: %s (%u triangles)", path.string().c_str(),
                triangleCount);
 
     return ExportResult{true, ""};
@@ -142,7 +142,7 @@ ExportResult ModelExporter::exportSTLAscii(const Mesh& mesh, const Path& path) {
         return ExportResult{false, "Failed to write file"};
     }
 
-    log::infof("Exported ASCII STL: %s (%u triangles)", path.string().c_str(),
+    log::infof("Export", "ASCII STL: %s (%u triangles)", path.string().c_str(),
                triangleCount);
 
     return ExportResult{true, ""};
@@ -210,7 +210,7 @@ ExportResult ModelExporter::exportOBJ(const Mesh& mesh, const Path& path) {
         return ExportResult{false, "Failed to write file"};
     }
 
-    log::infof("Exported OBJ: %s (%u triangles)", path.string().c_str(), triangleCount);
+    log::infof("Export", "OBJ: %s (%u triangles)", path.string().c_str(), triangleCount);
 
     return ExportResult{true, ""};
 }

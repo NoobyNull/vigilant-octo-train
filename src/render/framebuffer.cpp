@@ -72,7 +72,7 @@ bool Framebuffer::create(int width, int height) {
     // Check completeness
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if (status != GL_FRAMEBUFFER_COMPLETE) {
-        log::errorf("Framebuffer not complete: %d", status);
+        log::errorf("Framebuffer", "Not complete: %d", status);
         destroy();
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         return false;

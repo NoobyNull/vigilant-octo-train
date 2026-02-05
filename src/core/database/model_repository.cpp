@@ -40,7 +40,7 @@ std::optional<i64> ModelRepository::insert(const ModelRecord& model) {
     stmt.bindText(15, tagsToJson(model.tags));
 
     if (!stmt.execute()) {
-        log::errorf("Failed to insert model: %s", m_db.lastError().c_str());
+        log::errorf("ModelRepo", "Failed to insert model: %s", m_db.lastError().c_str());
         return std::nullopt;
     }
 

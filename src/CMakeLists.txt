@@ -21,6 +21,7 @@ set(DW_SOURCES
 
     # Core config
     core/config/config.cpp
+    core/config/config_watcher.cpp
 
     # Database
     core/database/database.cpp
@@ -36,9 +37,13 @@ set(DW_SOURCES
     core/loaders/loader_factory.cpp
     core/loaders/stl_loader.cpp
     core/loaders/obj_loader.cpp
+    core/loaders/threemf_loader.cpp
 
     # Project
     core/project/project.cpp
+
+    # Import
+    core/import/import_queue.cpp
 
     # Library
     core/library/library_manager.cpp
@@ -64,6 +69,7 @@ set(DW_SOURCES
     render/camera.cpp
     render/framebuffer.cpp
     render/renderer.cpp
+    render/thumbnail_generator.cpp
 
     # UI
     ui/ui_manager.cpp
@@ -74,11 +80,14 @@ set(DW_SOURCES
     ui/panels/library_panel.cpp
     ui/panels/properties_panel.cpp
     ui/panels/project_panel.cpp
+    ui/panels/gcode_panel.cpp
+    ui/panels/cut_optimizer_panel.cpp
+    ui/panels/start_page.cpp
 
     # UI Dialogs
     ui/dialogs/message_dialog.cpp
     ui/dialogs/file_dialog.cpp
-    ui/dialogs/settings_dialog.cpp
+    ui/dialogs/lighting_dialog.cpp
 )
 
 # Create executable
@@ -94,6 +103,7 @@ target_link_libraries(digital_workshop PRIVATE
     OpenGL::GL
     glm::glm
     SQLite::SQLite3
+    ZLIB::ZLIB
 )
 
 # Include directories

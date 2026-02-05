@@ -123,7 +123,7 @@ bool Database::open(const Path& path) {
 
     int result = sqlite3_open(path.string().c_str(), &m_db);
     if (result != SQLITE_OK) {
-        log::errorf("Failed to open database: %s", sqlite3_errmsg(m_db));
+        log::errorf("Database", "Failed to open: %s", sqlite3_errmsg(m_db));
         sqlite3_close(m_db);
         m_db = nullptr;
         return false;
@@ -135,7 +135,7 @@ bool Database::open(const Path& path) {
     // Use WAL mode for better concurrency
     execute("PRAGMA journal_mode = WAL");
 
-    log::infof("Opened database: %s", path.string().c_str());
+    log::infof("Database", "Opened: %s", path.string().c_str());
     return true;
 }
 
@@ -143,7 +143,7 @@ void Database::close() {
     if (m_db) {
         sqlite3_close(m_db);
         m_db = nullptr;
-        log::debug("Closed database");
+        log::debug("Database", "Closed");
     }
 }
 
@@ -152,7 +152,7 @@ bool Database::execute(const std::string& sql) {
     int result = sqlite3_exec(m_db, sql.c_str(), nullptr, nullptr, &errMsg);
 
     if (result != SQLITE_OK) {
-        log::errorf("SQL error: %s\nQuery: %s", errMsg, sql.c_str());
+        log::errorf("Database", "SQL error: %s\nQuery: %s", errMsg, sql.c_str());
         sqlite3_free(errMsg);
         return false;
     }
@@ -166,7 +166,7 @@ Statement Database::prepare(const std::string& sql) {
                                     static_cast<int>(sql.size()), &stmt, nullptr);
 
     if (result != SQLITE_OK) {
-        log::errorf("Failed to prepare statement: %s\nQuery: %s",
+        log::errorf("Database", "Failed to prepare statement: %s\nQuery: %s",
                     sqlite3_errmsg(m_db), sql.c_str());
         return Statement();
     }

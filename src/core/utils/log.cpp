@@ -58,7 +58,7 @@ const char* levelToColor(Level level) {
     return "\033[0m";
 }
 
-void logMessage(Level level, std::string_view message) {
+void logMessage(Level level, std::string_view module, std::string_view message) {
     if (level < g_minLevel) {
         return;
     }
@@ -71,13 +71,13 @@ void logMessage(Level level, std::string_view message) {
     const char* reset = "\033[0m";
 
     // Console output with color
-    std::cerr << color << "[" << timestamp << "] [" << levelStr << "] " << reset
-              << message << std::endl;
+    std::cerr << color << "[" << timestamp << "] [" << levelStr << "] "
+              << "[" << module << "] " << reset << message << std::endl;
 
     // File output without color
     if (g_logFile.is_open()) {
-        g_logFile << "[" << timestamp << "] [" << levelStr << "] " << message
-                  << std::endl;
+        g_logFile << "[" << timestamp << "] [" << levelStr << "] "
+                  << "[" << module << "] " << message << std::endl;
     }
 }
 
@@ -91,20 +91,20 @@ Level getLevel() {
     return g_minLevel;
 }
 
-void debug(std::string_view message) {
-    logMessage(Level::Debug, message);
+void debug(std::string_view module, std::string_view message) {
+    logMessage(Level::Debug, module, message);
 }
 
-void info(std::string_view message) {
-    logMessage(Level::Info, message);
+void info(std::string_view module, std::string_view message) {
+    logMessage(Level::Info, module, message);
 }
 
-void warning(std::string_view message) {
-    logMessage(Level::Warning, message);
+void warning(std::string_view module, std::string_view message) {
+    logMessage(Level::Warning, module, message);
 }
 
-void error(std::string_view message) {
-    logMessage(Level::Error, message);
+void error(std::string_view module, std::string_view message) {
+    logMessage(Level::Error, module, message);
 }
 
 void setLogFile(const std::string& path) {

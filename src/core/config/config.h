@@ -23,9 +23,12 @@ public:
     void removeRecentProject(const Path& path);
     void clearRecentProjects();
 
-    // UI preferences
-    bool getDarkMode() const { return m_darkMode; }
-    void setDarkMode(bool enabled) { m_darkMode = enabled; }
+    // Config file path (for external watcher)
+    Path configFilePath() const { return getConfigFilePath(); }
+
+    // Theme (0=Dark, 1=Light, 2=HighContrast)
+    int getThemeIndex() const { return m_themeIndex; }
+    void setThemeIndex(int index) { m_themeIndex = index; }
 
     f32 getUiScale() const { return m_uiScale; }
     void setUiScale(f32 scale) { m_uiScale = scale; }
@@ -57,6 +60,51 @@ public:
     bool getWindowMaximized() const { return m_windowMaximized; }
     void setWindowMaximized(bool maximized) { m_windowMaximized = maximized; }
 
+    // Render settings (persisted)
+    Vec3 getRenderLightDir() const { return m_lightDir; }
+    void setRenderLightDir(const Vec3& dir) { m_lightDir = dir; }
+
+    Vec3 getRenderLightColor() const { return m_lightColor; }
+    void setRenderLightColor(const Vec3& c) { m_lightColor = c; }
+
+    Vec3 getRenderAmbient() const { return m_ambient; }
+    void setRenderAmbient(const Vec3& a) { m_ambient = a; }
+
+    Color getRenderObjectColor() const { return m_objectColor; }
+    void setRenderObjectColor(const Color& c) { m_objectColor = c; }
+
+    f32 getRenderShininess() const { return m_shininess; }
+    void setRenderShininess(f32 s) { m_shininess = s; }
+
+    // Log level (maps to log::Level enum)
+    int getLogLevel() const { return m_logLevel; }
+    void setLogLevel(int level) { m_logLevel = level; }
+
+    // Workspace state (panel visibility)
+    bool getShowViewport() const { return m_wsShowViewport; }
+    void setShowViewport(bool v) { m_wsShowViewport = v; }
+
+    bool getShowLibrary() const { return m_wsShowLibrary; }
+    void setShowLibrary(bool v) { m_wsShowLibrary = v; }
+
+    bool getShowProperties() const { return m_wsShowProperties; }
+    void setShowProperties(bool v) { m_wsShowProperties = v; }
+
+    bool getShowProject() const { return m_wsShowProject; }
+    void setShowProject(bool v) { m_wsShowProject = v; }
+
+    bool getShowGCode() const { return m_wsShowGCode; }
+    void setShowGCode(bool v) { m_wsShowGCode = v; }
+
+    bool getShowCutOptimizer() const { return m_wsShowCutOptimizer; }
+    void setShowCutOptimizer(bool v) { m_wsShowCutOptimizer = v; }
+
+    bool getShowStartPage() const { return m_wsShowStartPage; }
+    void setShowStartPage(bool v) { m_wsShowStartPage = v; }
+
+    i64 getLastSelectedModelId() const { return m_wsLastSelectedModelId; }
+    void setLastSelectedModelId(i64 id) { m_wsLastSelectedModelId = id; }
+
 private:
     Config() = default;
     ~Config() = default;
@@ -70,10 +118,20 @@ private:
     static constexpr int MAX_RECENT_PROJECTS = 10;
 
     // UI preferences
-    bool m_darkMode = true;
+    int m_themeIndex = 0;  // 0=Dark, 1=Light, 2=HighContrast
     f32 m_uiScale = 1.0f;
     bool m_showGrid = true;
     bool m_showAxis = true;
+
+    // Render settings
+    Vec3 m_lightDir{-0.5f, -1.0f, -0.3f};
+    Vec3 m_lightColor{1.0f, 1.0f, 1.0f};
+    Vec3 m_ambient{0.2f, 0.2f, 0.2f};
+    Color m_objectColor{0.4f, 0.6f, 0.8f, 1.0f};
+    f32 m_shininess = 32.0f;
+
+    // Logging
+    int m_logLevel = 1;  // Info
 
     // Default paths
     Path m_lastImportDir;
@@ -84,6 +142,16 @@ private:
     int m_windowWidth = 1600;
     int m_windowHeight = 900;
     bool m_windowMaximized = false;
+
+    // Workspace state
+    bool m_wsShowViewport = true;
+    bool m_wsShowLibrary = true;
+    bool m_wsShowProperties = true;
+    bool m_wsShowProject = true;
+    bool m_wsShowGCode = false;
+    bool m_wsShowCutOptimizer = false;
+    bool m_wsShowStartPage = true;
+    i64 m_wsLastSelectedModelId = -1;
 };
 
 }  // namespace dw

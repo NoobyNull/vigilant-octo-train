@@ -25,6 +25,13 @@ public:
     // Load mesh from file
     virtual LoadResult load(const Path& path) = 0;
 
+    // Load mesh from byte buffer (avoids re-reading file from disk)
+    // Default implementation returns an error — override in subclasses.
+    virtual LoadResult loadFromBuffer(const ByteBuffer& data) {
+        (void)data;
+        return LoadResult{nullptr, "loadFromBuffer not supported by this loader"};
+    }
+
     // Check if this loader supports the given file extension
     virtual bool supports(const std::string& extension) const = 0;
 

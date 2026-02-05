@@ -140,11 +140,11 @@ bool ensureDirectoriesExist() {
 
     auto ensureDir = [&success](const Path& path, const char* name) {
         if (!file::createDirectories(path)) {
-            log::errorf("Failed to create %s directory: %s", name,
+            log::errorf("Paths", "Failed to create %s directory: %s", name,
                         path.string().c_str());
             success = false;
         } else {
-            log::debugf("Ensured %s directory: %s", name, path.string().c_str());
+            log::debugf("Paths", "Ensured %s directory: %s", name, path.string().c_str());
         }
     };
 
