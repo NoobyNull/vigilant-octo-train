@@ -32,7 +32,10 @@
 #include "ui/theme.h"
 #include "version.h"
 
-#ifdef __linux__
+#ifdef _WIN32
+    #include <shellapi.h>
+    #include <windows.h>
+#elif defined(__linux__)
     #include <unistd.h>
 #endif
 
@@ -873,7 +876,19 @@ void Application::applyConfig() {
 }
 
 void Application::spawnSettingsApp() {
-#ifdef __linux__
+#ifdef _WIN32
+    wchar_t exePath[MAX_PATH] = {};
+    DWORD len = GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+    if (len > 0 && len < MAX_PATH) {
+        std::wstring dir(exePath);
+        auto slash = dir.find_last_of(L"\\/");
+        if (slash != std::wstring::npos) {
+            dir = dir.substr(0, slash);
+        }
+        std::wstring settingsPath = dir + L"\\dw_settings.exe";
+        ShellExecuteW(nullptr, L"open", settingsPath.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+    }
+#elif defined(__linux__)
     // Resolve path relative to the running executable
     char exePath[1024] = {};
     ssize_t len = readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
@@ -888,14 +903,22 @@ void Application::spawnSettingsApp() {
         std::system(cmd.c_str());
         return;
     }
-#endif
     std::system("dw_settings &");
+#endif
 }
 
 void Application::relaunchApp() {
     // Save current config before relaunching
     Config::instance().save();
 
+#ifdef _WIN32
+    wchar_t selfPath[MAX_PATH] = {};
+    DWORD len = GetModuleFileNameW(nullptr, selfPath, MAX_PATH);
+    if (len > 0 && len < MAX_PATH) {
+        ShellExecuteW(nullptr, L"open", selfPath, nullptr, nullptr, SW_SHOWNORMAL);
+        quit();
+    }
+#elif defined(__linux__)
     // Get path to self
     char selfPath[4096] = {};
     ssize_t len = readlink("/proc/self/exe", selfPath, sizeof(selfPath) - 1);
@@ -906,6 +929,7 @@ void Application::relaunchApp() {
         std::system(cmd.c_str());
         quit();
     }
+#endif
 }
 
 void Application::renderRestartPopup() {

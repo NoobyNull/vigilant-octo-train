@@ -51,7 +51,7 @@ Path getHomeDir() {
         return Path(pw->pw_dir);
     }
     log::error("Paths", "Cannot determine home directory: $HOME unset and getpwuid failed");
-    return Path("/tmp");
+    return fs::temp_directory_path();
 #endif
 }
 

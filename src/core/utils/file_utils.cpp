@@ -227,14 +227,19 @@ Path currentDirectory() {
 }
 
 Path homeDirectory() {
-    const char* home = std::getenv("HOME");
-    if (home) {
-        return Path(home);
-    }
 #ifdef _WIN32
     const char* userprofile = std::getenv("USERPROFILE");
     if (userprofile) {
         return Path(userprofile);
+    }
+    const char* home = std::getenv("HOME");
+    if (home) {
+        return Path(home);
+    }
+#else
+    const char* home = std::getenv("HOME");
+    if (home) {
+        return Path(home);
     }
 #endif
     return currentDirectory();

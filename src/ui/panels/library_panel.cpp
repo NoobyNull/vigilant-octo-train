@@ -7,6 +7,11 @@
 #include <fstream>
 #include <vector>
 
+#ifdef _WIN32
+    #include <shellapi.h>
+    #include <windows.h>
+#endif
+
 #include <imgui.h>
 
 #include "../icons.h"
@@ -328,10 +333,15 @@ void LibraryPanel::renderContextMenu(const ModelRecord& model) {
     ImGui::Separator();
 
     if (ImGui::MenuItem("Show in Explorer")) {
-        auto parentDir = model.filePath.parent_path().string();
+        auto parentDir = model.filePath.parent_path();
         if (!parentDir.empty()) {
-            std::string cmd = "xdg-open \"" + parentDir + "\"";
+#ifdef _WIN32
+            ShellExecuteW(nullptr, L"open", parentDir.wstring().c_str(), nullptr, nullptr,
+                          SW_SHOWNORMAL);
+#else
+            std::string cmd = "xdg-open \"" + parentDir.string() + "\"";
             std::system(cmd.c_str());
+#endif
         }
     }
 

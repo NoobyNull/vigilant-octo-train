@@ -86,9 +86,20 @@ function(dw_set_release_flags target)
     endif()
 endfunction()
 
+# Mark dependency include directories as SYSTEM to suppress their warnings
+function(dw_suppress_dependency_warnings target)
+    if(TARGET glm::glm)
+        get_target_property(GLM_INCLUDES glm::glm INTERFACE_INCLUDE_DIRECTORIES)
+        if(GLM_INCLUDES)
+            target_include_directories(${target} SYSTEM PRIVATE ${GLM_INCLUDES})
+        endif()
+    endif()
+endfunction()
+
 # Apply all flags to a target
 function(dw_configure_target target)
     dw_set_warning_flags(${target})
     dw_set_debug_flags(${target})
     dw_set_release_flags(${target})
+    dw_suppress_dependency_warnings(${target})
 endfunction()
