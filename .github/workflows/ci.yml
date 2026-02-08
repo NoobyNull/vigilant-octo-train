@@ -1,13 +1,32 @@
-name: Windows CI
+name: CI
 
 on:
   push:
-    branches: [windows]
+    branches: [main]
   pull_request:
-    branches: [windows]
+    branches: [main]
 
 jobs:
-  build:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev libgl-dev zlib1g-dev clang-format-18
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Debug -DDW_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build -j$(nproc)
+
+      - name: Test
+        run: ./build/tests/dw_tests
+
+  windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
