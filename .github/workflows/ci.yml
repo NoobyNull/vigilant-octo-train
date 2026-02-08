@@ -1,0 +1,22 @@
+name: Windows CI
+
+on:
+  push:
+    branches: [windows]
+  pull_request:
+    branches: [windows]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -DDW_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --config Debug -j $env:NUMBER_OF_PROCESSORS
+
+      - name: Test
+        run: ./build/tests/Debug/dw_tests.exe
