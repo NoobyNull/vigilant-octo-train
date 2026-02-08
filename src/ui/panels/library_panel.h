@@ -1,30 +1,33 @@
 #pragma once
 
-#include "../../core/library/library_manager.h"
-#include "panel.h"
-
-#include <glad/gl.h>
-
 #include <functional>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+#include <glad/gl.h>
+
+#include "../../core/library/library_manager.h"
+#include "panel.h"
+
 namespace dw {
 
 // Library panel for browsing and managing imported models
 class LibraryPanel : public Panel {
-public:
+  public:
     explicit LibraryPanel(LibraryManager* library);
     ~LibraryPanel() override;
 
     void render() override;
 
-    // Callback when a model is selected
+    // Callback when a model is clicked (single-click: preview metadata)
     using ModelSelectedCallback = std::function<void(int64_t modelId)>;
     void setOnModelSelected(ModelSelectedCallback callback) {
         m_onModelSelected = std::move(callback);
     }
+
+    // Callback when a model is double-clicked (load into viewport)
+    void setOnModelOpened(ModelSelectedCallback callback) { m_onModelOpened = std::move(callback); }
 
     // Refresh the model list
     void refresh();
@@ -33,7 +36,7 @@ public:
     int64_t selectedModelId() const { return m_selectedModelId; }
     void setSelectedModelId(int64_t id) { m_selectedModelId = id; }
 
-private:
+  private:
     void renderToolbar();
     void renderModelList();
     void renderModelItem(const ModelRecord& model, int index);
@@ -53,9 +56,9 @@ private:
     std::vector<ModelRecord> m_models;
     std::string m_searchQuery;
     int64_t m_selectedModelId = -1;
-    int m_contextMenuModelIndex = -1;
 
     ModelSelectedCallback m_onModelSelected;
+    ModelSelectedCallback m_onModelOpened;
 
     // Thumbnail texture cache: model ID -> GL texture
     std::unordered_map<int64_t, GLuint> m_textureCache;
@@ -70,4 +73,4 @@ private:
     float m_thumbnailSize = 64.0f;
 };
 
-}  // namespace dw
+} // namespace dw

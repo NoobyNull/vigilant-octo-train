@@ -1,12 +1,14 @@
 #include "archive.h"
 
-#include "../utils/file_utils.h"
-#include "../utils/log.h"
-
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
+#include <system_error>
+
+#include "../utils/file_utils.h"
+#include "../utils/log.h"
 
 namespace dw {
 
@@ -16,7 +18,7 @@ namespace dw {
 
 namespace {
 
-constexpr uint32_t MAGIC = 0x44575000;  // "DWP\0"
+constexpr uint32_t MAGIC = 0x44575000; // "DWP\0"
 constexpr uint32_t VERSION = 1;
 
 struct ArchiveHeader {
@@ -27,13 +29,11 @@ struct ArchiveHeader {
 };
 
 bool writeU32(std::ostream& out, uint32_t value) {
-    return out.write(reinterpret_cast<const char*>(&value), sizeof(value))
-        .good();
+    return out.write(reinterpret_cast<const char*>(&value), sizeof(value)).good();
 }
 
 bool writeU64(std::ostream& out, uint64_t value) {
-    return out.write(reinterpret_cast<const char*>(&value), sizeof(value))
-        .good();
+    return out.write(reinterpret_cast<const char*>(&value), sizeof(value)).good();
 }
 
 bool readU32(std::istream& in, uint32_t& value) {
@@ -46,40 +46,30 @@ bool readU64(std::istream& in, uint64_t& value) {
 
 std::vector<std::string> collectFiles(const std::string& dir) {
     std::vector<std::string> files;
-    auto entries = file::listEntries(dir);
-
-    for (const auto& entry : entries) {
-        std::string fullPath = dir + "/" + entry;
-        if (file::isDirectory(fullPath)) {
-            auto subFiles = collectFiles(fullPath);
-            files.insert(files.end(), subFiles.begin(), subFiles.end());
-        } else {
-            files.push_back(fullPath);
+    std::error_code ec;
+    for (const auto& entry : fs::recursive_directory_iterator(dir, ec)) {
+        if (entry.is_regular_file()) {
+            files.push_back(entry.path().string());
         }
     }
-
     return files;
 }
 
-std::string makeRelativePath(const std::string& basePath,
-                              const std::string& fullPath) {
-    if (fullPath.find(basePath) == 0) {
-        std::string relative = fullPath.substr(basePath.length());
-        if (!relative.empty() && relative[0] == '/') {
-            relative = relative.substr(1);
-        }
-        return relative;
+std::string makeRelativePath(const std::string& basePath, const std::string& fullPath) {
+    std::error_code ec;
+    auto rel = fs::relative(fs::path(fullPath), fs::path(basePath), ec);
+    if (ec) {
+        return fullPath;
     }
-    return fullPath;
+    return rel.generic_string();
 }
 
-}  // namespace
+} // namespace
 
 ArchiveResult ProjectArchive::create(const std::string& archivePath,
-                                      const std::string& projectDir) {
+                                     const std::string& projectDir) {
     if (!file::isDirectory(projectDir)) {
-        return ArchiveResult::fail("Project directory does not exist: " +
-                                    projectDir);
+        return ArchiveResult::fail("Project directory does not exist: " + projectDir);
     }
 
     // Collect all files
@@ -91,8 +81,7 @@ ArchiveResult ProjectArchive::create(const std::string& archivePath,
     // Create output file
     std::ofstream out(archivePath, std::ios::binary);
     if (!out) {
-        return ArchiveResult::fail("Failed to create archive file: " +
-                                    archivePath);
+        return ArchiveResult::fail("Failed to create archive file: " + archivePath);
     }
 
     // Write header
@@ -136,14 +125,13 @@ ArchiveResult ProjectArchive::create(const std::string& archivePath,
         return ArchiveResult::fail("Failed to finalize archive");
     }
 
-    log::infof("Archive", "Created with %zu files: %s", archivedFiles.size(),
-               archivePath.c_str());
+    log::infof("Archive", "Created with %zu files: %s", archivedFiles.size(), archivePath.c_str());
 
     return ArchiveResult::ok(std::move(archivedFiles));
 }
 
 ArchiveResult ProjectArchive::extract(const std::string& archivePath,
-                                       const std::string& outputDir) {
+                                      const std::string& outputDir) {
     std::ifstream in(archivePath, std::ios::binary);
     if (!in) {
         return ArchiveResult::fail("Failed to open archive: " + archivePath);
@@ -163,8 +151,7 @@ ArchiveResult ProjectArchive::extract(const std::string& archivePath,
 
     // Create output directory
     if (!file::createDirectories(outputDir)) {
-        return ArchiveResult::fail("Failed to create output directory: " +
-                                    outputDir);
+        return ArchiveResult::fail("Failed to create output directory: " + outputDir);
     }
 
     std::vector<std::string> extractedFiles;
@@ -182,8 +169,7 @@ ArchiveResult ProjectArchive::extract(const std::string& archivePath,
 
         // Security check: prevent path traversal
         if (relativePath.find("..") != std::string::npos) {
-            return ArchiveResult::fail(
-                "Security error: path traversal detected");
+            return ArchiveResult::fail("Security error: path traversal detected");
         }
 
         // Read content size
@@ -202,7 +188,9 @@ ArchiveResult ProjectArchive::extract(const std::string& archivePath,
         // Create parent directories
         Path parentDir = file::getParent(outputPath);
         if (!parentDir.empty()) {
-            file::createDirectories(parentDir);
+            if (!file::createDirectories(parentDir)) {
+                return ArchiveResult::fail("Failed to create directory: " + parentDir.string());
+            }
         }
 
         // Write file
@@ -213,8 +201,7 @@ ArchiveResult ProjectArchive::extract(const std::string& archivePath,
         extractedFiles.push_back(relativePath);
     }
 
-    log::infof("Archive", "Extracted %zu files to: %s", extractedFiles.size(),
-               outputDir.c_str());
+    log::infof("Archive", "Extracted %zu files to: %s", extractedFiles.size(), outputDir.c_str());
 
     return ArchiveResult::ok(std::move(extractedFiles));
 }
@@ -252,7 +239,7 @@ std::vector<ArchiveEntry> ProjectArchive::list(const std::string& archivePath) {
         if (!readU64(in, entry.uncompressedSize)) {
             break;
         }
-        entry.compressedSize = entry.uncompressedSize;  // No compression
+        entry.compressedSize = entry.uncompressedSize; // No compression
 
         // Skip content
         in.seekg(entry.uncompressedSize, std::ios::cur);
@@ -275,4 +262,4 @@ bool ProjectArchive::isValidArchive(const std::string& archivePath) {
     return header.magic == MAGIC && header.version <= VERSION;
 }
 
-}  // namespace dw
+} // namespace dw

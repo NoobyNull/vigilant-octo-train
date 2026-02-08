@@ -24,21 +24,17 @@ struct ArchiveResult {
         return {true, "", std::move(files)};
     }
 
-    static ArchiveResult fail(const std::string& error) {
-        return {false, error, {}};
-    }
+    static ArchiveResult fail(const std::string& error) { return {false, error, {}}; }
 };
 
 // Archive format for project export
 class ProjectArchive {
-public:
+  public:
     // Create a new archive for writing
-    static ArchiveResult create(const std::string& archivePath,
-                                 const std::string& projectDir);
+    static ArchiveResult create(const std::string& archivePath, const std::string& projectDir);
 
     // Extract an archive
-    static ArchiveResult extract(const std::string& archivePath,
-                                  const std::string& outputDir);
+    static ArchiveResult extract(const std::string& archivePath, const std::string& outputDir);
 
     // List contents of an archive
     static std::vector<ArchiveEntry> list(const std::string& archivePath);
@@ -51,4 +47,4 @@ public:
     static constexpr const char* MimeType = "application/x-digitalworkshop-project";
 };
 
-}  // namespace dw
+} // namespace dw

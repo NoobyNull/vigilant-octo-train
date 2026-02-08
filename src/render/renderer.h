@@ -1,14 +1,14 @@
 #pragma once
 
+#include <memory>
+#include <unordered_map>
+
+#include <glad/gl.h>
+
 #include "../core/mesh/mesh.h"
 #include "../core/types.h"
 #include "camera.h"
 #include "shader.h"
-
-#include <glad/gl.h>
-
-#include <memory>
-#include <unordered_map>
 
 namespace dw {
 
@@ -36,7 +36,7 @@ struct RenderSettings {
 
 // Main renderer class
 class Renderer {
-public:
+  public:
     Renderer() = default;
     ~Renderer();
 
@@ -52,8 +52,8 @@ public:
     void setCamera(const Camera& camera);
 
     // Render a mesh
-    void renderMesh(const Mesh& mesh, const Mat4& modelMatrix = Mat4::identity());
-    void renderMesh(const GPUMesh& gpuMesh, const Mat4& modelMatrix = Mat4::identity());
+    void renderMesh(const Mesh& mesh, const Mat4& modelMatrix = Mat4(1.0f));
+    void renderMesh(const GPUMesh& gpuMesh, const Mat4& modelMatrix = Mat4(1.0f));
 
     // Render grid
     void renderGrid(f32 size = 10.0f, f32 spacing = 1.0f);
@@ -64,6 +64,9 @@ public:
     // Upload mesh to GPU
     GPUMesh uploadMesh(const Mesh& mesh);
 
+    // Mesh cache management
+    void clearMeshCache();
+
     // Settings
     RenderSettings& settings() { return m_settings; }
     const RenderSettings& settings() const { return m_settings; }
@@ -71,7 +74,7 @@ public:
     // Check if initialized
     bool isInitialized() const { return m_initialized; }
 
-private:
+  private:
     bool createShaders();
     void createGridMesh(f32 size, f32 spacing);
     void createAxisMesh(f32 length);
@@ -87,6 +90,9 @@ private:
     GPUMesh m_axisMesh;
 
     RenderSettings m_settings;
+
+    // Mesh cache: hash -> uploaded GPU mesh
+    std::unordered_map<u64, GPUMesh> m_meshCache;
 };
 
-}  // namespace dw
+} // namespace dw

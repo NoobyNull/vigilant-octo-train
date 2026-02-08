@@ -7,41 +7,41 @@ namespace dw {
 namespace icons {
 
 // File operations
-constexpr const char* ICON_NEW = "\xEF\x85\x9B";      //
-constexpr const char* ICON_OPEN = "\xEF\x81\xBC";    //
-constexpr const char* ICON_SAVE = "\xEF\x83\x87";    //
-constexpr const char* ICON_IMPORT = "\xEF\x81\x9E";  //
-constexpr const char* ICON_EXPORT = "\xEF\x81\x9D";  //
+constexpr const char* ICON_NEW = "\xEF\x85\x9B";    //
+constexpr const char* ICON_OPEN = "\xEF\x81\xBC";   //
+constexpr const char* ICON_SAVE = "\xEF\x83\x87";   //
+constexpr const char* ICON_IMPORT = "\xEF\x81\x9E"; //
+constexpr const char* ICON_EXPORT = "\xEF\x81\x9D"; //
 
 // View controls
-constexpr const char* ICON_ZOOM_IN = "\xEF\x80\x8E";   //
-constexpr const char* ICON_ZOOM_OUT = "\xEF\x80\x90";  //
-constexpr const char* ICON_FIT = "\xEF\x82\xB5";       //
-constexpr const char* ICON_GRID = "\xEF\x80\x8A";      //
+constexpr const char* ICON_ZOOM_IN = "\xEF\x80\x8E";  //
+constexpr const char* ICON_ZOOM_OUT = "\xEF\x80\x90"; //
+constexpr const char* ICON_FIT = "\xEF\x82\xB5";      //
+constexpr const char* ICON_GRID = "\xEF\x80\x8A";     //
 
 // Actions
-constexpr const char* ICON_ADD = "\xEF\x81\xA7";      //
-constexpr const char* ICON_REMOVE = "\xEF\x82\x88";   //
-constexpr const char* ICON_DELETE = "\xEF\x87\xB8";   //
-constexpr const char* ICON_SEARCH = "\xEF\x80\x82";   //
-constexpr const char* ICON_FILTER = "\xEF\x82\xB0";   //
-constexpr const char* ICON_REFRESH = "\xEF\x80\xA1";  //
+constexpr const char* ICON_ADD = "\xEF\x81\xA7";     //
+constexpr const char* ICON_REMOVE = "\xEF\x82\x88";  //
+constexpr const char* ICON_DELETE = "\xEF\x87\xB8";  //
+constexpr const char* ICON_SEARCH = "\xEF\x80\x82";  //
+constexpr const char* ICON_FILTER = "\xEF\x82\xB0";  //
+constexpr const char* ICON_REFRESH = "\xEF\x80\xA1"; //
 
 // Object types
-constexpr const char* ICON_MODEL = "\xEF\x86\xB2";    //
-constexpr const char* ICON_PROJECT = "\xEF\x81\xBC";  //
-constexpr const char* ICON_FOLDER = "\xEF\x81\xBC";   //
-constexpr const char* ICON_FILE = "\xEF\x85\x9B";     //
+constexpr const char* ICON_MODEL = "\xEF\x86\xB2";   //
+constexpr const char* ICON_PROJECT = "\xEF\x81\xBC"; //
+constexpr const char* ICON_FOLDER = "\xEF\x81\xBC";  //
+constexpr const char* ICON_FILE = "\xEF\x85\x9B";    //
 
 // Settings and status
-constexpr const char* ICON_SETTINGS = "\xEF\x80\x93";  //
-constexpr const char* ICON_INFO = "\xEF\x81\x9A";      //
-constexpr const char* ICON_WARNING = "\xEF\x81\xB1";   //
-constexpr const char* ICON_ERROR = "\xEF\x81\xAA";     //
-constexpr const char* ICON_QUESTION = "\xEF\x81\x99";  //
+constexpr const char* ICON_SETTINGS = "\xEF\x80\x93"; //
+constexpr const char* ICON_INFO = "\xEF\x81\x9A";     //
+constexpr const char* ICON_WARNING = "\xEF\x81\xB1";  //
+constexpr const char* ICON_ERROR = "\xEF\x81\xAA";    //
+constexpr const char* ICON_QUESTION = "\xEF\x81\x99"; //
 
 // View modes
-constexpr const char* ICON_LIST = "\xEF\x80\xBA";      //
+constexpr const char* ICON_LIST = "\xEF\x80\xBA"; //
 
 // Without icon fonts, use text labels
 namespace text {
@@ -57,8 +57,8 @@ constexpr const char* DELETE = "[X]";
 constexpr const char* SEARCH = "[?]";
 constexpr const char* SETTINGS = "[S]";
 
-}  // namespace text
-}  // namespace icons
+} // namespace text
+} // namespace icons
 
 // Convenience struct for simpler access: Icons::Model instead of icons::ICON_MODEL
 struct Icons {
@@ -89,4 +89,4 @@ struct Icons {
     static constexpr const char* List = icons::ICON_LIST;
 };
 
-}  // namespace dw
+} // namespace dw

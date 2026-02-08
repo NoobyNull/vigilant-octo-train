@@ -1,13 +1,13 @@
 #include "config.h"
 
+#include <algorithm>
+#include <fstream>
+#include <sstream>
+
 #include "../paths/app_paths.h"
 #include "../utils/file_utils.h"
 #include "../utils/log.h"
 #include "../utils/string_utils.h"
-
-#include <algorithm>
-#include <fstream>
-#include <sstream>
 
 namespace dw {
 
@@ -65,30 +65,47 @@ bool Config::load() {
         if (section == "ui") {
             if (key == "theme") {
                 str::parseInt(value, m_themeIndex);
-            } else if (key == "dark_mode") {
-                // Backward compat: map old dark_mode to theme index
-                m_themeIndex = (value == "true" || value == "1") ? 0 : 1;
             } else if (key == "scale") {
                 str::parseFloat(value, m_uiScale);
             } else if (key == "show_grid") {
                 m_showGrid = (value == "true" || value == "1");
             } else if (key == "show_axis") {
                 m_showAxis = (value == "true" || value == "1");
+            } else if (key == "auto_orient") {
+                m_autoOrient = (value == "true" || value == "1");
+            } else if (key == "nav_style") {
+                int style = 0;
+                str::parseInt(value, style);
+                if (style >= 0 && style <= 2)
+                    m_navStyle = static_cast<NavStyle>(style);
             }
         } else if (section == "render") {
-            if (key == "light_dir_x") str::parseFloat(value, m_lightDir.x);
-            else if (key == "light_dir_y") str::parseFloat(value, m_lightDir.y);
-            else if (key == "light_dir_z") str::parseFloat(value, m_lightDir.z);
-            else if (key == "light_color_r") str::parseFloat(value, m_lightColor.x);
-            else if (key == "light_color_g") str::parseFloat(value, m_lightColor.y);
-            else if (key == "light_color_b") str::parseFloat(value, m_lightColor.z);
-            else if (key == "ambient_r") str::parseFloat(value, m_ambient.x);
-            else if (key == "ambient_g") str::parseFloat(value, m_ambient.y);
-            else if (key == "ambient_b") str::parseFloat(value, m_ambient.z);
-            else if (key == "object_color_r") str::parseFloat(value, m_objectColor.r);
-            else if (key == "object_color_g") str::parseFloat(value, m_objectColor.g);
-            else if (key == "object_color_b") str::parseFloat(value, m_objectColor.b);
-            else if (key == "shininess") str::parseFloat(value, m_shininess);
+            if (key == "light_dir_x")
+                str::parseFloat(value, m_lightDir.x);
+            else if (key == "light_dir_y")
+                str::parseFloat(value, m_lightDir.y);
+            else if (key == "light_dir_z")
+                str::parseFloat(value, m_lightDir.z);
+            else if (key == "light_color_r")
+                str::parseFloat(value, m_lightColor.x);
+            else if (key == "light_color_g")
+                str::parseFloat(value, m_lightColor.y);
+            else if (key == "light_color_b")
+                str::parseFloat(value, m_lightColor.z);
+            else if (key == "ambient_r")
+                str::parseFloat(value, m_ambient.x);
+            else if (key == "ambient_g")
+                str::parseFloat(value, m_ambient.y);
+            else if (key == "ambient_b")
+                str::parseFloat(value, m_ambient.z);
+            else if (key == "object_color_r")
+                str::parseFloat(value, m_objectColor.r);
+            else if (key == "object_color_g")
+                str::parseFloat(value, m_objectColor.g);
+            else if (key == "object_color_b")
+                str::parseFloat(value, m_objectColor.b);
+            else if (key == "shininess")
+                str::parseFloat(value, m_shininess);
         } else if (section == "logging") {
             if (key == "level") {
                 str::parseInt(value, m_logLevel);
@@ -127,6 +144,14 @@ bool Config::load() {
             } else if (key == "last_selected_model") {
                 str::parseInt64(value, m_wsLastSelectedModelId);
             }
+        } else if (section == "bindings") {
+            if (key == "light_dir_drag") {
+                m_bindings[static_cast<int>(BindAction::LightDirDrag)] =
+                    InputBinding::deserialize(value);
+            } else if (key == "light_intensity_drag") {
+                m_bindings[static_cast<int>(BindAction::LightIntensityDrag)] =
+                    InputBinding::deserialize(value);
+            }
         } else if (section == "recent") {
             if (str::startsWith(key, "project")) {
                 if (!value.empty() && file::exists(value)) {
@@ -144,7 +169,10 @@ bool Config::save() {
     Path configPath = getConfigFilePath();
 
     // Ensure config directory exists
-    file::createDirectories(configPath.parent_path());
+    if (!file::createDirectories(configPath.parent_path())) {
+        log::error("Config", "Failed to create config directory");
+        return false;
+    }
 
     std::ostringstream ss;
     ss << std::fixed;
@@ -157,6 +185,8 @@ bool Config::save() {
     ss << "scale=" << m_uiScale << "\n";
     ss << "show_grid=" << (m_showGrid ? "true" : "false") << "\n";
     ss << "show_axis=" << (m_showAxis ? "true" : "false") << "\n";
+    ss << "auto_orient=" << (m_autoOrient ? "true" : "false") << "\n";
+    ss << "nav_style=" << static_cast<int>(m_navStyle) << "\n";
     ss << "\n";
 
     // Render section
@@ -213,6 +243,14 @@ bool Config::save() {
     ss << "last_selected_model=" << m_wsLastSelectedModelId << "\n";
     ss << "\n";
 
+    // Bindings section
+    ss << "[bindings]\n";
+    ss << "light_dir_drag=" << m_bindings[static_cast<int>(BindAction::LightDirDrag)].serialize()
+       << "\n";
+    ss << "light_intensity_drag="
+       << m_bindings[static_cast<int>(BindAction::LightIntensityDrag)].serialize() << "\n";
+    ss << "\n";
+
     // Recent projects section
     ss << "[recent]\n";
     for (size_t i = 0; i < m_recentProjects.size(); ++i) {
@@ -259,4 +297,25 @@ void Config::clearRecentProjects() {
     m_recentProjects.clear();
 }
 
-}  // namespace dw
+void Config::initDefaultBindings() {
+    for (int i = 0; i < static_cast<int>(BindAction::COUNT); ++i) {
+        m_bindings[static_cast<size_t>(i)] = defaultBinding(static_cast<BindAction>(i));
+    }
+}
+
+InputBinding Config::getBinding(BindAction action) const {
+    int idx = static_cast<int>(action);
+    if (idx >= 0 && idx < static_cast<int>(BindAction::COUNT)) {
+        return m_bindings[static_cast<size_t>(idx)];
+    }
+    return {};
+}
+
+void Config::setBinding(BindAction action, const InputBinding& binding) {
+    int idx = static_cast<int>(action);
+    if (idx >= 0 && idx < static_cast<int>(BindAction::COUNT)) {
+        m_bindings[static_cast<size_t>(idx)] = binding;
+    }
+}
+
+} // namespace dw

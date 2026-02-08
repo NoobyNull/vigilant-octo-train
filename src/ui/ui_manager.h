@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../core/types.h"
-
 #include <functional>
 #include <string>
 #include <vector>
+
+#include "../core/types.h"
 
 struct SDL_Window;
 union SDL_Event;
@@ -21,7 +21,7 @@ struct MenuItem {
     MenuCallback callback;
     bool separator = false;
     bool enabled = true;
-    bool* checked = nullptr;  // For toggle items
+    bool* checked = nullptr; // For toggle items
 };
 
 // Menu definition
@@ -32,7 +32,7 @@ struct Menu {
 
 // UI Manager - handles ImGui integration
 class UIManager {
-public:
+  public:
     UIManager() = default;
     ~UIManager();
 
@@ -65,13 +65,7 @@ public:
     bool wantCaptureKeyboard() const;
     bool wantCaptureMouse() const;
 
-    // File dialog helpers (using ImGui file browser)
-    bool openFileDialog(const std::string& title, const std::string& filters,
-                        std::string& outPath);
-    bool saveFileDialog(const std::string& title, const std::string& filters,
-                        std::string& outPath);
-
-private:
+  private:
     void initializeStyle();
 
     SDL_Window* m_window = nullptr;
@@ -80,4 +74,4 @@ private:
     bool m_initialized = false;
 };
 
-}  // namespace dw
+} // namespace dw

@@ -37,5 +37,5 @@ bool ensureDirectoriesExist();
 // Get application name (used in paths)
 const char* getAppName();
 
-}  // namespace paths
-}  // namespace dw
+} // namespace paths
+} // namespace dw

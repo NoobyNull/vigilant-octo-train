@@ -1,16 +1,16 @@
 #pragma once
 
-#include "../../core/project/project.h"
-#include "panel.h"
-
 #include <functional>
 #include <memory>
+
+#include "../../core/project/project.h"
+#include "panel.h"
 
 namespace dw {
 
 // Project panel for managing current project and its models
 class ProjectPanel : public Panel {
-public:
+  public:
     explicit ProjectPanel(ProjectManager* projectManager);
     ~ProjectPanel() override = default;
 
@@ -34,10 +34,7 @@ public:
         m_saveProjectCallback = std::move(callback);
     }
 
-    // Refresh project data
-    void refresh();
-
-private:
+  private:
     void renderProjectInfo();
     void renderModelList();
     void renderNoProject();
@@ -49,4 +46,4 @@ private:
     SaveProjectCallback m_saveProjectCallback;
 };
 
-}  // namespace dw
+} // namespace dw

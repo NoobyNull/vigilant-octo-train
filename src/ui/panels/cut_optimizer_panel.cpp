@@ -1,15 +1,17 @@
 #include "cut_optimizer_panel.h"
 
-#include "../icons.h"
-
-#include <imgui.h>
-
 #include <algorithm>
 #include <cstring>
 
+#include <imgui.h>
+
+#include "../icons.h"
+
 namespace dw {
 
-CutOptimizerPanel::CutOptimizerPanel() : Panel("Cut Optimizer") {}
+CutOptimizerPanel::CutOptimizerPanel() : Panel("Cut Optimizer") {
+    m_canvas.zoomMax = 5.0f;
+}
 
 void CutOptimizerPanel::render() {
     if (!m_open) {
@@ -52,6 +54,7 @@ void CutOptimizerPanel::clear() {
     m_result = optimizer::CutPlan{};
     m_hasResults = false;
     m_selectedSheet = 0;
+    m_canvas.reset();
 }
 
 void CutOptimizerPanel::renderToolbar() {
@@ -96,7 +99,8 @@ void CutOptimizerPanel::renderPartsEditor() {
 
     ImGui::SetNextItemWidth(60);
     ImGui::InputInt("##qty", &m_newPartQuantity);
-    if (m_newPartQuantity < 1) m_newPartQuantity = 1;
+    if (m_newPartQuantity < 1)
+        m_newPartQuantity = 1;
     ImGui::SameLine();
     ImGui::SetNextItemWidth(100);
     ImGui::InputText("##name", m_newPartName, sizeof(m_newPartName));
@@ -110,7 +114,7 @@ void CutOptimizerPanel::renderPartsEditor() {
         part.id = static_cast<i64>(m_parts.size());
         m_parts.push_back(part);
         m_newPartName[0] = '\0';
-        m_hasResults = false;  // Invalidate results
+        m_hasResults = false; // Invalidate results
     }
 
     ImGui::Separator();
@@ -219,33 +223,32 @@ void CutOptimizerPanel::renderResults() {
 }
 
 void CutOptimizerPanel::renderVisualization() {
-    if (m_result.sheets.empty()) return;
+    if (m_result.sheets.empty())
+        return;
 
     // Canvas for 2D visualization
-    ImVec2 canvasSize = ImGui::GetContentRegionAvail();
-    if (canvasSize.x < 50 || canvasSize.y < 50) return;
-
-    ImVec2 canvasPos = ImGui::GetCursorScreenPos();
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    auto area = m_canvas.begin();
+    if (!area)
+        return;
 
     // Background
-    drawList->AddRectFilled(canvasPos,
-                            ImVec2(canvasPos.x + canvasSize.x, canvasPos.y + canvasSize.y),
-                            IM_COL32(40, 40, 40, 255));
+    area.drawList->AddRectFilled(area.pos,
+                                 ImVec2(area.pos.x + area.size.x, area.pos.y + area.size.y),
+                                 IM_COL32(40, 40, 40, 255));
 
     // Calculate scale to fit sheet
-    float scaleX = (canvasSize.x - 20) / m_sheet.width;
-    float scaleY = (canvasSize.y - 20) / m_sheet.height;
-    float scale = std::min(scaleX, scaleY) * m_zoom;
+    float scaleX = (area.size.x - 20) / m_sheet.width;
+    float scaleY = (area.size.y - 20) / m_sheet.height;
+    float scale = m_canvas.effectiveScale(std::min(scaleX, scaleY));
 
-    float offsetX = canvasPos.x + 10 + m_panX;
-    float offsetY = canvasPos.y + 10 + m_panY;
+    float offsetX = area.pos.x + 10 + m_canvas.panX;
+    float offsetY = area.pos.y + 10 + m_canvas.panY;
 
     // Draw sheet outline
     ImVec2 sheetP1(offsetX, offsetY);
     ImVec2 sheetP2(offsetX + m_sheet.width * scale, offsetY + m_sheet.height * scale);
-    drawList->AddRectFilled(sheetP1, sheetP2, IM_COL32(60, 60, 60, 255));
-    drawList->AddRect(sheetP1, sheetP2, IM_COL32(100, 100, 100, 255), 0.0f, 0, 2.0f);
+    area.drawList->AddRectFilled(sheetP1, sheetP2, IM_COL32(60, 60, 60, 255));
+    area.drawList->AddRect(sheetP1, sheetP2, IM_COL32(100, 100, 100, 255), 0.0f, 0, 2.0f);
 
     // Draw placements for selected sheet
     if (m_selectedSheet < static_cast<int>(m_result.sheets.size())) {
@@ -253,14 +256,14 @@ void CutOptimizerPanel::renderVisualization() {
 
         // Color palette for parts
         ImU32 colors[] = {
-            IM_COL32(66, 133, 244, 200),   // Blue
-            IM_COL32(234, 67, 53, 200),    // Red
-            IM_COL32(251, 188, 5, 200),    // Yellow
-            IM_COL32(52, 168, 83, 200),    // Green
-            IM_COL32(171, 71, 188, 200),   // Purple
-            IM_COL32(255, 112, 67, 200),   // Orange
-            IM_COL32(0, 172, 193, 200),    // Cyan
-            IM_COL32(124, 179, 66, 200),   // Lime
+            IM_COL32(66, 133, 244, 200), // Blue
+            IM_COL32(234, 67, 53, 200),  // Red
+            IM_COL32(251, 188, 5, 200),  // Yellow
+            IM_COL32(52, 168, 83, 200),  // Green
+            IM_COL32(171, 71, 188, 200), // Purple
+            IM_COL32(255, 112, 67, 200), // Orange
+            IM_COL32(0, 172, 193, 200),  // Cyan
+            IM_COL32(124, 179, 66, 200), // Lime
         };
         const int numColors = sizeof(colors) / sizeof(colors[0]);
 
@@ -272,38 +275,21 @@ void CutOptimizerPanel::renderVisualization() {
 
             ImU32 color = colors[placement.partIndex % numColors];
 
-            drawList->AddRectFilled(ImVec2(x, y), ImVec2(x + w, y + h), color);
-            drawList->AddRect(ImVec2(x, y), ImVec2(x + w, y + h),
-                              IM_COL32(255, 255, 255, 128));
+            area.drawList->AddRectFilled(ImVec2(x, y), ImVec2(x + w, y + h), color);
+            area.drawList->AddRect(ImVec2(x, y), ImVec2(x + w, y + h),
+                                   IM_COL32(255, 255, 255, 128));
 
             // Part label
             if (placement.part && w > 30 && h > 15) {
                 const char* name = placement.part->name.c_str();
                 ImVec2 textPos(x + 3, y + 2);
-                drawList->AddText(textPos, IM_COL32(255, 255, 255, 255), name);
+                area.drawList->AddText(textPos, IM_COL32(255, 255, 255, 255), name);
             }
         }
     }
 
     // Handle input for pan/zoom
-    ImGui::SetCursorScreenPos(canvasPos);
-    ImGui::InvisibleButton("canvas", canvasSize);
-    if (ImGui::IsItemHovered()) {
-        auto& io = ImGui::GetIO();
-        if (io.MouseWheel != 0) {
-            m_zoom *= (1.0f + io.MouseWheel * 0.1f);
-            m_zoom = std::max(0.1f, std::min(5.0f, m_zoom));
-        }
-        if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-            m_panX += io.MouseDelta.x;
-            m_panY += io.MouseDelta.y;
-        }
-        if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-            m_zoom = 1.0f;
-            m_panX = 0;
-            m_panY = 0;
-        }
-    }
+    m_canvas.handleInput("cut_canvas");
 }
 
 void CutOptimizerPanel::runOptimization() {
@@ -322,4 +308,4 @@ void CutOptimizerPanel::runOptimization() {
     m_selectedSheet = 0;
 }
 
-}  // namespace dw
+} // namespace dw

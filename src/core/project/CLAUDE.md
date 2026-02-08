@@ -1,10 +1,12 @@
 <claude-mem-context>
 # Recent Activity
 
-### Feb 3, 2026
+### Feb 5, 2026
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
-| #331 | 9:10 PM | 🟣 | Project Management System with Model Association and Dirty Tracking | ~1058 |
-| #329 | 9:09 PM | 🟣 | Project Management System with Lifecycle and Model Association | ~866 |
+| #81 | 7:42 PM | ✅ | Removed 25 Per-Directory CLAUDE.md Placeholder Files | ~489 |
+| #64 | 7:40 PM | 🔵 | Project System with Model Association and Lifecycle Management | ~1029 |
+| #48 | 7:39 PM | 🔵 | Project Domain Model with Manager and Dirty Tracking | ~925 |
+| #42 | " | 🔵 | Project Domain Model with Manager and Modification Tracking | ~693 |
 </claude-mem-context>

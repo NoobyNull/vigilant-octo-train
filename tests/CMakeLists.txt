@@ -31,6 +31,7 @@ set(DW_TEST_SOURCES
     test_import_pipeline.cpp
     test_config_watcher.cpp
     test_app_paths.cpp
+    test_cost_repository.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
     # Stubs for GL-dependent classes
@@ -58,6 +59,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/database/schema.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/model_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/project_repository.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/database/cost_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/project/project.cpp
     ${CMAKE_SOURCE_DIR}/src/core/export/model_exporter.cpp
     ${CMAKE_SOURCE_DIR}/src/core/archive/archive.cpp

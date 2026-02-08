@@ -1,16 +1,16 @@
 #include "thumbnail_generator.h"
 
-#include "camera.h"
-#include "framebuffer.h"
-#include "renderer.h"
-#include "../core/utils/file_utils.h"
-#include "../core/utils/log.h"
-
-#include <glad/gl.h>
-
 #include <algorithm>
 #include <cstring>
 #include <fstream>
+
+#include <glad/gl.h>
+
+#include "../core/utils/file_utils.h"
+#include "../core/utils/log.h"
+#include "camera.h"
+#include "framebuffer.h"
+#include "renderer.h"
 
 namespace dw {
 
@@ -25,23 +25,23 @@ bool writeTGA(const Path& path, const ByteBuffer& pixels, int width, int height)
 
     // TGA header (18 bytes)
     uint8_t header[18] = {0};
-    header[2] = 2;  // Uncompressed RGB
+    header[2] = 2; // Uncompressed RGB
     header[12] = static_cast<uint8_t>(width & 0xFF);
     header[13] = static_cast<uint8_t>((width >> 8) & 0xFF);
     header[14] = static_cast<uint8_t>(height & 0xFF);
     header[15] = static_cast<uint8_t>((height >> 8) & 0xFF);
-    header[16] = 32;  // 32 bits per pixel (BGRA)
-    header[17] = 0x20;  // Top-left origin
+    header[16] = 32;   // 32 bits per pixel (BGRA)
+    header[17] = 0x20; // Top-left origin
 
     file.write(reinterpret_cast<const char*>(header), 18);
 
     // Convert RGBA to BGRA and write
     std::vector<uint8_t> bgra(pixels.size());
     for (size_t i = 0; i < pixels.size(); i += 4) {
-        bgra[i + 0] = pixels[i + 2];  // B
-        bgra[i + 1] = pixels[i + 1];  // G
-        bgra[i + 2] = pixels[i + 0];  // R
-        bgra[i + 3] = pixels[i + 3];  // A
+        bgra[i + 0] = pixels[i + 2]; // B
+        bgra[i + 1] = pixels[i + 1]; // G
+        bgra[i + 2] = pixels[i + 0]; // R
+        bgra[i + 3] = pixels[i + 3]; // A
     }
 
     file.write(reinterpret_cast<const char*>(bgra.data()),
@@ -50,7 +50,7 @@ bool writeTGA(const Path& path, const ByteBuffer& pixels, int width, int height)
     return file.good();
 }
 
-}  // namespace
+} // namespace
 
 ThumbnailGenerator::~ThumbnailGenerator() {
     shutdown();
@@ -70,7 +70,7 @@ void ThumbnailGenerator::shutdown() {
 }
 
 bool ThumbnailGenerator::generate(const Mesh& mesh, const Path& outputPath,
-                                   const ThumbnailSettings& settings) {
+                                  const ThumbnailSettings& settings) {
     auto pixels = generateToBuffer(mesh, settings);
     if (pixels.empty()) {
         return false;
@@ -91,7 +91,7 @@ bool ThumbnailGenerator::generate(const Mesh& mesh, const Path& outputPath,
 }
 
 ByteBuffer ThumbnailGenerator::generateToBuffer(const Mesh& mesh,
-                                                  const ThumbnailSettings& settings) {
+                                                const ThumbnailSettings& settings) {
     if (mesh.vertexCount() == 0) {
         return {};
     }
@@ -141,4 +141,4 @@ ByteBuffer ThumbnailGenerator::generateToBuffer(const Mesh& mesh,
     return pixels;
 }
 
-}  // namespace dw
+} // namespace dw

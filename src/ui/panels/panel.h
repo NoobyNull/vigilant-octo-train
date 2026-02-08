@@ -6,7 +6,7 @@ namespace dw {
 
 // Base class for all UI panels
 class Panel {
-public:
+  public:
     Panel(const std::string& title) : m_title(title) {}
     virtual ~Panel() = default;
 
@@ -20,9 +20,9 @@ public:
 
     const std::string& title() const { return m_title; }
 
-protected:
+  protected:
     std::string m_title;
     bool m_open = true;
 };
 
-}  // namespace dw
+} // namespace dw

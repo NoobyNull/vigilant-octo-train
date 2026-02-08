@@ -1,10 +1,10 @@
 #include "gcode_panel.h"
 
+#include <imgui.h>
+
 #include "../../core/utils/file_utils.h"
 #include "../dialogs/file_dialog.h"
 #include "../icons.h"
-
-#include <imgui.h>
 
 namespace dw {
 
@@ -77,17 +77,18 @@ void GCodePanel::clear() {
     m_filePath.clear();
     m_currentLayer = 0.0f;
     m_maxLayer = 100.0f;
+    m_canvas.reset();
 }
 
 void GCodePanel::renderToolbar() {
     if (ImGui::Button("Open")) {
         if (m_fileDialog) {
             m_fileDialog->showOpen("Open G-code", FileDialog::gcodeFilters(),
-                [this](const std::string& path) {
-                    if (!path.empty()) {
-                        loadFile(path);
-                    }
-                });
+                                   [this](const std::string& path) {
+                                       if (!path.empty()) {
+                                           loadFile(path);
+                                       }
+                                   });
         }
     }
 
@@ -108,7 +109,8 @@ void GCodePanel::renderToolbar() {
 }
 
 void GCodePanel::renderStatistics() {
-    if (!hasGCode()) return;
+    if (!hasGCode())
+        return;
 
     ImGui::Text("%s Statistics", Icons::Info);
     ImGui::Separator();
@@ -174,7 +176,8 @@ void GCodePanel::renderStatistics() {
 }
 
 void GCodePanel::renderPathView() {
-    if (!hasGCode()) return;
+    if (!hasGCode())
+        return;
 
     // Layer slider
     renderLayerSlider();
@@ -182,49 +185,52 @@ void GCodePanel::renderPathView() {
     ImGui::Separator();
 
     // Canvas for 2D path rendering
-    ImVec2 canvasSize = ImGui::GetContentRegionAvail();
-    if (canvasSize.x < 50 || canvasSize.y < 50) return;
-
-    ImVec2 canvasPos = ImGui::GetCursorScreenPos();
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    auto area = m_canvas.begin();
+    if (!area)
+        return;
 
     // Background
-    drawList->AddRectFilled(canvasPos,
-                            ImVec2(canvasPos.x + canvasSize.x, canvasPos.y + canvasSize.y),
-                            IM_COL32(30, 30, 30, 255));
+    area.drawList->AddRectFilled(area.pos,
+                                 ImVec2(area.pos.x + area.size.x, area.pos.y + area.size.y),
+                                 IM_COL32(30, 30, 30, 255));
 
     // Calculate scale to fit paths
     const auto& boundsMin = m_program.boundsMin;
     const auto& boundsMax = m_program.boundsMax;
     float modelWidth = boundsMax.x - boundsMin.x;
     float modelHeight = boundsMax.y - boundsMin.y;
-    if (modelWidth < 0.001f) modelWidth = 1.0f;
-    if (modelHeight < 0.001f) modelHeight = 1.0f;
+    if (modelWidth < 0.001f)
+        modelWidth = 1.0f;
+    if (modelHeight < 0.001f)
+        modelHeight = 1.0f;
 
-    float scaleX = (canvasSize.x - 20) / modelWidth;
-    float scaleY = (canvasSize.y - 20) / modelHeight;
-    float scale = std::min(scaleX, scaleY) * m_zoom;
+    float scaleX = (area.size.x - 20) / modelWidth;
+    float scaleY = (area.size.y - 20) / modelHeight;
+    float scale = m_canvas.effectiveScale(std::min(scaleX, scaleY));
 
-    float offsetX = canvasPos.x + canvasSize.x / 2 - (boundsMin.x + modelWidth / 2) * scale + m_panX;
-    float offsetY = canvasPos.y + canvasSize.y / 2 + (boundsMin.y + modelHeight / 2) * scale + m_panY;
+    float offsetX =
+        area.pos.x + area.size.x / 2 - (boundsMin.x + modelWidth / 2) * scale + m_canvas.panX;
+    float offsetY =
+        area.pos.y + area.size.y / 2 + (boundsMin.y + modelHeight / 2) * scale + m_canvas.panY;
 
     // Draw paths
     for (const auto& segment : m_program.path) {
         // Filter by layer
-        if (segment.end.z > m_currentLayer) continue;
+        if (segment.end.z > m_currentLayer)
+            continue;
 
         bool isTravel = segment.isRapid;
-        if (isTravel && !m_showTravel) continue;
-        if (!isTravel && !m_showExtrusion) continue;
+        if (isTravel && !m_showTravel)
+            continue;
+        if (!isTravel && !m_showExtrusion)
+            continue;
 
-        ImVec2 p1(offsetX + segment.start.x * scale,
-                  offsetY - segment.start.y * scale);
-        ImVec2 p2(offsetX + segment.end.x * scale,
-                  offsetY - segment.end.y * scale);
+        ImVec2 p1(offsetX + segment.start.x * scale, offsetY - segment.start.y * scale);
+        ImVec2 p2(offsetX + segment.end.x * scale, offsetY - segment.end.y * scale);
 
         ImU32 color;
         if (isTravel) {
-            color = IM_COL32(100, 100, 100, 128);  // Gray for travel
+            color = IM_COL32(100, 100, 100, 128); // Gray for travel
         } else {
             // Color by height
             float zRange = boundsMax.z - boundsMin.z + 0.001f;
@@ -234,33 +240,15 @@ void GCodePanel::renderPathView() {
             color = IM_COL32(r, 100, b, 255);
         }
 
-        drawList->AddLine(p1, p2, color, isTravel ? 1.0f : 1.5f);
+        area.drawList->AddLine(p1, p2, color, isTravel ? 1.0f : 1.5f);
     }
 
     // Border
-    drawList->AddRect(canvasPos,
-                      ImVec2(canvasPos.x + canvasSize.x, canvasPos.y + canvasSize.y),
-                      IM_COL32(60, 60, 60, 255));
+    area.drawList->AddRect(area.pos, ImVec2(area.pos.x + area.size.x, area.pos.y + area.size.y),
+                           IM_COL32(60, 60, 60, 255));
 
     // Handle input for pan/zoom
-    ImGui::SetCursorScreenPos(canvasPos);
-    ImGui::InvisibleButton("canvas", canvasSize);
-    if (ImGui::IsItemHovered()) {
-        auto& io = ImGui::GetIO();
-        if (io.MouseWheel != 0) {
-            m_zoom *= (1.0f + io.MouseWheel * 0.1f);
-            m_zoom = std::max(0.1f, std::min(10.0f, m_zoom));
-        }
-        if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-            m_panX += io.MouseDelta.x;
-            m_panY += io.MouseDelta.y;
-        }
-        if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-            m_zoom = 1.0f;
-            m_panX = 0;
-            m_panY = 0;
-        }
-    }
+    m_canvas.handleInput("gcode_canvas");
 }
 
 void GCodePanel::renderLayerSlider() {
@@ -270,4 +258,4 @@ void GCodePanel::renderLayerSlider() {
     ImGui::SliderFloat("##Layer", &m_currentLayer, 0.0f, m_maxLayer, "%.2f mm");
 }
 
-}  // namespace dw
+} // namespace dw

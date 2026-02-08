@@ -126,5 +126,5 @@ void main() {
 }
 )";
 
-}  // namespace shaders
-}  // namespace dw
+} // namespace shaders
+} // namespace dw

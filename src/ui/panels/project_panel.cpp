@@ -1,8 +1,8 @@
 #include "project_panel.h"
 
-#include "../icons.h"
-
 #include <imgui.h>
+
+#include "../icons.h"
 
 namespace dw {
 
@@ -26,18 +26,13 @@ void ProjectPanel::render() {
     ImGui::End();
 }
 
-void ProjectPanel::refresh() {
-    // Force UI update on next frame
-}
-
 void ProjectPanel::renderProjectInfo() {
     auto project = m_projectManager->currentProject();
     if (!project) {
         return;
     }
 
-    if (ImGui::CollapsingHeader("Project Info",
-                                 ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ImGui::CollapsingHeader("Project Info", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
 
         // Project name with modified indicator
@@ -82,8 +77,7 @@ void ProjectPanel::renderModelList() {
         return;
     }
 
-    if (ImGui::CollapsingHeader("Project Models",
-                                 ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ImGui::CollapsingHeader("Project Models", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
 
         const auto& modelIds = project->modelIds();
@@ -97,8 +91,7 @@ void ProjectPanel::renderModelList() {
 
                 bool isSelected = (modelId == m_selectedModelId);
                 std::string label =
-                    Icons::Model + std::string(" Model #") +
-                    std::to_string(modelId);
+                    Icons::Model + std::string(" Model #") + std::to_string(modelId);
 
                 if (ImGui::Selectable(label.c_str(), isSelected)) {
                     m_selectedModelId = modelId;
@@ -151,4 +144,4 @@ void ProjectPanel::renderNoProject() {
     ImGui::TextDisabled("No recent projects");
 }
 
-}  // namespace dw
+} // namespace dw

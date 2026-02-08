@@ -1,9 +1,9 @@
 #include "config_watcher.h"
 
+#include <system_error>
+
 #include "../utils/file_utils.h"
 #include "../utils/log.h"
-
-#include <system_error>
 
 namespace dw {
 
@@ -28,15 +28,18 @@ void ConfigWatcher::stop() {
 }
 
 void ConfigWatcher::poll(uint64_t nowMs) {
-    if (!m_watching) return;
+    if (!m_watching)
+        return;
 
     // Throttle by interval
-    if (nowMs - m_lastPollMs < m_intervalMs) return;
+    if (nowMs - m_lastPollMs < m_intervalMs)
+        return;
     m_lastPollMs = nowMs;
 
     std::error_code ec;
     auto ftime = fs::last_write_time(m_path, ec);
-    if (ec) return;
+    if (ec)
+        return;
 
     auto mtime = ftime.time_since_epoch().count();
     if (mtime != m_lastMtime) {
@@ -48,4 +51,4 @@ void ConfigWatcher::poll(uint64_t nowMs) {
     }
 }
 
-}  // namespace dw
+} // namespace dw

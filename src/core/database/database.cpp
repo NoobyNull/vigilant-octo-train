@@ -1,9 +1,10 @@
 #include "database.h"
 
-#include "../utils/log.h"
-
 #include <cstring>
+
 #include <sqlite3.h>
+
+#include "../utils/log.h"
 
 namespace dw {
 
@@ -41,14 +42,12 @@ bool Statement::bindDouble(int index, f64 value) {
 }
 
 bool Statement::bindText(int index, const std::string& value) {
-    return sqlite3_bind_text(m_stmt, index, value.c_str(),
-                             static_cast<int>(value.size()),
+    return sqlite3_bind_text(m_stmt, index, value.c_str(), static_cast<int>(value.size()),
                              SQLITE_TRANSIENT) == SQLITE_OK;
 }
 
 bool Statement::bindBlob(int index, const void* data, int size) {
-    return sqlite3_bind_blob(m_stmt, index, data, size, SQLITE_TRANSIENT) ==
-           SQLITE_OK;
+    return sqlite3_bind_blob(m_stmt, index, data, size, SQLITE_TRANSIENT) == SQLITE_OK;
 }
 
 bool Statement::bindNull(int index) {
@@ -130,10 +129,14 @@ bool Database::open(const Path& path) {
     }
 
     // Enable foreign keys
-    execute("PRAGMA foreign_keys = ON");
+    if (!execute("PRAGMA foreign_keys = ON")) {
+        log::warning("Database", "Failed to enable foreign keys");
+    }
 
     // Use WAL mode for better concurrency
-    execute("PRAGMA journal_mode = WAL");
+    if (!execute("PRAGMA journal_mode = WAL")) {
+        log::warning("Database", "Failed to set WAL mode");
+    }
 
     log::infof("Database", "Opened: %s", path.string().c_str());
     return true;
@@ -162,12 +165,12 @@ bool Database::execute(const std::string& sql) {
 
 Statement Database::prepare(const std::string& sql) {
     sqlite3_stmt* stmt = nullptr;
-    int result = sqlite3_prepare_v2(m_db, sql.c_str(),
-                                    static_cast<int>(sql.size()), &stmt, nullptr);
+    int result =
+        sqlite3_prepare_v2(m_db, sql.c_str(), static_cast<int>(sql.size()), &stmt, nullptr);
 
     if (result != SQLITE_OK) {
-        log::errorf("Database", "Failed to prepare statement: %s\nQuery: %s",
-                    sqlite3_errmsg(m_db), sql.c_str());
+        log::errorf("Database", "Failed to prepare statement: %s\nQuery: %s", sqlite3_errmsg(m_db),
+                    sql.c_str());
         return Statement();
     }
 
@@ -201,12 +204,14 @@ std::string Database::lastError() const {
 // Transaction implementation
 
 Transaction::Transaction(Database& db) : m_db(db) {
-    m_db.beginTransaction();
+    if (!m_db.beginTransaction()) {
+        log::error("Transaction", "Failed to begin transaction");
+    }
 }
 
 Transaction::~Transaction() {
     if (!m_committed) {
-        m_db.rollback();
+        (void)m_db.rollback();
     }
 }
 
@@ -219,9 +224,9 @@ bool Transaction::commit() {
 
 void Transaction::rollback() {
     if (!m_committed) {
-        m_db.rollback();
-        m_committed = true;  // Prevent double rollback in destructor
+        (void)m_db.rollback();
+        m_committed = true; // Prevent double rollback in destructor
     }
 }
 
-}  // namespace dw
+} // namespace dw

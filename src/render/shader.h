@@ -1,16 +1,16 @@
 #pragma once
 
-#include "../core/types.h"
+#include <string>
+#include <unordered_map>
 
 #include <glad/gl.h>
 
-#include <string>
-#include <unordered_map>
+#include "../core/types.h"
 
 namespace dw {
 
 class Shader {
-public:
+  public:
     Shader() = default;
     ~Shader();
 
@@ -20,7 +20,7 @@ public:
     Shader& operator=(Shader&& other) noexcept;
 
     // Create shader from source
-    bool compile(const std::string& vertexSource, const std::string& fragmentSource);
+    [[nodiscard]] bool compile(const std::string& vertexSource, const std::string& fragmentSource);
 
     // Use this shader
     void bind() const;
@@ -38,7 +38,7 @@ public:
     void setVec4(const std::string& name, const Vec4& value);
     void setMat4(const std::string& name, const Mat4& value);
 
-private:
+  private:
     GLint getUniformLocation(const std::string& name);
     GLuint compileShader(GLenum type, const std::string& source);
 
@@ -46,4 +46,4 @@ private:
     mutable std::unordered_map<std::string, GLint> m_uniformCache;
 };
 
-}  // namespace dw
+} // namespace dw

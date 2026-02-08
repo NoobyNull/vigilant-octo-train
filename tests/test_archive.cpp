@@ -26,8 +26,8 @@ protected:
     void createTestFile(const std::string& relativePath, const std::string& content) {
         auto path = m_srcDir + "/" + relativePath;
         auto parent = dw::file::getParent(path);
-        dw::file::createDirectories(parent);
-        dw::file::writeText(path, content);
+        (void)dw::file::createDirectories(parent);
+        ASSERT_TRUE(dw::file::writeText(path, content));
     }
 
     std::filesystem::path m_baseDir;
@@ -82,7 +82,7 @@ TEST_F(ArchiveTest, CreateAndExtract_MultipleFiles) {
 TEST_F(ArchiveTest, CreateAndExtract_BinaryData) {
     // Write binary content
     dw::ByteBuffer bin = {0x00, 0xFF, 0xDE, 0xAD, 0xBE, 0xEF};
-    dw::file::writeBinary(m_srcDir + "/data.bin", bin);
+    ASSERT_TRUE(dw::file::writeBinary(m_srcDir + "/data.bin", bin));
 
     auto createResult = dw::ProjectArchive::create(m_archivePath, m_srcDir);
     ASSERT_TRUE(createResult.success) << createResult.error;
@@ -127,7 +127,7 @@ TEST_F(ArchiveTest, IsValidArchive_True) {
 }
 
 TEST_F(ArchiveTest, IsValidArchive_RandomFile) {
-    dw::file::writeText(m_archivePath, "not an archive");
+    ASSERT_TRUE(dw::file::writeText(m_archivePath, "not an archive"));
     EXPECT_FALSE(dw::ProjectArchive::isValidArchive(m_archivePath));
 }
 
@@ -150,7 +150,7 @@ TEST_F(ArchiveTest, Create_EmptyDir) {
 }
 
 TEST_F(ArchiveTest, Extract_InvalidArchive) {
-    dw::file::writeText(m_archivePath, "garbage data");
+    ASSERT_TRUE(dw::file::writeText(m_archivePath, "garbage data"));
     auto result = dw::ProjectArchive::extract(m_archivePath, m_outDir);
     EXPECT_FALSE(result.success);
 }

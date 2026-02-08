@@ -1,10 +1,11 @@
 #include "renderer.h"
 
+#include <vector>
+
+#include "../core/mesh/hash.h"
 #include "../core/utils/log.h"
 #include "gl_utils.h"
 #include "shader_sources.h"
-
-#include <vector>
 
 namespace dw {
 
@@ -59,6 +60,7 @@ bool Renderer::initialize() {
 }
 
 void Renderer::shutdown() {
+    clearMeshCache();
     m_gridMesh.destroy();
     m_axisMesh.destroy();
     m_initialized = false;
@@ -78,10 +80,12 @@ void Renderer::setCamera(const Camera& camera) {
 }
 
 void Renderer::renderMesh(const Mesh& mesh, const Mat4& modelMatrix) {
-    // Upload mesh if not cached (simple approach - upload every frame)
-    GPUMesh gpuMesh = uploadMesh(mesh);
-    renderMesh(gpuMesh, modelMatrix);
-    gpuMesh.destroy();
+    u64 key = hash::fromHex(hash::computeMesh(mesh));
+    auto it = m_meshCache.find(key);
+    if (it == m_meshCache.end()) {
+        it = m_meshCache.emplace(key, uploadMesh(mesh)).first;
+    }
+    renderMesh(it->second, modelMatrix);
 }
 
 void Renderer::renderMesh(const GPUMesh& gpuMesh, const Mat4& modelMatrix) {
@@ -107,15 +111,14 @@ void Renderer::renderMesh(const GPUMesh& gpuMesh, const Mat4& modelMatrix) {
     m_meshShader.setVec3("uLightDir", m_settings.lightDir);
     m_meshShader.setVec3("uLightColor", m_settings.lightColor);
     m_meshShader.setVec3("uAmbient", m_settings.ambient);
-    m_meshShader.setVec3("uObjectColor",
-                         Vec3{m_settings.objectColor.r, m_settings.objectColor.g,
-                              m_settings.objectColor.b});
+    m_meshShader.setVec3("uObjectColor", Vec3{m_settings.objectColor.r, m_settings.objectColor.g,
+                                              m_settings.objectColor.b});
     m_meshShader.setVec3("uViewPos", m_camera.position());
     m_meshShader.setFloat("uShininess", m_settings.shininess);
 
     glBindVertexArray(gpuMesh.vao);
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(gpuMesh.indexCount),
-                   GL_UNSIGNED_INT, nullptr);
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(gpuMesh.indexCount), GL_UNSIGNED_INT,
+                   nullptr);
     glBindVertexArray(0);
 
     if (m_settings.wireframe) {
@@ -137,8 +140,7 @@ void Renderer::renderGrid(f32 size, f32 spacing) {
     m_gridShader.setFloat("uFadeEnd", size);
 
     glBindVertexArray(m_gridMesh.vao);
-    glDrawElements(GL_LINES, static_cast<GLsizei>(m_gridMesh.indexCount),
-                   GL_UNSIGNED_INT, nullptr);
+    glDrawElements(GL_LINES, static_cast<GLsizei>(m_gridMesh.indexCount), GL_UNSIGNED_INT, nullptr);
     glBindVertexArray(0);
 
     glEnable(GL_CULL_FACE);
@@ -179,44 +181,51 @@ GPUMesh Renderer::uploadMesh(const Mesh& mesh) {
         return gpuMesh;
     }
 
-    glGenVertexArrays(1, &gpuMesh.vao);
-    glGenBuffers(1, &gpuMesh.vbo);
-    glGenBuffers(1, &gpuMesh.ebo);
+    GL_CHECK(glGenVertexArrays(1, &gpuMesh.vao));
+    GL_CHECK(glGenBuffers(1, &gpuMesh.vbo));
+    GL_CHECK(glGenBuffers(1, &gpuMesh.ebo));
 
-    glBindVertexArray(gpuMesh.vao);
+    GL_CHECK(glBindVertexArray(gpuMesh.vao));
 
     // Upload vertices
-    glBindBuffer(GL_ARRAY_BUFFER, gpuMesh.vbo);
-    glBufferData(GL_ARRAY_BUFFER,
-                 static_cast<GLsizeiptr>(mesh.vertices().size() * sizeof(Vertex)),
-                 mesh.vertices().data(), GL_STATIC_DRAW);
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, gpuMesh.vbo));
+    GL_CHECK(glBufferData(GL_ARRAY_BUFFER,
+                          static_cast<GLsizeiptr>(mesh.vertices().size() * sizeof(Vertex)),
+                          mesh.vertices().data(), GL_STATIC_DRAW));
 
     // Upload indices
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpuMesh.ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 static_cast<GLsizeiptr>(mesh.indices().size() * sizeof(u32)),
-                 mesh.indices().data(), GL_STATIC_DRAW);
+    GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpuMesh.ebo));
+    GL_CHECK(glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                          static_cast<GLsizeiptr>(mesh.indices().size() * sizeof(u32)),
+                          mesh.indices().data(), GL_STATIC_DRAW));
 
     // Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                          reinterpret_cast<void*>(offsetof(Vertex, position)));
-    glEnableVertexAttribArray(0);
+    GL_CHECK(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                                   reinterpret_cast<void*>(offsetof(Vertex, position))));
+    GL_CHECK(glEnableVertexAttribArray(0));
 
     // Normal attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                          reinterpret_cast<void*>(offsetof(Vertex, normal)));
-    glEnableVertexAttribArray(1);
+    GL_CHECK(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                                   reinterpret_cast<void*>(offsetof(Vertex, normal))));
+    GL_CHECK(glEnableVertexAttribArray(1));
 
     // Texture coordinate attribute
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                          reinterpret_cast<void*>(offsetof(Vertex, texCoord)));
-    glEnableVertexAttribArray(2);
+    GL_CHECK(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                                   reinterpret_cast<void*>(offsetof(Vertex, texCoord))));
+    GL_CHECK(glEnableVertexAttribArray(2));
 
-    glBindVertexArray(0);
+    GL_CHECK(glBindVertexArray(0));
 
     gpuMesh.indexCount = mesh.indexCount();
 
     return gpuMesh;
+}
+
+void Renderer::clearMeshCache() {
+    for (auto& [key, gpu] : m_meshCache) {
+        gpu.destroy();
+    }
+    m_meshCache.clear();
 }
 
 bool Renderer::createShaders() {
@@ -272,9 +281,8 @@ void Renderer::createGridMesh(f32 size, f32 spacing) {
                  vertices.data(), GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_gridMesh.ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 static_cast<GLsizeiptr>(indices.size() * sizeof(u32)), indices.data(),
-                 GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(indices.size() * sizeof(u32)),
+                 indices.data(), GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(f32), nullptr);
     glEnableVertexAttribArray(0);
@@ -287,14 +295,26 @@ void Renderer::createGridMesh(f32 size, f32 spacing) {
 void Renderer::createAxisMesh(f32 length) {
     f32 vertices[] = {
         // X axis
-        0.0f, 0.0f, 0.0f,
-        length, 0.0f, 0.0f,
+        0.0f,
+        0.0f,
+        0.0f,
+        length,
+        0.0f,
+        0.0f,
         // Y axis
-        0.0f, 0.0f, 0.0f,
-        0.0f, length, 0.0f,
+        0.0f,
+        0.0f,
+        0.0f,
+        0.0f,
+        length,
+        0.0f,
         // Z axis
-        0.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, length,
+        0.0f,
+        0.0f,
+        0.0f,
+        0.0f,
+        0.0f,
+        length,
     };
 
     glGenVertexArrays(1, &m_axisMesh.vao);
@@ -313,4 +333,4 @@ void Renderer::createAxisMesh(f32 length) {
     m_axisMesh.indexCount = 6;
 }
 
-}  // namespace dw
+} // namespace dw

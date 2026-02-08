@@ -8,13 +8,12 @@ namespace optimizer {
 // Guillotine algorithm - restricts cuts to guillotine patterns
 // (straight through cuts), which is more practical for CNC cutting
 class GuillotineOptimizer : public CutOptimizer {
-public:
+  public:
     GuillotineOptimizer() = default;
 
-    CutPlan optimize(const std::vector<Part>& parts,
-                     const std::vector<Sheet>& sheets) override;
+    CutPlan optimize(const std::vector<Part>& parts, const std::vector<Sheet>& sheets) override;
 
-private:
+  private:
     struct Node {
         f32 x, y, width, height;
         bool used = false;
@@ -23,9 +22,9 @@ private:
     };
 
     Node* insert(Node* node, f32 width, f32 height);
-    void collectPlacements(Node* node, std::vector<Placement>& placements,
-                           const Part* part, int partIndex, int instanceIndex);
+    void collectPlacements(Node* node, std::vector<Placement>& placements, const Part* part,
+                           int partIndex, int instanceIndex);
 };
 
-}  // namespace optimizer
-}  // namespace dw
+} // namespace optimizer
+} // namespace dw

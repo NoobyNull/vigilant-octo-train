@@ -1,15 +1,15 @@
 #pragma once
 
+#include <string>
+
 #include "../types.h"
 #include "gcode_types.h"
-
-#include <string>
 
 namespace dw {
 namespace gcode {
 
 class Parser {
-public:
+  public:
     Parser() = default;
 
     // Parse G-code from string
@@ -21,7 +21,7 @@ public:
     // Get last error message
     const std::string& lastError() const { return m_lastError; }
 
-private:
+  private:
     Command parseLine(const std::string& line, int lineNumber);
     CommandType parseCommandType(char letter, int number);
     f32 parseParameter(const std::string& line, char param);
@@ -29,5 +29,5 @@ private:
     std::string m_lastError;
 };
 
-}  // namespace gcode
-}  // namespace dw
+} // namespace gcode
+} // namespace dw

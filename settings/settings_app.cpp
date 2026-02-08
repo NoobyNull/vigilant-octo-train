@@ -1,9 +1,5 @@
 #include "settings_app.h"
 
-#include "../src/core/paths/app_paths.h"
-#include "../src/core/utils/log.h"
-#include "../src/ui/theme.h"
-
 #include <cstdio>
 #include <cstdlib>
 
@@ -12,6 +8,10 @@
 #include <imgui.h>
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_sdl2.h>
+
+#include "../src/core/paths/app_paths.h"
+#include "../src/core/utils/log.h"
+#include "../src/ui/theme.h"
 
 namespace dw {
 
@@ -22,7 +22,8 @@ SettingsApp::~SettingsApp() {
 }
 
 bool SettingsApp::init() {
-    if (m_initialized) return true;
+    if (m_initialized)
+        return true;
 
     paths::ensureDirectoriesExist();
 
@@ -36,6 +37,9 @@ bool SettingsApp::init() {
     m_showGrid = cfg.getShowGrid();
     m_showAxis = cfg.getShowAxis();
     m_logLevel = cfg.getLogLevel();
+    m_showStartPage = cfg.getShowStartPage();
+    m_autoOrient = cfg.getAutoOrient();
+    m_navStyle = cfg.getNavStyleIndex();
     m_lightDir = cfg.getRenderLightDir();
     m_lightColor = cfg.getRenderLightColor();
     m_ambient = cfg.getRenderAmbient();
@@ -46,6 +50,10 @@ bool SettingsApp::init() {
     m_objectColor[2] = objColor.b;
 
     m_shininess = cfg.getRenderShininess();
+
+    for (int i = 0; i < static_cast<int>(BindAction::COUNT); ++i) {
+        m_bindings[static_cast<size_t>(i)] = cfg.getBinding(static_cast<BindAction>(i));
+    }
 
     // Initialize SDL2
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -59,10 +67,9 @@ bool SettingsApp::init() {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-    m_window = SDL_CreateWindow("Digital Workshop - Settings",
-        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        WINDOW_WIDTH, WINDOW_HEIGHT,
-        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+    m_window = SDL_CreateWindow(
+        "Digital Workshop - Settings", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH,
+        WINDOW_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 
     if (!m_window) {
         std::fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
@@ -98,7 +105,8 @@ bool SettingsApp::init() {
 }
 
 int SettingsApp::run() {
-    if (!m_initialized) return 1;
+    if (!m_initialized)
+        return 1;
 
     m_running = true;
     while (m_running) {
@@ -122,8 +130,7 @@ void SettingsApp::processEvents() {
         if (event.type == SDL_QUIT) {
             m_running = false;
         }
-        if (event.type == SDL_WINDOWEVENT &&
-            event.window.event == SDL_WINDOWEVENT_CLOSE) {
+        if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE) {
             m_running = false;
         }
     }
@@ -157,6 +164,10 @@ void SettingsApp::render() {
             }
             if (ImGui::BeginTabItem("Rendering")) {
                 renderRenderingTab();
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("Bindings")) {
+                renderBindingsTab();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Paths")) {
@@ -206,10 +217,42 @@ void SettingsApp::render() {
 void SettingsApp::renderGeneralTab() {
     ImGui::Spacing();
 
+    ImGui::Text("Startup");
+    ImGui::Indent();
+    if (ImGui::Checkbox("Show Start Page at launch", &m_showStartPage))
+        m_dirty = true;
+    ImGui::Unindent();
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
     ImGui::Text("Viewport");
     ImGui::Indent();
-    if (ImGui::Checkbox("Show Grid", &m_showGrid)) m_dirty = true;
-    if (ImGui::Checkbox("Show Axis", &m_showAxis)) m_dirty = true;
+    if (ImGui::Checkbox("Show Grid", &m_showGrid))
+        m_dirty = true;
+    if (ImGui::Checkbox("Show Axis", &m_showAxis))
+        m_dirty = true;
+    if (ImGui::Checkbox("Auto-orient models", &m_autoOrient))
+        m_dirty = true;
+
+    ImGui::Spacing();
+    const char* navStyles[] = {"Default", "CAD (SolidWorks)", "Maya"};
+    if (ImGui::Combo("Navigation", &m_navStyle, navStyles, 3))
+        m_dirty = true;
+
+    // Show hint for selected style
+    switch (m_navStyle) {
+    case 0:
+        ImGui::TextDisabled("Left=Orbit, Shift+Left=Pan, Middle=Pan, Right=Zoom");
+        break;
+    case 1:
+        ImGui::TextDisabled("Middle=Orbit, Shift+Middle=Pan, Right=Pan, Scroll=Zoom");
+        break;
+    case 2:
+        ImGui::TextDisabled("Alt+Left=Orbit, Alt+Middle=Pan, Alt+Right=Zoom");
+        break;
+    }
     ImGui::Unindent();
 
     ImGui::Spacing();
@@ -219,7 +262,8 @@ void SettingsApp::renderGeneralTab() {
     ImGui::Text("Logging");
     ImGui::Indent();
     const char* logLevels[] = {"Debug", "Info", "Warning", "Error"};
-    if (ImGui::Combo("Log Level", &m_logLevel, logLevels, 4)) m_dirty = true;
+    if (ImGui::Combo("Log Level", &m_logLevel, logLevels, 4))
+        m_dirty = true;
     ImGui::Unindent();
 }
 
@@ -241,7 +285,8 @@ void SettingsApp::renderAppearanceTab() {
 
     ImGui::Text("UI Scale");
     ImGui::Indent();
-    if (ImGui::SliderFloat("##Scale", &m_uiScale, 0.75f, 2.0f, "%.2f")) m_dirty = true;
+    if (ImGui::SliderFloat("##Scale", &m_uiScale, 0.75f, 2.0f, "%.2f"))
+        m_dirty = true;
     if (ImGui::Button("Reset to 100%%")) {
         m_uiScale = 1.0f;
         m_dirty = true;
@@ -258,9 +303,12 @@ void SettingsApp::renderRenderingTab() {
 
     ImGui::Text("Light Direction");
     ImGui::Indent();
-    if (ImGui::SliderFloat("X##LightDir", &m_lightDir.x, -1.0f, 1.0f)) m_dirty = true;
-    if (ImGui::SliderFloat("Y##LightDir", &m_lightDir.y, -1.0f, 1.0f)) m_dirty = true;
-    if (ImGui::SliderFloat("Z##LightDir", &m_lightDir.z, -1.0f, 1.0f)) m_dirty = true;
+    if (ImGui::SliderFloat("X##LightDir", &m_lightDir.x, -1.0f, 1.0f))
+        m_dirty = true;
+    if (ImGui::SliderFloat("Y##LightDir", &m_lightDir.y, -1.0f, 1.0f))
+        m_dirty = true;
+    if (ImGui::SliderFloat("Z##LightDir", &m_lightDir.z, -1.0f, 1.0f))
+        m_dirty = true;
     ImGui::Unindent();
 
     ImGui::Spacing();
@@ -291,21 +339,21 @@ void SettingsApp::renderRenderingTab() {
 
     ImGui::Text("Object Color");
     ImGui::Indent();
-    if (ImGui::ColorEdit3("##ObjectColor", m_objectColor)) m_dirty = true;
+    if (ImGui::ColorEdit3("##ObjectColor", m_objectColor))
+        m_dirty = true;
 
     // Color presets
     ImGui::Text("Presets:");
     ImGui::SameLine();
-    struct Preset { const char* name; float r, g, b; };
+    struct Preset {
+        const char* name;
+        float r, g, b;
+    };
     static constexpr Preset presets[] = {
-        {"Steel",   0.6f, 0.6f, 0.65f},
-        {"Copper",  0.72f, 0.45f, 0.20f},
-        {"Gold",    0.83f, 0.69f, 0.22f},
-        {"Blue",    0.4f, 0.6f, 0.8f},
-        {"Red",     0.8f, 0.3f, 0.3f},
-        {"Green",   0.3f, 0.7f, 0.4f},
-        {"White",   0.9f, 0.9f, 0.9f},
-        {"Black",   0.15f, 0.15f, 0.15f},
+        {"Steel", 0.6f, 0.6f, 0.65f},  {"Copper", 0.72f, 0.45f, 0.20f},
+        {"Gold", 0.83f, 0.69f, 0.22f}, {"Blue", 0.4f, 0.6f, 0.8f},
+        {"Red", 0.8f, 0.3f, 0.3f},     {"Green", 0.3f, 0.7f, 0.4f},
+        {"White", 0.9f, 0.9f, 0.9f},   {"Black", 0.15f, 0.15f, 0.15f},
     };
     for (const auto& p : presets) {
         ImVec4 col(p.r, p.g, p.b, 1.0f);
@@ -324,7 +372,8 @@ void SettingsApp::renderRenderingTab() {
 
     ImGui::Text("Shininess");
     ImGui::Indent();
-    if (ImGui::SliderFloat("##Shininess", &m_shininess, 1.0f, 128.0f, "%.0f")) m_dirty = true;
+    if (ImGui::SliderFloat("##Shininess", &m_shininess, 1.0f, 128.0f, "%.0f"))
+        m_dirty = true;
     ImGui::Unindent();
 
     ImGui::Spacing();
@@ -337,7 +386,9 @@ void SettingsApp::renderRenderingTab() {
         m_lightDir = {-0.5f, -1.0f, -0.3f};
         m_lightColor = {1.0f, 1.0f, 1.0f};
         m_ambient = {0.2f, 0.2f, 0.2f};
-        m_objectColor[0] = 0.4f; m_objectColor[1] = 0.6f; m_objectColor[2] = 0.8f;
+        m_objectColor[0] = 0.4f;
+        m_objectColor[1] = 0.6f;
+        m_objectColor[2] = 0.8f;
         m_shininess = 32.0f;
         m_dirty = true;
     }
@@ -399,6 +450,36 @@ void SettingsApp::renderPathsTab() {
     }
 }
 
+void SettingsApp::renderBindingsTab() {
+    ImGui::Spacing();
+
+    ImGui::Text("Input Bindings");
+    ImGui::TextDisabled("Hold the assigned binding and drag in the viewport.");
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    for (int i = 0; i < static_cast<int>(BindAction::COUNT); ++i) {
+        auto action = static_cast<BindAction>(i);
+        if (m_bindingRecorder.renderBindingRow(action, m_bindings[static_cast<size_t>(i)],
+                                               m_bindings)) {
+            m_dirty = true;
+        }
+    }
+
+    if (!m_bindingRecorder.conflictMessage.empty()) {
+        ImGui::Spacing();
+        ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "%s",
+                           m_bindingRecorder.conflictMessage.c_str());
+    }
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    ImGui::TextDisabled("Tip: Use modifier keys (Ctrl, Alt, Shift) with mouse buttons.");
+    ImGui::TextDisabled("Avoid bindings that overlap with your navigation style.");
+}
+
 void SettingsApp::renderAboutTab() {
     ImGui::Spacing();
 
@@ -409,9 +490,8 @@ void SettingsApp::renderAboutTab() {
     ImGui::Separator();
     ImGui::Spacing();
 
-    ImGui::TextWrapped(
-        "Digital Workshop is a 3D model management application "
-        "for CNC and 3D printing workflows.");
+    ImGui::TextWrapped("Digital Workshop is a 3D model management application "
+                       "for CNC and 3D printing workflows.");
 
     ImGui::Spacing();
 
@@ -436,12 +516,19 @@ void SettingsApp::applySettings() {
     cfg.setShowGrid(m_showGrid);
     cfg.setShowAxis(m_showAxis);
     cfg.setLogLevel(m_logLevel);
+    cfg.setShowStartPage(m_showStartPage);
+    cfg.setAutoOrient(m_autoOrient);
+    cfg.setNavStyleIndex(m_navStyle);
 
     cfg.setRenderLightDir(m_lightDir);
     cfg.setRenderLightColor(m_lightColor);
     cfg.setRenderAmbient(m_ambient);
     cfg.setRenderObjectColor(Color{m_objectColor[0], m_objectColor[1], m_objectColor[2], 1.0f});
     cfg.setRenderShininess(m_shininess);
+
+    for (int i = 0; i < static_cast<int>(BindAction::COUNT); ++i) {
+        cfg.setBinding(static_cast<BindAction>(i), m_bindings[static_cast<size_t>(i)]);
+    }
 
     cfg.save();
     m_dirty = false;
@@ -451,14 +538,21 @@ void SettingsApp::applySettings() {
 
 void SettingsApp::applyThemePreview() {
     switch (m_themeIndex) {
-        case 1:  Theme::applyLight(); break;
-        case 2:  Theme::applyHighContrast(); break;
-        default: Theme::applyDark(); break;
+    case 1:
+        Theme::applyLight();
+        break;
+    case 2:
+        Theme::applyHighContrast();
+        break;
+    default:
+        Theme::applyDark();
+        break;
     }
 }
 
 void SettingsApp::shutdown() {
-    if (!m_initialized) return;
+    if (!m_initialized)
+        return;
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
@@ -477,4 +571,4 @@ void SettingsApp::shutdown() {
     m_initialized = false;
 }
 
-}  // namespace dw
+} // namespace dw

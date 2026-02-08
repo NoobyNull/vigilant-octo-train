@@ -1,12 +1,12 @@
 #include "stl_loader.h"
 
-#include "../utils/file_utils.h"
-#include "../utils/log.h"
-#include "../utils/string_utils.h"
-
 #include <cstring>
 #include <sstream>
 #include <unordered_map>
+
+#include "../utils/file_utils.h"
+#include "../utils/log.h"
+#include "../utils/string_utils.h"
 
 namespace dw {
 
@@ -49,7 +49,7 @@ std::vector<std::string> STLLoader::extensions() const {
 
 bool STLLoader::isBinary(const ByteBuffer& data) {
     if (data.size() < 84) {
-        return false;  // Too small for binary STL
+        return false; // Too small for binary STL
     }
 
     // Check if it starts with "solid" (ASCII) but also has binary header
@@ -86,6 +86,11 @@ LoadResult STLLoader::loadBinary(const ByteBuffer& data) {
     u32 triangleCount = 0;
     std::memcpy(&triangleCount, ptr, sizeof(triangleCount));
     ptr += 4;
+
+    // Guard against integer overflow: triangleCount * 50 must not wrap
+    if (triangleCount > (SIZE_MAX - 84) / 50) {
+        return LoadResult{nullptr, "Invalid binary STL: triangle count causes overflow"};
+    }
 
     // Validate size
     usize expectedSize = 84 + static_cast<usize>(triangleCount) * 50;
@@ -205,4 +210,4 @@ LoadResult STLLoader::loadAscii(const std::string& content) {
     return LoadResult{mesh, ""};
 }
 
-}  // namespace dw
+} // namespace dw

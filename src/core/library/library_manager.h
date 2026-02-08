@@ -1,15 +1,15 @@
 #pragma once
 
-#include "../database/database.h"
-#include "../database/model_repository.h"
-#include "../mesh/mesh.h"
-#include "../types.h"
-
 #include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
+
+#include "../database/database.h"
+#include "../database/model_repository.h"
+#include "../mesh/mesh.h"
+#include "../types.h"
 
 namespace dw {
 
@@ -26,7 +26,7 @@ struct ImportResult {
 
 // Library manager - handles model library operations
 class LibraryManager {
-public:
+  public:
     explicit LibraryManager(Database& db);
 
     // Import a model file into the library
@@ -74,9 +74,11 @@ public:
     // Set thumbnail generator (optional, owned externally)
     void setThumbnailGenerator(ThumbnailGenerator* generator) { m_thumbnailGen = generator; }
 
-private:
-    std::string computeFileHash(const Path& path);
+    // Generate thumbnail and update DB record
     bool generateThumbnail(i64 modelId, const Mesh& mesh);
+
+  private:
+    std::string computeFileHash(const Path& path);
 
     Database& m_db;
     ModelRepository m_modelRepo;
@@ -84,4 +86,4 @@ private:
     ThumbnailGenerator* m_thumbnailGen = nullptr;
 };
 
-}  // namespace dw
+} // namespace dw

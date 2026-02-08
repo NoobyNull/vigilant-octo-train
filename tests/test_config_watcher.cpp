@@ -16,7 +16,7 @@ protected:
         m_tmpDir = std::filesystem::temp_directory_path() / "dw_test_watcher";
         std::filesystem::create_directories(m_tmpDir);
         m_filePath = m_tmpDir / "config.json";
-        dw::file::writeText(m_filePath, "{}");
+        ASSERT_TRUE(dw::file::writeText(m_filePath, "{}"));
     }
 
     void TearDown() override { std::filesystem::remove_all(m_tmpDir); }
@@ -47,7 +47,7 @@ TEST_F(ConfigWatcherTest, CallbackFiredAfterFileChange) {
 
     // Wait and modify the file
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    dw::file::writeText(m_filePath, "{\"changed\": true}");
+    ASSERT_TRUE(dw::file::writeText(m_filePath, "{\"changed\": true}"));
 
     // Poll after interval
     watcher.poll(200);
@@ -65,7 +65,7 @@ TEST_F(ConfigWatcherTest, StopSuppressesCallback) {
 
     // Modify file and poll — should not fire
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    dw::file::writeText(m_filePath, "{\"changed\": true}");
+    ASSERT_TRUE(dw::file::writeText(m_filePath, "{\"changed\": true}"));
     watcher.poll(300);
 
     EXPECT_EQ(callCount, 0);

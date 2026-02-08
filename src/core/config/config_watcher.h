@@ -1,16 +1,16 @@
 #pragma once
 
-#include "../types.h"
-
 #include <cstdint>
 #include <functional>
+
+#include "../types.h"
 
 namespace dw {
 
 // Watches a file for modification and fires a callback when it changes.
 // Uses mtime polling — call poll() from the main loop.
 class ConfigWatcher {
-public:
+  public:
     using Callback = std::function<void()>;
 
     // Start watching the given file path
@@ -25,7 +25,7 @@ public:
     // Call from main loop. Checks mtime at the configured interval.
     void poll(uint64_t nowMs);
 
-private:
+  private:
     Path m_path;
     Callback m_callback;
     int64_t m_lastMtime = 0;
@@ -34,4 +34,4 @@ private:
     bool m_watching = false;
 };
 
-}  // namespace dw
+} // namespace dw

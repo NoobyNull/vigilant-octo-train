@@ -1,8 +1,8 @@
 #include "message_dialog.h"
 
-#include "../icons.h"
-
 #include <imgui.h>
+
+#include "../icons.h"
 
 namespace dw {
 
@@ -19,27 +19,26 @@ void MessageDialog::render() {
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     ImGui::SetNextWindowSize(ImVec2(400, 0), ImGuiCond_Appearing);
 
-    if (ImGui::BeginPopupModal(m_title.c_str(), &m_open,
-                                ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal(m_title.c_str(), &m_open, ImGuiWindowFlags_AlwaysAutoResize)) {
         // Icon based on type
         const char* icon = Icons::Info;
         ImVec4 iconColor = ImVec4(0.4f, 0.6f, 0.8f, 1.0f);
 
         switch (m_type) {
-            case MessageType::Warning:
-                icon = Icons::Warning;
-                iconColor = ImVec4(0.8f, 0.6f, 0.3f, 1.0f);
-                break;
-            case MessageType::Error:
-                icon = Icons::Error;
-                iconColor = ImVec4(0.8f, 0.3f, 0.3f, 1.0f);
-                break;
-            case MessageType::Question:
-                icon = Icons::Question;
-                iconColor = ImVec4(0.5f, 0.7f, 0.9f, 1.0f);
-                break;
-            default:
-                break;
+        case MessageType::Warning:
+            icon = Icons::Warning;
+            iconColor = ImVec4(0.8f, 0.6f, 0.3f, 1.0f);
+            break;
+        case MessageType::Error:
+            icon = Icons::Error;
+            iconColor = ImVec4(0.8f, 0.3f, 0.3f, 1.0f);
+            break;
+        case MessageType::Question:
+            icon = Icons::Question;
+            iconColor = ImVec4(0.5f, 0.7f, 0.9f, 1.0f);
+            break;
+        default:
+            break;
         }
 
         ImGui::PushStyleColor(ImGuiCol_Text, iconColor);
@@ -59,8 +58,7 @@ void MessageDialog::render() {
 
         if (m_type == MessageType::Question) {
             // Yes/No buttons
-            ImGui::SetCursorPosX((contentWidth - buttonWidth * 2 - spacing) /
-                                 2);
+            ImGui::SetCursorPosX((contentWidth - buttonWidth * 2 - spacing) / 2);
             if (ImGui::Button("Yes", ImVec2(buttonWidth, 0))) {
                 m_open = false;
                 if (m_callback) {
@@ -89,9 +87,8 @@ void MessageDialog::render() {
     }
 }
 
-void MessageDialog::show(const std::string& title, const std::string& message,
-                          MessageType type,
-                          std::function<void(DialogResult)> callback) {
+void MessageDialog::show(const std::string& title, const std::string& message, MessageType type,
+                         std::function<void(DialogResult)> callback) {
     m_title = title;
     m_message = message;
     m_type = type;
@@ -108,13 +105,11 @@ void MessageDialog::info(const std::string& title, const std::string& message) {
     instance().show(title, message, MessageType::Info);
 }
 
-void MessageDialog::warning(const std::string& title,
-                             const std::string& message) {
+void MessageDialog::warning(const std::string& title, const std::string& message) {
     instance().show(title, message, MessageType::Warning);
 }
 
-void MessageDialog::error(const std::string& title,
-                           const std::string& message) {
+void MessageDialog::error(const std::string& title, const std::string& message) {
     instance().show(title, message, MessageType::Error);
 }
 
@@ -133,8 +128,7 @@ void ConfirmDialog::render() {
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     ImGui::SetNextWindowSize(ImVec2(350, 0), ImGuiCond_Appearing);
 
-    if (ImGui::BeginPopupModal(m_title.c_str(), &m_open,
-                                ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal(m_title.c_str(), &m_open, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.7f, 0.9f, 1.0f));
         ImGui::Text("%s", Icons::Question);
         ImGui::PopStyleColor();
@@ -171,11 +165,11 @@ void ConfirmDialog::render() {
 }
 
 void ConfirmDialog::show(const std::string& title, const std::string& message,
-                          std::function<void(bool)> callback) {
+                         std::function<void(bool)> callback) {
     m_title = title;
     m_message = message;
     m_callback = std::move(callback);
     m_open = true;
 }
 
-}  // namespace dw
+} // namespace dw

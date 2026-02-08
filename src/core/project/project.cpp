@@ -1,9 +1,9 @@
 #include "project.h"
 
+#include <algorithm>
+
 #include "../database/database.h"
 #include "../utils/log.h"
-
-#include <algorithm>
 
 namespace dw {
 
@@ -65,8 +65,7 @@ std::shared_ptr<Project> ProjectManager::create(const std::string& name) {
     project->record().id = *id;
     project->record().name = name;
 
-    log::infof("Project", "Created: %s (ID: %lld)", name.c_str(),
-               static_cast<long long>(*id));
+    log::infof("Project", "Created: %s (ID: %lld)", name.c_str(), static_cast<long long>(*id));
 
     return project;
 }
@@ -175,4 +174,4 @@ bool ProjectManager::removeModelFromProject(i64 modelId) {
     return true;
 }
 
-}  // namespace dw
+} // namespace dw

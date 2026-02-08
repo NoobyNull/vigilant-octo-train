@@ -1,11 +1,11 @@
 #pragma once
 
+#include <memory>
+
 #include "../../render/camera.h"
 #include "../../render/framebuffer.h"
 #include "../../render/renderer.h"
 #include "panel.h"
-
-#include <memory>
 
 namespace dw {
 
@@ -15,7 +15,7 @@ using MeshPtr = std::shared_ptr<Mesh>;
 
 // 3D viewport panel
 class ViewportPanel : public Panel {
-public:
+  public:
     ViewportPanel();
     ~ViewportPanel() override = default;
 
@@ -36,10 +36,11 @@ public:
     void resetView();
     void fitToModel();
 
-private:
+  private:
     void handleInput();
     void renderViewport();
     void renderToolbar();
+    void renderViewCube();
 
     Renderer m_renderer;
     Camera m_camera;
@@ -48,15 +49,13 @@ private:
     MeshPtr m_mesh;
     GPUMesh m_gpuMesh;
 
-    // Input state
-    bool m_isDragging = false;
-    bool m_isPanning = false;
-    int m_lastMouseX = 0;
-    int m_lastMouseY = 0;
+    // Light drag state
+    bool m_lightDirDragging = false;
+    bool m_lightIntensityDragging = false;
 
     // Viewport size
     int m_viewportWidth = 1;
     int m_viewportHeight = 1;
 };
 
-}  // namespace dw
+} // namespace dw

@@ -10,14 +10,16 @@ Framebuffer::~Framebuffer() {
 }
 
 Framebuffer::Framebuffer(Framebuffer&& other) noexcept
-    : m_fbo(other.m_fbo),
-      m_colorTexture(other.m_colorTexture),
-      m_depthTexture(other.m_depthTexture),
-      m_width(other.m_width),
-      m_height(other.m_height) {
+    : m_fbo(other.m_fbo)
+    , m_colorTexture(other.m_colorTexture)
+    , m_depthTexture(other.m_depthTexture)
+    , m_width(other.m_width)
+    , m_height(other.m_height) {
     other.m_fbo = 0;
     other.m_colorTexture = 0;
     other.m_depthTexture = 0;
+    other.m_width = 0;
+    other.m_height = 0;
 }
 
 Framebuffer& Framebuffer::operator=(Framebuffer&& other) noexcept {
@@ -31,6 +33,8 @@ Framebuffer& Framebuffer::operator=(Framebuffer&& other) noexcept {
         other.m_fbo = 0;
         other.m_colorTexture = 0;
         other.m_depthTexture = 0;
+        other.m_width = 0;
+        other.m_height = 0;
     }
     return *this;
 }
@@ -50,24 +54,21 @@ bool Framebuffer::create(int width, int height) {
     // Create color texture
     glGenTextures(1, &m_colorTexture);
     glBindTexture(GL_TEXTURE_2D, m_colorTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                 nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                           m_colorTexture, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_colorTexture, 0);
 
     // Create depth texture
     glGenTextures(1, &m_depthTexture);
     glBindTexture(GL_TEXTURE_2D, m_depthTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, width, height, 0,
-                 GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, width, height, 0, GL_DEPTH_COMPONENT,
+                 GL_FLOAT, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
-                           m_depthTexture, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_depthTexture, 0);
 
     // Check completeness
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -126,4 +127,4 @@ ByteBuffer Framebuffer::readPixels() const {
     return buffer;
 }
 
-}  // namespace dw
+} // namespace dw

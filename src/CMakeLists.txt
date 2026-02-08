@@ -22,6 +22,7 @@ set(DW_SOURCES
     # Core config
     core/config/config.cpp
     core/config/config_watcher.cpp
+    core/config/input_binding.cpp
 
     # Database
     core/database/database.cpp
@@ -83,6 +84,9 @@ set(DW_SOURCES
     ui/panels/gcode_panel.cpp
     ui/panels/cut_optimizer_panel.cpp
     ui/panels/start_page.cpp
+
+    # UI Widgets
+    ui/widgets/binding_recorder.cpp
 
     # UI Dialogs
     ui/dialogs/message_dialog.cpp

@@ -34,16 +34,11 @@ auto Window::create(const WindowConfig& config) -> bool {
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
     // Create window
-    auto flags = static_cast<SDL_WindowFlags>(
-        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+    auto flags = static_cast<SDL_WindowFlags>(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE |
+                                              SDL_WINDOW_ALLOW_HIGHDPI);
 
-    m_window = SDL_CreateWindow(
-        config.title,
-        SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED,
-        config.width,
-        config.height,
-        flags);
+    m_window = SDL_CreateWindow(config.title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                                config.width, config.height, flags);
 
     if (m_window == nullptr) {
         std::fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());

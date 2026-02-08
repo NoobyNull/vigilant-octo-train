@@ -1,11 +1,11 @@
 #include "obj_loader.h"
 
+#include <sstream>
+#include <unordered_map>
+
 #include "../utils/file_utils.h"
 #include "../utils/log.h"
 #include "../utils/string_utils.h"
-
-#include <sstream>
-#include <unordered_map>
 
 namespace dw {
 
@@ -28,10 +28,20 @@ LoadResult OBJLoader::loadFromBuffer(const ByteBuffer& data) {
 LoadResult OBJLoader::parseContent(const std::string& content) {
     auto mesh = std::make_shared<Mesh>();
 
+    // Estimate counts from file size to pre-allocate and avoid repeated reallocations.
+    // Typical OBJ: ~50 bytes per vertex line, ~30 bytes per face line.
+    usize estimatedVertices = content.size() / 50;
+    usize estimatedTriangles = content.size() / 30;
+
     // Temporary storage for OBJ data
     std::vector<Vec3> positions;
     std::vector<Vec3> normals;
     std::vector<Vec2> texCoords;
+
+    positions.reserve(estimatedVertices);
+    normals.reserve(estimatedVertices);
+    texCoords.reserve(estimatedVertices);
+    mesh->reserve(static_cast<u32>(estimatedVertices), static_cast<u32>(estimatedTriangles * 3));
 
     // Vertex deduplication
     struct VertexKey {
@@ -120,41 +130,34 @@ LoadResult OBJLoader::parseContent(const std::string& content) {
             while (ls >> vertexStr) {
                 VertexKey key;
 
-                // Parse v/vt/vn format
-                auto parts = str::split(vertexStr, '/');
-
-                if (!parts.empty() && !parts[0].empty()) {
-                    int idx = 0;
-                    if (str::parseInt(parts[0], idx)) {
-                        // OBJ indices are 1-based, negative means from end
-                        if (idx > 0) {
-                            key.pos = idx - 1;
-                        } else if (idx < 0) {
-                            key.pos = static_cast<int>(positions.size()) + idx;
-                        }
+                // Parse v, v/vt, v/vt/vn, or v//vn format
+                // Cannot use str::split because it skips empty tokens (v//vn -> ["v","vn"])
+                std::string components[3];
+                int componentCount = 0;
+                for (char c : vertexStr) {
+                    if (c == '/' && componentCount < 2) {
+                        componentCount++;
+                    } else {
+                        components[componentCount] += c;
                     }
                 }
+                componentCount++; // Convert from index to count
 
-                if (parts.size() > 1 && !parts[1].empty()) {
+                auto parseIndex = [](const std::string& s, int totalCount) -> int {
                     int idx = 0;
-                    if (str::parseInt(parts[1], idx)) {
-                        if (idx > 0) {
-                            key.tex = idx - 1;
-                        } else if (idx < 0) {
-                            key.tex = static_cast<int>(texCoords.size()) + idx;
-                        }
-                    }
+                    if (s.empty() || !str::parseInt(s, idx))
+                        return -1;
+                    return (idx > 0) ? idx - 1 : totalCount + idx;
+                };
+
+                if (componentCount >= 1) {
+                    key.pos = parseIndex(components[0], static_cast<int>(positions.size()));
                 }
-
-                if (parts.size() > 2 && !parts[2].empty()) {
-                    int idx = 0;
-                    if (str::parseInt(parts[2], idx)) {
-                        if (idx > 0) {
-                            key.norm = idx - 1;
-                        } else if (idx < 0) {
-                            key.norm = static_cast<int>(normals.size()) + idx;
-                        }
-                    }
+                if (componentCount >= 2) {
+                    key.tex = parseIndex(components[1], static_cast<int>(texCoords.size()));
+                }
+                if (componentCount >= 3) {
+                    key.norm = parseIndex(components[2], static_cast<int>(normals.size()));
                 }
 
                 faceIndices.push_back(getOrCreateVertex(key));
@@ -193,4 +196,4 @@ std::vector<std::string> OBJLoader::extensions() const {
     return {"obj"};
 }
 
-}  // namespace dw
+} // namespace dw

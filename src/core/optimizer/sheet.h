@@ -1,20 +1,20 @@
 #pragma once
 
-#include "../types.h"
-
 #include <string>
 #include <vector>
+
+#include "../types.h"
 
 namespace dw {
 namespace optimizer {
 
 // A rectangular part to be cut
 struct Part {
-    i64 id = 0;           // Reference to model/source
+    i64 id = 0; // Reference to model/source
     std::string name;
-    f32 width = 0.0f;     // X dimension
-    f32 height = 0.0f;    // Y dimension
-    int quantity = 1;     // How many needed
+    f32 width = 0.0f;  // X dimension
+    f32 height = 0.0f; // Y dimension
+    int quantity = 1;  // How many needed
 
     Part() = default;
     Part(f32 w, f32 h, int qty = 1) : width(w), height(h), quantity(qty) {}
@@ -28,9 +28,9 @@ struct Part {
 struct Sheet {
     f32 width = 0.0f;
     f32 height = 0.0f;
-    f32 cost = 0.0f;      // Optional cost per sheet
-    int quantity = 0;     // Available quantity (0 = unlimited)
-    std::string name;     // e.g., "4x8 Plywood"
+    f32 cost = 0.0f;  // Optional cost per sheet
+    int quantity = 0; // Available quantity (0 = unlimited)
+    std::string name; // e.g., "4x8 Plywood"
 
     Sheet() = default;
     Sheet(f32 w, f32 h) : width(w), height(h) {}
@@ -42,11 +42,11 @@ struct Sheet {
 // Placement of a part on a sheet
 struct Placement {
     const Part* part = nullptr;
-    int partIndex = 0;         // Index in original parts list
-    int instanceIndex = 0;     // Which instance (for quantity > 1)
-    f32 x = 0.0f;              // Position on sheet
+    int partIndex = 0;     // Index in original parts list
+    int instanceIndex = 0; // Which instance (for quantity > 1)
+    f32 x = 0.0f;          // Position on sheet
     f32 y = 0.0f;
-    bool rotated = false;      // 90 degree rotation
+    bool rotated = false; // 90 degree rotation
 
     f32 getWidth() const { return rotated ? part->height : part->width; }
     f32 getHeight() const { return rotated ? part->width : part->height; }
@@ -68,7 +68,7 @@ struct SheetResult {
 // Complete cut plan result
 struct CutPlan {
     std::vector<SheetResult> sheets;
-    std::vector<Part> unplacedParts;  // Parts that couldn't fit
+    std::vector<Part> unplacedParts; // Parts that couldn't fit
 
     f32 totalUsedArea = 0.0f;
     f32 totalWasteArea = 0.0f;
@@ -83,5 +83,5 @@ struct CutPlan {
     bool isComplete() const { return unplacedParts.empty(); }
 };
 
-}  // namespace optimizer
-}  // namespace dw
+} // namespace optimizer
+} // namespace dw

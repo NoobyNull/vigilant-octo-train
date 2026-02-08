@@ -1,6 +1,7 @@
 #include "project_repository.h"
 
 #include "../utils/log.h"
+#include "../utils/string_utils.h"
 
 namespace dw {
 
@@ -16,9 +17,11 @@ std::optional<i64> ProjectRepository::insert(const ProjectRecord& project) {
         return std::nullopt;
     }
 
-    stmt.bindText(1, project.name);
-    stmt.bindText(2, project.description);
-    stmt.bindText(3, project.filePath.string());
+    if (!stmt.bindText(1, project.name) || !stmt.bindText(2, project.description) ||
+        !stmt.bindText(3, project.filePath.string())) {
+        log::error("ProjectRepo", "Failed to bind insert parameters");
+        return std::nullopt;
+    }
 
     if (!stmt.execute()) {
         log::errorf("ProjectRepo", "Failed to insert project: %s", m_db.lastError().c_str());
@@ -34,7 +37,9 @@ std::optional<ProjectRecord> ProjectRepository::findById(i64 id) {
         return std::nullopt;
     }
 
-    stmt.bindInt(1, id);
+    if (!stmt.bindInt(1, id)) {
+        return std::nullopt;
+    }
 
     if (stmt.step()) {
         return rowToProject(stmt);
@@ -58,16 +63,18 @@ std::vector<ProjectRecord> ProjectRepository::findAll() {
     return results;
 }
 
-std::vector<ProjectRecord> ProjectRepository::findByName(const std::string& searchTerm) {
+std::vector<ProjectRecord> ProjectRepository::findByName(std::string_view searchTerm) {
     std::vector<ProjectRecord> results;
 
     auto stmt = m_db.prepare(
-        "SELECT * FROM projects WHERE name LIKE ? ORDER BY modified_at DESC");
+        "SELECT * FROM projects WHERE name LIKE ? ESCAPE '\\' ORDER BY modified_at DESC");
     if (!stmt.isValid()) {
         return results;
     }
 
-    stmt.bindText(1, "%" + searchTerm + "%");
+    if (!stmt.bindText(1, "%" + str::escapeLike(searchTerm) + "%")) {
+        return results;
+    }
 
     while (stmt.step()) {
         results.push_back(rowToProject(stmt));
@@ -90,22 +97,23 @@ bool ProjectRepository::update(const ProjectRecord& project) {
         return false;
     }
 
-    stmt.bindText(1, project.name);
-    stmt.bindText(2, project.description);
-    stmt.bindText(3, project.filePath.string());
-    stmt.bindInt(4, project.id);
+    if (!stmt.bindText(1, project.name) || !stmt.bindText(2, project.description) ||
+        !stmt.bindText(3, project.filePath.string()) || !stmt.bindInt(4, project.id)) {
+        return false;
+    }
 
     return stmt.execute();
 }
 
 bool ProjectRepository::updateModifiedTime(i64 id) {
-    auto stmt =
-        m_db.prepare("UPDATE projects SET modified_at = CURRENT_TIMESTAMP WHERE id = ?");
+    auto stmt = m_db.prepare("UPDATE projects SET modified_at = CURRENT_TIMESTAMP WHERE id = ?");
     if (!stmt.isValid()) {
         return false;
     }
 
-    stmt.bindInt(1, id);
+    if (!stmt.bindInt(1, id)) {
+        return false;
+    }
     return stmt.execute();
 }
 
@@ -115,7 +123,9 @@ bool ProjectRepository::remove(i64 id) {
         return false;
     }
 
-    stmt.bindInt(1, id);
+    if (!stmt.bindInt(1, id)) {
+        return false;
+    }
     return stmt.execute();
 }
 
@@ -129,9 +139,9 @@ bool ProjectRepository::addModel(i64 projectId, i64 modelId, int sortOrder) {
         return false;
     }
 
-    stmt.bindInt(1, projectId);
-    stmt.bindInt(2, modelId);
-    stmt.bindInt(3, sortOrder);
+    if (!stmt.bindInt(1, projectId) || !stmt.bindInt(2, modelId) || !stmt.bindInt(3, sortOrder)) {
+        return false;
+    }
 
     bool result = stmt.execute();
     if (result) {
@@ -141,14 +151,14 @@ bool ProjectRepository::addModel(i64 projectId, i64 modelId, int sortOrder) {
 }
 
 bool ProjectRepository::removeModel(i64 projectId, i64 modelId) {
-    auto stmt =
-        m_db.prepare("DELETE FROM project_models WHERE project_id = ? AND model_id = ?");
+    auto stmt = m_db.prepare("DELETE FROM project_models WHERE project_id = ? AND model_id = ?");
     if (!stmt.isValid()) {
         return false;
     }
 
-    stmt.bindInt(1, projectId);
-    stmt.bindInt(2, modelId);
+    if (!stmt.bindInt(1, projectId) || !stmt.bindInt(2, modelId)) {
+        return false;
+    }
 
     bool result = stmt.execute();
     if (result) {
@@ -167,9 +177,9 @@ bool ProjectRepository::updateModelOrder(i64 projectId, i64 modelId, int sortOrd
         return false;
     }
 
-    stmt.bindInt(1, sortOrder);
-    stmt.bindInt(2, projectId);
-    stmt.bindInt(3, modelId);
+    if (!stmt.bindInt(1, sortOrder) || !stmt.bindInt(2, projectId) || !stmt.bindInt(3, modelId)) {
+        return false;
+    }
 
     return stmt.execute();
 }
@@ -183,7 +193,9 @@ std::vector<i64> ProjectRepository::getModelIds(i64 projectId) {
         return ids;
     }
 
-    stmt.bindInt(1, projectId);
+    if (!stmt.bindInt(1, projectId)) {
+        return ids;
+    }
 
     while (stmt.step()) {
         ids.push_back(stmt.getInt(0));
@@ -200,7 +212,9 @@ std::vector<i64> ProjectRepository::getProjectsForModel(i64 modelId) {
         return ids;
     }
 
-    stmt.bindInt(1, modelId);
+    if (!stmt.bindInt(1, modelId)) {
+        return ids;
+    }
 
     while (stmt.step()) {
         ids.push_back(stmt.getInt(0));
@@ -210,14 +224,15 @@ std::vector<i64> ProjectRepository::getProjectsForModel(i64 modelId) {
 }
 
 bool ProjectRepository::hasModel(i64 projectId, i64 modelId) {
-    auto stmt = m_db.prepare(
-        "SELECT 1 FROM project_models WHERE project_id = ? AND model_id = ? LIMIT 1");
+    auto stmt =
+        m_db.prepare("SELECT 1 FROM project_models WHERE project_id = ? AND model_id = ? LIMIT 1");
     if (!stmt.isValid()) {
         return false;
     }
 
-    stmt.bindInt(1, projectId);
-    stmt.bindInt(2, modelId);
+    if (!stmt.bindInt(1, projectId) || !stmt.bindInt(2, modelId)) {
+        return false;
+    }
 
     return stmt.step();
 }
@@ -246,4 +261,4 @@ ProjectRecord ProjectRepository::rowToProject(Statement& stmt) {
     return project;
 }
 
-}  // namespace dw
+} // namespace dw

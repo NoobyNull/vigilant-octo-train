@@ -177,4 +177,4 @@ void Theme::applyHighContrast() {
     colors[ImGuiCol_ButtonActive] = ImVec4(0.3f, 0.5f, 0.9f, 1.0f);
 }
 
-}  // namespace dw
+} // namespace dw

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "../types.h"
-
 #include <cmath>
 #include <string>
 #include <variant>
 #include <vector>
+
+#include "../types.h"
 
 namespace dw {
 namespace gcode {
@@ -14,27 +14,27 @@ namespace gcode {
 enum class CommandType {
     Unknown,
     // Motion commands
-    G0,   // Rapid move
-    G1,   // Linear move
-    G2,   // Clockwise arc
-    G3,   // Counter-clockwise arc
+    G0, // Rapid move
+    G1, // Linear move
+    G2, // Clockwise arc
+    G3, // Counter-clockwise arc
     // Unit commands
-    G20,  // Inches
-    G21,  // Millimeters
+    G20, // Inches
+    G21, // Millimeters
     // Positioning
-    G28,  // Home
-    G90,  // Absolute positioning
-    G91,  // Relative positioning
-    G92,  // Set position
+    G28, // Home
+    G90, // Absolute positioning
+    G91, // Relative positioning
+    G92, // Set position
     // M commands
-    M0,   // Program stop
-    M1,   // Optional stop
-    M2,   // Program end
-    M3,   // Spindle on CW
-    M4,   // Spindle on CCW
-    M5,   // Spindle off
-    M6,   // Tool change
-    M30,  // Program end and rewind
+    M0,  // Program stop
+    M1,  // Optional stop
+    M2,  // Program end
+    M3,  // Spindle on CW
+    M4,  // Spindle on CCW
+    M5,  // Spindle off
+    M6,  // Tool change
+    M30, // Program end and rewind
 };
 
 // Units
@@ -46,7 +46,7 @@ enum class PositioningMode { Absolute, Relative };
 // A single G-code command with parameters
 struct Command {
     CommandType type = CommandType::Unknown;
-    std::string raw;  // Original line text
+    std::string raw; // Original line text
 
     // Position parameters (NaN if not specified)
     f32 x = std::numeric_limits<f32>::quiet_NaN();
@@ -54,9 +54,9 @@ struct Command {
     f32 z = std::numeric_limits<f32>::quiet_NaN();
 
     // Arc parameters
-    f32 i = std::numeric_limits<f32>::quiet_NaN();  // Arc center X offset
-    f32 j = std::numeric_limits<f32>::quiet_NaN();  // Arc center Y offset
-    f32 r = std::numeric_limits<f32>::quiet_NaN();  // Arc radius
+    f32 i = std::numeric_limits<f32>::quiet_NaN(); // Arc center X offset
+    f32 j = std::numeric_limits<f32>::quiet_NaN(); // Arc center Y offset
+    f32 r = std::numeric_limits<f32>::quiet_NaN(); // Arc radius
 
     // Feed rate
     f32 f = std::numeric_limits<f32>::quiet_NaN();
@@ -83,8 +83,8 @@ struct Command {
 
     // Check if this is a motion command
     bool isMotion() const {
-        return type == CommandType::G0 || type == CommandType::G1 ||
-               type == CommandType::G2 || type == CommandType::G3;
+        return type == CommandType::G0 || type == CommandType::G1 || type == CommandType::G2 ||
+               type == CommandType::G3;
     }
 };
 
@@ -92,7 +92,7 @@ struct Command {
 struct PathSegment {
     Vec3 start;
     Vec3 end;
-    bool isRapid = false;  // G0 vs G1
+    bool isRapid = false; // G0 vs G1
     f32 feedRate = 0.0f;
     int lineNumber = 0;
 };
@@ -112,10 +112,10 @@ struct Program {
 
 // Statistics about the G-code program
 struct Statistics {
-    f32 totalPathLength = 0.0f;     // Total travel distance
-    f32 cuttingPathLength = 0.0f;   // G1 distance only (excluding rapids)
-    f32 rapidPathLength = 0.0f;     // G0 distance only
-    f32 estimatedTime = 0.0f;       // In minutes
+    f32 totalPathLength = 0.0f;   // Total travel distance
+    f32 cuttingPathLength = 0.0f; // G1 distance only (excluding rapids)
+    f32 rapidPathLength = 0.0f;   // G0 distance only
+    f32 estimatedTime = 0.0f;     // In minutes
     int toolChangeCount = 0;
     int lineCount = 0;
     int commandCount = 0;
@@ -123,5 +123,5 @@ struct Statistics {
     Vec3 boundsMax;
 };
 
-}  // namespace gcode
-}  // namespace dw
+} // namespace gcode
+} // namespace dw

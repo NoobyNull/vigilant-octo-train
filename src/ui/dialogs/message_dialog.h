@@ -1,8 +1,8 @@
 #pragma once
 
-#include "dialog.h"
-
 #include <functional>
+
+#include "dialog.h"
 
 namespace dw {
 
@@ -11,7 +11,7 @@ enum class MessageType { Info, Warning, Error, Question };
 
 // Simple message dialog
 class MessageDialog : public Dialog {
-public:
+  public:
     MessageDialog();
     ~MessageDialog() override = default;
 
@@ -27,7 +27,7 @@ public:
     static void warning(const std::string& title, const std::string& message);
     static void error(const std::string& title, const std::string& message);
 
-private:
+  private:
     std::string m_message;
     MessageType m_type = MessageType::Info;
     std::function<void(DialogResult)> m_callback;
@@ -38,7 +38,7 @@ private:
 
 // Confirmation dialog
 class ConfirmDialog : public Dialog {
-public:
+  public:
     ConfirmDialog();
     ~ConfirmDialog() override = default;
 
@@ -48,9 +48,9 @@ public:
     void show(const std::string& title, const std::string& message,
               std::function<void(bool)> callback);
 
-private:
+  private:
     std::string m_message;
     std::function<void(bool)> m_callback;
 };
 
-}  // namespace dw
+} // namespace dw

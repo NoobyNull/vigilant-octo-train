@@ -83,8 +83,8 @@ namespace {
 class ImportQueueTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        m_db.open(":memory:");
-        dw::Schema::initialize(m_db);
+        ASSERT_TRUE(m_db.open(":memory:"));
+        ASSERT_TRUE(dw::Schema::initialize(m_db));
         m_tmpDir = std::filesystem::temp_directory_path() / "dw_test_import";
         std::filesystem::create_directories(m_tmpDir);
     }
@@ -98,7 +98,7 @@ protected:
         std::memcpy(buf.data() + 80, &triCount, sizeof(triCount));
         float tri[12] = {0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0};
         std::memcpy(buf.data() + 84, tri, sizeof(tri));
-        dw::file::writeBinary(path, buf);
+        EXPECT_TRUE(dw::file::writeBinary(path, buf));
         return path;
     }
 

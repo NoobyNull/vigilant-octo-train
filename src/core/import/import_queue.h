@@ -1,18 +1,18 @@
 #pragma once
 
-#include "import_task.h"
-#include "../database/database.h"
-#include "../database/model_repository.h"
-
 #include <functional>
 #include <mutex>
 #include <thread>
 #include <vector>
 
+#include "../database/database.h"
+#include "../database/model_repository.h"
+#include "import_task.h"
+
 namespace dw {
 
 class ImportQueue {
-public:
+  public:
     explicit ImportQueue(Database& db);
     ~ImportQueue();
 
@@ -40,7 +40,7 @@ public:
     using ImportCallback = std::function<void(const ImportTask& task)>;
     void setOnComplete(ImportCallback callback);
 
-private:
+  private:
     void workerLoop();
     void processTask(ImportTask& task);
 
@@ -55,10 +55,10 @@ private:
 
     // Task queues (protected by m_mutex)
     std::vector<ImportTask> m_pending;
-    std::vector<ImportTask> m_completed;  // Ready for main-thread thumbnail
+    std::vector<ImportTask> m_completed; // Ready for main-thread thumbnail
 
     ImportProgress m_progress;
     ImportCallback m_onComplete;
 };
 
-}  // namespace dw
+} // namespace dw

@@ -25,8 +25,8 @@ bool Schema::initialize(Database& db) {
 }
 
 bool Schema::isInitialized(Database& db) {
-    auto stmt = db.prepare(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='schema_version'");
+    auto stmt =
+        db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='schema_version'");
     return stmt.step();
 }
 
@@ -39,9 +39,13 @@ int Schema::getVersion(Database& db) {
 }
 
 bool Schema::setVersion(Database& db, int version) {
-    db.execute("DELETE FROM schema_version");
+    if (!db.execute("DELETE FROM schema_version")) {
+        return false;
+    }
     auto stmt = db.prepare("INSERT INTO schema_version (version) VALUES (?)");
-    stmt.bindInt(1, version);
+    if (!stmt.bindInt(1, version)) {
+        return false;
+    }
     return stmt.execute();
 }
 
@@ -111,19 +115,42 @@ bool Schema::createTables(Database& db) {
         return false;
     }
 
-    // Create indexes for common queries
-    db.execute("CREATE INDEX IF NOT EXISTS idx_models_hash ON models(hash)");
-    db.execute("CREATE INDEX IF NOT EXISTS idx_models_name ON models(name)");
-    db.execute("CREATE INDEX IF NOT EXISTS idx_models_format ON models(file_format)");
-    db.execute(
-        "CREATE INDEX IF NOT EXISTS idx_project_models_project ON "
-        "project_models(project_id)");
-    db.execute(
-        "CREATE INDEX IF NOT EXISTS idx_project_models_model ON "
-        "project_models(model_id)");
+    // Cost estimates table
+    if (!db.execute(R"(
+        CREATE TABLE IF NOT EXISTS cost_estimates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            project_id INTEGER,
+            items TEXT DEFAULT '[]',
+            subtotal REAL DEFAULT 0,
+            tax_rate REAL DEFAULT 0,
+            tax_amount REAL DEFAULT 0,
+            discount_rate REAL DEFAULT 0,
+            discount_amount REAL DEFAULT 0,
+            total REAL DEFAULT 0,
+            notes TEXT DEFAULT '',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            modified_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+        )
+    )")) {
+        return false;
+    }
+
+    // Create indexes for common queries (best-effort)
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_models_hash ON models(hash)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_models_name ON models(name)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_models_format ON models(file_format)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_project_models_project ON "
+                     "project_models(project_id)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_project_models_model ON "
+                     "project_models(model_id)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_cost_estimates_project ON "
+                     "cost_estimates(project_id)");
 
     // Set schema version
     if (!setVersion(db, CURRENT_VERSION)) {
+        txn.rollback();
         return false;
     }
 
@@ -136,4 +163,4 @@ bool Schema::createTables(Database& db) {
     return true;
 }
 
-}  // namespace dw
+} // namespace dw

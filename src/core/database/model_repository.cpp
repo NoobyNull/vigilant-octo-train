@@ -1,8 +1,9 @@
 #include "model_repository.h"
 
-#include "../utils/log.h"
-
 #include <sstream>
+
+#include "../utils/log.h"
+#include "../utils/string_utils.h"
 
 namespace dw {
 
@@ -23,21 +24,22 @@ std::optional<i64> ModelRepository::insert(const ModelRecord& model) {
         return std::nullopt;
     }
 
-    stmt.bindText(1, model.hash);
-    stmt.bindText(2, model.name);
-    stmt.bindText(3, model.filePath.string());
-    stmt.bindText(4, model.fileFormat);
-    stmt.bindInt(5, static_cast<i64>(model.fileSize));
-    stmt.bindInt(6, static_cast<i64>(model.vertexCount));
-    stmt.bindInt(7, static_cast<i64>(model.triangleCount));
-    stmt.bindDouble(8, static_cast<f64>(model.boundsMin.x));
-    stmt.bindDouble(9, static_cast<f64>(model.boundsMin.y));
-    stmt.bindDouble(10, static_cast<f64>(model.boundsMin.z));
-    stmt.bindDouble(11, static_cast<f64>(model.boundsMax.x));
-    stmt.bindDouble(12, static_cast<f64>(model.boundsMax.y));
-    stmt.bindDouble(13, static_cast<f64>(model.boundsMax.z));
-    stmt.bindText(14, model.thumbnailPath.string());
-    stmt.bindText(15, tagsToJson(model.tags));
+    if (!stmt.bindText(1, model.hash) || !stmt.bindText(2, model.name) ||
+        !stmt.bindText(3, model.filePath.string()) || !stmt.bindText(4, model.fileFormat) ||
+        !stmt.bindInt(5, static_cast<i64>(model.fileSize)) ||
+        !stmt.bindInt(6, static_cast<i64>(model.vertexCount)) ||
+        !stmt.bindInt(7, static_cast<i64>(model.triangleCount)) ||
+        !stmt.bindDouble(8, static_cast<f64>(model.boundsMin.x)) ||
+        !stmt.bindDouble(9, static_cast<f64>(model.boundsMin.y)) ||
+        !stmt.bindDouble(10, static_cast<f64>(model.boundsMin.z)) ||
+        !stmt.bindDouble(11, static_cast<f64>(model.boundsMax.x)) ||
+        !stmt.bindDouble(12, static_cast<f64>(model.boundsMax.y)) ||
+        !stmt.bindDouble(13, static_cast<f64>(model.boundsMax.z)) ||
+        !stmt.bindText(14, model.thumbnailPath.string()) ||
+        !stmt.bindText(15, tagsToJson(model.tags))) {
+        log::error("ModelRepo", "Failed to bind insert parameters");
+        return std::nullopt;
+    }
 
     if (!stmt.execute()) {
         log::errorf("ModelRepo", "Failed to insert model: %s", m_db.lastError().c_str());
@@ -53,7 +55,9 @@ std::optional<ModelRecord> ModelRepository::findById(i64 id) {
         return std::nullopt;
     }
 
-    stmt.bindInt(1, id);
+    if (!stmt.bindInt(1, id)) {
+        return std::nullopt;
+    }
 
     if (stmt.step()) {
         return rowToModel(stmt);
@@ -62,13 +66,15 @@ std::optional<ModelRecord> ModelRepository::findById(i64 id) {
     return std::nullopt;
 }
 
-std::optional<ModelRecord> ModelRepository::findByHash(const std::string& hash) {
+std::optional<ModelRecord> ModelRepository::findByHash(std::string_view hash) {
     auto stmt = m_db.prepare("SELECT * FROM models WHERE hash = ?");
     if (!stmt.isValid()) {
         return std::nullopt;
     }
 
-    stmt.bindText(1, hash);
+    if (!stmt.bindText(1, std::string(hash))) {
+        return std::nullopt;
+    }
 
     if (stmt.step()) {
         return rowToModel(stmt);
@@ -92,16 +98,18 @@ std::vector<ModelRecord> ModelRepository::findAll() {
     return results;
 }
 
-std::vector<ModelRecord> ModelRepository::findByName(const std::string& searchTerm) {
+std::vector<ModelRecord> ModelRepository::findByName(std::string_view searchTerm) {
     std::vector<ModelRecord> results;
 
     auto stmt = m_db.prepare(
-        "SELECT * FROM models WHERE name LIKE ? ORDER BY imported_at DESC");
+        "SELECT * FROM models WHERE name LIKE ? ESCAPE '\\' ORDER BY imported_at DESC");
     if (!stmt.isValid()) {
         return results;
     }
 
-    stmt.bindText(1, "%" + searchTerm + "%");
+    if (!stmt.bindText(1, "%" + str::escapeLike(searchTerm) + "%")) {
+        return results;
+    }
 
     while (stmt.step()) {
         results.push_back(rowToModel(stmt));
@@ -110,16 +118,18 @@ std::vector<ModelRecord> ModelRepository::findByName(const std::string& searchTe
     return results;
 }
 
-std::vector<ModelRecord> ModelRepository::findByFormat(const std::string& format) {
+std::vector<ModelRecord> ModelRepository::findByFormat(std::string_view format) {
     std::vector<ModelRecord> results;
 
-    auto stmt = m_db.prepare(
-        "SELECT * FROM models WHERE file_format = ? ORDER BY imported_at DESC");
+    auto stmt =
+        m_db.prepare("SELECT * FROM models WHERE file_format = ? ORDER BY imported_at DESC");
     if (!stmt.isValid()) {
         return results;
     }
 
-    stmt.bindText(1, format);
+    if (!stmt.bindText(1, std::string(format))) {
+        return results;
+    }
 
     while (stmt.step()) {
         results.push_back(rowToModel(stmt));
@@ -128,17 +138,19 @@ std::vector<ModelRecord> ModelRepository::findByFormat(const std::string& format
     return results;
 }
 
-std::vector<ModelRecord> ModelRepository::findByTag(const std::string& tag) {
+std::vector<ModelRecord> ModelRepository::findByTag(std::string_view tag) {
     std::vector<ModelRecord> results;
 
     // Simple JSON search using LIKE (for now)
     auto stmt = m_db.prepare(
-        "SELECT * FROM models WHERE tags LIKE ? ORDER BY imported_at DESC");
+        "SELECT * FROM models WHERE tags LIKE ? ESCAPE '\\' ORDER BY imported_at DESC");
     if (!stmt.isValid()) {
         return results;
     }
 
-    stmt.bindText(1, "%\"" + tag + "\"%");
+    if (!stmt.bindText(1, "%\"" + str::escapeLike(tag) + "\"%")) {
+        return results;
+    }
 
     while (stmt.step()) {
         results.push_back(rowToModel(stmt));
@@ -171,21 +183,20 @@ bool ModelRepository::update(const ModelRecord& model) {
         return false;
     }
 
-    stmt.bindText(1, model.name);
-    stmt.bindText(2, model.filePath.string());
-    stmt.bindText(3, model.fileFormat);
-    stmt.bindInt(4, static_cast<i64>(model.fileSize));
-    stmt.bindInt(5, static_cast<i64>(model.vertexCount));
-    stmt.bindInt(6, static_cast<i64>(model.triangleCount));
-    stmt.bindDouble(7, static_cast<f64>(model.boundsMin.x));
-    stmt.bindDouble(8, static_cast<f64>(model.boundsMin.y));
-    stmt.bindDouble(9, static_cast<f64>(model.boundsMin.z));
-    stmt.bindDouble(10, static_cast<f64>(model.boundsMax.x));
-    stmt.bindDouble(11, static_cast<f64>(model.boundsMax.y));
-    stmt.bindDouble(12, static_cast<f64>(model.boundsMax.z));
-    stmt.bindText(13, model.thumbnailPath.string());
-    stmt.bindText(14, tagsToJson(model.tags));
-    stmt.bindInt(15, model.id);
+    if (!stmt.bindText(1, model.name) || !stmt.bindText(2, model.filePath.string()) ||
+        !stmt.bindText(3, model.fileFormat) || !stmt.bindInt(4, static_cast<i64>(model.fileSize)) ||
+        !stmt.bindInt(5, static_cast<i64>(model.vertexCount)) ||
+        !stmt.bindInt(6, static_cast<i64>(model.triangleCount)) ||
+        !stmt.bindDouble(7, static_cast<f64>(model.boundsMin.x)) ||
+        !stmt.bindDouble(8, static_cast<f64>(model.boundsMin.y)) ||
+        !stmt.bindDouble(9, static_cast<f64>(model.boundsMin.z)) ||
+        !stmt.bindDouble(10, static_cast<f64>(model.boundsMax.x)) ||
+        !stmt.bindDouble(11, static_cast<f64>(model.boundsMax.y)) ||
+        !stmt.bindDouble(12, static_cast<f64>(model.boundsMax.z)) ||
+        !stmt.bindText(13, model.thumbnailPath.string()) ||
+        !stmt.bindText(14, tagsToJson(model.tags)) || !stmt.bindInt(15, model.id)) {
+        return false;
+    }
 
     return stmt.execute();
 }
@@ -196,8 +207,9 @@ bool ModelRepository::updateThumbnail(i64 id, const Path& thumbnailPath) {
         return false;
     }
 
-    stmt.bindText(1, thumbnailPath.string());
-    stmt.bindInt(2, id);
+    if (!stmt.bindText(1, thumbnailPath.string()) || !stmt.bindInt(2, id)) {
+        return false;
+    }
 
     return stmt.execute();
 }
@@ -208,8 +220,9 @@ bool ModelRepository::updateTags(i64 id, const std::vector<std::string>& tags) {
         return false;
     }
 
-    stmt.bindText(1, tagsToJson(tags));
-    stmt.bindInt(2, id);
+    if (!stmt.bindText(1, tagsToJson(tags)) || !stmt.bindInt(2, id)) {
+        return false;
+    }
 
     return stmt.execute();
 }
@@ -220,27 +233,33 @@ bool ModelRepository::remove(i64 id) {
         return false;
     }
 
-    stmt.bindInt(1, id);
+    if (!stmt.bindInt(1, id)) {
+        return false;
+    }
     return stmt.execute();
 }
 
-bool ModelRepository::removeByHash(const std::string& hash) {
+bool ModelRepository::removeByHash(std::string_view hash) {
     auto stmt = m_db.prepare("DELETE FROM models WHERE hash = ?");
     if (!stmt.isValid()) {
         return false;
     }
 
-    stmt.bindText(1, hash);
+    if (!stmt.bindText(1, std::string(hash))) {
+        return false;
+    }
     return stmt.execute();
 }
 
-bool ModelRepository::exists(const std::string& hash) {
+bool ModelRepository::exists(std::string_view hash) {
     auto stmt = m_db.prepare("SELECT 1 FROM models WHERE hash = ? LIMIT 1");
     if (!stmt.isValid()) {
         return false;
     }
 
-    stmt.bindText(1, hash);
+    if (!stmt.bindText(1, std::string(hash))) {
+        return false;
+    }
     return stmt.step();
 }
 
@@ -290,7 +309,7 @@ std::string ModelRepository::tagsToJson(const std::vector<std::string>& tags) {
         if (i > 0) {
             ss << ",";
         }
-        ss << "\"" << tags[i] << "\"";
+        ss << "\"" << str::escapeJsonString(tags[i]) << "\"";
     }
     ss << "]";
     return ss.str();
@@ -299,7 +318,6 @@ std::string ModelRepository::tagsToJson(const std::vector<std::string>& tags) {
 std::vector<std::string> ModelRepository::jsonToTags(const std::string& json) {
     std::vector<std::string> tags;
 
-    // Simple JSON array parsing (assumes well-formed input)
     if (json.size() < 2 || json[0] != '[') {
         return tags;
     }
@@ -312,17 +330,36 @@ std::vector<std::string> ModelRepository::jsonToTags(const std::string& json) {
             break;
         }
 
-        // Find closing quote
-        size_t end = json.find('"', start + 1);
-        if (end == std::string::npos) {
+        // Find closing quote, skipping escaped quotes
+        size_t end = start + 1;
+        while (end < json.size()) {
+            if (json[end] == '"' && json[end - 1] != '\\') {
+                break;
+            }
+            ++end;
+        }
+        if (end >= json.size()) {
             break;
         }
 
-        tags.push_back(json.substr(start + 1, end - start - 1));
+        // Unescape the string
+        std::string tag;
+        for (size_t i = start + 1; i < end; ++i) {
+            if (json[i] == '\\' && i + 1 < end) {
+                char next = json[i + 1];
+                if (next == '"' || next == '\\') {
+                    tag.push_back(next);
+                    ++i;
+                    continue;
+                }
+            }
+            tag.push_back(json[i]);
+        }
+        tags.push_back(std::move(tag));
         pos = end + 1;
     }
 
     return tags;
 }
 
-}  // namespace dw
+} // namespace dw

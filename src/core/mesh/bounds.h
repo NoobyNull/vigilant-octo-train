@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../types.h"
-
 #include <algorithm>
 #include <cmath>
 #include <limits>
+
+#include "../types.h"
 
 namespace dw {
 
@@ -43,32 +43,26 @@ struct AABB {
 
     // Get center point
     Vec3 center() const {
-        return Vec3{(min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f,
-                    (min.z + max.z) * 0.5f};
+        return Vec3{(min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f, (min.z + max.z) * 0.5f};
     }
 
     // Check if valid (min <= max)
-    bool isValid() const {
-        return min.x <= max.x && min.y <= max.y && min.z <= max.z;
-    }
+    bool isValid() const { return min.x <= max.x && min.y <= max.y && min.z <= max.z; }
 
     // Check if contains a point
     bool contains(const Vec3& point) const {
-        return point.x >= min.x && point.x <= max.x && point.y >= min.y &&
-               point.y <= max.y && point.z >= min.z && point.z <= max.z;
+        return point.x >= min.x && point.x <= max.x && point.y >= min.y && point.y <= max.y &&
+               point.z >= min.z && point.z <= max.z;
     }
 
     // Check if intersects another AABB
     bool intersects(const AABB& other) const {
-        return min.x <= other.max.x && max.x >= other.min.x &&
-               min.y <= other.max.y && max.y >= other.min.y &&
-               min.z <= other.max.z && max.z >= other.min.z;
+        return min.x <= other.max.x && max.x >= other.min.x && min.y <= other.max.y &&
+               max.y >= other.min.y && min.z <= other.max.z && max.z >= other.min.z;
     }
 
     // Get longest axis dimension
-    f32 maxExtent() const {
-        return std::max({width(), height(), depth()});
-    }
+    f32 maxExtent() const { return std::max({width(), height(), depth()}); }
 
     // Get diagonal length
     f32 diagonal() const {
@@ -85,4 +79,4 @@ struct AABB {
     }
 };
 
-}  // namespace dw
+} // namespace dw

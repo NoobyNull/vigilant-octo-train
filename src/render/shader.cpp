@@ -98,7 +98,10 @@ GLint Shader::getUniformLocation(const std::string& name) {
     }
 
     GLint location = glGetUniformLocation(m_program, name.c_str());
-    m_uniformCache[name] = location;
+    // Only cache valid locations; -1 means not found, allow re-lookup
+    if (location != -1) {
+        m_uniformCache[name] = location;
+    }
     return location;
 }
 
@@ -123,7 +126,7 @@ void Shader::setVec4(const std::string& name, const Vec4& value) {
 }
 
 void Shader::setMat4(const std::string& name, const Mat4& value) {
-    glUniformMatrix4fv(getUniformLocation(name), 1, GL_FALSE, value.ptr());
+    glUniformMatrix4fv(getUniformLocation(name), 1, GL_FALSE, glm::value_ptr(value));
 }
 
-}  // namespace dw
+} // namespace dw

@@ -182,7 +182,7 @@ TEST(Mesh, CenterOnOrigin) {
 TEST(Mesh, NormalizeSize) {
     auto mesh = makeCube();
     // Scale cube (0-1) up, then normalize to target size 2.0
-    mesh.transform(dw::Mat4::scale({10.0f, 10.0f, 10.0f}));
+    mesh.transform(glm::scale(dw::Mat4(1.0f), dw::Vec3(10.0f, 10.0f, 10.0f)));
     mesh.normalizeSize(2.0f);
     mesh.recalculateBounds();
 
@@ -194,7 +194,7 @@ TEST(Mesh, NormalizeSize) {
 
 TEST(Mesh, Transform_Scale) {
     auto mesh = makeTriangle();
-    mesh.transform(dw::Mat4::scale({2.0f, 2.0f, 2.0f}));
+    mesh.transform(glm::scale(dw::Mat4(1.0f), dw::Vec3(2.0f, 2.0f, 2.0f)));
     mesh.recalculateBounds();
 
     EXPECT_FLOAT_EQ(mesh.bounds().max.x, 2.0f);
@@ -203,7 +203,7 @@ TEST(Mesh, Transform_Scale) {
 
 TEST(Mesh, Transform_Translate) {
     auto mesh = makeTriangle();
-    mesh.transform(dw::Mat4::translate({10.0f, 0.0f, 0.0f}));
+    mesh.transform(glm::translate(dw::Mat4(1.0f), dw::Vec3(10.0f, 0.0f, 0.0f)));
     mesh.recalculateBounds();
 
     EXPECT_NEAR(mesh.bounds().min.x, 10.0f, 1e-5f);

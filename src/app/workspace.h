@@ -14,7 +14,7 @@ class GCodeFile;
 class CutPlan;
 
 class Workspace {
-public:
+  public:
     Workspace() = default;
     ~Workspace() = default;
 
@@ -39,7 +39,7 @@ public:
     // Clear all focused objects
     void clearAll();
 
-private:
+  private:
     std::shared_ptr<Mesh> m_focusedMesh;
     std::shared_ptr<GCodeFile> m_focusedGCode;
     std::shared_ptr<CutPlan> m_focusedCutPlan;

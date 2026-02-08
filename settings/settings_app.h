@@ -1,14 +1,16 @@
 #pragma once
 
 #include "../src/core/config/config.h"
+#include "../src/core/config/input_binding.h"
 #include "../src/core/types.h"
+#include "../src/ui/widgets/binding_recorder.h"
 
 struct SDL_Window;
 
 namespace dw {
 
 class SettingsApp {
-public:
+  public:
     SettingsApp();
     ~SettingsApp();
 
@@ -18,7 +20,7 @@ public:
     bool init();
     int run();
 
-private:
+  private:
     void processEvents();
     void render();
     void shutdown();
@@ -28,6 +30,7 @@ private:
     void renderAppearanceTab();
     void renderRenderingTab();
     void renderPathsTab();
+    void renderBindingsTab();
     void renderAboutTab();
 
     // Apply current settings to config and save
@@ -47,7 +50,10 @@ private:
     f32 m_uiScale = 1.0f;
     bool m_showGrid = true;
     bool m_showAxis = true;
+    bool m_autoOrient = true;
+    int m_navStyle = 0;
     int m_logLevel = 1;
+    bool m_showStartPage = true;
 
     // Render settings
     Vec3 m_lightDir{-0.5f, -1.0f, -0.3f};
@@ -56,8 +62,12 @@ private:
     float m_objectColor[3]{0.4f, 0.6f, 0.8f};
     f32 m_shininess = 32.0f;
 
+    // Input bindings
+    std::array<InputBinding, static_cast<int>(BindAction::COUNT)> m_bindings;
+    BindingRecorder m_bindingRecorder;
+
     static constexpr int WINDOW_WIDTH = 520;
     static constexpr int WINDOW_HEIGHT = 480;
 };
 
-}  // namespace dw
+} // namespace dw

@@ -6,16 +6,16 @@ namespace dw {
 
 // Wavefront OBJ file loader
 class OBJLoader : public MeshLoader {
-public:
+  public:
     OBJLoader() = default;
 
-    LoadResult load(const Path& path) override;
-    LoadResult loadFromBuffer(const ByteBuffer& data) override;
+    [[nodiscard]] LoadResult load(const Path& path) override;
+    [[nodiscard]] LoadResult loadFromBuffer(const ByteBuffer& data) override;
     bool supports(const std::string& extension) const override;
     std::vector<std::string> extensions() const override;
 
-private:
+  private:
     LoadResult parseContent(const std::string& content);
 };
 
-}  // namespace dw
+} // namespace dw

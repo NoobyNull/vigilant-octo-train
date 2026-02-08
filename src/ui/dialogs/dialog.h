@@ -7,7 +7,7 @@ namespace dw {
 
 // Base class for modal dialogs
 class Dialog {
-public:
+  public:
     explicit Dialog(const std::string& title) : m_title(title) {}
     virtual ~Dialog() = default;
 
@@ -21,18 +21,12 @@ public:
 
     const std::string& title() const { return m_title; }
 
-protected:
+  protected:
     std::string m_title;
     bool m_open = false;
 };
 
 // Common dialog result types
-enum class DialogResult {
-    None,
-    Ok,
-    Cancel,
-    Yes,
-    No
-};
+enum class DialogResult { None, Ok, Cancel, Yes, No };
 
-}  // namespace dw
+} // namespace dw

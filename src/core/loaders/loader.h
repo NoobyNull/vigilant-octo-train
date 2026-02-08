@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../mesh/mesh.h"
-#include "../types.h"
-
 #include <memory>
 #include <string>
+
+#include "../mesh/mesh.h"
+#include "../types.h"
 
 namespace dw {
 
@@ -19,15 +19,15 @@ struct LoadResult {
 
 // Abstract mesh loader interface
 class MeshLoader {
-public:
+  public:
     virtual ~MeshLoader() = default;
 
     // Load mesh from file
-    virtual LoadResult load(const Path& path) = 0;
+    [[nodiscard]] virtual LoadResult load(const Path& path) = 0;
 
     // Load mesh from byte buffer (avoids re-reading file from disk)
     // Default implementation returns an error — override in subclasses.
-    virtual LoadResult loadFromBuffer(const ByteBuffer& data) {
+    [[nodiscard]] virtual LoadResult loadFromBuffer(const ByteBuffer& data) {
         (void)data;
         return LoadResult{nullptr, "loadFromBuffer not supported by this loader"};
     }
@@ -39,4 +39,4 @@ public:
     virtual std::vector<std::string> extensions() const = 0;
 };
 
-}  // namespace dw
+} // namespace dw

@@ -9,24 +9,22 @@ namespace dw {
 // This implementation handles uncompressed ZIP entries.
 // Compressed entries require extraction first.
 class ThreeMFLoader : public MeshLoader {
-public:
+  public:
     ThreeMFLoader() = default;
     ~ThreeMFLoader() override = default;
 
-    LoadResult load(const Path& path) override;
-    LoadResult loadFromBuffer(const ByteBuffer& data) override;
+    [[nodiscard]] LoadResult load(const Path& path) override;
+    [[nodiscard]] LoadResult loadFromBuffer(const ByteBuffer& data) override;
     bool supports(const std::string& extension) const override;
     std::vector<std::string> extensions() const override;
 
-private:
+  private:
     // Parse the 3dmodel.model XML file
     LoadResult parseModelXML(const std::string& xmlContent);
 
     // Extract vertices and triangles from XML
-    bool parseVertices(const std::string& verticesBlock,
-                       std::vector<Vec3>& outVertices);
-    bool parseTriangles(const std::string& trianglesBlock,
-                        const std::vector<Vec3>& vertices,
+    bool parseVertices(const std::string& verticesBlock, std::vector<Vec3>& outVertices);
+    bool parseTriangles(const std::string& trianglesBlock, const std::vector<Vec3>& vertices,
                         Mesh& outMesh);
 
     // Simple ZIP extraction for the model file
@@ -34,4 +32,4 @@ private:
     std::string extractModelXMLFromBuffer(const ByteBuffer& data);
 };
 
-}  // namespace dw
+} // namespace dw

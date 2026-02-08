@@ -15,8 +15,8 @@ namespace {
 class LibraryManagerTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        m_db.open(":memory:");
-        dw::Schema::initialize(m_db);
+        ASSERT_TRUE(m_db.open(":memory:"));
+        ASSERT_TRUE(dw::Schema::initialize(m_db));
         m_mgr = std::make_unique<dw::LibraryManager>(m_db);
 
         m_tmpDir = std::filesystem::temp_directory_path() / "dw_test_libmgr";
@@ -42,7 +42,7 @@ protected:
         };
         std::memcpy(buf.data() + 84, tri, sizeof(tri));
 
-        dw::file::writeBinary(path, buf);
+        EXPECT_TRUE(dw::file::writeBinary(path, buf));
         return path;
     }
 
@@ -62,7 +62,7 @@ protected:
         };
         std::memcpy(buf.data() + 84, tri, sizeof(tri));
 
-        dw::file::writeBinary(path, buf);
+        EXPECT_TRUE(dw::file::writeBinary(path, buf));
         return path;
     }
 
@@ -101,7 +101,7 @@ TEST_F(LibraryManagerTest, ImportModel_NonExistent) {
 
 TEST_F(LibraryManagerTest, ImportModel_UnsupportedFormat) {
     auto path = m_tmpDir / "model.fbx";
-    dw::file::writeText(path, "not a real fbx");
+    ASSERT_TRUE(dw::file::writeText(path, "not a real fbx"));
     auto result = m_mgr->importModel(path);
     EXPECT_FALSE(result.success);
 }

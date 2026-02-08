@@ -1,15 +1,15 @@
 #pragma once
 
+#include <functional>
+
 #include "../../core/types.h"
 #include "panel.h"
-
-#include <functional>
 
 namespace dw {
 
 // Start page shown on application launch with recent projects and quick actions
 class StartPage : public Panel {
-public:
+  public:
     StartPage();
     ~StartPage() override = default;
 
@@ -24,7 +24,7 @@ public:
     void setOnImportModel(VoidCallback cb) { m_onImportModel = std::move(cb); }
     void setOnOpenRecentProject(PathCallback cb) { m_onOpenRecentProject = std::move(cb); }
 
-private:
+  private:
     void renderRecentProjects();
     void renderQuickActions();
 
@@ -34,4 +34,4 @@ private:
     PathCallback m_onOpenRecentProject;
 };
 
-}  // namespace dw
+} // namespace dw

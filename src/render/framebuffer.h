@@ -1,14 +1,14 @@
 #pragma once
 
-#include "../core/types.h"
-
 #include <glad/gl.h>
+
+#include "../core/types.h"
 
 namespace dw {
 
 // Offscreen framebuffer for rendering to texture
 class Framebuffer {
-public:
+  public:
     Framebuffer() = default;
     ~Framebuffer();
 
@@ -40,7 +40,7 @@ public:
     // Read pixels
     ByteBuffer readPixels() const;
 
-private:
+  private:
     GLuint m_fbo = 0;
     GLuint m_colorTexture = 0;
     GLuint m_depthTexture = 0;
@@ -48,4 +48,4 @@ private:
     int m_height = 0;
 };
 
-}  // namespace dw
+} // namespace dw

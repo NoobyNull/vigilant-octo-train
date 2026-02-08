@@ -1,8 +1,9 @@
 #include "properties_panel.h"
 
-#include "../icons.h"
-
 #include <imgui.h>
+
+#include "../../core/utils/string_utils.h"
+#include "../icons.h"
 
 namespace dw {
 
@@ -22,6 +23,8 @@ void PropertiesPanel::render() {
             renderTransformInfo();
             ImGui::Spacing();
             renderMaterialInfo();
+        } else if (m_record) {
+            renderModelRecordInfo();
         } else {
             ImGui::TextDisabled("No model selected");
             ImGui::TextDisabled("Select a model from the library");
@@ -30,15 +33,87 @@ void PropertiesPanel::render() {
     ImGui::End();
 }
 
-void PropertiesPanel::setMesh(std::shared_ptr<Mesh> mesh,
-                               const std::string& name) {
+void PropertiesPanel::setMesh(std::shared_ptr<Mesh> mesh, const std::string& name) {
     m_mesh = std::move(mesh);
     m_meshName = name;
+    m_record.reset();
+}
+
+void PropertiesPanel::setModelRecord(const ModelRecord& record) {
+    m_record = record;
+    m_mesh = nullptr;
+    m_meshName.clear();
 }
 
 void PropertiesPanel::clearMesh() {
     m_mesh = nullptr;
     m_meshName.clear();
+    m_record.reset();
+}
+
+void PropertiesPanel::renderModelRecordInfo() {
+    const auto& r = *m_record;
+
+    if (ImGui::CollapsingHeader("Model Info", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Indent();
+
+        ImGui::Text("Name: %s", r.name.c_str());
+        ImGui::Text("Format: %s", r.fileFormat.c_str());
+
+        ImGui::Text("File Size: %s", str::formatFileSize(r.fileSize).c_str());
+
+        // Vertex count
+        if (r.vertexCount >= 1000000) {
+            ImGui::Text("Vertices: %.2fM", r.vertexCount / 1000000.0);
+        } else if (r.vertexCount >= 1000) {
+            ImGui::Text("Vertices: %.1fK", r.vertexCount / 1000.0);
+        } else {
+            ImGui::Text("Vertices: %u", r.vertexCount);
+        }
+
+        // Triangle count
+        if (r.triangleCount >= 1000000) {
+            ImGui::Text("Triangles: %.2fM", r.triangleCount / 1000000.0);
+        } else if (r.triangleCount >= 1000) {
+            ImGui::Text("Triangles: %.1fK", r.triangleCount / 1000.0);
+        } else {
+            ImGui::Text("Triangles: %u", r.triangleCount);
+        }
+
+        if (!r.importedAt.empty()) {
+            ImGui::Text("Imported: %s", r.importedAt.c_str());
+        }
+
+        ImGui::Unindent();
+    }
+
+    // Bounds from record
+    if (r.boundsMin.x != 0.0f || r.boundsMin.y != 0.0f || r.boundsMin.z != 0.0f ||
+        r.boundsMax.x != 0.0f || r.boundsMax.y != 0.0f || r.boundsMax.z != 0.0f) {
+        ImGui::Spacing();
+        if (ImGui::CollapsingHeader("Bounds", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Indent();
+            ImGui::Text("Min: (%.3f, %.3f, %.3f)", r.boundsMin.x, r.boundsMin.y, r.boundsMin.z);
+            ImGui::Text("Max: (%.3f, %.3f, %.3f)", r.boundsMax.x, r.boundsMax.y, r.boundsMax.z);
+            Vec3 size{r.boundsMax.x - r.boundsMin.x, r.boundsMax.y - r.boundsMin.y,
+                      r.boundsMax.z - r.boundsMin.z};
+            ImGui::Text("Size: %.3f x %.3f x %.3f", size.x, size.y, size.z);
+            ImGui::Unindent();
+        }
+    }
+
+    // File path
+    ImGui::Spacing();
+    if (ImGui::CollapsingHeader("File")) {
+        ImGui::Indent();
+        ImGui::TextWrapped("%s", r.filePath.string().c_str());
+        ImGui::Unindent();
+    }
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    ImGui::TextDisabled("Double-click to load into viewport");
 }
 
 void PropertiesPanel::renderMeshInfo() {
@@ -75,15 +150,8 @@ void PropertiesPanel::renderMeshInfo() {
         ImGui::Text("Indices: %zu", indexCount);
 
         // Memory usage estimate
-        size_t memoryBytes =
-            vertexCount * sizeof(Vertex) + indexCount * sizeof(uint32_t);
-        if (memoryBytes >= 1024 * 1024) {
-            ImGui::Text("Memory: %.2f MB", memoryBytes / (1024.0 * 1024.0));
-        } else if (memoryBytes >= 1024) {
-            ImGui::Text("Memory: %.1f KB", memoryBytes / 1024.0);
-        } else {
-            ImGui::Text("Memory: %zu bytes", memoryBytes);
-        }
+        size_t memoryBytes = vertexCount * sizeof(Vertex) + indexCount * sizeof(uint32_t);
+        ImGui::Text("Memory: %s", str::formatFileSize(memoryBytes).c_str());
 
         ImGui::Unindent();
     }
@@ -95,17 +163,14 @@ void PropertiesPanel::renderBoundsInfo() {
 
         const AABB& bounds = m_mesh->bounds();
 
-        ImGui::Text("Min: (%.3f, %.3f, %.3f)", bounds.min.x, bounds.min.y,
-                    bounds.min.z);
-        ImGui::Text("Max: (%.3f, %.3f, %.3f)", bounds.max.x, bounds.max.y,
-                    bounds.max.z);
+        ImGui::Text("Min: (%.3f, %.3f, %.3f)", bounds.min.x, bounds.min.y, bounds.min.z);
+        ImGui::Text("Max: (%.3f, %.3f, %.3f)", bounds.max.x, bounds.max.y, bounds.max.z);
 
         Vec3 size = bounds.size();
         ImGui::Text("Size: %.3f x %.3f x %.3f", size.x, size.y, size.z);
 
         Vec3 center = bounds.center();
-        ImGui::Text("Center: (%.3f, %.3f, %.3f)", center.x, center.y,
-                    center.z);
+        ImGui::Text("Center: (%.3f, %.3f, %.3f)", center.x, center.y, center.z);
 
         float diagonal = bounds.diagonal();
         ImGui::Text("Diagonal: %.3f", diagonal);
@@ -157,12 +222,11 @@ void PropertiesPanel::renderTransformInfo() {
         ImGui::Spacing();
 
         // Normalize Size button with configurable target size
-        static float targetSize = 1.0f;
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.4f);
-        ImGui::DragFloat("Target Size", &targetSize, 0.1f, 0.01f, 1000.0f, "%.2f");
+        ImGui::DragFloat("Target Size", &m_targetSize, 0.1f, 0.01f, 1000.0f, "%.2f");
 
         if (ImGui::Button("Normalize Size", ImVec2(-1, 0))) {
-            m_mesh->normalizeSize(targetSize);
+            m_mesh->normalizeSize(m_targetSize);
             if (m_onMeshModified) {
                 m_onMeshModified();
             }
@@ -180,43 +244,47 @@ void PropertiesPanel::renderTransformInfo() {
         ImGui::Spacing();
 
         // Translate
-        static float translate[3] = {0.0f, 0.0f, 0.0f};
-        ImGui::DragFloat3("Translate", translate, 0.1f);
+        ImGui::DragFloat3("Translate", m_translate, 0.1f);
         ImGui::SameLine();
         if (ImGui::Button("Apply##Translate")) {
-            Mat4 mat = Mat4::translate(Vec3{translate[0], translate[1], translate[2]});
+            Mat4 mat =
+                glm::translate(Mat4(1.0f), Vec3{m_translate[0], m_translate[1], m_translate[2]});
             m_mesh->transform(mat);
-            translate[0] = translate[1] = translate[2] = 0.0f;
+            m_translate[0] = m_translate[1] = m_translate[2] = 0.0f;
             if (m_onMeshModified) {
                 m_onMeshModified();
             }
         }
 
         // Rotate (degrees)
-        static float rotateDeg[3] = {0.0f, 0.0f, 0.0f};
-        ImGui::DragFloat3("Rotate (deg)", rotateDeg, 1.0f);
+        ImGui::DragFloat3("Rotate (deg)", m_rotateDeg, 1.0f);
         ImGui::SameLine();
         if (ImGui::Button("Apply##Rotate")) {
             constexpr float DEG2RAD = 3.14159265358979f / 180.0f;
-            Mat4 mat = Mat4::identity();
-            if (rotateDeg[0] != 0.0f) mat = Mat4::rotateX(rotateDeg[0] * DEG2RAD) * mat;
-            if (rotateDeg[1] != 0.0f) mat = Mat4::rotateY(rotateDeg[1] * DEG2RAD) * mat;
-            if (rotateDeg[2] != 0.0f) mat = Mat4::rotateZ(rotateDeg[2] * DEG2RAD) * mat;
+            Mat4 mat = Mat4(1.0f);
+            if (m_rotateDeg[0] != 0.0f)
+                mat =
+                    glm::rotate(Mat4(1.0f), m_rotateDeg[0] * DEG2RAD, Vec3(1.0f, 0.0f, 0.0f)) * mat;
+            if (m_rotateDeg[1] != 0.0f)
+                mat =
+                    glm::rotate(Mat4(1.0f), m_rotateDeg[1] * DEG2RAD, Vec3(0.0f, 1.0f, 0.0f)) * mat;
+            if (m_rotateDeg[2] != 0.0f)
+                mat =
+                    glm::rotate(Mat4(1.0f), m_rotateDeg[2] * DEG2RAD, Vec3(0.0f, 0.0f, 1.0f)) * mat;
             m_mesh->transform(mat);
-            rotateDeg[0] = rotateDeg[1] = rotateDeg[2] = 0.0f;
+            m_rotateDeg[0] = m_rotateDeg[1] = m_rotateDeg[2] = 0.0f;
             if (m_onMeshModified) {
                 m_onMeshModified();
             }
         }
 
         // Scale
-        static float scaleVal[3] = {1.0f, 1.0f, 1.0f};
-        ImGui::DragFloat3("Scale", scaleVal, 0.01f, 0.01f, 100.0f);
+        ImGui::DragFloat3("Scale", m_scaleVal, 0.01f, 0.01f, 100.0f);
         ImGui::SameLine();
         if (ImGui::Button("Apply##Scale")) {
-            Mat4 mat = Mat4::scale(Vec3{scaleVal[0], scaleVal[1], scaleVal[2]});
+            Mat4 mat = glm::scale(Mat4(1.0f), Vec3{m_scaleVal[0], m_scaleVal[1], m_scaleVal[2]});
             m_mesh->transform(mat);
-            scaleVal[0] = scaleVal[1] = scaleVal[2] = 1.0f;
+            m_scaleVal[0] = m_scaleVal[1] = m_scaleVal[2] = 1.0f;
             if (m_onMeshModified) {
                 m_onMeshModified();
             }
@@ -232,8 +300,7 @@ void PropertiesPanel::renderMaterialInfo() {
 
         float color[3] = {m_objectColor.r, m_objectColor.g, m_objectColor.b};
         if (ImGui::ColorEdit3("Object Color", color,
-                              ImGuiColorEditFlags_NoInputs |
-                              ImGuiColorEditFlags_PickerHueWheel)) {
+                              ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel)) {
             m_objectColor.r = color[0];
             m_objectColor.g = color[1];
             m_objectColor.b = color[2];
@@ -253,14 +320,9 @@ void PropertiesPanel::renderMaterialInfo() {
         };
 
         static const ColorPreset presets[] = {
-            {"Steel Blue", 0x6699CC},
-            {"Silver", 0xC0C0C0},
-            {"Gold", 0xDAA520},
-            {"Copper", 0xB87333},
-            {"Red", 0xCC3333},
-            {"Green", 0x33CC33},
-            {"White", 0xEEEEEE},
-            {"Dark Gray", 0x555555},
+            {"Steel Blue", 0x6699CC}, {"Silver", 0xC0C0C0},    {"Gold", 0xDAA520},
+            {"Copper", 0xB87333},     {"Red", 0xCC3333},       {"Green", 0x33CC33},
+            {"White", 0xEEEEEE},      {"Dark Gray", 0x555555},
         };
 
         for (int i = 0; i < 8; i++) {
@@ -288,4 +350,4 @@ void PropertiesPanel::renderMaterialInfo() {
     }
 }
 
-}  // namespace dw
+} // namespace dw

@@ -1,10 +1,10 @@
 <claude-mem-context>
 # Recent Activity
 
-### Feb 3, 2026
+### Feb 5, 2026
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
-| #141 | 8:34 PM | 🟣 | Project Scaffolding Created with CMake Build System and Application Framework | ~767 |
-| #114 | 8:33 PM | 🟣 | CMake Build System Files Created | ~804 |
+| #81 | 7:42 PM | ✅ | Removed 25 Per-Directory CLAUDE.md Placeholder Files | ~489 |
+| #22 | 7:37 PM | 🔵 | FetchContent-Based Dependency Management with System Fallbacks | ~811 |
 </claude-mem-context>

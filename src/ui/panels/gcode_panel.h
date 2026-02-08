@@ -1,11 +1,12 @@
 #pragma once
 
-#include "../../core/gcode/gcode_analyzer.h"
-#include "../../core/gcode/gcode_parser.h"
-#include "panel.h"
-
 #include <memory>
 #include <string>
+
+#include "../../core/gcode/gcode_analyzer.h"
+#include "../../core/gcode/gcode_parser.h"
+#include "../widgets/canvas_2d.h"
+#include "panel.h"
 
 namespace dw {
 
@@ -13,7 +14,7 @@ class FileDialog;
 
 // G-code viewer panel
 class GCodePanel : public Panel {
-public:
+  public:
     GCodePanel();
     ~GCodePanel() override = default;
 
@@ -31,7 +32,7 @@ public:
     // Check if G-code is loaded
     bool hasGCode() const { return m_program.commands.size() > 0; }
 
-private:
+  private:
     void renderToolbar();
     void renderStatistics();
     void renderPathView();
@@ -48,9 +49,7 @@ private:
     float m_maxLayer = 100.0f;
     bool m_showTravel = false;
     bool m_showExtrusion = true;
-    float m_zoom = 1.0f;
-    float m_panX = 0.0f;
-    float m_panY = 0.0f;
+    Canvas2D m_canvas;
 };
 
-}  // namespace dw
+} // namespace dw

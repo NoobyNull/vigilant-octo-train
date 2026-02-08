@@ -8,13 +8,13 @@ namespace optimizer {
 
 std::unique_ptr<CutOptimizer> CutOptimizer::create(Algorithm algorithm) {
     switch (algorithm) {
-        case Algorithm::FirstFitDecreasing:
-            return std::make_unique<BinPacker>();
-        case Algorithm::Guillotine:
-            return std::make_unique<GuillotineOptimizer>();
+    case Algorithm::FirstFitDecreasing:
+        return std::make_unique<BinPacker>();
+    case Algorithm::Guillotine:
+        return std::make_unique<GuillotineOptimizer>();
     }
-    return std::make_unique<BinPacker>();  // Default
+    return std::make_unique<BinPacker>(); // Default
 }
 
-}  // namespace optimizer
-}  // namespace dw
+} // namespace optimizer
+} // namespace dw

@@ -1,19 +1,19 @@
 #pragma once
 
-#include "dialog.h"
-
 #include <cstdint>
 #include <functional>
 #include <set>
 #include <string>
 #include <vector>
 
+#include "dialog.h"
+
 namespace dw {
 
 // File filter for dialogs
 struct FileFilter {
-    std::string name;        // e.g., "3D Models"
-    std::string extensions;  // e.g., "*.stl;*.obj;*.3mf"
+    std::string name;       // e.g., "3D Models"
+    std::string extensions; // e.g., "*.stl;*.obj;*.3mf"
 };
 
 // File dialog mode
@@ -21,31 +21,26 @@ enum class FileDialogMode { Open, Save, SelectFolder };
 
 // Simple file dialog (native dialogs not available, using ImGui)
 class FileDialog : public Dialog {
-public:
+  public:
     FileDialog();
     ~FileDialog() override = default;
 
     void render() override;
 
     // Show open file dialog (single file)
-    void showOpen(const std::string& title,
-                  const std::vector<FileFilter>& filters,
+    void showOpen(const std::string& title, const std::vector<FileFilter>& filters,
                   std::function<void(const std::string&)> callback);
 
     // Show open file dialog (multi-select)
-    void showOpenMulti(const std::string& title,
-                       const std::vector<FileFilter>& filters,
+    void showOpenMulti(const std::string& title, const std::vector<FileFilter>& filters,
                        std::function<void(const std::vector<std::string>&)> callback);
 
     // Show save file dialog
-    void showSave(const std::string& title,
-                  const std::vector<FileFilter>& filters,
-                  const std::string& defaultName,
-                  std::function<void(const std::string&)> callback);
+    void showSave(const std::string& title, const std::vector<FileFilter>& filters,
+                  const std::string& defaultName, std::function<void(const std::string&)> callback);
 
     // Show folder selection dialog
-    void showFolder(const std::string& title,
-                    std::function<void(const std::string&)> callback);
+    void showFolder(const std::string& title, std::function<void(const std::string&)> callback);
 
     // Common filters
     static std::vector<FileFilter> modelFilters();
@@ -54,7 +49,7 @@ public:
     static std::vector<FileFilter> gcodeFilters();
     static std::vector<FileFilter> allFilters();
 
-private:
+  private:
     void refreshDirectory();
     bool matchesFilter(const std::string& filename) const;
 
@@ -72,10 +67,10 @@ private:
         uint64_t size;
     };
     std::vector<DirEntry> m_entries;
-    std::set<std::string> m_selectedFiles;  // Multi-select set
+    std::set<std::string> m_selectedFiles; // Multi-select set
 
     std::function<void(const std::string&)> m_callback;
     std::function<void(const std::vector<std::string>&)> m_multiCallback;
 };
 
-}  // namespace dw
+} // namespace dw

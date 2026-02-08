@@ -1,10 +1,11 @@
 #include "file_dialog.h"
 
+#include <algorithm>
+
+#include <imgui.h>
+
 #include "../../core/utils/file_utils.h"
 #include "../icons.h"
-
-#include <algorithm>
-#include <imgui.h>
 
 namespace dw {
 
@@ -46,9 +47,8 @@ void FileDialog::render() {
         ImGui::BeginChild("FileList", ImVec2(0, -80), true);
 
         for (const auto& entry : m_entries) {
-            bool isSelected = m_multiSelect
-                ? (m_selectedFiles.count(entry.name) > 0)
-                : (entry.name == m_selectedFile);
+            bool isSelected = m_multiSelect ? (m_selectedFiles.count(entry.name) > 0)
+                                            : (entry.name == m_selectedFile);
             std::string label;
 
             if (entry.isDirectory) {
@@ -86,8 +86,7 @@ void FileDialog::render() {
                         m_selectedFile.clear();
                         m_selectedFiles.clear();
                     } else if (m_mode == FileDialogMode::Open && !m_multiSelect) {
-                        std::string fullPath =
-                            m_currentPath + "/" + m_selectedFile;
+                        std::string fullPath = m_currentPath + "/" + m_selectedFile;
                         m_open = false;
                         if (m_callback) {
                             m_callback(fullPath);
@@ -111,8 +110,7 @@ void FileDialog::render() {
         if (!m_filters.empty() && m_mode != FileDialogMode::SelectFolder) {
             ImGui::SameLine();
             ImGui::SetNextItemWidth(150);
-            if (ImGui::BeginCombo("##Filter",
-                                  m_filters[m_selectedFilter].name.c_str())) {
+            if (ImGui::BeginCombo("##Filter", m_filters[m_selectedFilter].name.c_str())) {
                 for (size_t i = 0; i < m_filters.size(); ++i) {
                     if (ImGui::Selectable(m_filters[i].name.c_str(),
                                           i == static_cast<size_t>(m_selectedFilter))) {
@@ -150,8 +148,7 @@ void FileDialog::render() {
         } else if (m_mode == FileDialogMode::Save) {
             if (ImGui::Button("Save", ImVec2(buttonWidth, 0))) {
                 if (!m_inputFileName.empty()) {
-                    std::string fullPath =
-                        m_currentPath + "/" + m_inputFileName;
+                    std::string fullPath = m_currentPath + "/" + m_inputFileName;
                     m_open = false;
                     if (m_callback) {
                         m_callback(fullPath);
@@ -181,9 +178,8 @@ void FileDialog::render() {
     }
 }
 
-void FileDialog::showOpen(const std::string& title,
-                           const std::vector<FileFilter>& filters,
-                           std::function<void(const std::string&)> callback) {
+void FileDialog::showOpen(const std::string& title, const std::vector<FileFilter>& filters,
+                          std::function<void(const std::string&)> callback) {
     m_title = title;
     m_mode = FileDialogMode::Open;
     m_multiSelect = false;
@@ -197,9 +193,8 @@ void FileDialog::showOpen(const std::string& title,
     m_open = true;
 }
 
-void FileDialog::showOpenMulti(const std::string& title,
-                                const std::vector<FileFilter>& filters,
-                                std::function<void(const std::vector<std::string>&)> callback) {
+void FileDialog::showOpenMulti(const std::string& title, const std::vector<FileFilter>& filters,
+                               std::function<void(const std::vector<std::string>&)> callback) {
     m_title = title;
     m_mode = FileDialogMode::Open;
     m_multiSelect = true;
@@ -213,10 +208,9 @@ void FileDialog::showOpenMulti(const std::string& title,
     m_open = true;
 }
 
-void FileDialog::showSave(const std::string& title,
-                           const std::vector<FileFilter>& filters,
-                           const std::string& defaultName,
-                           std::function<void(const std::string&)> callback) {
+void FileDialog::showSave(const std::string& title, const std::vector<FileFilter>& filters,
+                          const std::string& defaultName,
+                          std::function<void(const std::string&)> callback) {
     m_title = title;
     m_mode = FileDialogMode::Save;
     m_filters = filters;
@@ -229,7 +223,7 @@ void FileDialog::showSave(const std::string& title,
 }
 
 void FileDialog::showFolder(const std::string& title,
-                             std::function<void(const std::string&)> callback) {
+                            std::function<void(const std::string&)> callback) {
     m_title = title;
     m_mode = FileDialogMode::SelectFolder;
     m_filters.clear();
@@ -246,7 +240,7 @@ void FileDialog::refreshDirectory() {
 
     for (const auto& name : names) {
         if (name.empty() || name[0] == '.') {
-            continue;  // Skip hidden files
+            continue; // Skip hidden files
         }
 
         std::string fullPath = m_currentPath + "/" + name;
@@ -266,18 +260,16 @@ void FileDialog::refreshDirectory() {
     }
 
     // Sort: directories first, then alphabetically
-    std::sort(m_entries.begin(), m_entries.end(),
-              [](const DirEntry& a, const DirEntry& b) {
-                  if (a.isDirectory != b.isDirectory) {
-                      return a.isDirectory > b.isDirectory;
-                  }
-                  return a.name < b.name;
-              });
+    std::sort(m_entries.begin(), m_entries.end(), [](const DirEntry& a, const DirEntry& b) {
+        if (a.isDirectory != b.isDirectory) {
+            return a.isDirectory > b.isDirectory;
+        }
+        return a.name < b.name;
+    });
 }
 
 bool FileDialog::matchesFilter(const std::string& filename) const {
-    if (m_filters.empty() ||
-        m_selectedFilter >= static_cast<int>(m_filters.size())) {
+    if (m_filters.empty() || m_selectedFilter >= static_cast<int>(m_filters.size())) {
         return true;
     }
 
@@ -295,13 +287,11 @@ bool FileDialog::matchesFilter(const std::string& filename) const {
 
         // Remove leading "*."
         if (pattern.size() > 2 && pattern[0] == '*' && pattern[1] == '.') {
-            std::string ext = pattern.substr(1);  // ".stl"
+            std::string ext = pattern.substr(1); // ".stl"
             if (filename.size() >= ext.size()) {
-                std::string fileExt =
-                    filename.substr(filename.size() - ext.size());
+                std::string fileExt = filename.substr(filename.size() - ext.size());
                 // Case-insensitive comparison
-                std::transform(fileExt.begin(), fileExt.end(), fileExt.begin(),
-                               ::tolower);
+                std::transform(fileExt.begin(), fileExt.end(), fileExt.begin(), ::tolower);
                 std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
                 if (fileExt == ext) {
                     return true;
@@ -327,8 +317,7 @@ std::vector<FileFilter> FileDialog::modelFilters() {
 }
 
 std::vector<FileFilter> FileDialog::projectFilters() {
-    return {{"Digital Workshop Projects", "*.dwproj"},
-            {"All Files", "*.*"}};
+    return {{"Digital Workshop Projects", "*.dwproj"}, {"All Files", "*.*"}};
 }
 
 std::vector<FileFilter> FileDialog::archiveFilters() {
@@ -336,12 +325,11 @@ std::vector<FileFilter> FileDialog::archiveFilters() {
 }
 
 std::vector<FileFilter> FileDialog::gcodeFilters() {
-    return {{"G-code Files", "*.gcode;*.nc;*.ngc;*.tap"},
-            {"All Files", "*.*"}};
+    return {{"G-code Files", "*.gcode;*.nc;*.ngc;*.tap"}, {"All Files", "*.*"}};
 }
 
 std::vector<FileFilter> FileDialog::allFilters() {
     return {{"All Files", "*.*"}};
 }
 
-}  // namespace dw
+} // namespace dw

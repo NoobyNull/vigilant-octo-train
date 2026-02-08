@@ -4,7 +4,7 @@ namespace dw {
 
 // Polished ImGui theme configuration
 class Theme {
-public:
+  public:
     // Apply the polished dark theme (default)
     static void applyDark();
 
@@ -16,20 +16,20 @@ public:
 
     // Colors for consistent use in panels
     struct Colors {
-        static constexpr unsigned int Primary = 0xFF6699CC;       // Blue accent
-        static constexpr unsigned int Secondary = 0xFF8899AA;     // Muted blue
-        static constexpr unsigned int Success = 0xFF77CC77;       // Green
-        static constexpr unsigned int Warning = 0xFFCCAA55;       // Yellow/Orange
-        static constexpr unsigned int Error = 0xFFCC6666;         // Red
-        static constexpr unsigned int Background = 0xFF1E2124;    // Dark background
-        static constexpr unsigned int Surface = 0xFF2A2D31;       // Panel background
-        static constexpr unsigned int Border = 0xFF3A3D41;        // Border color
-        static constexpr unsigned int Text = 0xFFE8E8E8;          // Primary text
-        static constexpr unsigned int TextDim = 0xFF808080;       // Secondary text
+        static constexpr unsigned int Primary = 0xFF6699CC;    // Blue accent
+        static constexpr unsigned int Secondary = 0xFF8899AA;  // Muted blue
+        static constexpr unsigned int Success = 0xFF77CC77;    // Green
+        static constexpr unsigned int Warning = 0xFFCCAA55;    // Yellow/Orange
+        static constexpr unsigned int Error = 0xFFCC6666;      // Red
+        static constexpr unsigned int Background = 0xFF1E2124; // Dark background
+        static constexpr unsigned int Surface = 0xFF2A2D31;    // Panel background
+        static constexpr unsigned int Border = 0xFF3A3D41;     // Border color
+        static constexpr unsigned int Text = 0xFFE8E8E8;       // Primary text
+        static constexpr unsigned int TextDim = 0xFF808080;    // Secondary text
     };
 
-private:
+  private:
     static void applyBaseStyle();
 };
 
-}  // namespace dw
+} // namespace dw

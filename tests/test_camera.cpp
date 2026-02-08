@@ -186,7 +186,7 @@ TEST(Camera, ViewMatrix_NotIdentity) {
     for (int i = 0; i < 4; ++i) {
         for (int j = 0; j < 4; ++j) {
             float expected = (i == j) ? 1.0f : 0.0f;
-            if (std::abs(view(i, j) - expected) > 0.01f) {
+            if (std::abs(view[j][i] - expected) > 0.01f) {
                 allIdentity = false;
             }
         }
@@ -199,8 +199,8 @@ TEST(Camera, ProjectionMatrix_ValidPerspective) {
     cam.setViewport(800, 600);
     auto proj = cam.projectionMatrix();
     // Perspective matrix has (3,2) = -1, (3,3) = 0
-    EXPECT_FLOAT_EQ(proj(3, 2), -1.0f);
-    EXPECT_FLOAT_EQ(proj(3, 3), 0.0f);
+    EXPECT_FLOAT_EQ(proj[2][3], -1.0f);
+    EXPECT_FLOAT_EQ(proj[3][3], 0.0f);
 }
 
 // --- Setters ---

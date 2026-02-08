@@ -15,7 +15,7 @@ struct WindowConfig {
 };
 
 class Window {
-public:
+  public:
     Window() = default;
     ~Window();
 
@@ -42,7 +42,7 @@ public:
     // Swap buffers
     void swapBuffers();
 
-private:
+  private:
     SDL_Window* m_window = nullptr;
     void* m_glContext = nullptr;
 };

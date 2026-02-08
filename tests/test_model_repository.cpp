@@ -12,8 +12,8 @@ namespace {
 class ModelRepoTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        m_db.open(":memory:");
-        dw::Schema::initialize(m_db);
+        ASSERT_TRUE(m_db.open(":memory:"));
+        ASSERT_TRUE(dw::Schema::initialize(m_db));
         m_repo = std::make_unique<dw::ModelRepository>(m_db);
     }
 

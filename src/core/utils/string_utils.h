@@ -47,5 +47,12 @@ bool parseInt64(std::string_view s, int64_t& out);
 bool parseFloat(std::string_view s, float& out);
 bool parseDouble(std::string_view s, double& out);
 
-}  // namespace str
-}  // namespace dw
+// Escape SQL LIKE wildcards (% and _) with backslash
+// Use with: WHERE col LIKE ? ESCAPE '\'
+std::string escapeLike(std::string_view s);
+
+// Escape a string for embedding in JSON (handles ", \, control chars)
+std::string escapeJsonString(std::string_view s);
+
+} // namespace str
+} // namespace dw

@@ -1,10 +1,11 @@
 #include "hash.h"
 
-#include "../utils/file_utils.h"
-#include "mesh.h"
-
+#include <cstring>
 #include <iomanip>
 #include <sstream>
+
+#include "../utils/file_utils.h"
+#include "mesh.h"
 
 namespace dw {
 namespace hash {
@@ -55,7 +56,9 @@ std::string computeMesh(const Mesh& mesh) {
     for (const auto& vertex : mesh.vertices()) {
         const f32* pos = &vertex.position.x;
         for (int i = 0; i < 3; ++i) {
-            hash ^= *reinterpret_cast<const u32*>(&pos[i]);
+            u32 bits = 0;
+            std::memcpy(&bits, &pos[i], sizeof(bits));
+            hash ^= bits;
             hash *= FNV_PRIME;
         }
     }
@@ -82,5 +85,5 @@ u64 fromHex(const std::string& hex) {
     return hash;
 }
 
-}  // namespace hash
-}  // namespace dw
+} // namespace hash
+} // namespace dw

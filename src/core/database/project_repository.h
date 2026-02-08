@@ -1,11 +1,12 @@
 #pragma once
 
-#include "../types.h"
-#include "database.h"
-
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
+
+#include "../types.h"
+#include "database.h"
 
 namespace dw {
 
@@ -29,7 +30,7 @@ struct ProjectModelLink {
 
 // Repository for project CRUD operations
 class ProjectRepository {
-public:
+  public:
     explicit ProjectRepository(Database& db);
 
     // Create
@@ -38,7 +39,7 @@ public:
     // Read
     std::optional<ProjectRecord> findById(i64 id);
     std::vector<ProjectRecord> findAll();
-    std::vector<ProjectRecord> findByName(const std::string& searchTerm);
+    std::vector<ProjectRecord> findByName(std::string_view searchTerm);
 
     // Update
     bool update(const ProjectRecord& project);
@@ -58,10 +59,10 @@ public:
     // Utility
     i64 count();
 
-private:
+  private:
     ProjectRecord rowToProject(Statement& stmt);
 
     Database& m_db;
 };
 
-}  // namespace dw
+} // namespace dw

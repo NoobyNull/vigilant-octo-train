@@ -2,10 +2,12 @@
 
 #include "app/application.h"
 
+#include <cstdio>
+#include <cstdlib>
+
 #include "app/workspace.h"
 #include "core/config/config.h"
 #include "core/config/config_watcher.h"
-#include "core/utils/log.h"
 #include "core/database/database.h"
 #include "core/database/schema.h"
 #include "core/export/model_exporter.h"
@@ -15,25 +17,23 @@
 #include "core/loaders/loader_factory.h"
 #include "core/paths/app_paths.h"
 #include "core/project/project.h"
+#include "core/utils/log.h"
+#include "render/thumbnail_generator.h"
 #include "ui/dialogs/file_dialog.h"
 #include "ui/dialogs/lighting_dialog.h"
 #include "ui/dialogs/message_dialog.h"
-#include "render/thumbnail_generator.h"
 #include "ui/panels/cut_optimizer_panel.h"
-#include "ui/panels/start_page.h"
 #include "ui/panels/gcode_panel.h"
 #include "ui/panels/library_panel.h"
 #include "ui/panels/project_panel.h"
 #include "ui/panels/properties_panel.h"
+#include "ui/panels/start_page.h"
 #include "ui/panels/viewport_panel.h"
 #include "ui/theme.h"
 #include "version.h"
 
-#include <cstdio>
-#include <cstdlib>
-
 #ifdef __linux__
-#include <unistd.h>
+    #include <unistd.h>
 #endif
 
 #include <SDL.h>
@@ -41,6 +41,7 @@
 #include <imgui.h>
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_sdl2.h>
+#include <imgui_internal.h>
 
 namespace dw {
 
@@ -50,7 +51,7 @@ Application::~Application() {
     shutdown();
 }
 
-auto Application::init() -> bool {
+bool Application::init() {
     if (m_initialized) {
         return true;
     }
@@ -83,15 +84,16 @@ auto Application::init() -> bool {
     auto& cfg = Config::instance();
     int startWidth = cfg.getWindowWidth();
     int startHeight = cfg.getWindowHeight();
-    if (startWidth <= 0) startWidth = DEFAULT_WIDTH;
-    if (startHeight <= 0) startHeight = DEFAULT_HEIGHT;
+    if (startWidth <= 0)
+        startWidth = DEFAULT_WIDTH;
+    if (startHeight <= 0)
+        startHeight = DEFAULT_HEIGHT;
 
-    auto windowFlags = static_cast<SDL_WindowFlags>(
-        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+    auto windowFlags = static_cast<SDL_WindowFlags>(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE |
+                                                    SDL_WINDOW_ALLOW_HIGHDPI);
 
-    m_window = SDL_CreateWindow(
-        WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        startWidth, startHeight, windowFlags);
+    m_window = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                                startWidth, startHeight, windowFlags);
 
     if (m_window == nullptr) {
         std::fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
@@ -135,9 +137,15 @@ auto Application::init() -> bool {
 
     // Apply theme from config
     switch (Config::instance().getThemeIndex()) {
-        case 1:  Theme::applyLight(); break;
-        case 2:  Theme::applyHighContrast(); break;
-        default: Theme::applyDark(); break;
+    case 1:
+        Theme::applyLight();
+        break;
+    case 2:
+        Theme::applyHighContrast();
+        break;
+    default:
+        Theme::applyDark();
+        break;
     }
 
     // Setup Platform/Renderer backends
@@ -184,20 +192,15 @@ auto Application::init() -> bool {
         onNewProject();
         m_showStartPage = false;
     });
-    m_startPage->setOnOpenProject([this]() {
-        onOpenProject();
-    });
+    m_startPage->setOnOpenProject([this]() { onOpenProject(); });
     m_startPage->setOnImportModel([this]() {
         onImportModel();
         m_showStartPage = false;
     });
-    m_startPage->setOnOpenRecentProject([this](const Path& path) {
-        onOpenRecentProject(path);
-    });
+    m_startPage->setOnOpenRecentProject([this](const Path& path) { onOpenRecentProject(path); });
 
     // Apply config render settings to viewport
     {
-        auto& cfg = Config::instance();
         auto& rs = m_viewportPanel->renderSettings();
         rs.lightDir = cfg.getRenderLightDir();
         rs.lightColor = cfg.getRenderLightColor();
@@ -209,13 +212,20 @@ auto Application::init() -> bool {
     }
 
     // Set up callbacks
+    // Single-click: show metadata in properties panel
     m_libraryPanel->setOnModelSelected([this](int64_t modelId) {
-        onModelSelected(modelId);
+        if (!m_libraryManager)
+            return;
+        auto record = m_libraryManager->getModel(modelId);
+        if (record && m_propertiesPanel) {
+            m_propertiesPanel->setModelRecord(*record);
+        }
     });
 
-    m_projectPanel->setOnModelSelected([this](int64_t modelId) {
-        onModelSelected(modelId);
-    });
+    // Double-click: load mesh into viewport
+    m_libraryPanel->setOnModelOpened([this](int64_t modelId) { onModelSelected(modelId); });
+
+    m_projectPanel->setOnModelSelected([this](int64_t modelId) { onModelSelected(modelId); });
 
     m_propertiesPanel->setOnMeshModified([this]() {
         // Re-upload mesh to GPU after transform operations
@@ -232,13 +242,9 @@ auto Application::init() -> bool {
         }
     });
 
-    m_projectPanel->setOpenProjectCallback([this]() {
-        onOpenProject();
-    });
+    m_projectPanel->setOpenProjectCallback([this]() { onOpenProject(); });
 
-    m_projectPanel->setSaveProjectCallback([this]() {
-        onSaveProject();
-    });
+    m_projectPanel->setSaveProjectCallback([this]() { onSaveProject(); });
 
     // Initialize dialogs
     m_fileDialog = std::make_unique<FileDialog>();
@@ -286,7 +292,7 @@ auto Application::init() -> bool {
     return true;
 }
 
-auto Application::run() -> int {
+int Application::run() {
     if (!m_initialized) {
         std::fprintf(stderr, "Application not initialized\n");
         return 1;
@@ -318,8 +324,7 @@ void Application::processEvents() {
             quit();
         }
 
-        if (event.type == SDL_WINDOWEVENT &&
-            event.window.event == SDL_WINDOWEVENT_CLOSE &&
+        if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE &&
             event.window.windowID == SDL_GetWindowID(m_window)) {
             quit();
         }
@@ -350,7 +355,16 @@ void Application::render() {
     ImGui::NewFrame();
 
     // Create dockspace over entire window
-    ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
+    ImGuiID dockspaceId = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
+
+    // On first frame, set up default dock layout if no imgui.ini was loaded
+    if (m_firstFrame) {
+        m_firstFrame = false;
+        if (ImGui::DockBuilderGetNode(dockspaceId) == nullptr ||
+            ImGui::DockBuilderGetNode(dockspaceId)->IsLeafNode()) {
+            setupDefaultDockLayout(dockspaceId);
+        }
+    }
 
     // Handle keyboard shortcuts
     handleKeyboardShortcuts();
@@ -371,7 +385,7 @@ void Application::render() {
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     if (ImGui::BeginPopupModal("About Digital Workshop", nullptr,
-                                ImGuiWindowFlags_AlwaysAutoResize)) {
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("Digital Workshop");
         ImGui::Text("Version %s", VERSION);
         ImGui::Separator();
@@ -510,19 +524,20 @@ void Application::renderPanels() {
 void Application::onImportModel() {
     if (m_fileDialog) {
         m_fileDialog->showOpenMulti("Import Models", FileDialog::modelFilters(),
-            [this](const std::vector<std::string>& paths) {
-                if (paths.empty()) return;
+                                    [this](const std::vector<std::string>& paths) {
+                                        if (paths.empty())
+                                            return;
 
-                std::vector<Path> importPaths;
-                importPaths.reserve(paths.size());
-                for (const auto& p : paths) {
-                    importPaths.emplace_back(p);
-                }
+                                        std::vector<Path> importPaths;
+                                        importPaths.reserve(paths.size());
+                                        for (const auto& p : paths) {
+                                            importPaths.emplace_back(p);
+                                        }
 
-                if (m_importQueue) {
-                    m_importQueue->enqueue(importPaths);
-                }
-            });
+                                        if (m_importQueue) {
+                                            m_importQueue->enqueue(importPaths);
+                                        }
+                                    });
     }
 }
 
@@ -535,71 +550,66 @@ void Application::onExportModel() {
 
     if (m_fileDialog) {
         m_fileDialog->showSave("Export Model", FileDialog::modelFilters(), "model.stl",
-            [this, mesh](const std::string& path) {
-                if (path.empty()) return;
+                               [this, mesh](const std::string& path) {
+                                   if (path.empty())
+                                       return;
 
-                ModelExporter exporter;
-                auto result = exporter.exportMesh(*mesh, path);
+                                   ModelExporter exporter;
+                                   auto result = exporter.exportMesh(*mesh, path);
 
-                if (result.success) {
-                    MessageDialog::info("Export Complete", "Model exported to:\n" + path);
-                } else {
-                    MessageDialog::error("Export Failed", result.error);
-                }
-            });
+                                   if (result.success) {
+                                       MessageDialog::info("Export Complete",
+                                                           "Model exported to:\n" + path);
+                                   } else {
+                                       MessageDialog::error("Export Failed", result.error);
+                                   }
+                               });
     }
 }
 
 void Application::onNewProject() {
     auto project = m_projectManager->create("New Project");
     m_projectManager->setCurrentProject(project);
-    if (m_projectPanel) {
-        m_projectPanel->refresh();
-    }
     m_showStartPage = false;
 }
 
 void Application::onOpenProject() {
-    if (!m_fileDialog) return;
+    if (!m_fileDialog)
+        return;
 
     m_fileDialog->showOpen("Open Project", FileDialog::projectFilters(),
-        [this](const std::string& path) {
-            if (path.empty()) return;
+                           [this](const std::string& path) {
+                               if (path.empty())
+                                   return;
 
-            // Search existing projects for one matching this file path
-            auto projects = m_projectManager->listProjects();
-            for (const auto& record : projects) {
-                if (record.filePath == Path(path)) {
-                    auto project = m_projectManager->open(record.id);
-                    if (project) {
-                        m_projectManager->setCurrentProject(project);
-                        if (m_projectPanel) {
-                            m_projectPanel->refresh();
-                        }
-                        Config::instance().addRecentProject(Path(path));
-                        Config::instance().save();
-                        m_showStartPage = false;
-                        return;
-                    }
-                }
-            }
+                               // Search existing projects for one matching this file path
+                               auto projects = m_projectManager->listProjects();
+                               for (const auto& record : projects) {
+                                   if (record.filePath == Path(path)) {
+                                       auto project = m_projectManager->open(record.id);
+                                       if (project) {
+                                           m_projectManager->setCurrentProject(project);
+                                           Config::instance().addRecentProject(Path(path));
+                                           Config::instance().save();
+                                           m_showStartPage = false;
+                                           return;
+                                       }
+                                   }
+                               }
 
-            // No existing project found at that path - create a new one
-            // and associate the file path
-            Path filePath(path);
-            std::string name = filePath.stem().string();
-            auto project = m_projectManager->create(name);
-            if (project) {
-                project->setFilePath(filePath);
-                m_projectManager->setCurrentProject(project);
-                if (m_projectPanel) {
-                    m_projectPanel->refresh();
-                }
-                Config::instance().addRecentProject(filePath);
-                Config::instance().save();
-                m_showStartPage = false;
-            }
-        });
+                               // No existing project found at that path - create a new one
+                               // and associate the file path
+                               Path filePath(path);
+                               std::string name = filePath.stem().string();
+                               auto project = m_projectManager->create(name);
+                               if (project) {
+                                   project->setFilePath(filePath);
+                                   m_projectManager->setCurrentProject(project);
+                                   Config::instance().addRecentProject(filePath);
+                                   Config::instance().save();
+                                   m_showStartPage = false;
+                               }
+                           });
 }
 
 void Application::onSaveProject() {
@@ -613,24 +623,18 @@ void Application::onSaveProject() {
     if (project->filePath().empty()) {
         if (m_fileDialog) {
             std::string defaultName = project->name() + ".dwp";
-            m_fileDialog->showSave("Save Project", FileDialog::projectFilters(),
-                defaultName,
-                [this, project](const std::string& path) {
-                    if (path.empty()) return;
-                    project->setFilePath(Path(path));
-                    m_projectManager->save(*project);
-                    if (m_projectPanel) {
-                        m_projectPanel->refresh();
-                    }
-                    Config::instance().addRecentProject(Path(path));
-                    Config::instance().save();
-                });
+            m_fileDialog->showSave("Save Project", FileDialog::projectFilters(), defaultName,
+                                   [this, project](const std::string& path) {
+                                       if (path.empty())
+                                           return;
+                                       project->setFilePath(Path(path));
+                                       m_projectManager->save(*project);
+                                       Config::instance().addRecentProject(Path(path));
+                                       Config::instance().save();
+                                   });
         }
     } else {
         m_projectManager->save(*project);
-        if (m_projectPanel) {
-            m_projectPanel->refresh();
-        }
         if (!project->filePath().empty()) {
             Config::instance().addRecentProject(project->filePath());
             Config::instance().save();
@@ -639,10 +643,12 @@ void Application::onSaveProject() {
 }
 
 void Application::onModelSelected(int64_t modelId) {
-    if (!m_libraryManager) return;
+    if (!m_libraryManager)
+        return;
 
     auto mesh = m_libraryManager->loadMesh(modelId);
-    if (!mesh) return;
+    if (!mesh)
+        return;
 
     m_workspace->setFocusedMesh(mesh);
     if (m_viewportPanel) {
@@ -656,13 +662,15 @@ void Application::onModelSelected(int64_t modelId) {
 }
 
 void Application::onFilesDropped(const std::vector<std::string>& paths) {
-    if (!m_importQueue) return;
+    if (!m_importQueue)
+        return;
 
     std::vector<Path> importPaths;
     for (const auto& p : paths) {
         Path path{p};
         auto ext = path.extension().string();
-        if (!ext.empty() && ext[0] == '.') ext = ext.substr(1);
+        if (!ext.empty() && ext[0] == '.')
+            ext = ext.substr(1);
 
         if (LoaderFactory::isSupported(ext)) {
             importPaths.push_back(path);
@@ -675,7 +683,8 @@ void Application::onFilesDropped(const std::vector<std::string>& paths) {
 }
 
 void Application::processCompletedImports() {
-    if (!m_importQueue) return;
+    if (!m_importQueue)
+        return;
 
     auto completed = m_importQueue->pollCompleted();
     if (!completed.empty()) {
@@ -683,17 +692,10 @@ void Application::processCompletedImports() {
     }
     for (auto& task : completed) {
         // Generate thumbnail on main thread (needs GL context)
-        if (m_thumbnailGenerator && task.mesh) {
+        // Use LibraryManager which writes the file AND updates the DB
+        if (m_thumbnailGenerator && task.mesh && m_libraryManager) {
             m_libraryManager->setThumbnailGenerator(m_thumbnailGenerator.get());
-            // Use the library manager's thumbnail path convention
-            Path thumbnailDir = paths::getThumbnailDir();
-            Path thumbnailPath = thumbnailDir / (std::to_string(task.modelId) + ".tga");
-
-            ThumbnailSettings settings;
-            settings.width = 256;
-            settings.height = 256;
-
-            m_thumbnailGenerator->generate(*task.mesh, thumbnailPath, settings);
+            m_libraryManager->generateThumbnail(task.modelId, *task.mesh);
         }
 
         // Select the last imported model and refresh library
@@ -715,7 +717,8 @@ void Application::processCompletedImports() {
 }
 
 void Application::onOpenRecentProject(const Path& path) {
-    if (!m_projectManager) return;
+    if (!m_projectManager)
+        return;
 
     auto projects = m_projectManager->listProjects();
     for (const auto& record : projects) {
@@ -723,9 +726,6 @@ void Application::onOpenRecentProject(const Path& path) {
             auto project = m_projectManager->open(record.id);
             if (project) {
                 m_projectManager->setCurrentProject(project);
-                if (m_projectPanel) {
-                    m_projectPanel->refresh();
-                }
                 Config::instance().addRecentProject(path);
                 Config::instance().save();
                 m_showStartPage = false;
@@ -740,9 +740,6 @@ void Application::onOpenRecentProject(const Path& path) {
     if (project) {
         project->setFilePath(path);
         m_projectManager->setCurrentProject(project);
-        if (m_projectPanel) {
-            m_projectPanel->refresh();
-        }
         Config::instance().addRecentProject(path);
         Config::instance().save();
         m_showStartPage = false;
@@ -757,7 +754,8 @@ void Application::handleKeyboardShortcuts() {
     auto& io = ImGui::GetIO();
 
     // Only handle shortcuts when not typing in a text field
-    if (io.WantTextInput) return;
+    if (io.WantTextInput)
+        return;
 
     bool ctrl = io.KeyCtrl;
 
@@ -787,7 +785,8 @@ void Application::handleKeyboardShortcuts() {
 }
 
 void Application::renderImportProgress() {
-    if (!m_importQueue || !m_importQueue->isActive()) return;
+    if (!m_importQueue || !m_importQueue->isActive())
+        return;
 
     const auto& prog = m_importQueue->progress();
 
@@ -809,11 +808,12 @@ void Application::renderImportProgress() {
         int failed = prog.failedFiles.load();
 
         // Current file and stage
-        ImGui::Text("%s", prog.currentFileName);
+        ImGui::Text("%s", prog.getCurrentFileName().c_str());
         ImGui::TextDisabled("%s", importStageName(prog.currentStage.load()));
 
         // Overall progress bar
-        float fraction = total > 0 ? static_cast<float>(completed) / static_cast<float>(total) : 0.0f;
+        float fraction =
+            total > 0 ? static_cast<float>(completed) / static_cast<float>(total) : 0.0f;
         char overlay[64];
         std::snprintf(overlay, sizeof(overlay), "%d / %d", completed, total);
         ImGui::ProgressBar(fraction, ImVec2(-1, 0), overlay);
@@ -840,9 +840,15 @@ void Application::applyConfig() {
 
     // Theme (live)
     switch (cfg.getThemeIndex()) {
-        case 1:  Theme::applyLight(); break;
-        case 2:  Theme::applyHighContrast(); break;
-        default: Theme::applyDark(); break;
+    case 1:
+        Theme::applyLight();
+        break;
+    case 2:
+        Theme::applyHighContrast();
+        break;
+    default:
+        Theme::applyDark();
+        break;
     }
 
     // Render settings (live)
@@ -867,6 +873,22 @@ void Application::applyConfig() {
 }
 
 void Application::spawnSettingsApp() {
+#ifdef __linux__
+    // Resolve path relative to the running executable
+    char exePath[1024] = {};
+    ssize_t len = readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
+    if (len > 0) {
+        exePath[len] = '\0';
+        std::string dir(exePath);
+        auto slash = dir.rfind('/');
+        if (slash != std::string::npos) {
+            dir = dir.substr(0, slash);
+        }
+        std::string cmd = dir + "/dw_settings &";
+        std::system(cmd.c_str());
+        return;
+    }
+#endif
     std::system("dw_settings &");
 }
 
@@ -887,7 +909,8 @@ void Application::relaunchApp() {
 }
 
 void Application::renderRestartPopup() {
-    if (!m_showRestartPopup) return;
+    if (!m_showRestartPopup)
+        return;
 
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
@@ -910,6 +933,35 @@ void Application::renderRestartPopup() {
         }
     }
     ImGui::End();
+}
+
+void Application::setupDefaultDockLayout(ImGuiID dockspaceId) {
+    ImGui::DockBuilderRemoveNode(dockspaceId);
+    ImGui::DockBuilderAddNode(dockspaceId, ImGuiDockNodeFlags_DockSpace);
+    ImGui::DockBuilderSetNodeSize(dockspaceId, ImGui::GetMainViewport()->Size);
+
+    // Split: left sidebar (20%) | center+right
+    ImGuiID dockLeft = 0;
+    ImGuiID dockCenterRight = 0;
+    ImGui::DockBuilderSplitNode(dockspaceId, ImGuiDir_Left, 0.20f, &dockLeft, &dockCenterRight);
+
+    // Split left sidebar: library (top 60%) | project (bottom 40%)
+    ImGuiID dockLeftTop = 0;
+    ImGuiID dockLeftBottom = 0;
+    ImGui::DockBuilderSplitNode(dockLeft, ImGuiDir_Down, 0.40f, &dockLeftBottom, &dockLeftTop);
+
+    // Split center+right: center | right sidebar (22%) for properties
+    ImGuiID dockCenter = 0;
+    ImGuiID dockRight = 0;
+    ImGui::DockBuilderSplitNode(dockCenterRight, ImGuiDir_Right, 0.22f, &dockRight, &dockCenter);
+
+    // Dock windows into their positions
+    ImGui::DockBuilderDockWindow("Library", dockLeftTop);
+    ImGui::DockBuilderDockWindow("Project", dockLeftBottom);
+    ImGui::DockBuilderDockWindow("Viewport", dockCenter);
+    ImGui::DockBuilderDockWindow("Properties", dockRight);
+
+    ImGui::DockBuilderFinish(dockspaceId);
 }
 
 void Application::saveWorkspaceState() {
@@ -967,7 +1019,7 @@ void Application::shutdown() {
     m_startPage.reset();
 
     // Destroy core systems
-    m_importQueue.reset();  // Joins worker thread
+    m_importQueue.reset(); // Joins worker thread
     m_workspace.reset();
     m_thumbnailGenerator.reset();
     m_projectManager.reset();

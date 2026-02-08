@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../types.h"
-
 #include <string>
 #include <vector>
+
+#include "../types.h"
 
 namespace dw {
 namespace file {
@@ -15,21 +15,21 @@ Result<std::string> readText(const Path& path);
 Result<ByteBuffer> readBinary(const Path& path);
 
 // Write string to file
-bool writeText(const Path& path, std::string_view content);
+[[nodiscard]] bool writeText(const Path& path, std::string_view content);
 
 // Write bytes to file
-bool writeBinary(const Path& path, const ByteBuffer& data);
-bool writeBinary(const Path& path, const void* data, usize size);
+[[nodiscard]] bool writeBinary(const Path& path, const ByteBuffer& data);
+[[nodiscard]] bool writeBinary(const Path& path, const void* data, usize size);
 
 // File operations
 bool exists(const Path& path);
 bool isFile(const Path& path);
 bool isDirectory(const Path& path);
-bool createDirectory(const Path& path);
-bool createDirectories(const Path& path);
-bool remove(const Path& path);
-bool copy(const Path& from, const Path& to);
-bool move(const Path& from, const Path& to);
+[[nodiscard]] bool createDirectory(const Path& path);
+[[nodiscard]] bool createDirectories(const Path& path);
+[[nodiscard]] bool remove(const Path& path);
+[[nodiscard]] bool copy(const Path& from, const Path& to);
+[[nodiscard]] bool move(const Path& from, const Path& to);
 
 // Get file size in bytes
 Result<u64> getFileSize(const Path& path);
@@ -65,5 +65,5 @@ std::vector<std::string> listEntries(const Path& directory);
 // Get file size (convenience wrapper)
 u64 fileSize(const Path& path);
 
-}  // namespace file
-}  // namespace dw
+} // namespace file
+} // namespace dw

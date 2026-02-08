@@ -1,19 +1,26 @@
 #include "start_page.h"
 
+#include <imgui.h>
+
 #include "../../core/config/config.h"
 #include "../../core/paths/app_paths.h"
 #include "version.h"
-
-#include <imgui.h>
 
 namespace dw {
 
 StartPage::StartPage() : Panel("Start Page") {}
 
 void StartPage::render() {
-    if (!m_open) return;
+    if (!m_open)
+        return;
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse;
+
+    // Default size and centered position on first launch
+    ImVec2 viewportSize = ImGui::GetMainViewport()->Size;
+    ImGui::SetNextWindowSize(ImVec2(790, 410), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(viewportSize.x * 0.5f, viewportSize.y * 0.5f),
+                            ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
 
     if (ImGui::Begin(m_title.c_str(), &m_open, flags)) {
         // Header
@@ -25,19 +32,29 @@ void StartPage::render() {
         ImGui::Separator();
         ImGui::Spacing();
 
-        // Two-column layout
+        // Two-column layout — reserve space for checkbox at bottom
+        float checkboxHeight = ImGui::GetFrameHeightWithSpacing() + 8.0f;
+        float contentHeight = ImGui::GetContentRegionAvail().y - checkboxHeight;
         float availWidth = ImGui::GetContentRegionAvail().x;
         float leftWidth = availWidth * 0.6f;
 
-        ImGui::BeginChild("##StartLeft", ImVec2(leftWidth, 0), false);
+        ImGui::BeginChild("##StartLeft", ImVec2(leftWidth, contentHeight), false);
         renderRecentProjects();
         ImGui::EndChild();
 
         ImGui::SameLine();
 
-        ImGui::BeginChild("##StartRight", ImVec2(0, 0), false);
+        ImGui::BeginChild("##StartRight", ImVec2(0, contentHeight), false);
         renderQuickActions();
         ImGui::EndChild();
+
+        // Show at launch checkbox
+        ImGui::Spacing();
+        bool showAtLaunch = Config::instance().getShowStartPage();
+        if (ImGui::Checkbox("Show at launch", &showAtLaunch)) {
+            Config::instance().setShowStartPage(showAtLaunch);
+            Config::instance().save();
+        }
     }
     ImGui::End();
 }
@@ -88,13 +105,15 @@ void StartPage::renderQuickActions() {
     float buttonHeight = 32.0f;
 
     if (ImGui::Button("New Project", ImVec2(buttonWidth, buttonHeight))) {
-        if (m_onNewProject) m_onNewProject();
+        if (m_onNewProject)
+            m_onNewProject();
     }
 
     ImGui::Spacing();
 
     if (ImGui::Button("Open Project", ImVec2(buttonWidth, buttonHeight))) {
-        if (m_onOpenProject) m_onOpenProject();
+        if (m_onOpenProject)
+            m_onOpenProject();
     }
 
     ImGui::Spacing();
@@ -102,8 +121,9 @@ void StartPage::renderQuickActions() {
     ImGui::Spacing();
 
     if (ImGui::Button("Import Model", ImVec2(buttonWidth, buttonHeight))) {
-        if (m_onImportModel) m_onImportModel();
+        if (m_onImportModel)
+            m_onImportModel();
     }
 }
 
-}  // namespace dw
+} // namespace dw

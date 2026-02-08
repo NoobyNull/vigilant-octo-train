@@ -98,7 +98,7 @@ TEST(FileUtils, ReadBinary_NonExistent) {
 TEST(FileUtils, Exists_CreatedFile) {
     TempDir tmp;
     auto path = tmp / "exists.txt";
-    dw::file::writeText(path, "x");
+    ASSERT_TRUE(dw::file::writeText(path, "x"));
 
     EXPECT_TRUE(dw::file::exists(path));
     EXPECT_TRUE(dw::file::isFile(path));
@@ -137,7 +137,7 @@ TEST(FileUtils, CreateDirectories_Nested) {
 TEST(FileUtils, Remove_File) {
     TempDir tmp;
     auto path = tmp / "removeme.txt";
-    dw::file::writeText(path, "x");
+    ASSERT_TRUE(dw::file::writeText(path, "x"));
     ASSERT_TRUE(dw::file::exists(path));
 
     EXPECT_TRUE(dw::file::remove(path));
@@ -150,7 +150,7 @@ TEST(FileUtils, Copy_File) {
     TempDir tmp;
     auto src = tmp / "src.txt";
     auto dst = tmp / "dst.txt";
-    dw::file::writeText(src, "content");
+    ASSERT_TRUE(dw::file::writeText(src, "content"));
 
     ASSERT_TRUE(dw::file::copy(src, dst));
     EXPECT_TRUE(dw::file::exists(src));
@@ -165,7 +165,7 @@ TEST(FileUtils, Move_File) {
     TempDir tmp;
     auto src = tmp / "src.txt";
     auto dst = tmp / "dst.txt";
-    dw::file::writeText(src, "content");
+    ASSERT_TRUE(dw::file::writeText(src, "content"));
 
     ASSERT_TRUE(dw::file::move(src, dst));
     EXPECT_FALSE(dw::file::exists(src));
@@ -177,7 +177,7 @@ TEST(FileUtils, Move_File) {
 TEST(FileUtils, GetFileSize_NonZero) {
     TempDir tmp;
     auto path = tmp / "size.txt";
-    dw::file::writeText(path, "hello");
+    ASSERT_TRUE(dw::file::writeText(path, "hello"));
 
     auto result = dw::file::getFileSize(path);
     ASSERT_TRUE(result.has_value());
@@ -188,9 +188,9 @@ TEST(FileUtils, GetFileSize_NonZero) {
 
 TEST(FileUtils, ListFiles_Basic) {
     TempDir tmp;
-    dw::file::writeText(tmp / "a.txt", "a");
-    dw::file::writeText(tmp / "b.stl", "b");
-    dw::file::writeText(tmp / "c.txt", "c");
+    ASSERT_TRUE(dw::file::writeText(tmp / "a.txt", "a"));
+    ASSERT_TRUE(dw::file::writeText(tmp / "b.stl", "b"));
+    ASSERT_TRUE(dw::file::writeText(tmp / "c.txt", "c"));
 
     auto all = dw::file::listFiles(tmp.path());
     EXPECT_GE(all.size(), 3u);
@@ -198,9 +198,9 @@ TEST(FileUtils, ListFiles_Basic) {
 
 TEST(FileUtils, ListFiles_FilteredByExtension) {
     TempDir tmp;
-    dw::file::writeText(tmp / "a.txt", "a");
-    dw::file::writeText(tmp / "b.stl", "b");
-    dw::file::writeText(tmp / "c.txt", "c");
+    ASSERT_TRUE(dw::file::writeText(tmp / "a.txt", "a"));
+    ASSERT_TRUE(dw::file::writeText(tmp / "b.stl", "b"));
+    ASSERT_TRUE(dw::file::writeText(tmp / "c.txt", "c"));
 
     auto stls = dw::file::listFiles(tmp.path(), "stl");
     EXPECT_EQ(stls.size(), 1u);

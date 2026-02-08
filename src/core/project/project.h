@@ -1,12 +1,12 @@
 #pragma once
 
-#include "../database/model_repository.h"
-#include "../database/project_repository.h"
-#include "../types.h"
-
 #include <memory>
 #include <string>
 #include <vector>
+
+#include "../database/model_repository.h"
+#include "../database/project_repository.h"
+#include "../types.h"
 
 namespace dw {
 
@@ -15,7 +15,7 @@ class Database;
 
 // Project class - represents an open project
 class Project {
-public:
+  public:
     Project() = default;
 
     // Project metadata
@@ -49,7 +49,7 @@ public:
     const ProjectRecord& record() const { return m_record; }
     ProjectRecord& record() { return m_record; }
 
-private:
+  private:
     ProjectRecord m_record;
     std::vector<i64> m_modelIds;
     bool m_modified = false;
@@ -57,7 +57,7 @@ private:
 
 // Project manager - handles project lifecycle
 class ProjectManager {
-public:
+  public:
     explicit ProjectManager(Database& db);
 
     // Project operations
@@ -73,18 +73,16 @@ public:
 
     // Current project
     std::shared_ptr<Project> currentProject() const { return m_currentProject; }
-    void setCurrentProject(std::shared_ptr<Project> project) {
-        m_currentProject = project;
-    }
+    void setCurrentProject(std::shared_ptr<Project> project) { m_currentProject = project; }
 
     // Model operations within current project
     bool addModelToProject(i64 modelId);
     bool removeModelFromProject(i64 modelId);
 
-private:
+  private:
     Database& m_db;
     ProjectRepository m_projectRepo;
     std::shared_ptr<Project> m_currentProject;
 };
 
-}  // namespace dw
+} // namespace dw

@@ -1,12 +1,42 @@
 #include "file_utils.h"
 
-#include "log.h"
-
 #include <algorithm>
 #include <cstdlib>
 #include <fstream>
 
+#include "log.h"
+
 namespace dw {
+
+namespace {
+
+// Helper for filesystem operations that return bool and log on failure.
+// The callable receives a std::error_code& and performs the fs operation.
+template <typename F> bool fsOp(const char* opName, const Path& path, F&& fn) {
+    std::error_code ec;
+    fn(ec);
+    if (ec) {
+        log::errorf("FileIO", "Failed to %s: %s (%s)", opName, path.string().c_str(),
+                    ec.message().c_str());
+        return false;
+    }
+    return true;
+}
+
+// Two-path variant for copy/move operations.
+template <typename F> bool fsOp2(const char* opName, const Path& from, const Path& to, F&& fn) {
+    std::error_code ec;
+    fn(ec);
+    if (ec) {
+        log::errorf("FileIO", "Failed to %s %s to %s: %s", opName, from.string().c_str(),
+                    to.string().c_str(), ec.message().c_str());
+        return false;
+    }
+    return true;
+}
+
+} // anonymous namespace
+
 namespace file {
 
 Result<std::string> readText(const Path& path) {
@@ -16,8 +46,7 @@ Result<std::string> readText(const Path& path) {
         return std::nullopt;
     }
 
-    std::string content((std::istreambuf_iterator<char>(file)),
-                        std::istreambuf_iterator<char>());
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     return content;
 }
 
@@ -32,8 +61,7 @@ Result<ByteBuffer> readBinary(const Path& path) {
     file.seekg(0, std::ios::beg);
 
     ByteBuffer buffer(static_cast<usize>(size));
-    if (!file.read(reinterpret_cast<char*>(buffer.data()),
-                   static_cast<std::streamsize>(size))) {
+    if (!file.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(size))) {
         log::errorf("FileIO", "Failed to read: %s", path.string().c_str());
         return std::nullopt;
     }
@@ -83,55 +111,33 @@ bool isDirectory(const Path& path) {
 }
 
 bool createDirectory(const Path& path) {
-    std::error_code ec;
-    bool result = fs::create_directory(path, ec);
-    if (ec) {
-        log::errorf("FileIO", "Failed to create directory: %s (%s)", path.string().c_str(),
-                    ec.message().c_str());
-    }
+    bool result = false;
+    fsOp("create directory", path,
+         [&](std::error_code& ec) { result = fs::create_directory(path, ec); });
     return result || file::exists(path);
 }
 
 bool createDirectories(const Path& path) {
-    std::error_code ec;
-    bool result = fs::create_directories(path, ec);
-    if (ec) {
-        log::errorf("FileIO", "Failed to create directories: %s (%s)", path.string().c_str(),
-                    ec.message().c_str());
-    }
+    bool result = false;
+    fsOp("create directories", path,
+         [&](std::error_code& ec) { result = fs::create_directories(path, ec); });
     return result || file::exists(path);
 }
 
 bool remove(const Path& path) {
-    std::error_code ec;
-    bool result = fs::remove(path, ec);
-    if (ec) {
-        log::errorf("FileIO", "Failed to remove: %s (%s)", path.string().c_str(),
-                    ec.message().c_str());
-    }
+    bool result = false;
+    fsOp("remove", path, [&](std::error_code& ec) { result = fs::remove(path, ec); });
     return result;
 }
 
 bool copy(const Path& from, const Path& to) {
-    std::error_code ec;
-    fs::copy(from, to, fs::copy_options::overwrite_existing, ec);
-    if (ec) {
-        log::errorf("FileIO", "Failed to copy %s to %s: %s", from.string().c_str(),
-                    to.string().c_str(), ec.message().c_str());
-        return false;
-    }
-    return true;
+    return fsOp2("copy", from, to, [&](std::error_code& ec) {
+        fs::copy(from, to, fs::copy_options::overwrite_existing, ec);
+    });
 }
 
 bool move(const Path& from, const Path& to) {
-    std::error_code ec;
-    fs::rename(from, to, ec);
-    if (ec) {
-        log::errorf("FileIO", "Failed to move %s to %s: %s", from.string().c_str(),
-                    to.string().c_str(), ec.message().c_str());
-        return false;
-    }
-    return true;
+    return fsOp2("move", from, to, [&](std::error_code& ec) { fs::rename(from, to, ec); });
 }
 
 Result<u64> getFileSize(const Path& path) {
@@ -254,5 +260,5 @@ u64 fileSize(const Path& path) {
     return result.value_or(0);
 }
 
-}  // namespace file
-}  // namespace dw
+} // namespace file
+} // namespace dw

@@ -6,7 +6,7 @@ namespace dw {
 
 // Dialog for adjusting lighting settings
 class LightingDialog {
-public:
+  public:
     LightingDialog() = default;
 
     // Open/close
@@ -20,9 +20,9 @@ public:
     // Render the dialog
     void render();
 
-private:
+  private:
     bool m_open = false;
     RenderSettings* m_settings = nullptr;
 };
 
-}  // namespace dw
+} // namespace dw

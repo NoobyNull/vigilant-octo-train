@@ -1,11 +1,11 @@
 #pragma once
 
-#include "../types.h"
-
 #include <functional>
 #include <memory>
 #include <string>
 #include <vector>
+
+#include "../types.h"
 
 struct sqlite3;
 struct sqlite3_stmt;
@@ -17,7 +17,7 @@ class Database;
 
 // RAII wrapper for prepared statement
 class Statement {
-public:
+  public:
     Statement() = default;
     Statement(sqlite3_stmt* stmt);
     ~Statement();
@@ -28,16 +28,16 @@ public:
     Statement& operator=(Statement&& other) noexcept;
 
     // Bind parameters (1-indexed)
-    bool bindInt(int index, i64 value);
-    bool bindDouble(int index, f64 value);
-    bool bindText(int index, const std::string& value);
-    bool bindBlob(int index, const void* data, int size);
-    bool bindNull(int index);
+    [[nodiscard]] bool bindInt(int index, i64 value);
+    [[nodiscard]] bool bindDouble(int index, f64 value);
+    [[nodiscard]] bool bindText(int index, const std::string& value);
+    [[nodiscard]] bool bindBlob(int index, const void* data, int size);
+    [[nodiscard]] bool bindNull(int index);
 
     // Execute and step
-    bool step();      // Returns true if there's a row (SQLITE_ROW)
-    bool execute();   // Returns true if successful (SQLITE_DONE)
-    void reset();     // Reset for reuse
+    [[nodiscard]] bool step();    // Returns true if there's a row (SQLITE_ROW)
+    [[nodiscard]] bool execute(); // Returns true if successful (SQLITE_DONE)
+    void reset();                 // Reset for reuse
 
     // Get column values (0-indexed)
     i64 getInt(int column) const;
@@ -52,13 +52,13 @@ public:
 
     bool isValid() const { return m_stmt != nullptr; }
 
-private:
+  private:
     sqlite3_stmt* m_stmt = nullptr;
 };
 
 // Database connection wrapper
 class Database {
-public:
+  public:
     Database() = default;
     ~Database();
 
@@ -66,48 +66,45 @@ public:
     Database& operator=(const Database&) = delete;
 
     // Open/close database
-    bool open(const Path& path);
+    [[nodiscard]] bool open(const Path& path);
     void close();
     bool isOpen() const { return m_db != nullptr; }
 
     // Execute SQL (for simple queries without results)
-    bool execute(const std::string& sql);
+    [[nodiscard]] bool execute(const std::string& sql);
 
     // Prepare statement for queries with results or parameters
     Statement prepare(const std::string& sql);
 
     // Transaction support
-    bool beginTransaction();
-    bool commit();
-    bool rollback();
+    [[nodiscard]] bool beginTransaction();
+    [[nodiscard]] bool commit();
+    [[nodiscard]] bool rollback();
 
     // Utility
     i64 lastInsertId() const;
     int changesCount() const;
     std::string lastError() const;
 
-    // Get raw handle (for advanced usage)
-    sqlite3* handle() const { return m_db; }
-
-private:
+  private:
     sqlite3* m_db = nullptr;
 };
 
 // Scoped transaction (RAII)
 class Transaction {
-public:
+  public:
     explicit Transaction(Database& db);
     ~Transaction();
 
     Transaction(const Transaction&) = delete;
     Transaction& operator=(const Transaction&) = delete;
 
-    bool commit();
+    [[nodiscard]] bool commit();
     void rollback();
 
-private:
+  private:
     Database& m_db;
     bool m_committed = false;
 };
 
-}  // namespace dw
+} // namespace dw

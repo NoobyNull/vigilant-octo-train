@@ -150,9 +150,9 @@ bool LibraryManager::removeModel(i64 modelId) {
         return false;
     }
 
-    // Remove thumbnail if exists
+    // Remove thumbnail if exists (best-effort cleanup)
     if (!record->thumbnailPath.empty() && file::exists(record->thumbnailPath)) {
-        file::remove(record->thumbnailPath);
+        (void)file::remove(record->thumbnailPath);
     }
 
     return m_modelRepo.remove(modelId);
@@ -172,13 +172,16 @@ std::string LibraryManager::computeFileHash(const Path& path) {
 
 bool LibraryManager::generateThumbnail(i64 modelId, const Mesh& mesh) {
     if (!m_thumbnailGen) {
-        return true;  // No generator set - skip silently
+        return true; // No generator set - skip silently
     }
 
     // Ensure thumbnail directory exists
     Path thumbnailDir = paths::getThumbnailDir();
     if (!file::exists(thumbnailDir)) {
-        file::createDirectories(thumbnailDir);
+        if (!file::createDirectories(thumbnailDir)) {
+            log::warning("Library", "Failed to create thumbnail directory");
+            return false;
+        }
     }
 
     Path thumbnailPath = thumbnailDir / (std::to_string(modelId) + ".tga");
@@ -188,7 +191,8 @@ bool LibraryManager::generateThumbnail(i64 modelId, const Mesh& mesh) {
     settings.height = 256;
 
     if (!m_thumbnailGen->generate(mesh, thumbnailPath, settings)) {
-        log::warningf("Library", "Failed to generate thumbnail for model %lld", static_cast<long long>(modelId));
+        log::warningf("Library", "Failed to generate thumbnail for model %lld",
+                      static_cast<long long>(modelId));
         return false;
     }
 
@@ -199,4 +203,4 @@ bool LibraryManager::generateThumbnail(i64 modelId, const Mesh& mesh) {
     return true;
 }
 
-}  // namespace dw
+} // namespace dw

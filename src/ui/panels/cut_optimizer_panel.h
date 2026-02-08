@@ -1,17 +1,18 @@
 #pragma once
 
-#include "../../core/optimizer/cut_optimizer.h"
-#include "../../core/optimizer/sheet.h"
-#include "panel.h"
-
 #include <memory>
 #include <vector>
+
+#include "../../core/optimizer/cut_optimizer.h"
+#include "../../core/optimizer/sheet.h"
+#include "../widgets/canvas_2d.h"
+#include "panel.h"
 
 namespace dw {
 
 // 2D Cut optimizer panel
 class CutOptimizerPanel : public Panel {
-public:
+  public:
     CutOptimizerPanel();
     ~CutOptimizerPanel() override = default;
 
@@ -20,7 +21,7 @@ public:
     // Clear all data
     void clear();
 
-private:
+  private:
     void renderToolbar();
     void renderPartsEditor();
     void renderSheetConfig();
@@ -31,13 +32,13 @@ private:
 
     // Input data
     std::vector<optimizer::Part> m_parts;
-    optimizer::Sheet m_sheet{2440.0f, 1220.0f};  // Standard 4x8 sheet
+    optimizer::Sheet m_sheet{2440.0f, 1220.0f}; // Standard 4x8 sheet
 
     // Settings
     optimizer::Algorithm m_algorithm = optimizer::Algorithm::Guillotine;
     bool m_allowRotation = true;
-    float m_kerf = 3.0f;    // mm
-    float m_margin = 5.0f;  // mm
+    float m_kerf = 3.0f;   // mm
+    float m_margin = 5.0f; // mm
 
     // Results
     optimizer::CutPlan m_result;
@@ -51,9 +52,7 @@ private:
 
     // Visualization state
     int m_selectedSheet = 0;
-    float m_zoom = 1.0f;
-    float m_panX = 0.0f;
-    float m_panY = 0.0f;
+    Canvas2D m_canvas; // zoomMax set in constructor
 };
 
-}  // namespace dw
+} // namespace dw

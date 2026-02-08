@@ -1,25 +1,24 @@
 #include "model_exporter.h"
 
-#include "../utils/file_utils.h"
-#include "../utils/log.h"
-#include "../utils/string_utils.h"
-
 #include <cstring>
 #include <fstream>
 #include <iomanip>
 #include <sstream>
 
+#include "../utils/file_utils.h"
+#include "../utils/log.h"
+#include "../utils/string_utils.h"
+
 namespace dw {
 
-ExportResult ModelExporter::exportMesh(const Mesh& mesh, const Path& path,
-                                        ExportFormat format) {
+ExportResult ModelExporter::exportMesh(const Mesh& mesh, const Path& path, ExportFormat format) {
     switch (format) {
-        case ExportFormat::STL_Binary:
-            return exportSTLBinary(mesh, path);
-        case ExportFormat::STL_ASCII:
-            return exportSTLAscii(mesh, path);
-        case ExportFormat::OBJ:
-            return exportOBJ(mesh, path);
+    case ExportFormat::STL_Binary:
+        return exportSTLBinary(mesh, path);
+    case ExportFormat::STL_ASCII:
+        return exportSTLAscii(mesh, path);
+    case ExportFormat::OBJ:
+        return exportOBJ(mesh, path);
     }
 
     return ExportResult{false, "Unknown export format"};
@@ -29,7 +28,7 @@ ExportResult ModelExporter::exportMesh(const Mesh& mesh, const Path& path) {
     std::string ext = str::toLower(file::getExtension(path));
 
     if (ext == "stl") {
-        return exportSTLBinary(mesh, path);  // Default to binary
+        return exportSTLBinary(mesh, path); // Default to binary
     } else if (ext == "obj") {
         return exportOBJ(mesh, path);
     }
@@ -68,7 +67,7 @@ ExportResult ModelExporter::exportSTLBinary(const Mesh& mesh, const Path& path) 
         // Calculate face normal
         Vec3 edge1 = v1.position - v0.position;
         Vec3 edge2 = v2.position - v0.position;
-        Vec3 normal = edge1.cross(edge2).normalized();
+        Vec3 normal = glm::normalize(glm::cross(edge1, edge2));
 
         // Write normal
         file.write(reinterpret_cast<const char*>(&normal.x), 4);
@@ -93,8 +92,7 @@ ExportResult ModelExporter::exportSTLBinary(const Mesh& mesh, const Path& path) 
         file.write(reinterpret_cast<const char*>(&attrByteCount), 2);
     }
 
-    log::infof("Export", "Binary STL: %s (%u triangles)", path.string().c_str(),
-               triangleCount);
+    log::infof("Export", "Binary STL: %s (%u triangles)", path.string().c_str(), triangleCount);
 
     return ExportResult{true, ""};
 }
@@ -121,17 +119,16 @@ ExportResult ModelExporter::exportSTLAscii(const Mesh& mesh, const Path& path) {
         // Calculate face normal
         Vec3 edge1 = v1.position - v0.position;
         Vec3 edge2 = v2.position - v0.position;
-        Vec3 normal = edge1.cross(edge2).normalized();
+        Vec3 normal = glm::normalize(glm::cross(edge1, edge2));
 
-        ss << "  facet normal " << normal.x << " " << normal.y << " " << normal.z
-           << "\n";
+        ss << "  facet normal " << normal.x << " " << normal.y << " " << normal.z << "\n";
         ss << "    outer loop\n";
-        ss << "      vertex " << v0.position.x << " " << v0.position.y << " "
-           << v0.position.z << "\n";
-        ss << "      vertex " << v1.position.x << " " << v1.position.y << " "
-           << v1.position.z << "\n";
-        ss << "      vertex " << v2.position.x << " " << v2.position.y << " "
-           << v2.position.z << "\n";
+        ss << "      vertex " << v0.position.x << " " << v0.position.y << " " << v0.position.z
+           << "\n";
+        ss << "      vertex " << v1.position.x << " " << v1.position.y << " " << v1.position.z
+           << "\n";
+        ss << "      vertex " << v2.position.x << " " << v2.position.y << " " << v2.position.z
+           << "\n";
         ss << "    endloop\n";
         ss << "  endfacet\n";
     }
@@ -142,8 +139,7 @@ ExportResult ModelExporter::exportSTLAscii(const Mesh& mesh, const Path& path) {
         return ExportResult{false, "Failed to write file"};
     }
 
-    log::infof("Export", "ASCII STL: %s (%u triangles)", path.string().c_str(),
-               triangleCount);
+    log::infof("Export", "ASCII STL: %s (%u triangles)", path.string().c_str(), triangleCount);
 
     return ExportResult{true, ""};
 }
@@ -161,8 +157,7 @@ ExportResult ModelExporter::exportOBJ(const Mesh& mesh, const Path& path) {
 
     // Write vertices
     for (const auto& v : vertices) {
-        ss << "v " << v.position.x << " " << v.position.y << " " << v.position.z
-           << "\n";
+        ss << "v " << v.position.x << " " << v.position.y << " " << v.position.z << "\n";
     }
 
     ss << "\n";
@@ -188,19 +183,19 @@ ExportResult ModelExporter::exportOBJ(const Mesh& mesh, const Path& path) {
     // Write faces
     u32 triangleCount = mesh.triangleCount();
     for (u32 i = 0; i < triangleCount; ++i) {
-        u32 i0 = indices[i * 3] + 1;  // OBJ is 1-indexed
+        u32 i0 = indices[i * 3] + 1; // OBJ is 1-indexed
         u32 i1 = indices[i * 3 + 1] + 1;
         u32 i2 = indices[i * 3 + 2] + 1;
 
         if (hasNormals && hasTexCoords) {
-            ss << "f " << i0 << "/" << i0 << "/" << i0 << " " << i1 << "/" << i1 << "/"
-               << i1 << " " << i2 << "/" << i2 << "/" << i2 << "\n";
+            ss << "f " << i0 << "/" << i0 << "/" << i0 << " " << i1 << "/" << i1 << "/" << i1 << " "
+               << i2 << "/" << i2 << "/" << i2 << "\n";
         } else if (hasNormals) {
-            ss << "f " << i0 << "//" << i0 << " " << i1 << "//" << i1 << " " << i2
-               << "//" << i2 << "\n";
+            ss << "f " << i0 << "//" << i0 << " " << i1 << "//" << i1 << " " << i2 << "//" << i2
+               << "\n";
         } else if (hasTexCoords) {
-            ss << "f " << i0 << "/" << i0 << " " << i1 << "/" << i1 << " " << i2 << "/"
-               << i2 << "\n";
+            ss << "f " << i0 << "/" << i0 << " " << i1 << "/" << i1 << " " << i2 << "/" << i2
+               << "\n";
         } else {
             ss << "f " << i0 << " " << i1 << " " << i2 << "\n";
         }
@@ -215,4 +210,4 @@ ExportResult ModelExporter::exportOBJ(const Mesh& mesh, const Path& path) {
     return ExportResult{true, ""};
 }
 
-}  // namespace dw
+} // namespace dw

@@ -1,18 +1,18 @@
 #pragma once
 
-#include "../types.h"
-#include "bounds.h"
-#include "vertex.h"
-
 #include <memory>
 #include <string>
 #include <vector>
+
+#include "../types.h"
+#include "bounds.h"
+#include "vertex.h"
 
 namespace dw {
 
 // 3D mesh class
 class Mesh {
-public:
+  public:
     Mesh() = default;
     Mesh(std::vector<Vertex> vertices, std::vector<u32> indices);
 
@@ -44,6 +44,13 @@ public:
     // Merge another mesh into this one
     void merge(const Mesh& other);
 
+    // Auto-orient for relief models: permute axes to canonical
+    // (width=X, height=Y, depth=Z), return camera yaw for front face.
+    // Stores the permutation matrix so it can be reverted.
+    f32 autoOrient();
+    void revertAutoOrient();
+    bool wasAutoOriented() const { return m_autoOriented; }
+
     // Create a copy
     Mesh clone() const;
 
@@ -52,6 +59,10 @@ public:
     bool hasNormals() const;
     bool hasTexCoords() const;
 
+    // Validate mesh integrity (checks for NaN, out-of-bounds indices, degenerate triangles)
+    // Returns true if mesh passes all checks. Logs warnings for issues found.
+    bool validate() const;
+
     // Reserve memory
     void reserve(u32 vertexCount, u32 indexCount);
 
@@ -59,14 +70,17 @@ public:
     void addVertex(const Vertex& vertex);
     void addTriangle(u32 v0, u32 v1, u32 v2);
 
-private:
+  private:
     std::vector<Vertex> m_vertices;
     std::vector<u32> m_indices;
     AABB m_bounds;
     std::string m_name;
+
+    Mat4 m_orientMatrix; // Permutation applied by autoOrient()
+    bool m_autoOriented = false;
 };
 
 // Shared mesh pointer type
 using MeshPtr = std::shared_ptr<Mesh>;
 
-}  // namespace dw
+} // namespace dw

@@ -1,17 +1,19 @@
 <claude-mem-context>
 # Recent Activity
 
-### Feb 3, 2026
+### Feb 5, 2026
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
-| #312 | 9:07 PM | 🔴 | Missing cstring Header Added for memcpy Usage | ~93 |
-| #309 | " | 🔴 | Build Failure Due to Missing cmath Header in gcode_types.h | ~134 |
-| #291 | 9:04 PM | 🟣 | Project Repository Implemented with Many-to-Many Model Relationships | ~346 |
-| #289 | " | 🟣 | Project Repository with Many-to-Many Model Relationships | ~279 |
-| #288 | " | 🟣 | Model Repository Implementation with CRUD Operations and Search Capabilities | ~288 |
-| #287 | 9:03 PM | 🟣 | Database Schema with Zero-Migration Model Library | ~967 |
-| #286 | " | 🟣 | SQLite Database Wrapper with RAII, Prepared Statements, and Transaction Support | ~266 |
-| #285 | " | 🟣 | Database Schema Management with Version Tracking | ~612 |
-| #284 | " | 🟣 | SQLite Database Wrapper with RAII Statement Management and Transaction Support | ~989 |
+| #106 | 7:44 PM | 🔵 | ModelRepository with Hash-Based Deduplication and Tag Management | ~973 |
+| #100 | " | 🔵 | SQLite Wrapper Implementation with WAL Mode and Foreign Keys | ~950 |
+| #81 | 7:42 PM | ✅ | Removed 25 Per-Directory CLAUDE.md Placeholder Files | ~489 |
+| #45 | 7:39 PM | 🔵 | Cost Estimation System with JSON-Serialized Line Items | ~783 |
+| #43 | " | 🔵 | Project Repository with CRUD and Many-to-Many Model Associations | ~874 |
+| #41 | " | 🔵 | Model Repository with Tag Storage as JSON | ~856 |
+| #40 | 7:38 PM | 🔵 | SQLite Database Schema with Models, Projects, and Cost Estimates | ~948 |
+| #38 | " | 🔵 | Project Repository with Many-to-Many Model Relationships | ~620 |
+| #37 | " | 🔵 | RAII SQLite Wrapper with Prepared Statements and Transactions | ~779 |
+| #34 | " | 🔵 | Database Schema Management with Versioning | ~354 |
+| #31 | " | 🔵 | RAII-Based SQLite Wrapper with Prepared Statements | ~819 |
 </claude-mem-context>

@@ -1,13 +1,16 @@
 #include "app_paths.h"
 
+#include <cstdlib>
+
 #include "../utils/file_utils.h"
 #include "../utils/log.h"
 
-#include <cstdlib>
-
 #ifdef _WIN32
-#include <shlobj.h>
-#include <windows.h>
+    #include <shlobj.h>
+    #include <windows.h>
+#else
+    #include <pwd.h>
+    #include <unistd.h>
 #endif
 
 namespace dw {
@@ -42,11 +45,17 @@ Path getHomeDir() {
     if (home) {
         return Path(home);
     }
+    // Fallback: look up home dir from passwd entry
+    struct passwd* pw = getpwuid(getuid());
+    if (pw && pw->pw_dir) {
+        return Path(pw->pw_dir);
+    }
+    log::error("Paths", "Cannot determine home directory: $HOME unset and getpwuid failed");
     return Path("/tmp");
 #endif
 }
 
-}  // namespace
+} // namespace
 
 const char* getAppName() {
     return APP_NAME;
@@ -140,8 +149,7 @@ bool ensureDirectoriesExist() {
 
     auto ensureDir = [&success](const Path& path, const char* name) {
         if (!file::createDirectories(path)) {
-            log::errorf("Paths", "Failed to create %s directory: %s", name,
-                        path.string().c_str());
+            log::errorf("Paths", "Failed to create %s directory: %s", name, path.string().c_str());
             success = false;
         } else {
             log::debugf("Paths", "Ensured %s directory: %s", name, path.string().c_str());
@@ -157,5 +165,5 @@ bool ensureDirectoriesExist() {
     return success;
 }
 
-}  // namespace paths
-}  // namespace dw
+} // namespace paths
+} // namespace dw

@@ -1,15 +1,24 @@
 #pragma once
 
-#include "../types.h"
-
+#include <array>
 #include <string>
 #include <vector>
 
+#include "../types.h"
+#include "input_binding.h"
+
 namespace dw {
+
+// Navigation style for 3D viewport
+enum class NavStyle : int {
+    Default = 0, // Left=Orbit, Shift+Left=Pan, Middle=Pan, Right=Zoom
+    CAD = 1,     // Middle=Orbit, Shift+Middle=Pan, Right=Pan, Scroll=Zoom
+    Maya = 2,    // Alt+Left=Orbit, Alt+Middle=Pan, Alt+Right=Zoom
+};
 
 // Application configuration (persisted to config directory)
 class Config {
-public:
+  public:
     // Singleton access
     static Config& instance();
 
@@ -38,6 +47,14 @@ public:
 
     bool getShowAxis() const { return m_showAxis; }
     void setShowAxis(bool show) { m_showAxis = show; }
+
+    bool getAutoOrient() const { return m_autoOrient; }
+    void setAutoOrient(bool v) { m_autoOrient = v; }
+
+    NavStyle getNavStyle() const { return m_navStyle; }
+    void setNavStyle(NavStyle style) { m_navStyle = style; }
+    int getNavStyleIndex() const { return static_cast<int>(m_navStyle); }
+    void setNavStyleIndex(int index) { m_navStyle = static_cast<NavStyle>(index); }
 
     // Default paths
     const Path& getLastImportDir() const { return m_lastImportDir; }
@@ -76,6 +93,10 @@ public:
     f32 getRenderShininess() const { return m_shininess; }
     void setRenderShininess(f32 s) { m_shininess = s; }
 
+    // Input bindings
+    InputBinding getBinding(BindAction action) const;
+    void setBinding(BindAction action, const InputBinding& binding);
+
     // Log level (maps to log::Level enum)
     int getLogLevel() const { return m_logLevel; }
     void setLogLevel(int level) { m_logLevel = level; }
@@ -105,8 +126,9 @@ public:
     i64 getLastSelectedModelId() const { return m_wsLastSelectedModelId; }
     void setLastSelectedModelId(i64 id) { m_wsLastSelectedModelId = id; }
 
-private:
-    Config() = default;
+  private:
+    Config() { initDefaultBindings(); }
+    void initDefaultBindings();
     ~Config() = default;
     Config(const Config&) = delete;
     Config& operator=(const Config&) = delete;
@@ -118,10 +140,12 @@ private:
     static constexpr int MAX_RECENT_PROJECTS = 10;
 
     // UI preferences
-    int m_themeIndex = 0;  // 0=Dark, 1=Light, 2=HighContrast
+    int m_themeIndex = 0; // 0=Dark, 1=Light, 2=HighContrast
     f32 m_uiScale = 1.0f;
     bool m_showGrid = true;
     bool m_showAxis = true;
+    bool m_autoOrient = true;
+    NavStyle m_navStyle = NavStyle::Default;
 
     // Render settings
     Vec3 m_lightDir{-0.5f, -1.0f, -0.3f};
@@ -131,7 +155,7 @@ private:
     f32 m_shininess = 32.0f;
 
     // Logging
-    int m_logLevel = 1;  // Info
+    int m_logLevel = 1; // Info
 
     // Default paths
     Path m_lastImportDir;
@@ -152,6 +176,9 @@ private:
     bool m_wsShowCutOptimizer = false;
     bool m_wsShowStartPage = true;
     i64 m_wsLastSelectedModelId = -1;
+
+    // Input bindings
+    std::array<InputBinding, static_cast<int>(BindAction::COUNT)> m_bindings;
 };
 
-}  // namespace dw
+} // namespace dw

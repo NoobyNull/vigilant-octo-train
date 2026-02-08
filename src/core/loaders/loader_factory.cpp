@@ -38,8 +38,7 @@ LoadResult LoaderFactory::load(const Path& path) {
     return loader->load(path);
 }
 
-LoadResult LoaderFactory::loadFromBuffer(const ByteBuffer& data,
-                                         const std::string& extension) {
+LoadResult LoaderFactory::loadFromBuffer(const ByteBuffer& data, const std::string& extension) {
     auto loader = getLoaderByExtension(extension);
     if (!loader) {
         return LoadResult{nullptr, "Unsupported file format"};
@@ -57,4 +56,4 @@ std::vector<std::string> LoaderFactory::supportedExtensions() {
     return {"stl", "obj", "3mf"};
 }
 
-}  // namespace dw
+} // namespace dw

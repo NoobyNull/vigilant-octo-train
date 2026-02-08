@@ -4,6 +4,7 @@
 #include <cctype>
 #include <charconv>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <iomanip>
 #include <sstream>
@@ -16,14 +17,12 @@ std::string trim(std::string_view s) {
 }
 
 std::string trimLeft(std::string_view s) {
-    auto it = std::find_if(s.begin(), s.end(),
-                           [](unsigned char c) { return !std::isspace(c); });
+    auto it = std::find_if(s.begin(), s.end(), [](unsigned char c) { return !std::isspace(c); });
     return std::string(it, s.end());
 }
 
 std::string trimRight(std::string_view s) {
-    auto it = std::find_if(s.rbegin(), s.rend(),
-                           [](unsigned char c) { return !std::isspace(c); });
+    auto it = std::find_if(s.rbegin(), s.rend(), [](unsigned char c) { return !std::isspace(c); });
     return std::string(s.begin(), it.base());
 }
 
@@ -197,6 +196,8 @@ bool parseInt64(std::string_view s, int64_t& out) {
     return result.ec == std::errc{} && result.ptr == s.data() + s.size();
 }
 
+// Note: Uses strtof instead of std::from_chars because floating-point
+// from_chars is not reliably available across all C++17 compilers.
 bool parseFloat(std::string_view s, float& out) {
     char* end = nullptr;
     std::string str(s);
@@ -211,5 +212,57 @@ bool parseDouble(std::string_view s, double& out) {
     return end == str.c_str() + str.size();
 }
 
-}  // namespace str
-}  // namespace dw
+std::string escapeLike(std::string_view s) {
+    std::string result;
+    result.reserve(s.size());
+    for (char c : s) {
+        if (c == '%' || c == '_' || c == '\\') {
+            result.push_back('\\');
+        }
+        result.push_back(c);
+    }
+    return result;
+}
+
+std::string escapeJsonString(std::string_view s) {
+    std::string result;
+    result.reserve(s.size());
+    for (char c : s) {
+        switch (c) {
+        case '"':
+            result += "\\\"";
+            break;
+        case '\\':
+            result += "\\\\";
+            break;
+        case '\b':
+            result += "\\b";
+            break;
+        case '\f':
+            result += "\\f";
+            break;
+        case '\n':
+            result += "\\n";
+            break;
+        case '\r':
+            result += "\\r";
+            break;
+        case '\t':
+            result += "\\t";
+            break;
+        default:
+            if (static_cast<unsigned char>(c) < 0x20) {
+                char buf[8];
+                std::snprintf(buf, sizeof(buf), "\\u%04x", static_cast<unsigned char>(c));
+                result += buf;
+            } else {
+                result.push_back(c);
+            }
+            break;
+        }
+    }
+    return result;
+}
+
+} // namespace str
+} // namespace dw

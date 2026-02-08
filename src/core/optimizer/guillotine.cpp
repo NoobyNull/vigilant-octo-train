@@ -2,11 +2,17 @@
 
 #include <algorithm>
 
+#include "optimizer_utils.h"
+
 namespace dw {
 namespace optimizer {
 
+namespace {
+constexpr f32 PLACEMENT_EPSILON = 0.001f;
+} // namespace
+
 CutPlan GuillotineOptimizer::optimize(const std::vector<Part>& parts,
-                                       const std::vector<Sheet>& sheets) {
+                                      const std::vector<Sheet>& sheets) {
     CutPlan plan;
 
     if (parts.empty() || sheets.empty()) {
@@ -14,26 +20,7 @@ CutPlan GuillotineOptimizer::optimize(const std::vector<Part>& parts,
     }
 
     // Expand parts by quantity and sort by area (decreasing)
-    struct ExpandedPart {
-        const Part* part;
-        int partIndex;
-        int instanceIndex;
-        f32 area;
-    };
-
-    std::vector<ExpandedPart> expandedParts;
-    for (int i = 0; i < static_cast<int>(parts.size()); ++i) {
-        const Part& part = parts[i];
-        for (int j = 0; j < part.quantity; ++j) {
-            expandedParts.push_back({&part, i, j, part.area()});
-        }
-    }
-
-    // Sort by area (largest first)
-    std::sort(expandedParts.begin(), expandedParts.end(),
-              [](const ExpandedPart& a, const ExpandedPart& b) {
-                  return a.area > b.area;
-              });
+    auto expandedParts = expandParts(parts);
 
     // Track which parts have been placed
     std::vector<bool> placed(expandedParts.size(), false);
@@ -144,8 +131,7 @@ CutPlan GuillotineOptimizer::optimize(const std::vector<Part>& parts,
     return plan;
 }
 
-GuillotineOptimizer::Node* GuillotineOptimizer::insert(Node* node, f32 width,
-                                                        f32 height) {
+GuillotineOptimizer::Node* GuillotineOptimizer::insert(Node* node, f32 width, f32 height) {
     // If this node is used, try children
     if (node->used) {
         Node* result = nullptr;
@@ -158,13 +144,13 @@ GuillotineOptimizer::Node* GuillotineOptimizer::insert(Node* node, f32 width,
         return result;
     }
 
-    // If it doesn't fit, return null
-    if (width > node->width || height > node->height) {
+    // If it doesn't fit, return null (with epsilon tolerance for float rounding)
+    if (width > node->width + PLACEMENT_EPSILON || height > node->height + PLACEMENT_EPSILON) {
         return nullptr;
     }
 
-    // Perfect fit
-    if (width == node->width && height == node->height) {
+    // Perfect fit (within epsilon)
+    if (node->width - width < PLACEMENT_EPSILON && node->height - height < PLACEMENT_EPSILON) {
         node->used = true;
         return node;
     }
@@ -207,5 +193,5 @@ GuillotineOptimizer::Node* GuillotineOptimizer::insert(Node* node, f32 width,
     return node;
 }
 
-}  // namespace optimizer
-}  // namespace dw
+} // namespace optimizer
+} // namespace dw

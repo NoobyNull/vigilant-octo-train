@@ -16,7 +16,7 @@ struct ThumbnailSettings {
 
 // Generates thumbnail images for 3D models
 class ThumbnailGenerator {
-public:
+  public:
     ThumbnailGenerator() = default;
     ~ThumbnailGenerator();
 
@@ -33,13 +33,13 @@ public:
 
     // Generate thumbnail to memory buffer (RGBA pixels)
     ByteBuffer generateToBuffer(const Mesh& mesh,
-                                 const ThumbnailSettings& settings = ThumbnailSettings{});
+                                const ThumbnailSettings& settings = ThumbnailSettings{});
 
     // Check if initialized
     bool isInitialized() const { return m_initialized; }
 
-private:
+  private:
     bool m_initialized = false;
 };
 
-}  // namespace dw
+} // namespace dw

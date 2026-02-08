@@ -20,9 +20,7 @@ std::mutex g_logMutex;
 std::string getCurrentTimestamp() {
     auto now = std::chrono::system_clock::now();
     auto time = std::chrono::system_clock::to_time_t(now);
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                  now.time_since_epoch()) %
-              1000;
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
 
     std::stringstream ss;
     ss << std::put_time(std::localtime(&time), "%H:%M:%S");
@@ -32,28 +30,28 @@ std::string getCurrentTimestamp() {
 
 const char* levelToString(Level level) {
     switch (level) {
-        case Level::Debug:
-            return "DEBUG";
-        case Level::Info:
-            return "INFO ";
-        case Level::Warning:
-            return "WARN ";
-        case Level::Error:
-            return "ERROR";
+    case Level::Debug:
+        return "DEBUG";
+    case Level::Info:
+        return "INFO ";
+    case Level::Warning:
+        return "WARN ";
+    case Level::Error:
+        return "ERROR";
     }
     return "?????";
 }
 
 const char* levelToColor(Level level) {
     switch (level) {
-        case Level::Debug:
-            return "\033[36m";  // Cyan
-        case Level::Info:
-            return "\033[32m";  // Green
-        case Level::Warning:
-            return "\033[33m";  // Yellow
-        case Level::Error:
-            return "\033[31m";  // Red
+    case Level::Debug:
+        return "\033[36m"; // Cyan
+    case Level::Info:
+        return "\033[32m"; // Green
+    case Level::Warning:
+        return "\033[33m"; // Yellow
+    case Level::Error:
+        return "\033[31m"; // Red
     }
     return "\033[0m";
 }
@@ -81,7 +79,7 @@ void logMessage(Level level, std::string_view module, std::string_view message) 
     }
 }
 
-}  // namespace
+} // namespace
 
 void setLevel(Level level) {
     g_minLevel = level;
@@ -107,6 +105,14 @@ void error(std::string_view module, std::string_view message) {
     logMessage(Level::Error, module, message);
 }
 
+namespace detail {
+
+void logAtLevel(Level level, std::string_view module, std::string_view message) {
+    logMessage(level, module, message);
+}
+
+} // namespace detail
+
 void setLogFile(const std::string& path) {
     std::lock_guard<std::mutex> lock(g_logMutex);
     if (g_logFile.is_open()) {
@@ -125,5 +131,5 @@ void closeLogFile() {
     }
 }
 
-}  // namespace log
-}  // namespace dw
+} // namespace log
+} // namespace dw

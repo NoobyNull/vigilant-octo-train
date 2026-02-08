@@ -1,9 +1,5 @@
 #include "library_panel.h"
 
-#include "../icons.h"
-
-#include <imgui.h>
-
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -11,10 +7,13 @@
 #include <fstream>
 #include <vector>
 
+#include <imgui.h>
+
+#include "../icons.h"
+
 namespace dw {
 
-LibraryPanel::LibraryPanel(LibraryManager* library)
-    : Panel("Library"), m_library(library) {
+LibraryPanel::LibraryPanel(LibraryManager* library) : Panel("Library"), m_library(library) {
     refresh();
 }
 
@@ -58,15 +57,14 @@ GLuint LibraryPanel::loadTGATexture(const Path& path) {
     // Read BGRA pixel data
     size_t dataSize = static_cast<size_t>(width) * height * 4;
     std::vector<uint8_t> bgra(dataSize);
-    file.read(reinterpret_cast<char*>(bgra.data()),
-              static_cast<std::streamsize>(dataSize));
+    file.read(reinterpret_cast<char*>(bgra.data()), static_cast<std::streamsize>(dataSize));
     if (!file) {
         return 0;
     }
 
     // Convert BGRA to RGBA in-place
     for (size_t i = 0; i < dataSize; i += 4) {
-        std::swap(bgra[i + 0], bgra[i + 2]);  // swap B and R
+        std::swap(bgra[i + 0], bgra[i + 2]); // swap B and R
     }
 
     // Create OpenGL texture
@@ -81,8 +79,8 @@ GLuint LibraryPanel::loadTGATexture(const Path& path) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA,
-                 GL_UNSIGNED_BYTE, bgra.data());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 bgra.data());
     glBindTexture(GL_TEXTURE_2D, 0);
 
     return texture;
@@ -134,20 +132,18 @@ void LibraryPanel::refresh() {
 void LibraryPanel::renderToolbar() {
     // Search input
     ImGui::SetNextItemWidth(-100.0f);
-    if (ImGui::InputTextWithHint("##Search", "Search models...",
-                                  m_searchQuery.data(), 256,
-                                  ImGuiInputTextFlags_CallbackResize,
-                                  [](ImGuiInputTextCallbackData* data) -> int {
-                                      if (data->EventFlag ==
-                                          ImGuiInputTextFlags_CallbackResize) {
-                                          auto* str =
-                                              static_cast<std::string*>(data->UserData);
-                                          str->resize(data->BufTextLen);
-                                          data->Buf = str->data();
-                                      }
-                                      return 0;
-                                  },
-                                  &m_searchQuery)) {
+    if (ImGui::InputTextWithHint(
+            "##Search", "Search models...", m_searchQuery.data(), 256,
+            ImGuiInputTextFlags_CallbackResize,
+            [](ImGuiInputTextCallbackData* data) -> int {
+                if (data->EventFlag == ImGuiInputTextFlags_CallbackResize) {
+                    auto* str = static_cast<std::string*>(data->UserData);
+                    str->resize(data->BufTextLen);
+                    data->Buf = str->data();
+                }
+                return 0;
+            },
+            &m_searchQuery)) {
         refresh();
     }
 
@@ -196,12 +192,15 @@ void LibraryPanel::renderModelItem(const ModelRecord& model, int index) {
         // Thumbnail view: selectable with embedded thumbnail + text
         float itemHeight = m_thumbnailSize + 8.0f;
 
-        if (ImGui::Selectable("##item", isSelected,
-                              ImGuiSelectableFlags_AllowDoubleClick,
+        if (ImGui::Selectable("##item", isSelected, ImGuiSelectableFlags_AllowDoubleClick,
                               ImVec2(0, itemHeight))) {
             m_selectedModelId = model.id;
-            if (m_onModelSelected) {
-                m_onModelSelected(model.id);
+            if (ImGui::IsMouseDoubleClicked(0)) {
+                if (m_onModelOpened)
+                    m_onModelOpened(model.id);
+            } else {
+                if (m_onModelSelected)
+                    m_onModelSelected(model.id);
             }
         }
 
@@ -217,29 +216,22 @@ void LibraryPanel::renderModelItem(const ModelRecord& model, int index) {
 
         float pad = 4.0f;
         ImVec2 thumbMin = ImVec2(itemMin.x + pad, itemMin.y + pad);
-        ImVec2 thumbMax = ImVec2(thumbMin.x + m_thumbnailSize,
-                                 thumbMin.y + m_thumbnailSize);
+        ImVec2 thumbMax = ImVec2(thumbMin.x + m_thumbnailSize, thumbMin.y + m_thumbnailSize);
 
         GLuint tex = getThumbnailTexture(model);
         if (tex != 0) {
-            drawList->AddImageRounded(
-                (ImTextureID)(intptr_t)tex, thumbMin, thumbMax,
-                ImVec2(0, 0), ImVec2(1, 1), IM_COL32(255, 255, 255, 255),
-                4.0f);
-            drawList->AddRect(thumbMin, thumbMax,
-                              IM_COL32(80, 80, 80, 255), 4.0f);
+            drawList->AddImageRounded((ImTextureID)(intptr_t)tex, thumbMin, thumbMax, ImVec2(0, 0),
+                                      ImVec2(1, 1), IM_COL32(255, 255, 255, 255), 4.0f);
+            drawList->AddRect(thumbMin, thumbMax, IM_COL32(80, 80, 80, 255), 4.0f);
         } else {
-            drawList->AddRectFilled(thumbMin, thumbMax,
-                                    IM_COL32(60, 60, 60, 255), 4.0f);
-            drawList->AddRect(thumbMin, thumbMax,
-                              IM_COL32(80, 80, 80, 255), 4.0f);
+            drawList->AddRectFilled(thumbMin, thumbMax, IM_COL32(60, 60, 60, 255), 4.0f);
+            drawList->AddRect(thumbMin, thumbMax, IM_COL32(80, 80, 80, 255), 4.0f);
 
             // Center icon in placeholder
             const char* icon = Icons::Model;
             ImVec2 iconSize = ImGui::CalcTextSize(icon);
-            ImVec2 iconPos = ImVec2(
-                thumbMin.x + (m_thumbnailSize - iconSize.x) * 0.5f,
-                thumbMin.y + (m_thumbnailSize - iconSize.y) * 0.5f);
+            ImVec2 iconPos = ImVec2(thumbMin.x + (m_thumbnailSize - iconSize.x) * 0.5f,
+                                    thumbMin.y + (m_thumbnailSize - iconSize.y) * 0.5f);
             drawList->AddText(iconPos, IM_COL32(128, 128, 128, 255), icon);
         }
 
@@ -250,38 +242,35 @@ void LibraryPanel::renderModelItem(const ModelRecord& model, int index) {
         // Model name
         ImVec4 clipRect(textX, itemMin.y, textMaxX, itemMax.y);
         drawList->AddText(nullptr, 0.0f, ImVec2(textX, thumbMin.y),
-                          ImGui::GetColorU32(ImGuiCol_Text),
-                          model.name.c_str(), nullptr, 0.0f, &clipRect);
+                          ImGui::GetColorU32(ImGuiCol_Text), model.name.c_str(), nullptr, 0.0f,
+                          &clipRect);
 
         // Format info line
         std::string info = model.fileFormat;
         if (model.triangleCount > 0) {
             if (model.triangleCount >= 1000000) {
-                info += " | " +
-                        std::to_string(model.triangleCount / 1000000) +
-                        "M tris";
+                info += " | " + std::to_string(model.triangleCount / 1000000) + "M tris";
             } else if (model.triangleCount >= 1000) {
-                info += " | " +
-                        std::to_string(model.triangleCount / 1000) +
-                        "K tris";
+                info += " | " + std::to_string(model.triangleCount / 1000) + "K tris";
             } else {
-                info += " | " + std::to_string(model.triangleCount) +
-                        " tris";
+                info += " | " + std::to_string(model.triangleCount) + " tris";
             }
         }
         float lineHeight = ImGui::GetTextLineHeightWithSpacing();
-        drawList->AddText(nullptr, 0.0f,
-                          ImVec2(textX, thumbMin.y + lineHeight),
-                          ImGui::GetColorU32(ImGuiCol_TextDisabled),
-                          info.c_str(), nullptr, 0.0f, &clipRect);
+        drawList->AddText(nullptr, 0.0f, ImVec2(textX, thumbMin.y + lineHeight),
+                          ImGui::GetColorU32(ImGuiCol_TextDisabled), info.c_str(), nullptr, 0.0f,
+                          &clipRect);
     } else {
         // List view - compact row
-        if (ImGui::Selectable("##item", isSelected,
-                              ImGuiSelectableFlags_AllowDoubleClick,
+        if (ImGui::Selectable("##item", isSelected, ImGuiSelectableFlags_AllowDoubleClick,
                               ImVec2(0, 24.0f))) {
             m_selectedModelId = model.id;
-            if (m_onModelSelected) {
-                m_onModelSelected(model.id);
+            if (ImGui::IsMouseDoubleClicked(0)) {
+                if (m_onModelOpened)
+                    m_onModelOpened(model.id);
+            } else {
+                if (m_onModelSelected)
+                    m_onModelSelected(model.id);
             }
         }
 
@@ -300,17 +289,14 @@ void LibraryPanel::renderModelItem(const ModelRecord& model, int index) {
         std::string label = std::string(Icons::Model) + " " + model.name;
         float textMaxX = itemMax.x - 70.0f;
         ImVec4 clipRect(itemMin.x + pad, itemMin.y, textMaxX, itemMax.y);
-        drawList->AddText(nullptr, 0.0f,
-                          ImVec2(itemMin.x + pad, itemMin.y + 3.0f),
-                          ImGui::GetColorU32(ImGuiCol_Text),
-                          label.c_str(), nullptr, 0.0f, &clipRect);
+        drawList->AddText(nullptr, 0.0f, ImVec2(itemMin.x + pad, itemMin.y + 3.0f),
+                          ImGui::GetColorU32(ImGuiCol_Text), label.c_str(), nullptr, 0.0f,
+                          &clipRect);
 
         // Format on the right
         ImVec2 fmtSize = ImGui::CalcTextSize(model.fileFormat.c_str());
-        drawList->AddText(
-            ImVec2(itemMax.x - fmtSize.x - pad, itemMin.y + 3.0f),
-            ImGui::GetColorU32(ImGuiCol_TextDisabled),
-            model.fileFormat.c_str());
+        drawList->AddText(ImVec2(itemMax.x - fmtSize.x - pad, itemMin.y + 3.0f),
+                          ImGui::GetColorU32(ImGuiCol_TextDisabled), model.fileFormat.c_str());
     }
 
     ImGui::PopID();
@@ -318,8 +304,8 @@ void LibraryPanel::renderModelItem(const ModelRecord& model, int index) {
 
 void LibraryPanel::renderContextMenu(const ModelRecord& model) {
     if (ImGui::MenuItem("Open")) {
-        if (m_onModelSelected) {
-            m_onModelSelected(model.id);
+        if (m_onModelOpened) {
+            m_onModelOpened(model.id);
         }
     }
 
@@ -364,14 +350,13 @@ void LibraryPanel::renderRenameDialog() {
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     ImGui::SetNextWindowSize(ImVec2(350, 0), ImGuiCond_Appearing);
 
-    if (ImGui::BeginPopupModal("Rename Model", nullptr,
-                                ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal("Rename Model", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("Enter new name:");
         ImGui::SetNextItemWidth(-1);
 
-        bool enterPressed = ImGui::InputText(
-            "##RenameInput", m_renameBuffer, sizeof(m_renameBuffer),
-            ImGuiInputTextFlags_EnterReturnsTrue);
+        bool enterPressed =
+            ImGui::InputText("##RenameInput", m_renameBuffer, sizeof(m_renameBuffer),
+                             ImGuiInputTextFlags_EnterReturnsTrue);
 
         // Auto-focus the input field when popup opens
         if (ImGui::IsWindowAppearing()) {
@@ -405,4 +390,4 @@ void LibraryPanel::renderRenameDialog() {
     }
 }
 
-}  // namespace dw
+} // namespace dw

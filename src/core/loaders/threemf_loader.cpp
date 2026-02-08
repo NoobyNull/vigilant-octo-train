@@ -1,15 +1,15 @@
 #include "threemf_loader.h"
 
-#include "../utils/file_utils.h"
-#include "../utils/log.h"
-#include "../utils/string_utils.h"
-
-#include <zlib.h>
-
 #include <algorithm>
 #include <cstring>
 #include <fstream>
 #include <sstream>
+
+#include <zlib.h>
+
+#include "../utils/file_utils.h"
+#include "../utils/log.h"
+#include "../utils/string_utils.h"
 
 namespace dw {
 
@@ -18,7 +18,7 @@ namespace {
 // ZIP file structures (simplified)
 #pragma pack(push, 1)
 struct ZipLocalFileHeader {
-    uint32_t signature;         // 0x04034b50
+    uint32_t signature; // 0x04034b50
     uint16_t versionNeeded;
     uint16_t flags;
     uint16_t compression;
@@ -71,8 +71,7 @@ bool decompressDeflate(const char* compressedData, uint32_t compressedSize,
 }
 
 // Find and extract a file from a ZIP archive
-bool extractFromZip(const Path& zipPath, const std::string& targetFile,
-                    std::string& content) {
+bool extractFromZip(const Path& zipPath, const std::string& targetFile, std::string& content) {
     std::ifstream file(zipPath, std::ios::binary);
     if (!file) {
         return false;
@@ -94,8 +93,8 @@ bool extractFromZip(const Path& zipPath, const std::string& targetFile,
         file.seekg(header.extraFieldLength, std::ios::cur);
 
         // Check if this is our target file
-        bool isTarget = (fileName == targetFile) ||
-                        (fileName.find(targetFile) != std::string::npos);
+        bool isTarget =
+            (fileName == targetFile) || (fileName.find(targetFile) != std::string::npos);
 
         if (isTarget && header.compression == 0) {
             // Uncompressed - extract directly
@@ -134,32 +133,36 @@ bool extractFromZipBuffer(const ByteBuffer& zipData, const std::string& targetFi
 
         ptr += sizeof(ZipLocalFileHeader);
 
-        if (ptr + header->fileNameLength > end) break;
+        if (ptr + header->fileNameLength > end)
+            break;
 
         std::string fileName(reinterpret_cast<const char*>(ptr), header->fileNameLength);
         ptr += header->fileNameLength;
 
         // Skip extra field
-        if (ptr + header->extraFieldLength > end) break;
+        if (ptr + header->extraFieldLength > end)
+            break;
         ptr += header->extraFieldLength;
 
         // Check if this is our target file
-        bool isTarget = (fileName == targetFile) ||
-                        (fileName.find(targetFile) != std::string::npos);
+        bool isTarget =
+            (fileName == targetFile) || (fileName.find(targetFile) != std::string::npos);
 
         if (isTarget && header->compression == 0) {
-            if (ptr + header->uncompressedSize > end) break;
+            if (ptr + header->uncompressedSize > end)
+                break;
             content.assign(reinterpret_cast<const char*>(ptr), header->uncompressedSize);
             return true;
         } else if (isTarget && header->compression == 8) {
-            if (ptr + header->compressedSize > end) break;
-            return decompressDeflate(reinterpret_cast<const char*>(ptr),
-                                     header->compressedSize,
+            if (ptr + header->compressedSize > end)
+                break;
+            return decompressDeflate(reinterpret_cast<const char*>(ptr), header->compressedSize,
                                      header->uncompressedSize, content);
         }
 
         // Skip to next entry
-        if (ptr + header->compressedSize > end) break;
+        if (ptr + header->compressedSize > end)
+            break;
         ptr += header->compressedSize;
     }
 
@@ -181,7 +184,7 @@ std::string getXmlAttribute(const std::string& tag, const std::string& attr) {
     return tag.substr(pos, end - pos);
 }
 
-}  // namespace
+} // namespace
 
 LoadResult ThreeMFLoader::load(const Path& path) {
     LoadResult result;
@@ -204,9 +207,8 @@ LoadResult ThreeMFLoader::loadFromBuffer(const ByteBuffer& data) {
 
     std::string modelXml = extractModelXMLFromBuffer(data);
     if (modelXml.empty()) {
-        return LoadResult{nullptr,
-                          "Failed to extract model data from 3MF buffer. "
-                          "The file may use compression not supported by this loader."};
+        return LoadResult{nullptr, "Failed to extract model data from 3MF buffer. "
+                                   "The file may use compression not supported by this loader."};
     }
 
     return parseModelXML(modelXml);
@@ -226,11 +228,8 @@ std::string ThreeMFLoader::extractModelXML(const Path& zipPath) {
     std::string content;
 
     // Try common paths for the model file in 3MF archives
-    const std::vector<std::string> modelPaths = {
-        "3D/3dmodel.model",
-        "3dmodel.model",
-        "3D/model.model"
-    };
+    const std::vector<std::string> modelPaths = {"3D/3dmodel.model", "3dmodel.model",
+                                                 "3D/model.model"};
 
     for (const auto& modelPath : modelPaths) {
         if (extractFromZip(zipPath, modelPath, content)) {
@@ -244,11 +243,8 @@ std::string ThreeMFLoader::extractModelXML(const Path& zipPath) {
 std::string ThreeMFLoader::extractModelXMLFromBuffer(const ByteBuffer& data) {
     std::string content;
 
-    const std::vector<std::string> modelPaths = {
-        "3D/3dmodel.model",
-        "3dmodel.model",
-        "3D/model.model"
-    };
+    const std::vector<std::string> modelPaths = {"3D/3dmodel.model", "3dmodel.model",
+                                                 "3D/model.model"};
 
     for (const auto& modelPath : modelPaths) {
         if (extractFromZipBuffer(data, modelPath, content)) {
@@ -272,8 +268,7 @@ LoadResult ThreeMFLoader::parseModelXML(const std::string& xmlContent) {
         return result;
     }
 
-    std::string verticesBlock =
-        xmlContent.substr(vertStart + 10, vertEnd - vertStart - 10);
+    std::string verticesBlock = xmlContent.substr(vertStart + 10, vertEnd - vertStart - 10);
 
     std::vector<Vec3> vertices;
     if (!parseVertices(verticesBlock, vertices)) {
@@ -291,8 +286,7 @@ LoadResult ThreeMFLoader::parseModelXML(const std::string& xmlContent) {
         return result;
     }
 
-    std::string trianglesBlock =
-        xmlContent.substr(triStart + 11, triEnd - triStart - 11);
+    std::string trianglesBlock = xmlContent.substr(triStart + 11, triEnd - triStart - 11);
 
     if (!parseTriangles(trianglesBlock, vertices, *result.mesh)) {
         result.error = "Failed to parse triangles";
@@ -302,14 +296,25 @@ LoadResult ThreeMFLoader::parseModelXML(const std::string& xmlContent) {
 
     result.mesh->recalculateBounds();
 
-    log::infof("3MF", "Loaded: %u vertices, %u triangles",
-               result.mesh->vertexCount(), result.mesh->triangleCount());
+    log::infof("3MF", "Loaded: %u vertices, %u triangles", result.mesh->vertexCount(),
+               result.mesh->triangleCount());
 
     return result;
 }
 
 bool ThreeMFLoader::parseVertices(const std::string& verticesBlock,
-                                   std::vector<Vec3>& outVertices) {
+                                  std::vector<Vec3>& outVertices) {
+    // Count vertex tags to reserve capacity and avoid repeated reallocations
+    {
+        size_t count = 0;
+        size_t searchPos = 0;
+        while ((searchPos = verticesBlock.find("<vertex", searchPos)) != std::string::npos) {
+            ++count;
+            searchPos += 7; // length of "<vertex"
+        }
+        outVertices.reserve(count);
+    }
+
     // Parse <vertex x="..." y="..." z="..." /> tags
     size_t pos = 0;
     while ((pos = verticesBlock.find("<vertex", pos)) != std::string::npos) {
@@ -317,7 +322,8 @@ bool ThreeMFLoader::parseVertices(const std::string& verticesBlock,
         if (tagEnd == std::string::npos) {
             tagEnd = verticesBlock.find(">", pos);
         }
-        if (tagEnd == std::string::npos) break;
+        if (tagEnd == std::string::npos)
+            break;
 
         std::string tag = verticesBlock.substr(pos, tagEnd - pos);
 
@@ -340,8 +346,19 @@ bool ThreeMFLoader::parseVertices(const std::string& verticesBlock,
 }
 
 bool ThreeMFLoader::parseTriangles(const std::string& trianglesBlock,
-                                    const std::vector<Vec3>& vertices,
-                                    Mesh& outMesh) {
+                                   const std::vector<Vec3>& vertices, Mesh& outMesh) {
+    // Count triangle tags to reserve capacity and avoid repeated reallocations.
+    // Each triangle creates 3 vertices (flat shading, no deduplication) and 3 indices.
+    {
+        size_t count = 0;
+        size_t searchPos = 0;
+        while ((searchPos = trianglesBlock.find("<triangle", searchPos)) != std::string::npos) {
+            ++count;
+            searchPos += 9; // length of "<triangle"
+        }
+        outMesh.reserve(static_cast<u32>(count * 3), static_cast<u32>(count * 3));
+    }
+
     // Parse <triangle v1="..." v2="..." v3="..." /> tags
     size_t pos = 0;
     while ((pos = trianglesBlock.find("<triangle", pos)) != std::string::npos) {
@@ -349,7 +366,8 @@ bool ThreeMFLoader::parseTriangles(const std::string& trianglesBlock,
         if (tagEnd == std::string::npos) {
             tagEnd = trianglesBlock.find(">", pos);
         }
-        if (tagEnd == std::string::npos) break;
+        if (tagEnd == std::string::npos)
+            break;
 
         std::string tag = trianglesBlock.substr(pos, tagEnd - pos);
 
@@ -362,8 +380,7 @@ bool ThreeMFLoader::parseTriangles(const std::string& trianglesBlock,
             uint32_t v2 = std::stoul(v2Str);
             uint32_t v3 = std::stoul(v3Str);
 
-            if (v1 < vertices.size() && v2 < vertices.size() &&
-                v3 < vertices.size()) {
+            if (v1 < vertices.size() && v2 < vertices.size() && v3 < vertices.size()) {
                 // Calculate face normal
                 Vec3 p1 = vertices[v1];
                 Vec3 p2 = vertices[v2];
@@ -371,7 +388,7 @@ bool ThreeMFLoader::parseTriangles(const std::string& trianglesBlock,
 
                 Vec3 edge1 = p2 - p1;
                 Vec3 edge2 = p3 - p1;
-                Vec3 normal = edge1.cross(edge2).normalized();
+                Vec3 normal = glm::normalize(glm::cross(edge1, edge2));
 
                 // Add vertices with normals
                 uint32_t baseIdx = static_cast<uint32_t>(outMesh.vertices().size());
@@ -398,4 +415,4 @@ bool ThreeMFLoader::parseTriangles(const std::string& trianglesBlock,
     return outMesh.triangleCount() > 0;
 }
 
-}  // namespace dw
+} // namespace dw

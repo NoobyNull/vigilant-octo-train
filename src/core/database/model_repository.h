@@ -1,11 +1,12 @@
 #pragma once
 
-#include "../types.h"
-#include "database.h"
-
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
+
+#include "../types.h"
+#include "database.h"
 
 namespace dw {
 
@@ -28,7 +29,7 @@ struct ModelRecord {
 
 // Repository for model CRUD operations
 class ModelRepository {
-public:
+  public:
     explicit ModelRepository(Database& db);
 
     // Create
@@ -36,11 +37,11 @@ public:
 
     // Read
     std::optional<ModelRecord> findById(i64 id);
-    std::optional<ModelRecord> findByHash(const std::string& hash);
+    std::optional<ModelRecord> findByHash(std::string_view hash);
     std::vector<ModelRecord> findAll();
-    std::vector<ModelRecord> findByName(const std::string& searchTerm);
-    std::vector<ModelRecord> findByFormat(const std::string& format);
-    std::vector<ModelRecord> findByTag(const std::string& tag);
+    std::vector<ModelRecord> findByName(std::string_view searchTerm);
+    std::vector<ModelRecord> findByFormat(std::string_view format);
+    std::vector<ModelRecord> findByTag(std::string_view tag);
 
     // Update
     bool update(const ModelRecord& model);
@@ -49,13 +50,13 @@ public:
 
     // Delete
     bool remove(i64 id);
-    bool removeByHash(const std::string& hash);
+    bool removeByHash(std::string_view hash);
 
     // Utility
-    bool exists(const std::string& hash);
+    bool exists(std::string_view hash);
     i64 count();
 
-private:
+  private:
     ModelRecord rowToModel(Statement& stmt);
     std::string tagsToJson(const std::vector<std::string>& tags);
     std::vector<std::string> jsonToTags(const std::string& json);
@@ -63,4 +64,4 @@ private:
     Database& m_db;
 };
 
-}  // namespace dw
+} // namespace dw

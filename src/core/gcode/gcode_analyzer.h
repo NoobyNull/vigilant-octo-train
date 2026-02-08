@@ -6,7 +6,7 @@ namespace dw {
 namespace gcode {
 
 class Analyzer {
-public:
+  public:
     Analyzer() = default;
 
     // Analyze a parsed program
@@ -16,13 +16,13 @@ public:
     void setDefaultRapidRate(f32 rate) { m_defaultRapidRate = rate; }
     void setDefaultFeedRate(f32 rate) { m_defaultFeedRate = rate; }
 
-private:
+  private:
     f32 calculateSegmentLength(const PathSegment& segment);
     f32 calculateSegmentTime(const PathSegment& segment);
 
-    f32 m_defaultRapidRate = 5000.0f;  // mm/min
-    f32 m_defaultFeedRate = 1000.0f;   // mm/min
+    f32 m_defaultRapidRate = 5000.0f; // mm/min
+    f32 m_defaultFeedRate = 1000.0f;  // mm/min
 };
 
-}  // namespace gcode
-}  // namespace dw
+} // namespace gcode
+} // namespace dw

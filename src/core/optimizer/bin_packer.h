@@ -8,13 +8,12 @@ namespace optimizer {
 // First Fit Decreasing bin packing algorithm
 // Simple and fast, good for general use
 class BinPacker : public CutOptimizer {
-public:
+  public:
     BinPacker() = default;
 
-    CutPlan optimize(const std::vector<Part>& parts,
-                     const std::vector<Sheet>& sheets) override;
+    CutPlan optimize(const std::vector<Part>& parts, const std::vector<Sheet>& sheets) override;
 
-private:
+  private:
     struct FreeRect {
         f32 x, y, width, height;
     };
@@ -26,5 +25,5 @@ private:
                        const Placement& placement);
 };
 
-}  // namespace optimizer
-}  // namespace dw
+} // namespace optimizer
+} // namespace dw

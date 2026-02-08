@@ -3,11 +3,16 @@
 #include <algorithm>
 #include <limits>
 
+#include "optimizer_utils.h"
+
 namespace dw {
 namespace optimizer {
 
-CutPlan BinPacker::optimize(const std::vector<Part>& parts,
-                            const std::vector<Sheet>& sheets) {
+namespace {
+constexpr f32 PLACEMENT_EPSILON = 0.001f;
+} // namespace
+
+CutPlan BinPacker::optimize(const std::vector<Part>& parts, const std::vector<Sheet>& sheets) {
     CutPlan plan;
 
     if (parts.empty() || sheets.empty()) {
@@ -15,26 +20,7 @@ CutPlan BinPacker::optimize(const std::vector<Part>& parts,
     }
 
     // Expand parts by quantity and sort by area (decreasing)
-    struct ExpandedPart {
-        const Part* part;
-        int partIndex;
-        int instanceIndex;
-        f32 area;
-    };
-
-    std::vector<ExpandedPart> expandedParts;
-    for (int i = 0; i < static_cast<int>(parts.size()); ++i) {
-        const Part& part = parts[i];
-        for (int j = 0; j < part.quantity; ++j) {
-            expandedParts.push_back({&part, i, j, part.area()});
-        }
-    }
-
-    // Sort by area (largest first)
-    std::sort(expandedParts.begin(), expandedParts.end(),
-              [](const ExpandedPart& a, const ExpandedPart& b) {
-                  return a.area > b.area;
-              });
+    auto expandedParts = expandParts(parts);
 
     // Track which parts have been placed
     std::vector<bool> placed(expandedParts.size(), false);
@@ -70,8 +56,7 @@ CutPlan BinPacker::optimize(const std::vector<Part>& parts,
             placement.partIndex = ep.partIndex;
             placement.instanceIndex = ep.instanceIndex;
 
-            if (tryPlace(*ep.part, ep.partIndex, ep.instanceIndex, freeRects,
-                         placement)) {
+            if (tryPlace(*ep.part, ep.partIndex, ep.instanceIndex, freeRects, placement)) {
                 sheetResult.placements.push_back(placement);
                 sheetResult.usedArea += ep.part->area();
                 placed[i] = true;
@@ -107,7 +92,7 @@ CutPlan BinPacker::optimize(const std::vector<Part>& parts,
         if (!placed[i]) {
             const auto& ep = expandedParts[i];
             Part unplaced = *ep.part;
-            unplaced.quantity = 1;  // Each instance is separate
+            unplaced.quantity = 1; // Each instance is separate
             plan.unplacedParts.push_back(unplaced);
         }
     }
@@ -128,8 +113,9 @@ bool BinPacker::tryPlace(const Part& part, int partIndex, int instanceIndex,
     for (usize i = 0; i < freeRects.size(); ++i) {
         const FreeRect& rect = freeRects[i];
 
-        // Try normal orientation
-        if (partWidth <= rect.width && partHeight <= rect.height) {
+        // Try normal orientation (with epsilon tolerance for float rounding)
+        if (partWidth <= rect.width + PLACEMENT_EPSILON &&
+            partHeight <= rect.height + PLACEMENT_EPSILON) {
             f32 score = rect.width * rect.height - partWidth * partHeight;
             if (score < bestScore) {
                 bestScore = score;
@@ -139,7 +125,8 @@ bool BinPacker::tryPlace(const Part& part, int partIndex, int instanceIndex,
         }
 
         // Try rotated orientation
-        if (m_allowRotation && partHeight <= rect.width && partWidth <= rect.height) {
+        if (m_allowRotation && partHeight <= rect.width + PLACEMENT_EPSILON &&
+            partWidth <= rect.height + PLACEMENT_EPSILON) {
             f32 score = rect.width * rect.height - partHeight * partWidth;
             if (score < bestScore) {
                 bestScore = score;
@@ -198,5 +185,5 @@ void BinPacker::splitFreeRect(std::vector<FreeRect>& freeRects, usize rectIndex,
     }
 }
 
-}  // namespace optimizer
-}  // namespace dw
+} // namespace optimizer
+} // namespace dw

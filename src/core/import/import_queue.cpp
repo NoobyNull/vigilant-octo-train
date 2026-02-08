@@ -5,13 +5,9 @@
 #include "../utils/file_utils.h"
 #include "../utils/log.h"
 
-#include <cstring>
-
 namespace dw {
 
-ImportQueue::ImportQueue(Database& db)
-    : m_db(db)
-    , m_modelRepo(db) {}
+ImportQueue::ImportQueue(Database& db) : m_db(db), m_modelRepo(db) {}
 
 ImportQueue::~ImportQueue() {
     m_shutdown.store(true);
@@ -36,7 +32,7 @@ void ImportQueue::enqueue(const std::vector<Path>& paths) {
 
     // Start worker if not already running
     if (m_worker.joinable()) {
-        m_worker.join();  // Previous batch finished, clean up
+        m_worker.join(); // Previous batch finished, clean up
     }
     m_worker = std::thread(&ImportQueue::workerLoop, this);
 }
@@ -92,7 +88,7 @@ void ImportQueue::workerLoop() {
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             if (m_pending.empty()) {
-                break;  // No more work
+                break; // No more work
             }
             task = std::move(m_pending.front());
             m_pending.erase(m_pending.begin());
@@ -107,11 +103,8 @@ void ImportQueue::workerLoop() {
             continue;
         }
 
-        // Update progress with current file name
-        auto filename = file::getStem(task.sourcePath);
-        std::strncpy(m_progress.currentFileName, filename.c_str(),
-                      sizeof(m_progress.currentFileName) - 1);
-        m_progress.currentFileName[sizeof(m_progress.currentFileName) - 1] = '\0';
+        // Update progress with current file name (thread-safe)
+        m_progress.setCurrentFileName(file::getStem(task.sourcePath));
 
         processTask(task);
 
@@ -142,8 +135,7 @@ void ImportQueue::workerLoop() {
 
     m_progress.active.store(false);
     log::infof("Import", "Worker finished (%d/%d completed, %d failed)",
-               m_progress.completedFiles.load(),
-               m_progress.totalFiles.load(),
+               m_progress.completedFiles.load(), m_progress.totalFiles.load(),
                m_progress.failedFiles.load());
 }
 
@@ -232,8 +224,8 @@ void ImportQueue::processTask(ImportTask& task) {
     task.record.id = *modelId;
     task.stage = ImportStage::WaitingForThumbnail;
 
-    log::infof("Import", "'%s' ready for thumbnail (id=%lld)",
-               record.name.c_str(), static_cast<long long>(*modelId));
+    log::infof("Import", "'%s' ready for thumbnail (id=%lld)", record.name.c_str(),
+               static_cast<long long>(*modelId));
 }
 
-}  // namespace dw
+} // namespace dw

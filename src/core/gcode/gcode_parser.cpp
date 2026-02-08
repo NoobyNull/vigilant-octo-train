@@ -1,11 +1,11 @@
 #include "gcode_parser.h"
 
+#include <cmath>
+#include <sstream>
+
 #include "../utils/file_utils.h"
 #include "../utils/log.h"
 #include "../utils/string_utils.h"
-
-#include <cmath>
-#include <sstream>
 
 namespace dw {
 namespace gcode {
@@ -64,13 +64,19 @@ Program Parser::parse(const std::string& content) {
             Vec3 targetPos = currentPos;
 
             if (program.positioning == PositioningMode::Absolute) {
-                if (cmd.hasX()) targetPos.x = cmd.x;
-                if (cmd.hasY()) targetPos.y = cmd.y;
-                if (cmd.hasZ()) targetPos.z = cmd.z;
+                if (cmd.hasX())
+                    targetPos.x = cmd.x;
+                if (cmd.hasY())
+                    targetPos.y = cmd.y;
+                if (cmd.hasZ())
+                    targetPos.z = cmd.z;
             } else {
-                if (cmd.hasX()) targetPos.x += cmd.x;
-                if (cmd.hasY()) targetPos.y += cmd.y;
-                if (cmd.hasZ()) targetPos.z += cmd.z;
+                if (cmd.hasX())
+                    targetPos.x += cmd.x;
+                if (cmd.hasY())
+                    targetPos.y += cmd.y;
+                if (cmd.hasZ())
+                    targetPos.z += cmd.z;
             }
 
             // Lambda to update bounding box
@@ -101,10 +107,8 @@ Program Parser::parse(const std::string& content) {
                 f32 centerY = currentPos.y + jOff;
 
                 // Compute start and end angles relative to center
-                f32 startAngle = std::atan2(currentPos.y - centerY,
-                                            currentPos.x - centerX);
-                f32 endAngle = std::atan2(targetPos.y - centerY,
-                                          targetPos.x - centerX);
+                f32 startAngle = std::atan2(currentPos.y - centerY, currentPos.x - centerX);
+                f32 endAngle = std::atan2(targetPos.y - centerY, targetPos.x - centerX);
 
                 // Determine sweep direction
                 constexpr f32 PI2 = 2.0f * 3.14159265358979323846f;
@@ -130,8 +134,10 @@ Program Parser::parse(const std::string& content) {
                 // Number of segments: ~1 per 5 degrees, max 72 per full circle
                 constexpr f32 DEG_PER_SEG = 5.0f * 3.14159265358979323846f / 180.0f;
                 int numSegments = static_cast<int>(std::ceil(std::fabs(sweep) / DEG_PER_SEG));
-                if (numSegments < 1) numSegments = 1;
-                if (numSegments > 72) numSegments = 72;
+                if (numSegments < 1)
+                    numSegments = 1;
+                if (numSegments > 72)
+                    numSegments = 72;
 
                 f32 angleStep = sweep / static_cast<f32>(numSegments);
                 f32 startZ = currentPos.z;
@@ -157,7 +163,7 @@ Program Parser::parse(const std::string& content) {
                     PathSegment arcSeg;
                     arcSeg.start = prevPoint;
                     arcSeg.end = point;
-                    arcSeg.isRapid = false;  // Arcs are cutting moves
+                    arcSeg.isRapid = false; // Arcs are cutting moves
                     arcSeg.feedRate = segFeedRate;
                     arcSeg.lineNumber = lineNumber;
 
@@ -259,29 +265,49 @@ Command Parser::parseLine(const std::string& line, int lineNumber) {
 CommandType Parser::parseCommandType(char letter, int number) {
     if (letter == 'G') {
         switch (number) {
-            case 0: return CommandType::G0;
-            case 1: return CommandType::G1;
-            case 2: return CommandType::G2;
-            case 3: return CommandType::G3;
-            case 20: return CommandType::G20;
-            case 21: return CommandType::G21;
-            case 28: return CommandType::G28;
-            case 90: return CommandType::G90;
-            case 91: return CommandType::G91;
-            case 92: return CommandType::G92;
-            default: return CommandType::Unknown;
+        case 0:
+            return CommandType::G0;
+        case 1:
+            return CommandType::G1;
+        case 2:
+            return CommandType::G2;
+        case 3:
+            return CommandType::G3;
+        case 20:
+            return CommandType::G20;
+        case 21:
+            return CommandType::G21;
+        case 28:
+            return CommandType::G28;
+        case 90:
+            return CommandType::G90;
+        case 91:
+            return CommandType::G91;
+        case 92:
+            return CommandType::G92;
+        default:
+            return CommandType::Unknown;
         }
     } else if (letter == 'M') {
         switch (number) {
-            case 0: return CommandType::M0;
-            case 1: return CommandType::M1;
-            case 2: return CommandType::M2;
-            case 3: return CommandType::M3;
-            case 4: return CommandType::M4;
-            case 5: return CommandType::M5;
-            case 6: return CommandType::M6;
-            case 30: return CommandType::M30;
-            default: return CommandType::Unknown;
+        case 0:
+            return CommandType::M0;
+        case 1:
+            return CommandType::M1;
+        case 2:
+            return CommandType::M2;
+        case 3:
+            return CommandType::M3;
+        case 4:
+            return CommandType::M4;
+        case 5:
+            return CommandType::M5;
+        case 6:
+            return CommandType::M6;
+        case 30:
+            return CommandType::M30;
+        default:
+            return CommandType::Unknown;
         }
     }
 
@@ -294,7 +320,7 @@ f32 Parser::parseParameter(const std::string& line, char param) {
         return std::numeric_limits<f32>::quiet_NaN();
     }
 
-    pos++;  // Move past the parameter letter
+    pos++; // Move past the parameter letter
 
     // Skip spaces
     while (pos < line.size() && line[pos] == ' ') {
@@ -328,5 +354,5 @@ f32 Parser::parseParameter(const std::string& line, char param) {
     }
 }
 
-}  // namespace gcode
-}  // namespace dw
+} // namespace gcode
+} // namespace dw

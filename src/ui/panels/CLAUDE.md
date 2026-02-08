@@ -1,17 +1,10 @@
 <claude-mem-context>
 # Recent Activity
 
-### Feb 3, 2026
+### Feb 5, 2026
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
-| #366 | 9:18 PM | 🟣 | Project Panel UI Implemented with ImGui | ~883 |
-| #364 | " | 🟣 | Project Panel UI Component Created | ~827 |
-
-### Feb 4, 2026
-
-| ID | Time | T | Title | Read |
-|----|------|---|-------|------|
-| #450 | 6:42 AM | 🔄 | G-code Panel Layer Calculation Simplified | ~166 |
-| #442 | 6:39 AM | 🟣 | G-Code Viewer Panel with 2D Path Visualization and Statistics | ~1094 |
+| #105 | 7:44 PM | 🔵 | 3D Viewport Panel with Camera Controls and Render-to-Texture | ~794 |
+| #81 | 7:42 PM | ✅ | Removed 25 Per-Directory CLAUDE.md Placeholder Files | ~489 |
 </claude-mem-context>

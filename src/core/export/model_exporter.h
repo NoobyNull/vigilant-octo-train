@@ -1,9 +1,9 @@
 #pragma once
 
+#include <string>
+
 #include "../mesh/mesh.h"
 #include "../types.h"
-
-#include <string>
 
 namespace dw {
 
@@ -18,7 +18,7 @@ struct ExportResult {
 
 // Model exporter class
 class ModelExporter {
-public:
+  public:
     ModelExporter() = default;
 
     // Export mesh to file
@@ -27,10 +27,10 @@ public:
     // Auto-detect format from extension
     ExportResult exportMesh(const Mesh& mesh, const Path& path);
 
-private:
+  private:
     ExportResult exportSTLBinary(const Mesh& mesh, const Path& path);
     ExportResult exportSTLAscii(const Mesh& mesh, const Path& path);
     ExportResult exportOBJ(const Mesh& mesh, const Path& path);
 };
 
-}  // namespace dw
+} // namespace dw

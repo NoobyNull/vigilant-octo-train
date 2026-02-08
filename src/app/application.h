@@ -3,11 +3,11 @@
 // Digital Workshop - Application Class
 // Main application lifecycle: init, run loop, shutdown
 
-#include "../core/types.h"
-
 #include <memory>
 #include <string>
 #include <vector>
+
+#include "../core/types.h"
 
 struct SDL_Window;
 
@@ -34,23 +34,23 @@ class ConfirmDialog;
 class ImportQueue;
 
 class Application {
-public:
+  public:
     Application();
     ~Application();
 
     // Disable copy
     Application(const Application&) = delete;
-    auto operator=(const Application&) -> Application& = delete;
+    Application& operator=(const Application&) = delete;
 
     // Disable move (singleton-like usage)
     Application(Application&&) = delete;
-    auto operator=(Application&&) -> Application& = delete;
+    Application& operator=(Application&&) = delete;
 
     // Initialize SDL2, OpenGL, ImGui
-    auto init() -> bool;
+    bool init();
 
     // Main loop - returns exit code
-    auto run() -> int;
+    int run();
 
     // Request application to quit
     void quit();
@@ -59,7 +59,7 @@ public:
     auto isRunning() const -> bool { return m_running; }
     auto getWindow() const -> SDL_Window* { return m_window; }
 
-private:
+  private:
     void processEvents();
     void update();
     void render();
@@ -90,6 +90,7 @@ private:
     void renderRestartPopup();
     void saveWorkspaceState();
     void onOpenRecentProject(const Path& path);
+    void setupDefaultDockLayout(unsigned int dockspaceId);
 
     SDL_Window* m_window = nullptr;
     void* m_glContext = nullptr;
@@ -130,6 +131,7 @@ private:
     std::unique_ptr<ConfigWatcher> m_configWatcher;
     bool m_showRestartPopup = false;
     float m_lastAppliedUiScale = 1.0f;
+    bool m_firstFrame = true;
 
     static constexpr int DEFAULT_WIDTH = 1280;
     static constexpr int DEFAULT_HEIGHT = 720;

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../types.h"
-
 #include <string>
+
+#include "../types.h"
 
 namespace dw {
 
@@ -30,5 +30,5 @@ std::string toHex(u64 hash);
 // Convert hex string to hash
 u64 fromHex(const std::string& hex);
 
-}  // namespace hash
-}  // namespace dw
+} // namespace hash
+} // namespace dw

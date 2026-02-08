@@ -83,5 +83,5 @@ f32 Analyzer::calculateSegmentTime(const PathSegment& segment) {
     return 0.0f;
 }
 
-}  // namespace gcode
-}  // namespace dw
+} // namespace gcode
+} // namespace dw
