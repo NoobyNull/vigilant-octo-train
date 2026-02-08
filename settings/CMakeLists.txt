@@ -39,3 +39,6 @@ set_target_properties(dw_settings PROPERTIES
     OUTPUT_NAME "dw_settings"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )
+
+# Install target
+install(TARGETS dw_settings RUNTIME DESTINATION bin)

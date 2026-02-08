@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
     branches: [main]
 
@@ -18,13 +19,22 @@ jobs:
           sudo apt-get install -y libsdl2-dev libgl-dev zlib1g-dev clang-format-18
 
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Debug -DDW_BUILD_TESTS=ON
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DDW_BUILD_TESTS=ON
 
       - name: Build
         run: cmake --build build -j$(nproc)
 
       - name: Test
         run: ./build/tests/dw_tests
+
+      - name: Package
+        run: cd build && cpack
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DigitalWorkshop-linux
+          path: build/DigitalWorkshop-*.tar.gz
 
   windows:
     runs-on: windows-latest
@@ -35,7 +45,34 @@ jobs:
         run: cmake -B build -DDW_BUILD_TESTS=ON
 
       - name: Build
-        run: cmake --build build --config Debug -j $env:NUMBER_OF_PROCESSORS
+        run: cmake --build build --config Release -j $env:NUMBER_OF_PROCESSORS
 
       - name: Test
-        run: ./build/tests/Debug/dw_tests.exe
+        run: ./build/tests/Release/dw_tests.exe
+
+      - name: Package
+        run: cd build && cpack -C Release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DigitalWorkshop-windows
+          path: build/DigitalWorkshop-*.exe
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [linux, windows]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            DigitalWorkshop-linux/*
+            DigitalWorkshop-windows/*
+          generate_release_notes: true

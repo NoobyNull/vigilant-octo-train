@@ -128,3 +128,6 @@ set_target_properties(digital_workshop PROPERTIES
     OUTPUT_NAME "digital_workshop"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )
+
+# Install target
+install(TARGETS digital_workshop RUNTIME DESTINATION bin)
