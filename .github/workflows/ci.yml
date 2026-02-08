@@ -16,7 +16,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsdl2-dev libgl-dev zlib1g-dev clang-format-18
+          sudo apt-get install -y libsdl2-dev libgl-dev zlib1g-dev clang-format-18 makeself
 
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DDW_BUILD_TESTS=ON
@@ -28,13 +28,13 @@ jobs:
         run: ./build/tests/dw_tests
 
       - name: Package
-        run: cd build && cpack
+        run: ./packaging/linux/make-installer.sh build ${{ github.ref_name == 'main' && 'dev' || github.ref_name }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: DigitalWorkshop-linux
-          path: build/DigitalWorkshop-*.tar.gz
+          path: build/DigitalWorkshop-*.run
 
   windows:
     runs-on: windows-latest
@@ -73,6 +73,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            DigitalWorkshop-linux/*
-            DigitalWorkshop-windows/*
+            DigitalWorkshop-linux/*.run
+            DigitalWorkshop-windows/*.exe
           generate_release_notes: true
