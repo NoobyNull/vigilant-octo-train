@@ -55,6 +55,9 @@ void ViewportPanel::setMesh(MeshPtr mesh) {
             m_camera.setPitch(0.0f);
         }
     }
+
+    // Invalidate ViewCube cache (camera may have changed)
+    m_viewCubeCache.valid = false;
 }
 
 void ViewportPanel::clearMesh() {
@@ -62,10 +65,16 @@ void ViewportPanel::clearMesh() {
     if (m_gpuMesh.vao != 0) {
         m_gpuMesh.destroy();
     }
+
+    // Invalidate ViewCube cache
+    m_viewCubeCache.valid = false;
 }
 
 void ViewportPanel::resetView() {
     m_camera.reset();
+
+    // Invalidate ViewCube cache (camera changed)
+    m_viewCubeCache.valid = false;
 }
 
 void ViewportPanel::fitToModel() {
@@ -73,6 +82,9 @@ void ViewportPanel::fitToModel() {
         const auto& bounds = m_mesh->bounds();
         m_camera.fitToBounds(bounds.min, bounds.max);
     }
+
+    // Invalidate ViewCube cache (camera may have changed)
+    m_viewCubeCache.valid = false;
 }
 
 void ViewportPanel::handleInput() {
@@ -275,6 +287,7 @@ void ViewportPanel::renderViewCube() {
     constexpr f32 kCubeSize = 30.0f;
     constexpr f32 kMargin = 15.0f;
     constexpr f32 kDeg2Rad = 3.14159265f / 180.0f;
+    constexpr f32 kEpsilon = 0.001f;
 
     // Cube vertices: unit cube from -1 to 1
     const std::array<Vec3, 8> verts = {{
@@ -319,51 +332,70 @@ void ViewportPanel::renderViewCube() {
     // Cube origin: top-right corner
     ImVec2 origin = {rectMax.x - kMargin - kCubeSize, rectMin.y + kMargin + kCubeSize};
 
-    // Build rotation matrix from camera yaw/pitch
-    f32 yawRad = -m_camera.yaw() * kDeg2Rad;
-    f32 pitchRad = m_camera.pitch() * kDeg2Rad;
+    // --- Cache check: skip geometry recomputation if camera unchanged ---
+    f32 yaw = m_camera.yaw();
+    f32 pitch = m_camera.pitch();
 
-    f32 cy = std::cos(yawRad), sy = std::sin(yawRad);
-    f32 cp = std::cos(pitchRad), sp = std::sin(pitchRad);
+    if (!m_viewCubeCache.valid || std::abs(yaw - m_viewCubeCache.lastYaw) > kEpsilon ||
+        std::abs(pitch - m_viewCubeCache.lastPitch) > kEpsilon) {
 
-    // Rotation: yaw around Y, then pitch around X
-    // R = Rx(pitch) * Ry(yaw)
-    auto rotate = [&](const Vec3& v) -> Vec3 {
-        // Ry
-        f32 rx = cy * v.x + sy * v.z;
-        f32 ry = v.y;
-        f32 rz = -sy * v.x + cy * v.z;
-        // Rx
-        f32 fx = rx;
-        f32 fy = cp * ry - sp * rz;
-        f32 fz = sp * ry + cp * rz;
-        return {fx, fy, fz};
-    };
+        // Recompute geometry: build rotation matrix from camera yaw/pitch
+        f32 yawRad = -yaw * kDeg2Rad;
+        f32 pitchRad = pitch * kDeg2Rad;
 
-    // Rotate all vertices and project to 2D (orthographic: use x, -y)
+        f32 cy = std::cos(yawRad), sy = std::sin(yawRad);
+        f32 cp = std::cos(pitchRad), sp = std::sin(pitchRad);
+
+        // Rotation: yaw around Y, then pitch around X
+        // R = Rx(pitch) * Ry(yaw)
+        auto rotate = [&](const Vec3& v) -> Vec3 {
+            // Ry
+            f32 rx = cy * v.x + sy * v.z;
+            f32 ry = v.y;
+            f32 rz = -sy * v.x + cy * v.z;
+            // Rx
+            f32 fx = rx;
+            f32 fy = cp * ry - sp * rz;
+            f32 fz = sp * ry + cp * rz;
+            return {fx, fy, fz};
+        };
+
+        // Rotate all vertices and store as OFFSETS (relative to origin)
+        for (int i = 0; i < 8; i++) {
+            Vec3 r = rotate(verts[static_cast<usize>(i)]);
+            // Store offsets, not absolute coords
+            m_viewCubeCache.projectedVerts[static_cast<usize>(i)] = {r.x * kCubeSize,
+                                                                     -r.y * kCubeSize};
+            m_viewCubeCache.depths[static_cast<usize>(i)] = r.z;
+        }
+
+        // Sort faces back-to-front by average Z
+        for (int i = 0; i < 6; i++) {
+            const auto& f = faces[static_cast<usize>(i)];
+            f32 avgZ = (m_viewCubeCache.depths[static_cast<usize>(f.v[0])] +
+                        m_viewCubeCache.depths[static_cast<usize>(f.v[1])] +
+                        m_viewCubeCache.depths[static_cast<usize>(f.v[2])] +
+                        m_viewCubeCache.depths[static_cast<usize>(f.v[3])]) *
+                       0.25f;
+            m_viewCubeCache.sortedFaces[static_cast<usize>(i)] = {i, avgZ};
+        }
+        std::sort(m_viewCubeCache.sortedFaces.begin(), m_viewCubeCache.sortedFaces.end(),
+                  [](const ViewCubeCache::FaceSort& a, const ViewCubeCache::FaceSort& b) {
+                      return a.avgZ < b.avgZ;
+                  });
+
+        m_viewCubeCache.lastYaw = yaw;
+        m_viewCubeCache.lastPitch = pitch;
+        m_viewCubeCache.valid = true;
+    }
+
+    // Apply origin offset to cached verts for drawing (convert offsets to absolute coords)
     std::array<ImVec2, 8> proj;
-    std::array<f32, 8> depths;
     for (int i = 0; i < 8; i++) {
-        Vec3 r = rotate(verts[static_cast<usize>(i)]);
-        proj[static_cast<usize>(i)] = {origin.x + r.x * kCubeSize, origin.y - r.y * kCubeSize};
-        depths[static_cast<usize>(i)] = r.z;
+        proj[static_cast<usize>(i)] = {
+            origin.x + m_viewCubeCache.projectedVerts[static_cast<usize>(i)].x,
+            origin.y + m_viewCubeCache.projectedVerts[static_cast<usize>(i)].y};
     }
-
-    // Sort faces back-to-front by average Z
-    struct FaceSort {
-        int index;
-        f32 avgZ;
-    };
-    std::array<FaceSort, 6> sorted;
-    for (int i = 0; i < 6; i++) {
-        const auto& f = faces[static_cast<usize>(i)];
-        f32 avgZ = (depths[static_cast<usize>(f.v[0])] + depths[static_cast<usize>(f.v[1])] +
-                    depths[static_cast<usize>(f.v[2])] + depths[static_cast<usize>(f.v[3])]) *
-                   0.25f;
-        sorted[static_cast<usize>(i)] = {i, avgZ};
-    }
-    std::sort(sorted.begin(), sorted.end(),
-              [](const FaceSort& a, const FaceSort& b) { return a.avgZ < b.avgZ; });
 
     // Hit test: check mouse against faces front-to-back
     ImVec2 mousePos = ImGui::GetIO().MousePos;
@@ -383,9 +415,9 @@ void ViewportPanel::renderViewCube() {
                (c0 <= 0 && c1 <= 0 && c2 <= 0 && c3 <= 0);
     };
 
-    // Check front-to-back (reverse of sorted order)
+    // Check front-to-back (reverse of cached sorted order)
     for (int si = 5; si >= 0; si--) {
-        const auto& fs = sorted[static_cast<usize>(si)];
+        const auto& fs = m_viewCubeCache.sortedFaces[static_cast<usize>(si)];
         const auto& f = faces[static_cast<usize>(fs.index)];
         if (fs.avgZ < 0)
             continue; // Skip back faces for hit testing
@@ -408,7 +440,7 @@ void ViewportPanel::renderViewCube() {
     ImDrawList* drawList = ImGui::GetWindowDrawList();
 
     for (int si = 0; si < 6; si++) {
-        const auto& fs = sorted[static_cast<usize>(si)];
+        const auto& fs = m_viewCubeCache.sortedFaces[static_cast<usize>(si)];
         const auto& f = faces[static_cast<usize>(fs.index)];
 
         ImVec2 qa = proj[static_cast<usize>(f.v[0])];

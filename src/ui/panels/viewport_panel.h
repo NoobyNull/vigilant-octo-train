@@ -1,6 +1,9 @@
 #pragma once
 
+#include <array>
 #include <memory>
+
+#include <imgui.h>
 
 #include "../../render/camera.h"
 #include "../../render/framebuffer.h"
@@ -42,6 +45,20 @@ class ViewportPanel : public Panel {
     void renderToolbar();
     void renderViewCube();
 
+    // ViewCube geometry cache — invalidated when camera orientation changes
+    struct ViewCubeCache {
+        f32 lastYaw = -999.0f;
+        f32 lastPitch = -999.0f;
+        std::array<ImVec2, 8> projectedVerts{};
+        std::array<f32, 8> depths{};
+        struct FaceSort {
+            int index;
+            f32 avgZ;
+        };
+        std::array<FaceSort, 6> sortedFaces{};
+        bool valid = false;
+    };
+
     Renderer m_renderer;
     Camera m_camera;
     Framebuffer m_framebuffer;
@@ -56,6 +73,9 @@ class ViewportPanel : public Panel {
     // Viewport size
     int m_viewportWidth = 1;
     int m_viewportHeight = 1;
+
+    // ViewCube cache
+    ViewCubeCache m_viewCubeCache;
 };
 
 } // namespace dw
