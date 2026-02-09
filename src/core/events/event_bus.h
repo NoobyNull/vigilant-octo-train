@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "core/utils/log.h"
+#include "core/utils/thread_utils.h"
 
 namespace dw {
 
@@ -40,6 +41,8 @@ public:
     // Exception in one handler does not prevent others from running
     template <typename EventType>
     void publish(const EventType& event) {
+        ASSERT_MAIN_THREAD();
+
         auto typeIndex = std::type_index(typeid(EventType));
         auto it = m_handlers.find(typeIndex);
         if (it == m_handlers.end()) {

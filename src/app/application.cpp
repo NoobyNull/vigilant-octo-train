@@ -19,7 +19,9 @@
 #include "core/loaders/loader_factory.h"
 #include "core/paths/app_paths.h"
 #include "core/project/project.h"
+#include "core/threading/main_thread_queue.h"
 #include "core/utils/log.h"
+#include "core/utils/thread_utils.h"
 #include "render/thumbnail_generator.h"
 #include "ui/dialogs/file_dialog.h"
 #include "ui/dialogs/lighting_dialog.h"
@@ -158,6 +160,12 @@ bool Application::init() {
     ImGui_ImplOpenGL3_Init("#version 330");
 
     // Initialize core systems
+    // Initialize main thread (record thread ID for assertions)
+    dw::threading::initMainThread();
+
+    // Initialize MainThreadQueue (must exist before ImportQueue)
+    m_mainThreadQueue = std::make_unique<MainThreadQueue>();
+
     // Initialize EventBus (foundation for decoupled communication)
     m_eventBus = std::make_unique<EventBus>();
 
@@ -328,6 +336,10 @@ auto Application::eventBus() -> EventBus& {
     return *m_eventBus;
 }
 
+auto Application::mainThreadQueue() -> MainThreadQueue& {
+    return *m_mainThreadQueue;
+}
+
 void Application::processEvents() {
     std::vector<std::string> droppedFiles;
 
@@ -356,6 +368,12 @@ void Application::processEvents() {
 }
 
 void Application::update() {
+    // Process all pending main-thread tasks (from worker threads)
+    if (m_mainThreadQueue) {
+        m_mainThreadQueue->processAll();
+    }
+
+    // Process completed imports (thumbnail generation needs GL context)
     processCompletedImports();
 
     // Poll config watcher for live settings reload
@@ -497,6 +515,9 @@ void Application::renderMenuBar() {
 }
 
 void Application::renderPanels() {
+    // Assert we're on the main thread (ImGui is not thread-safe)
+    ASSERT_MAIN_THREAD();
+
     // Start page
     if (m_showStartPage && m_startPage) {
         m_startPage->render();
@@ -1055,8 +1076,10 @@ void Application::shutdown() {
     m_startPage.reset();
 
     // Destroy core systems
-    m_importQueue.reset();    // Joins worker thread, releases pooled connections
-    m_connectionPool.reset(); // Closes pooled connections
+    m_importQueue.reset();         // Joins worker thread, releases pooled connections
+    m_mainThreadQueue->shutdown(); // Signal no more processing
+    m_mainThreadQueue.reset();     // Destroy queue after worker joins
+    m_connectionPool.reset();      // Closes pooled connections
     m_workspace.reset();
     m_thumbnailGenerator.reset();
     m_projectManager.reset();

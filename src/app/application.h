@@ -34,6 +34,7 @@ class LightingDialog;
 class MessageDialog;
 class ConfirmDialog;
 class ImportQueue;
+class MainThreadQueue;
 
 class Application {
   public:
@@ -61,6 +62,7 @@ class Application {
     auto isRunning() const -> bool { return m_running; }
     auto getWindow() const -> SDL_Window* { return m_window; }
     auto eventBus() -> EventBus&;
+    auto mainThreadQueue() -> MainThreadQueue&;
 
   private:
     void processEvents();
@@ -101,6 +103,7 @@ class Application {
     bool m_initialized = false;
 
     // Core systems
+    std::unique_ptr<MainThreadQueue> m_mainThreadQueue;
     std::unique_ptr<EventBus> m_eventBus;
     std::unique_ptr<Database> m_database;
     std::unique_ptr<ConnectionPool> m_connectionPool;

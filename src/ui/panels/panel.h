@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include "core/utils/thread_utils.h"
+
 namespace dw {
 
 // Base class for all UI panels
@@ -10,7 +12,7 @@ class Panel {
     Panel(const std::string& title) : m_title(title) {}
     virtual ~Panel() = default;
 
-    // Called each frame to render the panel
+    // Called each frame to render the panel (main thread only)
     virtual void render() = 0;
 
     // Panel state

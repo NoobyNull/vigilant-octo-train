@@ -16,6 +16,9 @@ set(DW_SOURCES
     core/utils/file_utils.cpp
     core/utils/string_utils.cpp
 
+    # Threading
+    core/threading/main_thread_queue.cpp
+
     # Core paths
     core/paths/app_paths.cpp
 

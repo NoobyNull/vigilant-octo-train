@@ -6,8 +6,17 @@
 
 #include "core/events/event_bus.h"
 #include "core/events/event_types.h"
+#include "core/utils/thread_utils.h"
 
-TEST(EventBus, SubscribeAndReceive_SingleSubscriber) {
+// Test fixture that initializes main thread for all EventBus tests
+class EventBusTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        dw::threading::initMainThread();
+    }
+};
+
+TEST_F(EventBusTest, SubscribeAndReceive_SingleSubscriber) {
     dw::EventBus bus;
     int callCount = 0;
     int64_t receivedId = 0;
@@ -28,7 +37,7 @@ TEST(EventBus, SubscribeAndReceive_SingleSubscriber) {
     EXPECT_EQ(receivedName, "TestModel");
 }
 
-TEST(EventBus, SubscribeAndReceive_MultipleSubscribers) {
+TEST_F(EventBusTest, SubscribeAndReceive_MultipleSubscribers) {
     dw::EventBus bus;
     int callCount1 = 0;
     int callCount2 = 0;
@@ -50,7 +59,7 @@ TEST(EventBus, SubscribeAndReceive_MultipleSubscribers) {
     EXPECT_EQ(callCount2, 1);
 }
 
-TEST(EventBus, SubscribeAndReceive_DifferentEventTypes) {
+TEST_F(EventBusTest, SubscribeAndReceive_DifferentEventTypes) {
     dw::EventBus bus;
     int workspaceCallCount = 0;
     int importCallCount = 0;
@@ -75,7 +84,7 @@ TEST(EventBus, SubscribeAndReceive_DifferentEventTypes) {
     EXPECT_EQ(importCallCount, 1);
 }
 
-TEST(EventBus, Publish_NoSubscribers_DoesNotCrash) {
+TEST_F(EventBusTest, Publish_NoSubscribers_DoesNotCrash) {
     dw::EventBus bus;
 
     // Should not crash even with no subscribers
@@ -86,7 +95,7 @@ TEST(EventBus, Publish_NoSubscribers_DoesNotCrash) {
     EXPECT_TRUE(true);
 }
 
-TEST(EventBus, WeakRefCleanup_ExpiredSubscriberRemoved) {
+TEST_F(EventBusTest, WeakRefCleanup_ExpiredSubscriberRemoved) {
     dw::EventBus bus;
     int callCount = 0;
 
@@ -111,7 +120,7 @@ TEST(EventBus, WeakRefCleanup_ExpiredSubscriberRemoved) {
     EXPECT_EQ(callCount, 1); // Still 1, not 2
 }
 
-TEST(EventBus, WeakRefCleanup_MixedAliveAndExpired) {
+TEST_F(EventBusTest, WeakRefCleanup_MixedAliveAndExpired) {
     dw::EventBus bus;
     int callCount1 = 0;
     int callCount2 = 0;
@@ -144,7 +153,7 @@ TEST(EventBus, WeakRefCleanup_MixedAliveAndExpired) {
     EXPECT_EQ(callCount2, 1); // Still 1, not 2
 }
 
-TEST(EventBus, ReentrancySafety_SubscribeDuringPublish) {
+TEST_F(EventBusTest, ReentrancySafety_SubscribeDuringPublish) {
     dw::EventBus bus;
     int callCount = 0;
     dw::EventBus::SubscriptionId newSub;
@@ -173,7 +182,7 @@ TEST(EventBus, ReentrancySafety_SubscribeDuringPublish) {
     EXPECT_GE(callCount, 11);
 }
 
-TEST(EventBus, ExceptionIsolation_HandlerThrowDoesNotBlockOthers) {
+TEST_F(EventBusTest, ExceptionIsolation_HandlerThrowDoesNotBlockOthers) {
     dw::EventBus bus;
     int callCount1 = 0;
     int callCount2 = 0;
@@ -198,7 +207,7 @@ TEST(EventBus, ExceptionIsolation_HandlerThrowDoesNotBlockOthers) {
     EXPECT_EQ(callCount2, 1);
 }
 
-TEST(EventBus, EmptyEvent_WorksWithNoFields) {
+TEST_F(EventBusTest, EmptyEvent_WorksWithNoFields) {
     dw::EventBus bus;
     int callCount = 0;
 
@@ -213,7 +222,7 @@ TEST(EventBus, EmptyEvent_WorksWithNoFields) {
     EXPECT_EQ(callCount, 1);
 }
 
-TEST(EventBus, SubscriptionId_KeepsHandlerAlive) {
+TEST_F(EventBusTest, SubscriptionId_KeepsHandlerAlive) {
     dw::EventBus bus;
     int callCount = 0;
 
