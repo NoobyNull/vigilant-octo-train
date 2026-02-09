@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -36,6 +37,7 @@ class Shader {
     void setVec2(const std::string& name, const Vec2& value);
     void setVec3(const std::string& name, const Vec3& value);
     void setVec4(const std::string& name, const Vec4& value);
+    void setMat3(const std::string& name, const glm::mat3& value);
     void setMat4(const std::string& name, const Mat4& value);
 
   private:
@@ -43,7 +45,7 @@ class Shader {
     GLuint compileShader(GLenum type, const std::string& source);
 
     GLuint m_program = 0;
-    mutable std::unordered_map<std::string, GLint> m_uniformCache;
+    mutable std::unordered_map<std::string, std::optional<GLint>> m_uniformCache;
 };
 
 } // namespace dw

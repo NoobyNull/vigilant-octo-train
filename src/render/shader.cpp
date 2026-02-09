@@ -94,14 +94,12 @@ GLuint Shader::compileShader(GLenum type, const std::string& source) {
 GLint Shader::getUniformLocation(const std::string& name) {
     auto it = m_uniformCache.find(name);
     if (it != m_uniformCache.end()) {
-        return it->second;
+        return it->second.value_or(-1);
     }
 
     GLint location = glGetUniformLocation(m_program, name.c_str());
-    // Only cache valid locations; -1 means not found, allow re-lookup
-    if (location != -1) {
-        m_uniformCache[name] = location;
-    }
+    // Cache all lookups including not-found to avoid repeated glGetUniformLocation calls
+    m_uniformCache[name] = (location != -1) ? std::optional<GLint>{location} : std::nullopt;
     return location;
 }
 
@@ -123,6 +121,10 @@ void Shader::setVec3(const std::string& name, const Vec3& value) {
 
 void Shader::setVec4(const std::string& name, const Vec4& value) {
     glUniform4f(getUniformLocation(name), value.x, value.y, value.z, value.w);
+}
+
+void Shader::setMat3(const std::string& name, const glm::mat3& value) {
+    glUniformMatrix3fv(getUniformLocation(name), 1, GL_FALSE, glm::value_ptr(value));
 }
 
 void Shader::setMat4(const std::string& name, const Mat4& value) {
