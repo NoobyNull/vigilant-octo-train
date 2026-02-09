@@ -19,20 +19,20 @@ Phase 1: Architectural Foundation & Thread Safety — Decompose the Application 
 
 **Active Phase:** Phase 1 — Architectural Foundation & Thread Safety
 
-**Current Sub-Phase:** 1.5 Bug Fixes (in progress - Plan 2/3 complete)
+**Current Sub-Phase:** 1.6 Dead Code Cleanup (complete - Plan 1/1 complete)
 
-**Status:** Plan 1.5-02 complete. ViewCube geometry caching implemented - eliminates per-frame recomputation when camera is stationary. All 422 tests pass.
+**Status:** Plan 01.6-01 complete. All dead code items resolved: FontAwesome unicode replaced with text labels, DEAD-01 through DEAD-06 verified and documented. All 422 tests pass.
 
 **Progress:**
 ```
-Phase 1: [████████████████░░░░] 4/6 sub-phases (67%)
+Phase 1: [████████████████████] 6/6 sub-phases (100%)
 
 1.1 EventBus                 [##########] Plan 2/2 complete
 1.2 ConnectionPool           [##########] Plan 2/2 complete
 1.3 MainThreadQueue          [##########] Plan 2/2 complete
 1.4 God Class Decomposition  [##########] Plan 3/3 complete
-1.5 Bug Fixes                [######....] Plan 2/3 complete
-1.6 Dead Code Cleanup        [..........] Not Started
+1.5 Bug Fixes                [##########] Plan 3/3 complete
+1.6 Dead Code Cleanup        [##########] Plan 1/1 complete
 ```
 
 ---
@@ -52,16 +52,14 @@ Phase 1: [████████████████░░░░] 4/6 sub-
 | 1.4   | 03   | 5m 46s   | 2     | 5     | 2026-02-09 |
 | 1.5   | 01   | 2m 8s    | 2     | 4     | 2026-02-09 |
 | 1.5   | 02   | 2m 51s   | 1     | 2     | 2026-02-09 |
+| 1.5   | 03   | 2m 45s   | 1     | 3     | 2026-02-09 |
+| 1.6   | 01   | 1m 59s   | 2     | 2     | 2026-02-09 |
 
-**Cycle Time:** 3m 31s per plan (11 plans completed)
+**Cycle Time:** 3m 15s per plan (13 plans completed)
 
-**Completion Rate:** 4 sub-phases in 2 days
+**Completion Rate:** 6 sub-phases in 2 days (Phase 1 complete)
 
-**Estimated Remaining:**
-- 1.5 Bug Fixes: 3-5 days (M)
-- 1.6 Dead Code Cleanup: 1-3 days (S)
-
-**Total Estimate:** 4-8 days remaining
+**Phase 1 Complete:** All architectural foundation and thread safety work done
 
 ---
 
@@ -243,46 +241,50 @@ Phase 1: [████████████████░░░░] 4/6 sub-
 
 ### What Was Just Accomplished
 
-**Session Goal:** Execute Phase 1.5 Bug Fixes - Plan 02 (Cache ViewCube geometry to eliminate per-frame recomputation)
+**Session Goal:** Execute Phase 1.6 Dead Code Cleanup - Plan 01 (Replace FontAwesome icons, verify resolved items, update TODOS.md)
 
 **Completed:**
-- Plan 02: Added ViewCubeCache struct with lastYaw, lastPitch, projectedVerts, depths, sortedFaces, valid flag
-- Plan 02: Cached geometry as offsets (relative to origin) to avoid invalidation on viewport move/resize
-- Plan 02: Cache invalidates only when camera yaw/pitch change beyond epsilon (0.001)
-- Plan 02: renderViewCube() restructured to check cache before recomputing
+- Plan 01 Task 1: Replaced all FontAwesome unicode codepoints with text labels in icons.h
+- Plan 01 Task 2: Verified DEAD-01 through DEAD-04 already removed, DEAD-06 false claim
+- Plan 01 Task 2: Updated TODOS.md marking all 6 DEAD items as resolved
 - All 422 tests passing, zero regressions
-- Execution time: 2m 51s
+- Execution time: 1m 59s
+- **Phase 1 COMPLETE** - All 6 sub-phases done
 
 **Artifacts Created:**
-- `.planning/phases/01.5-bugfixes/1.5-02-SUMMARY.md` -- Plan 02 summary
+- `.planning/phases/01.6-deadcode/01.6-01-SUMMARY.md` -- Plan 01 summary
 
 **Artifacts Modified:**
-- `src/ui/panels/viewport_panel.h` -- Added ViewCubeCache struct, m_viewCubeCache member
-- `src/ui/panels/viewport_panel.cpp` -- Implemented cache-aware renderViewCube()
+- `src/ui/icons.h` -- Removed FontAwesome unicode, replaced with text labels
+- `.planning/TODOS.md` -- Marked all 6 DEAD items resolved
 
 **Commits:**
-- `d795cf2` -- fix(1.5-02): cache ViewCube geometry to eliminate per-frame recomputation
+- `5c095c2` -- refactor(01.6-01): replace FontAwesome unicode constants with text labels
+- `c97fc71` -- docs(01.6-01): mark all DEAD items as resolved in TODOS.md
 
 ### What to Do Next
 
-**Immediate Next Step:**
-```bash
-/gsd:execute-phase 1.5 --plan 03
-```
+**Phase 1 Complete!**
 
-Execute Plan 1.5-03 (Add regression tests for BUG-02, BUG-03, BUG-05).
+All 6 sub-phases finished:
+- Sub-phase 1.1: EventBus ✓
+- Sub-phase 1.2: ConnectionPool & WAL mode ✓
+- Sub-phase 1.3: MainThreadQueue & threading contracts ✓
+- Sub-phase 1.4: God Class Decomposition ✓
+- Sub-phase 1.5: Bug Fixes (BUG-01 through BUG-07) ✓
+- Sub-phase 1.6: Dead Code Cleanup ✓
 
-**Phase 1 Remaining:**
-- Sub-phase 1.5: Bug Fixes (1 plan remaining: 03)
-- Sub-phase 1.6: Dead Code Cleanup (1 plan)
+**Success Criteria Met:**
+- [x] Application.cpp under 400 lines (374 lines)
+- [x] All existing tests pass (422/422)
+- [x] New unit tests exist (EventBus, ConnectionPool, MainThreadQueue)
+- [x] SQLite WAL mode enabled
+- [x] No dead code from DEAD-01 through DEAD-06 remains
+- [x] All 7 bugs (BUG-01 through BUG-07) fixed
+- [x] Threading contract documented and enforced
 
-**Context for Next Session:**
-- Phase 1.4 complete: Application is a thin coordinator (374 lines)
-- Phase 1.5 Plan 01 complete: BUG-04 (shader cache) and BUG-07 (normal matrix) fixed
-- Phase 1.5 Plan 02 complete: BUG-01 (ViewCube cache) fixed
-- All infrastructure complete: EventBus, ConnectionPool, MainThreadQueue
-- 422 tests passing, zero regressions
-- Remaining: Plan 03 (regression tests for already-fixed bugs)
+**Next Phase:**
+Review ROADMAP.md for Phase 2 planning, or define next milestone focus.
 
 ---
 
@@ -301,8 +303,8 @@ Execute Plan 1.5-03 (Add regression tests for BUG-02, BUG-03, BUG-05).
 **Tech Debt:**
 - Baseline: 58 items in TODOS.md
 - Phase 1 Scope: 7 bugs + 6 dead code items + 1 god class = 14 items
-- Completed: God class decomposition (1 item)
-- Remaining: 7 bugs (1.5) + 6 dead code (1.6) = 13 items
+- Completed: All 14 Phase 1 items resolved
+- Remaining: 44 items (incomplete implementations, error handling, etc.)
 
 **Threading Safety:**
 - Baseline: Single SQLite connection (not thread-safe), ImportProgress race condition
@@ -342,4 +344,4 @@ Execute Plan 1.5-03 (Add regression tests for BUG-02, BUG-03, BUG-05).
 ---
 
 *State initialized: 2026-02-08*
-*Last session: 2026-02-09 -- Completed 1.4-03-PLAN.md*
+*Last session: 2026-02-09 -- Completed 01.6-01-PLAN.md -- Phase 1 Complete*
