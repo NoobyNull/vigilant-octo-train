@@ -1,11 +1,14 @@
 #pragma once
 
 #include <algorithm>
+#include <exception>
 #include <functional>
 #include <memory>
 #include <typeindex>
 #include <unordered_map>
 #include <vector>
+
+#include "core/utils/log.h"
 
 namespace dw {
 
@@ -20,9 +23,16 @@ public:
     // Returns a subscription token - handler remains active while token is alive
     template <typename EventType, typename Handler>
     SubscriptionId subscribe(Handler&& handler) {
-        // STUB: Does nothing - tests will fail
-        (void)handler; // Suppress unused warning
-        return nullptr;
+        // Wrap handler in a shared_ptr to manage lifetime
+        auto handlerFunc = std::make_shared<std::function<void(const EventType&)>>(
+            std::forward<Handler>(handler));
+
+        // Store a weak_ptr to the handler in the handlers map
+        auto typeIndex = std::type_index(typeid(EventType));
+        m_handlers[typeIndex].push_back(handlerFunc);
+
+        // Return the shared_ptr (as shared_ptr<void>) so caller controls lifetime
+        return handlerFunc;
     }
 
     // Publish an event to all subscribed handlers
@@ -30,8 +40,40 @@ public:
     // Exception in one handler does not prevent others from running
     template <typename EventType>
     void publish(const EventType& event) {
-        // STUB: Does nothing - tests will fail
-        (void)event; // Suppress unused warning
+        auto typeIndex = std::type_index(typeid(EventType));
+        auto it = m_handlers.find(typeIndex);
+        if (it == m_handlers.end()) {
+            return; // No subscribers
+        }
+
+        // Lock all handlers upfront to keep them alive during publish
+        // This ensures handlers remain valid even if subscription is dropped during iteration
+        std::vector<std::shared_ptr<std::function<void(const EventType&)>>> lockedHandlers;
+        for (auto& weakHandler : it->second) {
+            auto locked = weakHandler.lock();
+            if (locked) {
+                lockedHandlers.push_back(
+                    std::static_pointer_cast<std::function<void(const EventType&)>>(locked));
+            }
+        }
+
+        // Invoke all handlers (safe from iterator invalidation)
+        for (auto& handler : lockedHandlers) {
+            try {
+                (*handler)(event);
+            } catch (const std::exception& e) {
+                dw::log::errorf("event_bus", "Handler exception: %s", e.what());
+            } catch (...) {
+                dw::log::error("event_bus", "Handler threw unknown exception");
+            }
+        }
+
+        // Clean up expired weak_ptrs from the original list
+        auto& originalList = it->second;
+        originalList.erase(
+            std::remove_if(originalList.begin(), originalList.end(),
+                           [](const std::weak_ptr<void>& wp) { return wp.expired(); }),
+            originalList.end());
     }
 
 private:
