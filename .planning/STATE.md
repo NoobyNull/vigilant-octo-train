@@ -1,7 +1,7 @@
 # Project State: Digital Workshop
 
 **Last Updated:** 2026-02-09
-**Current Session:** Phase 1.5 Bug Fixes - Plan 03 Complete
+**Current Session:** Phase 1.5 Bug Fixes - Plan 02 Complete
 
 ---
 
@@ -19,19 +19,19 @@ Phase 1: Architectural Foundation & Thread Safety — Decompose the Application 
 
 **Active Phase:** Phase 1 — Architectural Foundation & Thread Safety
 
-**Current Sub-Phase:** 1.5 Bug Fixes (in progress - Plan 1/3 complete)
+**Current Sub-Phase:** 1.5 Bug Fixes (in progress - Plan 2/3 complete)
 
-**Status:** Plan 1.5-03 complete. Regression tests added for BUG-02, BUG-03, BUG-05. Test suite: 410 -> 422 tests, all passing.
+**Status:** Plan 1.5-02 complete. ViewCube geometry caching implemented - eliminates per-frame recomputation when camera is stationary. All 422 tests pass.
 
 **Progress:**
-[████████░░] 77%
+```
 Phase 1: [████████████████░░░░] 4/6 sub-phases (67%)
 
 1.1 EventBus                 [##########] Plan 2/2 complete
 1.2 ConnectionPool           [##########] Plan 2/2 complete
 1.3 MainThreadQueue          [##########] Plan 2/2 complete
 1.4 God Class Decomposition  [##########] Plan 3/3 complete
-1.5 Bug Fixes                [###.......] Plan 1/3 complete
+1.5 Bug Fixes                [######....] Plan 2/3 complete
 1.6 Dead Code Cleanup        [..........] Not Started
 ```
 
@@ -50,9 +50,10 @@ Phase 1: [████████████████░░░░] 4/6 sub-
 | 1.4   | 01   | 5m 32s   | 1     | 5     | 2026-02-09 |
 | 1.4   | 02   | 4m 52s   | 2     | 5     | 2026-02-09 |
 | 1.4   | 03   | 5m 46s   | 2     | 5     | 2026-02-09 |
-| 1.5   | 03   | 1m 27s   | 2     | 2     | 2026-02-09 |
+| 1.5   | 01   | 2m 8s    | 2     | 4     | 2026-02-09 |
+| 1.5   | 02   | 2m 51s   | 1     | 2     | 2026-02-09 |
 
-**Cycle Time:** 3m 38s per plan (10 plans completed)
+**Cycle Time:** 3m 31s per plan (11 plans completed)
 
 **Completion Rate:** 4 sub-phases in 2 days
 
@@ -194,6 +195,16 @@ Phase 1: [████████████████░░░░] 4/6 sub-
     - Rationale: Real search terms often contain both underscores and percent signs
     - Impact: 8 new string utils tests verify escapeLike works in realistic scenarios for BUG-05
 
+26. **ViewCube Cache Storage as Offsets (2026-02-09, Plan 1.5-02)**
+    - Decision: Cache projected vertices as offsets from origin, not absolute screen coordinates
+    - Rationale: Viewport can move/resize without invalidating cache - only camera orientation matters
+    - Impact: Cache remains valid through window resize/move, fewer invalidations, better performance
+
+27. **ViewCube Cache Invalidation Epsilon (2026-02-09, Plan 1.5-02)**
+    - Decision: Use epsilon threshold 0.001 for camera orientation change detection
+    - Rationale: Avoids cache misses from floating-point imprecision while detecting meaningful movement
+    - Impact: Robust cache hit rate without false misses from float comparison
+
 ### Open Questions
 
 1. **File Dialog Implementation (DEAD-04)**
@@ -232,45 +243,46 @@ Phase 1: [████████████████░░░░] 4/6 sub-
 
 ### What Was Just Accomplished
 
-**Session Goal:** Execute Phase 1.5 Bug Fixes - Plan 03 (Add regression tests for BUG-02, BUG-03, BUG-05)
+**Session Goal:** Execute Phase 1.5 Bug Fixes - Plan 02 (Cache ViewCube geometry to eliminate per-frame recomputation)
 
 **Completed:**
-- Plan 03: Added 8 comprehensive escapeLike tests for BUG-05 (SQL LIKE wildcard escaping)
-- Plan 03: Added 4 camera yaw wrapping edge case tests for BUG-02 (negative angles, exact boundaries)
-- Plan 03: Verified BUG-03 (framebuffer move constructor) via code review with documentation comment
-- Test suite expanded: 410 -> 422 tests, all passing
-- Zero regressions in existing test suite
-- Execution time: 1m 27s
+- Plan 02: Added ViewCubeCache struct with lastYaw, lastPitch, projectedVerts, depths, sortedFaces, valid flag
+- Plan 02: Cached geometry as offsets (relative to origin) to avoid invalidation on viewport move/resize
+- Plan 02: Cache invalidates only when camera yaw/pitch change beyond epsilon (0.001)
+- Plan 02: renderViewCube() restructured to check cache before recomputing
+- All 422 tests passing, zero regressions
+- Execution time: 2m 51s
 
 **Artifacts Created:**
-- `.planning/phases/01.5-bugfixes/1.5-03-SUMMARY.md` -- Plan 03 summary
+- `.planning/phases/01.5-bugfixes/1.5-02-SUMMARY.md` -- Plan 02 summary
 
 **Artifacts Modified:**
-- `tests/test_string_utils.cpp` -- Added 8 escapeLike regression tests
-- `tests/test_camera.cpp` -- Added 4 yaw edge case tests + BUG-03 verification comment
+- `src/ui/panels/viewport_panel.h` -- Added ViewCubeCache struct, m_viewCubeCache member
+- `src/ui/panels/viewport_panel.cpp` -- Implemented cache-aware renderViewCube()
 
 **Commits:**
-- `dc10e6e` -- test(1.5-03): add regression tests for BUG-02, BUG-03, BUG-05
+- `d795cf2` -- fix(1.5-02): cache ViewCube geometry to eliminate per-frame recomputation
 
 ### What to Do Next
 
 **Immediate Next Step:**
 ```bash
-/gsd:execute-phase 1.5 --plan 01
+/gsd:execute-phase 1.5 --plan 03
 ```
 
-Execute Plan 1.5-01 (BUG-04 shader uniform cache, BUG-07 normal matrix).
+Execute Plan 1.5-03 (Add regression tests for BUG-02, BUG-03, BUG-05).
 
 **Phase 1 Remaining:**
-- Sub-phase 1.5: Bug Fixes (2 plans remaining: 01 and 02)
+- Sub-phase 1.5: Bug Fixes (1 plan remaining: 03)
 - Sub-phase 1.6: Dead Code Cleanup (1 plan)
 
 **Context for Next Session:**
 - Phase 1.4 complete: Application is a thin coordinator (374 lines)
-- Phase 1.5 Plan 03 complete: BUG-02, BUG-03, BUG-05 regression tests added
+- Phase 1.5 Plan 01 complete: BUG-04 (shader cache) and BUG-07 (normal matrix) fixed
+- Phase 1.5 Plan 02 complete: BUG-01 (ViewCube cache) fixed
 - All infrastructure complete: EventBus, ConnectionPool, MainThreadQueue
 - 422 tests passing, zero regressions
-- Remaining bugs: BUG-01 (ViewCube cache), BUG-04 (shader cache), BUG-07 (normal matrix)
+- Remaining: Plan 03 (regression tests for already-fixed bugs)
 
 ---
 
