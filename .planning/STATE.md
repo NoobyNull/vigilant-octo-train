@@ -1,7 +1,7 @@
 # Project State: Digital Workshop
 
 **Last Updated:** 2026-02-09
-**Current Session:** Phase 1.1 EventBus - Complete
+**Current Session:** Phase 1.2 ConnectionPool - Complete
 
 ---
 
@@ -19,16 +19,16 @@ Phase 1: Architectural Foundation & Thread Safety — Decompose the Application 
 
 **Active Phase:** Phase 1 — Architectural Foundation & Thread Safety
 
-**Current Sub-Phase:** 1.2 ConnectionPool (Plan 1/2 complete)
+**Current Sub-Phase:** 1.2 ConnectionPool (Plan 2/2 complete)
 
-**Status:** In Progress - ConnectionPool core implemented, integration pending
+**Status:** Complete - ConnectionPool integrated into Application and ImportQueue
 
 **Progress:**
 ```
-Phase 1: [███░░░░░░░░░░░░░░░░░] 1.5/6 sub-phases (25%)
+Phase 1: [██████░░░░░░░░░░░░░░] 2/6 sub-phases (33%)
 
 1.1 EventBus                 [██████████] Plan 2/2 complete ✓
-1.2 ConnectionPool           [█████░░░░░] Plan 1/2 complete
+1.2 ConnectionPool           [██████████] Plan 2/2 complete ✓
 1.3 MainThreadQueue          [░░░░░░░░░░] Not Started
 1.4 God Class Decomposition  [░░░░░░░░░░] Not Started
 1.5 Bug Fixes                [░░░░░░░░░░] Not Started
@@ -44,8 +44,9 @@ Phase 1: [███░░░░░░░░░░░░░░░░░] 1.5/6 su
 | 1.1   | 01   | 3m 55s   | 2     | 5     | 2026-02-08 |
 | 1.1   | 02   | 1m 40s   | 1     | 2     | 2026-02-09 |
 | 1.2   | 01   | 2m 21s   | 2     | 6     | 2026-02-09 |
+| 1.2   | 02   | 3m 44s   | 2     | 6     | 2026-02-09 |
 
-**Cycle Time:** 2m 39s per plan (3 plans completed)
+**Cycle Time:** 2m 55s per plan (4 plans completed)
 
 **Completion Rate:** 1 sub-phase / 1 day = 1 sub-phase/day
 
@@ -170,53 +171,54 @@ Phase 1: [███░░░░░░░░░░░░░░░░░] 1.5/6 su
 
 ### What Was Just Accomplished
 
-**Session Goal:** Execute Phase 1.2 ConnectionPool - Plan 01
+**Session Goal:** Execute Phase 1.2 ConnectionPool - Plan 02
 
 **Completed:**
-- Plan 01: Created ConnectionPool with thread-safe acquire/release using mutex-protected deque
-- Plan 01: Implemented ScopedConnection RAII wrapper with move semantics
-- Plan 01: Enhanced Database::openWithFlags() to support NOMUTEX flag
-- Plan 01: Added sqlite3_busy_timeout(5000ms) for multi-thread coordination
-- Plan 01: Added PRAGMA synchronous=NORMAL for WAL performance
-- Plan 01: Created 13 comprehensive unit tests (all passing)
-- Verified backward compatibility (Database::open() unchanged)
-- Verified no regressions (400 tests pass)
+- Plan 02: Refactored ImportQueue to accept ConnectionPool& instead of Database&
+- Plan 02: ImportQueue::processTask() uses ScopedConnection to acquire/release pooled connection per task
+- Plan 02: Removed Database& and ModelRepository members from ImportQueue
+- Plan 02: Added ConnectionPool member to Application (initialized with 2 connections)
+- Plan 02: ImportQueue receives ConnectionPool reference from Application
+- Plan 02: Correct shutdown order: ImportQueue -> ConnectionPool -> Database
+- Plan 02: Updated test fixture to use ConnectionPool with temp database file
+- Verified all 400 tests pass with zero regressions
+- Verified main thread Database remains separate for UI queries
 
 **Artifacts Created:**
-- `src/core/database/connection_pool.h` — ConnectionPool and ScopedConnection (69 lines)
-- `src/core/database/connection_pool.cpp` — Pool implementation (120 lines)
-- `tests/test_connection_pool.cpp` — Unit tests (218 lines)
-- `.planning/phases/01.2-connectionpool/1.2-01-SUMMARY.md` — Plan 01 summary
+- `.planning/phases/01.2-connectionpool/1.2-02-SUMMARY.md` — Plan 02 summary
 
 **Artifacts Modified:**
-- `src/core/database/database.h` — Added openWithFlags() method
-- `src/core/database/database.cpp` — Refactored open(), added busy_timeout and synchronous pragma
-- `tests/CMakeLists.txt` — Added test_connection_pool.cpp
+- `src/core/import/import_queue.h` — Changed constructor to accept ConnectionPool&, removed Database& member
+- `src/core/import/import_queue.cpp` — processTask() uses ScopedConnection, creates ModelRepository per-task
+- `src/app/application.h` — Added ConnectionPool forward declaration and member
+- `src/app/application.cpp` — Initialize ConnectionPool(2), pass to ImportQueue, correct shutdown order
+- `src/CMakeLists.txt` — Added connection_pool.cpp to main executable sources
+- `tests/test_import_pipeline.cpp` — Updated test fixture to use ConnectionPool
 
 **Commits:**
-- `9c9a88e` — test(1.2-01): add failing tests for ConnectionPool with RAII ScopedConnection
-- `c00c8ac` — feat(1.2-01): implement ConnectionPool with NOMUTEX and RAII ScopedConnection
+- `ffddc29` — refactor(1.2-02): ImportQueue uses ConnectionPool for per-task connections
+- `3dc355c` — feat(1.2-02): wire ConnectionPool into Application and ImportQueue
 
 ### What to Do Next
 
 **Immediate Next Step:**
 ```bash
-/gsd:execute-phase 1.2 --plan 02
+/gsd:plan-phase 1.3
 ```
 
-Sub-phase 1.2 Plan 01 (ConnectionPool core) is complete. Execute Plan 02 (Integration).
+Sub-phase 1.2 (ConnectionPool) is complete (2/2 plans done). Begin planning sub-phase 1.3 (MainThreadQueue).
 
-**After 1.2-02:**
-- Complete sub-phase 1.2 (ConnectionPool)
-- Begin sub-phase 1.3 (MainThreadQueue)
+**After 1.3 Planning:**
+- Execute sub-phase 1.3 (MainThreadQueue)
 - MainThreadQueue enables worker-to-UI communication
+- Prevent ImGui threading violations from background threads
 
 **Context for Next Session:**
 - EventBus foundation complete (2/2 plans done) ✓
-- ConnectionPool core complete (1/2 plans done) ✓
-- ConnectionPool enables thread-safe concurrent database access
-- Plan 02 will integrate ConnectionPool into Application and ImportQueue
-- After 1.2+1.3 complete, ready for Phase 1.4 god class decomposition
+- ConnectionPool complete (2/2 plans done) ✓
+- Background workers can now use pooled database connections safely
+- Next: MainThreadQueue for posting work from workers to UI thread
+- After 1.3 complete, ready for Phase 1.4 god class decomposition
 
 ---
 
