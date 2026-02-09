@@ -24,6 +24,8 @@ set(DW_TEST_SOURCES
     test_event_bus.cpp
     # Tier 1 — ConnectionPool
     test_connection_pool.cpp
+    # Tier 1 — MainThreadQueue
+    test_main_thread_queue.cpp
     # Tier 1 — core logic
     test_types.cpp
     test_gcode_analyzer.cpp
@@ -46,6 +48,7 @@ set(DW_TEST_SOURCES
 set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/types.cpp
     ${CMAKE_SOURCE_DIR}/src/core/events/event_bus.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/threading/main_thread_queue.cpp
     ${CMAKE_SOURCE_DIR}/src/core/utils/log.cpp
     ${CMAKE_SOURCE_DIR}/src/core/utils/string_utils.cpp
     ${CMAKE_SOURCE_DIR}/src/core/utils/file_utils.cpp
