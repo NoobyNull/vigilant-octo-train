@@ -1,7 +1,7 @@
 # Project State: Digital Workshop
 
 **Last Updated:** 2026-02-09
-**Current Session:** Phase 1.2 ConnectionPool - Complete
+**Current Session:** Phase 1.3 MainThreadQueue - Plan 01 Complete
 
 ---
 
@@ -19,9 +19,9 @@ Phase 1: Architectural Foundation & Thread Safety — Decompose the Application 
 
 **Active Phase:** Phase 1 — Architectural Foundation & Thread Safety
 
-**Current Sub-Phase:** 1.2 ConnectionPool (Plan 2/2 complete)
+**Current Sub-Phase:** 1.3 MainThreadQueue (Plan 1/2 complete)
 
-**Status:** Complete - ConnectionPool integrated into Application and ImportQueue
+**Status:** In Progress - MainThreadQueue core implementation complete, integration pending
 
 **Progress:**
 ```
@@ -29,7 +29,7 @@ Phase 1: [██████░░░░░░░░░░░░░░] 2/6 sub-
 
 1.1 EventBus                 [██████████] Plan 2/2 complete ✓
 1.2 ConnectionPool           [██████████] Plan 2/2 complete ✓
-1.3 MainThreadQueue          [░░░░░░░░░░] Not Started
+1.3 MainThreadQueue          [█████░░░░░] Plan 1/2 complete
 1.4 God Class Decomposition  [░░░░░░░░░░] Not Started
 1.5 Bug Fixes                [░░░░░░░░░░] Not Started
 1.6 Dead Code Cleanup        [░░░░░░░░░░] Not Started
@@ -45,8 +45,9 @@ Phase 1: [██████░░░░░░░░░░░░░░] 2/6 sub-
 | 1.1   | 02   | 1m 40s   | 1     | 2     | 2026-02-09 |
 | 1.2   | 01   | 2m 21s   | 2     | 6     | 2026-02-09 |
 | 1.2   | 02   | 3m 44s   | 2     | 6     | 2026-02-09 |
+| 1.3   | 01   | 2m 30s   | 2     | 5     | 2026-02-09 |
 
-**Cycle Time:** 2m 55s per plan (4 plans completed)
+**Cycle Time:** 2m 50s per plan (5 plans completed)
 
 **Completion Rate:** 1 sub-phase / 1 day = 1 sub-phase/day
 
@@ -132,6 +133,21 @@ Phase 1: [██████░░░░░░░░░░░░░░] 2/6 sub-
    - Rationale: Fail-fast makes pool sizing issues visible and debuggable
    - Impact: Callers must handle exhaustion or size pool appropriately
 
+14. **MainThreadQueue Bounded Size (2026-02-09, Plan 1.3-01)**
+   - Decision: Default max size 1000, configurable per instance
+   - Rationale: 1000 messages at 60fps = 16 seconds backlog, prevents memory exhaustion
+   - Impact: Provides backpressure, blocks producers if queue full
+
+15. **Condition Variable Over Lock-Free Queue (2026-02-09, Plan 1.3-01)**
+   - Decision: Use std::mutex + std::condition_variable instead of lock-free
+   - Rationale: Lock-free adds complexity, not needed for ~60fps message rate
+   - Impact: Standard, debuggable, portable implementation
+
+16. **Execute Callbacks Outside Lock (2026-02-09, Plan 1.3-01)**
+   - Decision: Drain queue to local vector under lock, execute callbacks outside lock
+   - Rationale: Prevents deadlocks if callbacks enqueue or acquire other locks
+   - Impact: Safer concurrency, minimizes lock hold time
+
 ### Open Questions
 
 1. **File Dialog Implementation (DEAD-04)**
@@ -157,9 +173,9 @@ Phase 1: [██████░░░░░░░░░░░░░░] 2/6 sub-
 *From ROADMAP.md — tracked per sub-phase*
 
 **Next Immediate Actions:**
-1. Execute plan 1.1-02 (EventBus integration tests and documentation)
-2. Complete sub-phase 1.1 EventBus
-3. Begin sub-phase 1.2 ConnectionPool
+1. Execute plan 1.3-02 (MainThreadQueue integration into Application and ImportQueue)
+2. Complete sub-phase 1.3 MainThreadQueue
+3. Begin sub-phase 1.4 God Class Decomposition
 
 ### Current Blockers
 
@@ -171,53 +187,51 @@ Phase 1: [██████░░░░░░░░░░░░░░] 2/6 sub-
 
 ### What Was Just Accomplished
 
-**Session Goal:** Execute Phase 1.2 ConnectionPool - Plan 02
+**Session Goal:** Execute Phase 1.3 MainThreadQueue - Plan 01
 
 **Completed:**
-- Plan 02: Refactored ImportQueue to accept ConnectionPool& instead of Database&
-- Plan 02: ImportQueue::processTask() uses ScopedConnection to acquire/release pooled connection per task
-- Plan 02: Removed Database& and ModelRepository members from ImportQueue
-- Plan 02: Added ConnectionPool member to Application (initialized with 2 connections)
-- Plan 02: ImportQueue receives ConnectionPool reference from Application
-- Plan 02: Correct shutdown order: ImportQueue -> ConnectionPool -> Database
-- Plan 02: Updated test fixture to use ConnectionPool with temp database file
-- Verified all 400 tests pass with zero regressions
-- Verified main thread Database remains separate for UI queries
+- Plan 01: TDD RED phase - wrote 10 failing tests for MainThreadQueue and thread_utils
+- Plan 01: TDD GREEN phase - implemented MainThreadQueue with bounded queue and condition variable
+- Plan 01: Created thread_utils.h with ASSERT_MAIN_THREAD macro (follows GL_CHECK pattern)
+- Plan 01: All 10 new tests pass, all 410 total tests pass (no regressions)
+- Verified bounded queue behavior, cross-thread safety, shutdown handling
+- Verified thread ID assertions work correctly (main thread and worker thread)
 
 **Artifacts Created:**
-- `.planning/phases/01.2-connectionpool/1.2-02-SUMMARY.md` — Plan 02 summary
+- `.planning/phases/01.3-mainthreadqueue/1.3-01-SUMMARY.md` — Plan 01 summary
+- `src/core/threading/main_thread_queue.h` — MainThreadQueue class declaration
+- `src/core/threading/main_thread_queue.cpp` — Implementation with condition variable
+- `src/core/utils/thread_utils.h` — Threading utilities and ASSERT_MAIN_THREAD macro
+- `tests/test_main_thread_queue.cpp` — 10 unit tests
 
 **Artifacts Modified:**
-- `src/core/import/import_queue.h` — Changed constructor to accept ConnectionPool&, removed Database& member
-- `src/core/import/import_queue.cpp` — processTask() uses ScopedConnection, creates ModelRepository per-task
-- `src/app/application.h` — Added ConnectionPool forward declaration and member
-- `src/app/application.cpp` — Initialize ConnectionPool(2), pass to ImportQueue, correct shutdown order
-- `src/CMakeLists.txt` — Added connection_pool.cpp to main executable sources
-- `tests/test_import_pipeline.cpp` — Updated test fixture to use ConnectionPool
+- `tests/CMakeLists.txt` — Added test_main_thread_queue.cpp and main_thread_queue.cpp
 
 **Commits:**
-- `ffddc29` — refactor(1.2-02): ImportQueue uses ConnectionPool for per-task connections
-- `3dc355c` — feat(1.2-02): wire ConnectionPool into Application and ImportQueue
+- `eb5889d` — test(1.3-01): add failing tests for MainThreadQueue and thread_utils
+- `4390124` — feat(1.3-01): implement MainThreadQueue and thread_utils
 
 ### What to Do Next
 
 **Immediate Next Step:**
 ```bash
-/gsd:plan-phase 1.3
+/gsd:execute-plan 1.3-02
 ```
 
-Sub-phase 1.2 (ConnectionPool) is complete (2/2 plans done). Begin planning sub-phase 1.3 (MainThreadQueue).
+Sub-phase 1.3 (MainThreadQueue) Plan 01 is complete. Execute Plan 02 (integration into Application and ImportQueue).
 
-**After 1.3 Planning:**
-- Execute sub-phase 1.3 (MainThreadQueue)
-- MainThreadQueue enables worker-to-UI communication
-- Prevent ImGui threading violations from background threads
+**After 1.3-02:**
+- Complete sub-phase 1.3 (MainThreadQueue) — 2/2 plans done
+- MainThreadQueue will be integrated into Application::update()
+- ImportQueue will use MainThreadQueue for completed imports
+- Threading contracts documented in THREADING.md
+- ASSERT_MAIN_THREAD() assertions added to UI entry points
 
 **Context for Next Session:**
 - EventBus foundation complete (2/2 plans done) ✓
 - ConnectionPool complete (2/2 plans done) ✓
-- Background workers can now use pooled database connections safely
-- Next: MainThreadQueue for posting work from workers to UI thread
+- MainThreadQueue core complete (1/2 plans done) — standalone class and tests working
+- Next: Integrate MainThreadQueue into Application and document threading contracts
 - After 1.3 complete, ready for Phase 1.4 god class decomposition
 
 ---
