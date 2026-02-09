@@ -8,6 +8,9 @@ set(DW_SOURCES
     app/window.cpp
     app/workspace.cpp
 
+    # Managers (extracted from Application)
+    managers/ui_manager.cpp
+
     # Core types
     core/types.cpp
 
@@ -77,7 +80,7 @@ set(DW_SOURCES
     render/thumbnail_generator.cpp
 
     # UI
-    ui/ui_manager.cpp
+    # ui/ui_manager.cpp  -- dead code, replaced by managers/ui_manager.cpp (Phase 1.6 cleanup)
     ui/theme.cpp
 
     # UI Panels

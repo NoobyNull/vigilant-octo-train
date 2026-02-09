@@ -1,7 +1,8 @@
 #pragma once
 
 // Digital Workshop - Application Class
-// Main application lifecycle: init, run loop, shutdown
+// Main application lifecycle: init, run loop, shutdown.
+// UI ownership delegated to UIManager (src/managers/ui_manager.h).
 
 #include <memory>
 #include <string>
@@ -20,21 +21,19 @@ class ConnectionPool;
 class LibraryManager;
 class ProjectManager;
 class Workspace;
-class ViewportPanel;
-class LibraryPanel;
-class PropertiesPanel;
-class ProjectPanel;
-class GCodePanel;
-class CutOptimizerPanel;
-class StartPage;
 class ThumbnailGenerator;
-class FileDialog;
 class ConfigWatcher;
-class LightingDialog;
-class MessageDialog;
-class ConfirmDialog;
 class ImportQueue;
 class MainThreadQueue;
+
+} // namespace dw
+
+// Forward declare to avoid pulling in managers/ui_manager.h
+namespace dw {
+class UIManager;
+}
+
+namespace dw {
 
 class Application {
   public:
@@ -70,12 +69,7 @@ class Application {
     void render();
     void shutdown();
 
-    void setupMenus();
-    void renderMenuBar();
-    void renderPanels();
-    void renderImportProgress();
-
-    // Callbacks
+    // Callbacks (business logic stays in Application)
     void onImportModel();
     void onExportModel();
     void onNewProject();
@@ -84,18 +78,14 @@ class Application {
     void onModelSelected(int64_t modelId);
     void onFilesDropped(const std::vector<std::string>& paths);
     void processCompletedImports();
-    void showAboutDialog();
-    void handleKeyboardShortcuts();
+    void onOpenRecentProject(const Path& path);
 
-    // Config watcher
+    // Config watcher (stays in Application until Plan 03)
     void onConfigFileChanged();
     void applyConfig();
     void spawnSettingsApp();
     void relaunchApp();
-    void renderRestartPopup();
     void saveWorkspaceState();
-    void onOpenRecentProject(const Path& path);
-    void setupDefaultDockLayout(unsigned int dockspaceId);
 
     SDL_Window* m_window = nullptr;
     void* m_glContext = nullptr;
@@ -113,33 +103,12 @@ class Application {
     std::unique_ptr<ThumbnailGenerator> m_thumbnailGenerator;
     std::unique_ptr<ImportQueue> m_importQueue;
 
-    // UI Panels
-    std::unique_ptr<ViewportPanel> m_viewportPanel;
-    std::unique_ptr<LibraryPanel> m_libraryPanel;
-    std::unique_ptr<PropertiesPanel> m_propertiesPanel;
-    std::unique_ptr<ProjectPanel> m_projectPanel;
-    std::unique_ptr<GCodePanel> m_gcodePanel;
-    std::unique_ptr<CutOptimizerPanel> m_cutOptimizerPanel;
-    std::unique_ptr<StartPage> m_startPage;
+    // UI Manager - owns all panels, dialogs, visibility state
+    std::unique_ptr<UIManager> m_uiManager;
 
-    // Panel visibility
-    bool m_showViewport = true;
-    bool m_showLibrary = true;
-    bool m_showProperties = true;
-    bool m_showProject = true;
-    bool m_showGCode = false;
-    bool m_showCutOptimizer = false;
-    bool m_showStartPage = true;
-
-    // Dialogs
-    std::unique_ptr<FileDialog> m_fileDialog;
-    std::unique_ptr<LightingDialog> m_lightingDialog;
-
-    // Config watching
+    // Config watching (stays in Application until Plan 03)
     std::unique_ptr<ConfigWatcher> m_configWatcher;
-    bool m_showRestartPopup = false;
     float m_lastAppliedUiScale = 1.0f;
-    bool m_firstFrame = true;
 
     static constexpr int DEFAULT_WIDTH = 1280;
     static constexpr int DEFAULT_HEIGHT = 720;
