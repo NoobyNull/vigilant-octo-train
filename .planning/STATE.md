@@ -1,7 +1,7 @@
 # Project State: Digital Workshop
 
 **Last Updated:** 2026-02-09
-**Current Session:** Phase 1.4 God Class Decomposition - Plan 01 Complete
+**Current Session:** Phase 1.4 God Class Decomposition - Plan 02 Complete
 
 ---
 
@@ -19,18 +19,18 @@ Phase 1: Architectural Foundation & Thread Safety — Decompose the Application 
 
 **Active Phase:** Phase 1 — Architectural Foundation & Thread Safety
 
-**Current Sub-Phase:** 1.4 God Class Decomposition (Plan 1/3 complete)
+**Current Sub-Phase:** 1.4 God Class Decomposition (Plan 2/3 complete)
 
-**Status:** In Progress - UIManager extracted from Application
+**Status:** In Progress - UIManager and FileIOManager extracted from Application
 
 **Progress:**
 ```
-Phase 1: [██████████░░░░░░░░░░] 3.3/6 sub-phases (55%)
+Phase 1: [████████████░░░░░░░░] 3.7/6 sub-phases (61%)
 
 1.1 EventBus                 [██████████] Plan 2/2 complete ✓
 1.2 ConnectionPool           [██████████] Plan 2/2 complete ✓
 1.3 MainThreadQueue          [██████████] Plan 2/2 complete ✓
-1.4 God Class Decomposition  [███░░░░░░░] Plan 1/3 complete
+1.4 God Class Decomposition  [██████░░░░] Plan 2/3 complete
 1.5 Bug Fixes                [░░░░░░░░░░] Not Started
 1.6 Dead Code Cleanup        [░░░░░░░░░░] Not Started
 ```
@@ -48,8 +48,9 @@ Phase 1: [██████████░░░░░░░░░░] 3.3/6 su
 | 1.3   | 01   | 2m 30s   | 2     | 5     | 2026-02-09 |
 | 1.3   | 02   | 4m 10s   | 2     | 8     | 2026-02-09 |
 | 1.4   | 01   | 5m 32s   | 1     | 5     | 2026-02-09 |
+| 1.4   | 02   | 4m 52s   | 2     | 5     | 2026-02-09 |
 
-**Cycle Time:** 3m 24s per plan (7 plans completed)
+**Cycle Time:** 3m 35s per plan (8 plans completed)
 
 **Completion Rate:** 1 sub-phase / 1 day = 1 sub-phase/day
 
@@ -155,6 +156,16 @@ Phase 1: [██████████░░░░░░░░░░] 3.3/6 su
    - Rationale: UIManager handles rendering/UI state, Application handles business logic
    - Impact: Clean separation, UIManager has no dependency on Application
 
+18. **FileIOManager setShowStartPage Callback Pattern (2026-02-09, Plan 1.4-02)**
+   - Decision: FileIOManager methods receive `std::function<void(bool)> setShowStartPage` callback
+   - Rationale: Decouples FileIOManager from UIManager's visibility state
+   - Impact: FileIOManager has no dependency on UIManager, only coordinates subsystems
+
+19. **FileIOManager Panel Pointers Per-Call (2026-02-09, Plan 1.4-02)**
+   - Decision: processCompletedImports receives panel pointers as parameters, not stored as members
+   - Rationale: Prevents lifetime issues, keeps dependency minimal and explicit
+   - Impact: FileIOManager only couples to panel types at method signature level
+
 ### Open Questions
 
 1. **File Dialog Implementation (DEAD-04)**
@@ -193,49 +204,49 @@ Phase 1: [██████████░░░░░░░░░░] 3.3/6 su
 
 ### What Was Just Accomplished
 
-**Session Goal:** Execute Phase 1.4 God Class Decomposition - Plan 01 (Extract UIManager)
+**Session Goal:** Execute Phase 1.4 God Class Decomposition - Plan 02 (Extract FileIOManager)
 
 **Completed:**
-- Plan 01: Created src/managers/ui_manager.h (153 lines) and ui_manager.cpp (403 lines)
-- Plan 01: Moved all panel ownership, visibility state, menu bar, keyboard shortcuts, dialogs, import progress, about/restart popups, and dock layout from Application to UIManager
-- Plan 01: Application delegates all UI through m_uiManager
-- Plan 01: ConfigWatcher stays in Application (per Plan 03)
-- Plan 01: StartPage callbacks wired by Application, not UIManager
-- Plan 01: Old src/ui/ui_manager.cpp excluded from build (symbol collision), header preserved for Phase 1.6
-- Plan 01: Application.cpp reduced from 1,108 to 803 lines (28% reduction)
+- Plan 02: Created src/managers/file_io_manager.h (62 lines) and file_io_manager.cpp (249 lines)
+- Plan 02: Moved 8 file I/O methods from Application to FileIOManager: importModel, exportModel, onFilesDropped, processCompletedImports, newProject, openProject, saveProject, openRecentProject
+- Plan 02: Application delegates all file I/O through m_fileIOManager
+- Plan 02: StartPage and UIManager action callbacks wired through FileIOManager
+- Plan 02: Application.cpp reduced from 803 to 613 lines (24% reduction, cumulative 45% from original 1,108)
 - All 410 tests pass, application builds successfully
 
 **Artifacts Created:**
-- `src/managers/ui_manager.h` — UIManager class header
-- `src/managers/ui_manager.cpp` — UIManager implementation
-- `.planning/phases/01.4-godclass/1.4-01-SUMMARY.md` — Plan 01 summary
+- `src/managers/file_io_manager.h` — FileIOManager class header
+- `src/managers/file_io_manager.cpp` — FileIOManager implementation
+- `.planning/phases/01.4-godclass/1.4-02-SUMMARY.md` — Plan 02 summary
 
 **Artifacts Modified:**
-- `src/app/application.h` — Replaced 12 panel/dialog/visibility members with m_uiManager
-- `src/app/application.cpp` — Delegates UI through m_uiManager, removed 6 UI methods
-- `src/CMakeLists.txt` — Added managers/ui_manager.cpp, excluded old ui/ui_manager.cpp
+- `src/app/application.h` — Added m_fileIOManager, removed 8 method declarations
+- `src/app/application.cpp` — Delegates file I/O through m_fileIOManager, removed 8 methods
+- `src/CMakeLists.txt` — Added managers/file_io_manager.cpp
 
 **Commits:**
-- `e8b889f` — refactor(1.4-01): extract UIManager from Application god class
+- `616d1fb` — feat(1.4-02): create FileIOManager class with all file I/O methods
+- `d9a8d87` — refactor(1.4-02): integrate FileIOManager into Application, remove 8 methods
 
 ### What to Do Next
 
 **Immediate Next Step:**
 ```bash
-/gsd:execute-phase 1.4-02
+/gsd:execute-phase 1.4-03
 ```
 
-Execute Plan 02: Extract FileIOManager from Application.
+Execute Plan 03: Final Application cleanup (ConfigWatcher migration, remaining reduction).
 
 **Phase 1.4 Remaining:**
-- Plan 02: Extract FileIOManager (import, export, file dialogs, drop handling)
-- Plan 03: Final cleanup (ConfigWatcher migration, Application.cpp ~300 lines target)
+- Plan 03: Final cleanup (ConfigWatcher migration, Application.cpp target ~300 lines)
 
 **Context for Next Session:**
 - UIManager extraction complete (Plan 01) ✓
-- Application.cpp at 803 lines (target ~300 after Plans 02+03)
+- FileIOManager extraction complete (Plan 02) ✓
+- Application.cpp at 613 lines (target ~300 after Plan 03)
 - FileDialog accessed through m_uiManager->fileDialog()
-- Business logic callbacks (onImportModel, etc.) still in Application
+- All business logic callbacks now route through FileIOManager
+- Only onModelSelected, config management, and lifecycle remain in Application
 
 ---
 
@@ -244,7 +255,7 @@ Execute Plan 02: Extract FileIOManager from Application.
 **Code Quality:**
 - Baseline: 1,071-line god class (Application.cpp)
 - Target: ~300 lines after sub-phase 1.4
-- Current: 803 lines after UIManager extraction (Plan 01, 28% reduction)
+- Current: 613 lines after FileIOManager extraction (Plan 02, 45% cumulative reduction)
 
 **Test Coverage:**
 - Baseline: Core modules tested (loaders, database, mesh, optimizer)
