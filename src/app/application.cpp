@@ -12,21 +12,15 @@
 #include "core/database/database.h"
 #include "core/database/schema.h"
 #include "core/events/event_bus.h"
-#include "core/export/model_exporter.h"
 #include "core/import/import_queue.h"
-#include "core/import/import_task.h"
 #include "core/library/library_manager.h"
-#include "core/loaders/loader_factory.h"
 #include "core/paths/app_paths.h"
-#include "core/project/project.h"
 #include "core/threading/main_thread_queue.h"
 #include "core/utils/log.h"
 #include "core/utils/thread_utils.h"
+#include "managers/file_io_manager.h"
 #include "managers/ui_manager.h"
 #include "render/thumbnail_generator.h"
-#include "ui/dialogs/file_dialog.h"
-#include "ui/dialogs/lighting_dialog.h"
-#include "ui/dialogs/message_dialog.h"
 #include "ui/panels/library_panel.h"
 #include "ui/panels/project_panel.h"
 #include "ui/panels/properties_panel.h"
@@ -203,19 +197,29 @@ bool Application::init() {
     // Apply config render settings to viewport
     m_uiManager->applyRenderSettingsFromConfig();
 
-    // Wire StartPage callbacks (Application wires these, not UIManager)
+    // Initialize File I/O Manager (orchestrates import, export, project operations)
+    m_fileIOManager = std::make_unique<FileIOManager>(
+        m_eventBus.get(), m_database.get(), m_libraryManager.get(), m_projectManager.get(),
+        m_importQueue.get(), m_workspace.get(), m_uiManager->fileDialog(),
+        m_thumbnailGenerator.get());
+
+    // Wire StartPage callbacks (after both UIManager and FileIOManager exist)
     if (m_uiManager->startPage()) {
         m_uiManager->startPage()->setOnNewProject([this]() {
-            onNewProject();
-            m_uiManager->showStartPage() = false;
+            m_fileIOManager->newProject([this](bool show) { m_uiManager->showStartPage() = show; });
         });
-        m_uiManager->startPage()->setOnOpenProject([this]() { onOpenProject(); });
+        m_uiManager->startPage()->setOnOpenProject([this]() {
+            m_fileIOManager->openProject(
+                [this](bool show) { m_uiManager->showStartPage() = show; });
+        });
         m_uiManager->startPage()->setOnImportModel([this]() {
-            onImportModel();
+            m_fileIOManager->importModel();
             m_uiManager->showStartPage() = false;
         });
-        m_uiManager->startPage()->setOnOpenRecentProject(
-            [this](const Path& path) { onOpenRecentProject(path); });
+        m_uiManager->startPage()->setOnOpenRecentProject([this](const Path& path) {
+            m_fileIOManager->openRecentProject(
+                path, [this](bool show) { m_uiManager->showStartPage() = show; });
+        });
     }
 
     // Wire panel callbacks
@@ -238,8 +242,12 @@ bool Application::init() {
     if (m_uiManager->projectPanel()) {
         m_uiManager->projectPanel()->setOnModelSelected(
             [this](int64_t modelId) { onModelSelected(modelId); });
-        m_uiManager->projectPanel()->setOpenProjectCallback([this]() { onOpenProject(); });
-        m_uiManager->projectPanel()->setSaveProjectCallback([this]() { onSaveProject(); });
+        m_uiManager->projectPanel()->setOpenProjectCallback([this]() {
+            m_fileIOManager->openProject(
+                [this](bool show) { m_uiManager->showStartPage() = show; });
+        });
+        m_uiManager->projectPanel()->setSaveProjectCallback(
+            [this]() { m_fileIOManager->saveProject(); });
     }
 
     if (m_uiManager->propertiesPanel()) {
@@ -260,11 +268,15 @@ bool Application::init() {
     }
 
     // Wire UIManager action callbacks (menu bar and keyboard shortcuts)
-    m_uiManager->setOnNewProject([this]() { onNewProject(); });
-    m_uiManager->setOnOpenProject([this]() { onOpenProject(); });
-    m_uiManager->setOnSaveProject([this]() { onSaveProject(); });
-    m_uiManager->setOnImportModel([this]() { onImportModel(); });
-    m_uiManager->setOnExportModel([this]() { onExportModel(); });
+    m_uiManager->setOnNewProject([this]() {
+        m_fileIOManager->newProject([this](bool show) { m_uiManager->showStartPage() = show; });
+    });
+    m_uiManager->setOnOpenProject([this]() {
+        m_fileIOManager->openProject([this](bool show) { m_uiManager->showStartPage() = show; });
+    });
+    m_uiManager->setOnSaveProject([this]() { m_fileIOManager->saveProject(); });
+    m_uiManager->setOnImportModel([this]() { m_fileIOManager->importModel(); });
+    m_uiManager->setOnExportModel([this]() { m_fileIOManager->exportModel(); });
     m_uiManager->setOnQuit([this]() { quit(); });
     m_uiManager->setOnSpawnSettings([this]() { spawnSettingsApp(); });
 
@@ -348,7 +360,7 @@ void Application::processEvents() {
     }
 
     if (!droppedFiles.empty()) {
-        onFilesDropped(droppedFiles);
+        m_fileIOManager->onFilesDropped(droppedFiles);
     }
 }
 
@@ -359,7 +371,9 @@ void Application::update() {
     }
 
     // Process completed imports (thumbnail generation needs GL context)
-    processCompletedImports();
+    m_fileIOManager->processCompletedImports(
+        m_uiManager->viewportPanel(), m_uiManager->propertiesPanel(), m_uiManager->libraryPanel(),
+        [this](bool show) { m_uiManager->showStartPage() = show; });
 
     // Poll config watcher for live settings reload
     if (m_configWatcher) {
@@ -415,128 +429,6 @@ void Application::render() {
     SDL_GL_SwapWindow(m_window);
 }
 
-void Application::onImportModel() {
-    if (m_uiManager->fileDialog()) {
-        m_uiManager->fileDialog()->showOpenMulti("Import Models", FileDialog::modelFilters(),
-                                                 [this](const std::vector<std::string>& paths) {
-                                                     if (paths.empty())
-                                                         return;
-
-                                                     std::vector<Path> importPaths;
-                                                     importPaths.reserve(paths.size());
-                                                     for (const auto& p : paths) {
-                                                         importPaths.emplace_back(p);
-                                                     }
-
-                                                     if (m_importQueue) {
-                                                         m_importQueue->enqueue(importPaths);
-                                                     }
-                                                 });
-    }
-}
-
-void Application::onExportModel() {
-    auto mesh = m_workspace->getFocusedMesh();
-    if (!mesh) {
-        MessageDialog::warning("No Model", "No model selected to export.");
-        return;
-    }
-
-    if (m_uiManager->fileDialog()) {
-        m_uiManager->fileDialog()->showSave(
-            "Export Model", FileDialog::modelFilters(), "model.stl",
-            [this, mesh](const std::string& path) {
-                if (path.empty())
-                    return;
-
-                ModelExporter exporter;
-                auto result = exporter.exportMesh(*mesh, path);
-
-                if (result.success) {
-                    MessageDialog::info("Export Complete", "Model exported to:\n" + path);
-                } else {
-                    MessageDialog::error("Export Failed", result.error);
-                }
-            });
-    }
-}
-
-void Application::onNewProject() {
-    auto project = m_projectManager->create("New Project");
-    m_projectManager->setCurrentProject(project);
-    m_uiManager->showStartPage() = false;
-}
-
-void Application::onOpenProject() {
-    if (!m_uiManager->fileDialog())
-        return;
-
-    m_uiManager->fileDialog()->showOpen(
-        "Open Project", FileDialog::projectFilters(), [this](const std::string& path) {
-            if (path.empty())
-                return;
-
-            // Search existing projects for one matching this file path
-            auto projects = m_projectManager->listProjects();
-            for (const auto& record : projects) {
-                if (record.filePath == Path(path)) {
-                    auto project = m_projectManager->open(record.id);
-                    if (project) {
-                        m_projectManager->setCurrentProject(project);
-                        Config::instance().addRecentProject(Path(path));
-                        Config::instance().save();
-                        m_uiManager->showStartPage() = false;
-                        return;
-                    }
-                }
-            }
-
-            // No existing project found at that path - create a new one
-            // and associate the file path
-            Path filePath(path);
-            std::string name = filePath.stem().string();
-            auto project = m_projectManager->create(name);
-            if (project) {
-                project->setFilePath(filePath);
-                m_projectManager->setCurrentProject(project);
-                Config::instance().addRecentProject(filePath);
-                Config::instance().save();
-                m_uiManager->showStartPage() = false;
-            }
-        });
-}
-
-void Application::onSaveProject() {
-    auto project = m_projectManager->currentProject();
-    if (!project) {
-        MessageDialog::warning("No Project", "No project is currently open.");
-        return;
-    }
-
-    // If project has no file path, show save dialog to pick one
-    if (project->filePath().empty()) {
-        if (m_uiManager->fileDialog()) {
-            std::string defaultName = project->name() + ".dwp";
-            m_uiManager->fileDialog()->showSave("Save Project", FileDialog::projectFilters(),
-                                                defaultName,
-                                                [this, project](const std::string& path) {
-                                                    if (path.empty())
-                                                        return;
-                                                    project->setFilePath(Path(path));
-                                                    m_projectManager->save(*project);
-                                                    Config::instance().addRecentProject(Path(path));
-                                                    Config::instance().save();
-                                                });
-        }
-    } else {
-        m_projectManager->save(*project);
-        if (!project->filePath().empty()) {
-            Config::instance().addRecentProject(project->filePath());
-            Config::instance().save();
-        }
-    }
-}
-
 void Application::onModelSelected(int64_t modelId) {
     if (!m_libraryManager)
         return;
@@ -553,91 +445,6 @@ void Application::onModelSelected(int64_t modelId) {
         auto record = m_libraryManager->getModel(modelId);
         std::string name = record ? record->name : "";
         m_uiManager->propertiesPanel()->setMesh(mesh, name);
-    }
-}
-
-void Application::onFilesDropped(const std::vector<std::string>& paths) {
-    if (!m_importQueue)
-        return;
-
-    std::vector<Path> importPaths;
-    for (const auto& p : paths) {
-        Path path{p};
-        auto ext = path.extension().string();
-        if (!ext.empty() && ext[0] == '.')
-            ext = ext.substr(1);
-
-        if (LoaderFactory::isSupported(ext)) {
-            importPaths.push_back(path);
-        }
-    }
-
-    if (!importPaths.empty()) {
-        m_importQueue->enqueue(importPaths);
-    }
-}
-
-void Application::processCompletedImports() {
-    if (!m_importQueue)
-        return;
-
-    auto completed = m_importQueue->pollCompleted();
-    if (!completed.empty()) {
-        m_uiManager->showStartPage() = false;
-    }
-    for (auto& task : completed) {
-        // Generate thumbnail on main thread (needs GL context)
-        // Use LibraryManager which writes the file AND updates the DB
-        if (m_thumbnailGenerator && task.mesh && m_libraryManager) {
-            m_libraryManager->setThumbnailGenerator(m_thumbnailGenerator.get());
-            m_libraryManager->generateThumbnail(task.modelId, *task.mesh);
-        }
-
-        // Select the last imported model and refresh library
-        if (m_uiManager->libraryPanel()) {
-            m_uiManager->libraryPanel()->refresh();
-        }
-
-        // Focus the newly imported mesh directly (no re-read from disk)
-        if (task.mesh) {
-            m_workspace->setFocusedMesh(task.mesh);
-            if (m_uiManager->viewportPanel()) {
-                m_uiManager->viewportPanel()->setMesh(task.mesh);
-            }
-            if (m_uiManager->propertiesPanel()) {
-                m_uiManager->propertiesPanel()->setMesh(task.mesh, task.record.name);
-            }
-        }
-    }
-}
-
-void Application::onOpenRecentProject(const Path& path) {
-    if (!m_projectManager)
-        return;
-
-    auto projects = m_projectManager->listProjects();
-    for (const auto& record : projects) {
-        if (record.filePath == path) {
-            auto project = m_projectManager->open(record.id);
-            if (project) {
-                m_projectManager->setCurrentProject(project);
-                Config::instance().addRecentProject(path);
-                Config::instance().save();
-                m_uiManager->showStartPage() = false;
-                return;
-            }
-        }
-    }
-
-    // Project not found in DB -- create new from path
-    std::string name = path.stem().string();
-    auto project = m_projectManager->create(name);
-    if (project) {
-        project->setFilePath(path);
-        m_projectManager->setCurrentProject(project);
-        Config::instance().addRecentProject(path);
-        Config::instance().save();
-        m_uiManager->showStartPage() = false;
     }
 }
 
@@ -766,6 +573,9 @@ void Application::shutdown() {
 
     // Destroy config watcher
     m_configWatcher.reset();
+
+    // Destroy File I/O Manager (before UI Manager which owns FileDialog)
+    m_fileIOManager.reset();
 
     // Destroy UI Manager (panels and dialogs)
     m_uiManager.reset();

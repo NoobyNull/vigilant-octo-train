@@ -3,6 +3,7 @@
 // Digital Workshop - Application Class
 // Main application lifecycle: init, run loop, shutdown.
 // UI ownership delegated to UIManager (src/managers/ui_manager.h).
+// File I/O orchestration delegated to FileIOManager (src/managers/file_io_manager.h).
 
 #include <memory>
 #include <string>
@@ -28,10 +29,11 @@ class MainThreadQueue;
 
 } // namespace dw
 
-// Forward declare to avoid pulling in managers/ui_manager.h
+// Forward declare to avoid pulling in managers/*.h
 namespace dw {
 class UIManager;
-}
+class FileIOManager;
+} // namespace dw
 
 namespace dw {
 
@@ -70,15 +72,7 @@ class Application {
     void shutdown();
 
     // Callbacks (business logic stays in Application)
-    void onImportModel();
-    void onExportModel();
-    void onNewProject();
-    void onOpenProject();
-    void onSaveProject();
     void onModelSelected(int64_t modelId);
-    void onFilesDropped(const std::vector<std::string>& paths);
-    void processCompletedImports();
-    void onOpenRecentProject(const Path& path);
 
     // Config watcher (stays in Application until Plan 03)
     void onConfigFileChanged();
@@ -105,6 +99,9 @@ class Application {
 
     // UI Manager - owns all panels, dialogs, visibility state
     std::unique_ptr<UIManager> m_uiManager;
+
+    // File I/O Manager - orchestrates import, export, project operations
+    std::unique_ptr<FileIOManager> m_fileIOManager;
 
     // Config watching (stays in Application until Plan 03)
     std::unique_ptr<ConfigWatcher> m_configWatcher;
