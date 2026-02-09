@@ -10,6 +10,7 @@
 #include "core/config/config_watcher.h"
 #include "core/database/database.h"
 #include "core/database/schema.h"
+#include "core/events/event_bus.h"
 #include "core/export/model_exporter.h"
 #include "core/import/import_queue.h"
 #include "core/import/import_task.h"
@@ -156,6 +157,9 @@ bool Application::init() {
     ImGui_ImplOpenGL3_Init("#version 330");
 
     // Initialize core systems
+    // Initialize EventBus (foundation for decoupled communication)
+    m_eventBus = std::make_unique<EventBus>();
+
     m_database = std::make_unique<Database>();
     if (!m_database->open(paths::getDatabasePath())) {
         std::fprintf(stderr, "Failed to open database\n");
@@ -1049,6 +1053,7 @@ void Application::shutdown() {
     m_projectManager.reset();
     m_libraryManager.reset();
     m_database.reset();
+    m_eventBus.reset(); // Destroy after all subscribers
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();

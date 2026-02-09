@@ -14,6 +14,7 @@ struct SDL_Window;
 namespace dw {
 
 // Forward declarations
+class EventBus;
 class Database;
 class LibraryManager;
 class ProjectManager;
@@ -58,6 +59,7 @@ class Application {
     // Accessors
     auto isRunning() const -> bool { return m_running; }
     auto getWindow() const -> SDL_Window* { return m_window; }
+    auto eventBus() -> EventBus& { return *m_eventBus; }
 
   private:
     void processEvents();
@@ -98,6 +100,7 @@ class Application {
     bool m_initialized = false;
 
     // Core systems
+    std::unique_ptr<EventBus> m_eventBus;
     std::unique_ptr<Database> m_database;
     std::unique_ptr<LibraryManager> m_libraryManager;
     std::unique_ptr<ProjectManager> m_projectManager;
