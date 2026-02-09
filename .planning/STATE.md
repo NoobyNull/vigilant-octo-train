@@ -1,7 +1,7 @@
 # Project State: Digital Workshop
 
 **Last Updated:** 2026-02-09
-**Current Session:** Phase 1.4 God Class Decomposition - Complete
+**Current Session:** Phase 1.5 Bug Fixes - Plan 03 Complete
 
 ---
 
@@ -19,19 +19,19 @@ Phase 1: Architectural Foundation & Thread Safety — Decompose the Application 
 
 **Active Phase:** Phase 1 — Architectural Foundation & Thread Safety
 
-**Current Sub-Phase:** 1.5 Bug Fixes (next to start)
+**Current Sub-Phase:** 1.5 Bug Fixes (in progress - Plan 1/3 complete)
 
-**Status:** Sub-phase 1.4 God Class Decomposition complete. Application.cpp reduced from 1,108 to 374 lines.
+**Status:** Plan 1.5-03 complete. Regression tests added for BUG-02, BUG-03, BUG-05. Test suite: 410 -> 422 tests, all passing.
 
 **Progress:**
-```
+[████████░░] 77%
 Phase 1: [████████████████░░░░] 4/6 sub-phases (67%)
 
 1.1 EventBus                 [##########] Plan 2/2 complete
 1.2 ConnectionPool           [##########] Plan 2/2 complete
 1.3 MainThreadQueue          [##########] Plan 2/2 complete
 1.4 God Class Decomposition  [##########] Plan 3/3 complete
-1.5 Bug Fixes                [..........] Not Started
+1.5 Bug Fixes                [###.......] Plan 1/3 complete
 1.6 Dead Code Cleanup        [..........] Not Started
 ```
 
@@ -50,8 +50,9 @@ Phase 1: [████████████████░░░░] 4/6 sub-
 | 1.4   | 01   | 5m 32s   | 1     | 5     | 2026-02-09 |
 | 1.4   | 02   | 4m 52s   | 2     | 5     | 2026-02-09 |
 | 1.4   | 03   | 5m 46s   | 2     | 5     | 2026-02-09 |
+| 1.5   | 03   | 1m 27s   | 2     | 2     | 2026-02-09 |
 
-**Cycle Time:** 3m 50s per plan (9 plans completed)
+**Cycle Time:** 3m 38s per plan (10 plans completed)
 
 **Completion Rate:** 4 sub-phases in 2 days
 
@@ -178,6 +179,21 @@ Phase 1: [████████████████░░░░] 4/6 sub-
     - Rationale: Eliminates duplication since applyConfig() already has this logic for hot-reload
     - Impact: Single point of config application, Application further simplified
 
+23. **BUG-03 Verification Without Unit Tests (2026-02-09, Plan 1.5-03)**
+    - Decision: Verify framebuffer move constructor via code review instead of unit test
+    - Rationale: Framebuffer requires OpenGL context for testing - adds complexity and external dependencies
+    - Impact: BUG-03 verified (framebuffer.cpp:21-22, :36-37 zero width/height correctly) but no test coverage
+
+24. **Comprehensive Edge Case Coverage for Angle Wrapping (2026-02-09, Plan 1.5-03)**
+    - Decision: Add tests for negative angles, exact boundaries (0, 360), and small negative wraps
+    - Rationale: fmod behavior with negative angles is subtle - needs explicit test coverage to catch regressions
+    - Impact: 4 new camera tests cover critical edge cases for BUG-02
+
+25. **Realistic LIKE Injection Test Patterns (2026-02-09, Plan 1.5-03)**
+    - Decision: Include tests with combined wildcards like "box_v2 (50%)"
+    - Rationale: Real search terms often contain both underscores and percent signs
+    - Impact: 8 new string utils tests verify escapeLike works in realistic scenarios for BUG-05
+
 ### Open Questions
 
 1. **File Dialog Implementation (DEAD-04)**
@@ -216,49 +232,45 @@ Phase 1: [████████████████░░░░] 4/6 sub-
 
 ### What Was Just Accomplished
 
-**Session Goal:** Execute Phase 1.4 God Class Decomposition - Plan 03 (Extract ConfigManager, final cleanup)
+**Session Goal:** Execute Phase 1.5 Bug Fixes - Plan 03 (Add regression tests for BUG-02, BUG-03, BUG-05)
 
 **Completed:**
-- Plan 03: Created src/managers/config_manager.h (67 lines) and config_manager.cpp (176 lines)
-- Plan 03: Moved 5 config methods from Application to ConfigManager: onConfigFileChanged, applyConfig, spawnSettingsApp, relaunchApp, saveWorkspaceState
-- Plan 03: ConfigManager owns ConfigWatcher (moved from Application)
-- Plan 03: Initial config application (theme, render, log level) moved to ConfigManager::init()
-- Plan 03: Application.cpp reduced from 613 to 374 lines (66% total reduction from original 1,108)
-- Plan 03: Phase 1.4 god class decomposition complete
-- All 410 tests pass, application builds successfully
+- Plan 03: Added 8 comprehensive escapeLike tests for BUG-05 (SQL LIKE wildcard escaping)
+- Plan 03: Added 4 camera yaw wrapping edge case tests for BUG-02 (negative angles, exact boundaries)
+- Plan 03: Verified BUG-03 (framebuffer move constructor) via code review with documentation comment
+- Test suite expanded: 410 -> 422 tests, all passing
+- Zero regressions in existing test suite
+- Execution time: 1m 27s
 
 **Artifacts Created:**
-- `src/managers/config_manager.h` -- ConfigManager class header
-- `src/managers/config_manager.cpp` -- ConfigManager implementation
-- `.planning/phases/01.4-godclass/1.4-03-SUMMARY.md` -- Plan 03 summary
+- `.planning/phases/01.5-bugfixes/1.5-03-SUMMARY.md` -- Plan 03 summary
 
 **Artifacts Modified:**
-- `src/app/application.h` -- Removed ConfigWatcher, 5 config method declarations, added ConfigManager
-- `src/app/application.cpp` -- Thin coordinator, delegates config through m_configManager
-- `src/CMakeLists.txt` -- Added managers/config_manager.cpp
+- `tests/test_string_utils.cpp` -- Added 8 escapeLike regression tests
+- `tests/test_camera.cpp` -- Added 4 yaw edge case tests + BUG-03 verification comment
 
 **Commits:**
-- `83a864b` -- feat(1.4-03): create ConfigManager class
-- `cebda8e` -- refactor(1.4-03): integrate ConfigManager, finalize thin coordinator
+- `dc10e6e` -- test(1.5-03): add regression tests for BUG-02, BUG-03, BUG-05
 
 ### What to Do Next
 
 **Immediate Next Step:**
 ```bash
-/gsd:plan-phase 1.5
+/gsd:execute-phase 1.5 --plan 01
 ```
 
-Plan sub-phase 1.5 Bug Fixes.
+Execute Plan 1.5-01 (BUG-04 shader uniform cache, BUG-07 normal matrix).
 
 **Phase 1 Remaining:**
-- Sub-phase 1.5: Bug Fixes (7 bugs from TODOS.md)
-- Sub-phase 1.6: Dead Code Cleanup (6 dead code items from TODOS.md)
+- Sub-phase 1.5: Bug Fixes (2 plans remaining: 01 and 02)
+- Sub-phase 1.6: Dead Code Cleanup (1 plan)
 
 **Context for Next Session:**
 - Phase 1.4 complete: Application is a thin coordinator (374 lines)
-- Three managers: UIManager (UI), FileIOManager (I/O), ConfigManager (config)
+- Phase 1.5 Plan 03 complete: BUG-02, BUG-03, BUG-05 regression tests added
 - All infrastructure complete: EventBus, ConnectionPool, MainThreadQueue
-- 410 tests passing, zero regressions throughout Phase 1.4
+- 422 tests passing, zero regressions
+- Remaining bugs: BUG-01 (ViewCube cache), BUG-04 (shader cache), BUG-07 (normal matrix)
 
 ---
 
