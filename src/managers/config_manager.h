@@ -30,7 +30,7 @@ class ConfigManager {
     ConfigManager(ConfigManager&&) = delete;
     ConfigManager& operator=(ConfigManager&&) = delete;
 
-    // Initialize config watching
+    // Initialize: apply initial config (theme, render settings, log level) and start watching
     void init(SDL_Window* window);
 
     // Call each frame to poll config watcher

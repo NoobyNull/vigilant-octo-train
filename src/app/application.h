@@ -4,6 +4,7 @@
 // Main application lifecycle: init, run loop, shutdown.
 // UI ownership delegated to UIManager (src/managers/ui_manager.h).
 // File I/O orchestration delegated to FileIOManager (src/managers/file_io_manager.h).
+// Config management delegated to ConfigManager (src/managers/config_manager.h).
 
 #include <memory>
 #include <string>
@@ -23,16 +24,14 @@ class LibraryManager;
 class ProjectManager;
 class Workspace;
 class ThumbnailGenerator;
-class ConfigWatcher;
 class ImportQueue;
 class MainThreadQueue;
 
-} // namespace dw
-
-// Forward declare to avoid pulling in managers/*.h
-namespace dw {
+// Managers (extracted from Application)
 class UIManager;
 class FileIOManager;
+class ConfigManager;
+
 } // namespace dw
 
 namespace dw {
@@ -74,13 +73,6 @@ class Application {
     // Callbacks (business logic stays in Application)
     void onModelSelected(int64_t modelId);
 
-    // Config watcher (stays in Application until Plan 03)
-    void onConfigFileChanged();
-    void applyConfig();
-    void spawnSettingsApp();
-    void relaunchApp();
-    void saveWorkspaceState();
-
     SDL_Window* m_window = nullptr;
     void* m_glContext = nullptr;
     bool m_running = false;
@@ -103,9 +95,8 @@ class Application {
     // File I/O Manager - orchestrates import, export, project operations
     std::unique_ptr<FileIOManager> m_fileIOManager;
 
-    // Config watching (stays in Application until Plan 03)
-    std::unique_ptr<ConfigWatcher> m_configWatcher;
-    float m_lastAppliedUiScale = 1.0f;
+    // Config Manager - config watching, applying, workspace state, settings, relaunch
+    std::unique_ptr<ConfigManager> m_configManager;
 
     static constexpr int DEFAULT_WIDTH = 1280;
     static constexpr int DEFAULT_HEIGHT = 720;

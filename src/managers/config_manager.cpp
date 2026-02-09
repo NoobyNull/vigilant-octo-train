@@ -34,6 +34,9 @@ ConfigManager::~ConfigManager() {
 void ConfigManager::init(SDL_Window* window) {
     m_window = window;
 
+    // Apply initial config (theme, render settings, log level)
+    applyConfig();
+
     // Set up config file watcher for live reload
     m_configWatcher = std::make_unique<ConfigWatcher>();
     m_configWatcher->setOnChanged([this]() { onConfigFileChanged(); });

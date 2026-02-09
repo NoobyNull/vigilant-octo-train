@@ -11,6 +11,7 @@ set(DW_SOURCES
     # Managers (extracted from Application)
     managers/ui_manager.cpp
     managers/file_io_manager.cpp
+    managers/config_manager.cpp
 
     # Core types
     core/types.cpp
