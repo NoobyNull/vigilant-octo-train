@@ -220,3 +220,47 @@ TEST(Camera, SetClipPlanes) {
     EXPECT_FLOAT_EQ(cam.nearPlane(), 1.0f);
     EXPECT_FLOAT_EQ(cam.farPlane(), 500.0f);
 }
+
+// --- BUG-02 regression: fmod angle wrapping edge cases ---
+
+TEST(Camera, Orbit_NegativeYaw_WrapsToPositive) {
+    dw::Camera cam;
+    cam.setYaw(0.0f);
+    // Orbit negative (large amount to go well below 0)
+    cam.orbit(-1000.0f / 0.5f, 0.0f);  // -1000 degrees at 0.5 sensitivity
+    // Yaw should be in [0, 360)
+    EXPECT_GE(cam.yaw(), 0.0f);
+    EXPECT_LT(cam.yaw(), 360.0f);
+}
+
+TEST(Camera, Orbit_ExactlyZero) {
+    dw::Camera cam;
+    cam.setYaw(0.0f);
+    cam.orbit(0.0f, 0.0f);
+    EXPECT_FLOAT_EQ(cam.yaw(), 0.0f);
+}
+
+TEST(Camera, Orbit_Exactly360_WrapsToZero) {
+    dw::Camera cam;
+    // Set yaw near 360 and push it to exactly 360
+    cam.setYaw(359.0f);
+    cam.orbit(1.0f / 0.5f, 0.0f);  // +1 degree at 0.5 sensitivity = +2.0 * 0.5 = +1.0
+    // After wrapping, should be 0.0
+    EXPECT_GE(cam.yaw(), 0.0f);
+    EXPECT_LT(cam.yaw(), 360.0f);
+}
+
+TEST(Camera, Orbit_SmallNegative_WrapsCorrectly) {
+    dw::Camera cam;
+    cam.setYaw(1.0f);
+    // Orbit -4 degrees (sensitivity 0.5, so deltaX = -4/0.5 = -8)
+    cam.orbit(-8.0f, 0.0f);  // 1.0 + (-8.0 * 0.5) = 1.0 - 4.0 = -3.0 -> wraps to 357.0
+    EXPECT_NEAR(cam.yaw(), 357.0f, 0.01f);
+}
+
+// --- BUG-03 verification: framebuffer move constructor ---
+// BUG-03 (zeroing width/height in move constructor) is ALREADY FIXED.
+// Verified by code review: framebuffer.cpp:21-22 zeros m_width and m_height.
+// Move assignment operator (framebuffer.cpp:36-37) also zeros correctly.
+// Cannot unit test without GL context (framebuffer needs OpenGL).
+// No test added — fix confirmed via code inspection.

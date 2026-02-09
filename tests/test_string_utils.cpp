@@ -247,3 +247,38 @@ TEST(StringUtils, ParseDouble_Invalid) {
     double val = 0.0;
     EXPECT_FALSE(dw::str::parseDouble("not_a_number", val));
 }
+
+// --- LIKE Escape (BUG-05 regression) ---
+
+TEST(StringUtils, EscapeLike_NoSpecialChars) {
+    EXPECT_EQ(dw::str::escapeLike("hello"), "hello");
+}
+
+TEST(StringUtils, EscapeLike_PercentEscaped) {
+    EXPECT_EQ(dw::str::escapeLike("100%"), "100\\%");
+}
+
+TEST(StringUtils, EscapeLike_UnderscoreEscaped) {
+    EXPECT_EQ(dw::str::escapeLike("test_file"), "test\\_file");
+}
+
+TEST(StringUtils, EscapeLike_BackslashEscaped) {
+    EXPECT_EQ(dw::str::escapeLike("path\\to"), "path\\\\to");
+}
+
+TEST(StringUtils, EscapeLike_MultipleWildcards) {
+    EXPECT_EQ(dw::str::escapeLike("%_\\"), "\\%\\_\\\\");
+}
+
+TEST(StringUtils, EscapeLike_EmptyString) {
+    EXPECT_EQ(dw::str::escapeLike(""), "");
+}
+
+TEST(StringUtils, EscapeLike_NoEscapeNeeded) {
+    EXPECT_EQ(dw::str::escapeLike("normal search term"), "normal search term");
+}
+
+TEST(StringUtils, EscapeLike_MixedContent) {
+    // Realistic search: user types "box_v2 (50%)"
+    EXPECT_EQ(dw::str::escapeLike("box_v2 (50%)"), "box\\_v2 (50\\%)");
+}
