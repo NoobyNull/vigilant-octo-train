@@ -34,12 +34,12 @@ TEST(EventBus, SubscribeAndReceive_MultipleSubscribers) {
     int callCount2 = 0;
 
     auto sub1 = bus.subscribe<dw::WorkspaceChanged>(
-        [&](const dw::WorkspaceChanged& event) {
+        [&](const dw::WorkspaceChanged& /*event*/) {
             callCount1++;
         });
 
     auto sub2 = bus.subscribe<dw::WorkspaceChanged>(
-        [&](const dw::WorkspaceChanged& event) {
+        [&](const dw::WorkspaceChanged& /*event*/) {
             callCount2++;
         });
 
@@ -56,12 +56,12 @@ TEST(EventBus, SubscribeAndReceive_DifferentEventTypes) {
     int importCallCount = 0;
 
     auto sub1 = bus.subscribe<dw::WorkspaceChanged>(
-        [&](const dw::WorkspaceChanged& event) {
+        [&](const dw::WorkspaceChanged& /*event*/) {
             workspaceCallCount++;
         });
 
     auto sub2 = bus.subscribe<dw::ImportCompleted>(
-        [&](const dw::ImportCompleted& event) {
+        [&](const dw::ImportCompleted& /*event*/) {
             importCallCount++;
         });
 
@@ -92,7 +92,7 @@ TEST(EventBus, WeakRefCleanup_ExpiredSubscriberRemoved) {
 
     {
         auto sub = bus.subscribe<dw::WorkspaceChanged>(
-            [&](const dw::WorkspaceChanged& event) {
+            [&](const dw::WorkspaceChanged& /*event*/) {
                 callCount++;
             });
 
@@ -117,13 +117,13 @@ TEST(EventBus, WeakRefCleanup_MixedAliveAndExpired) {
     int callCount2 = 0;
 
     auto sub1 = bus.subscribe<dw::WorkspaceChanged>(
-        [&](const dw::WorkspaceChanged& event) {
+        [&](const dw::WorkspaceChanged& /*event*/) {
             callCount1++;
         });
 
     {
         auto sub2 = bus.subscribe<dw::WorkspaceChanged>(
-            [&](const dw::WorkspaceChanged& event) {
+            [&](const dw::WorkspaceChanged& /*event*/) {
                 callCount2++;
             });
 
@@ -150,11 +150,11 @@ TEST(EventBus, ReentrancySafety_SubscribeDuringPublish) {
     dw::EventBus::SubscriptionId newSub;
 
     auto sub1 = bus.subscribe<dw::WorkspaceChanged>(
-        [&](const dw::WorkspaceChanged& event) {
+        [&](const dw::WorkspaceChanged& /*event*/) {
             callCount++;
             // Subscribe a new handler during publish
             newSub = bus.subscribe<dw::WorkspaceChanged>(
-                [&](const dw::WorkspaceChanged& event) {
+                [&](const dw::WorkspaceChanged& /*event*/) {
                     callCount += 10;
                 });
         });
@@ -179,13 +179,13 @@ TEST(EventBus, ExceptionIsolation_HandlerThrowDoesNotBlockOthers) {
     int callCount2 = 0;
 
     auto sub1 = bus.subscribe<dw::WorkspaceChanged>(
-        [&](const dw::WorkspaceChanged& event) {
+        [&](const dw::WorkspaceChanged& /*event*/) {
             callCount1++;
             throw std::runtime_error("Handler exception");
         });
 
     auto sub2 = bus.subscribe<dw::WorkspaceChanged>(
-        [&](const dw::WorkspaceChanged& event) {
+        [&](const dw::WorkspaceChanged& /*event*/) {
             callCount2++;
         });
 
@@ -203,7 +203,7 @@ TEST(EventBus, EmptyEvent_WorksWithNoFields) {
     int callCount = 0;
 
     auto sub = bus.subscribe<dw::ConfigFileChanged>(
-        [&](const dw::ConfigFileChanged& event) {
+        [&](const dw::ConfigFileChanged& /*event*/) {
             callCount++;
         });
 
@@ -218,7 +218,7 @@ TEST(EventBus, SubscriptionId_KeepsHandlerAlive) {
     int callCount = 0;
 
     auto sub = bus.subscribe<dw::WorkspaceChanged>(
-        [&](const dw::WorkspaceChanged& event) {
+        [&](const dw::WorkspaceChanged& /*event*/) {
             callCount++;
         });
 
