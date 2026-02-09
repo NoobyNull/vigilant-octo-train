@@ -5,15 +5,14 @@
 #include <thread>
 #include <vector>
 
-#include "../database/database.h"
-#include "../database/model_repository.h"
+#include "../database/connection_pool.h"
 #include "import_task.h"
 
 namespace dw {
 
 class ImportQueue {
   public:
-    explicit ImportQueue(Database& db);
+    explicit ImportQueue(ConnectionPool& pool);
     ~ImportQueue();
 
     // Enqueue files for import (called from main thread)
@@ -44,8 +43,7 @@ class ImportQueue {
     void workerLoop();
     void processTask(ImportTask& task);
 
-    Database& m_db;
-    ModelRepository m_modelRepo;
+    ConnectionPool& m_pool;
 
     // Thread management
     std::thread m_worker;

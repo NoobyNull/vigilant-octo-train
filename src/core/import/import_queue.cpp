@@ -1,5 +1,7 @@
 #include "import_queue.h"
 
+#include "../database/connection_pool.h"
+#include "../database/model_repository.h"
 #include "../loaders/loader_factory.h"
 #include "../mesh/hash.h"
 #include "../utils/file_utils.h"
@@ -7,7 +9,7 @@
 
 namespace dw {
 
-ImportQueue::ImportQueue(Database& db) : m_db(db), m_modelRepo(db) {}
+ImportQueue::ImportQueue(ConnectionPool& pool) : m_pool(pool) {}
 
 ImportQueue::~ImportQueue() {
     m_shutdown.store(true);
@@ -140,6 +142,10 @@ void ImportQueue::workerLoop() {
 }
 
 void ImportQueue::processTask(ImportTask& task) {
+    // Acquire a pooled connection for this task
+    ScopedConnection conn(m_pool);
+    ModelRepository modelRepo(*conn);
+
     // Stage 1: Reading
     task.stage = ImportStage::Reading;
     m_progress.currentStage.store(ImportStage::Reading);
@@ -163,7 +169,7 @@ void ImportQueue::processTask(ImportTask& task) {
     task.stage = ImportStage::CheckingDuplicate;
     m_progress.currentStage.store(ImportStage::CheckingDuplicate);
 
-    auto existing = m_modelRepo.findByHash(task.fileHash);
+    auto existing = modelRepo.findByHash(task.fileHash);
     if (existing) {
         task.isDuplicate = true;
         task.stage = ImportStage::Failed;
@@ -210,7 +216,7 @@ void ImportQueue::processTask(ImportTask& task) {
     record.boundsMin = bounds.min;
     record.boundsMax = bounds.max;
 
-    auto modelId = m_modelRepo.insert(record);
+    auto modelId = modelRepo.insert(record);
     if (!modelId) {
         task.stage = ImportStage::Failed;
         task.error = "Failed to insert into database";

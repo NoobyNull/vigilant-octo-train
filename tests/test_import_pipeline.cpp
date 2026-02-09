@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include "core/database/connection_pool.h"
 #include "core/database/database.h"
 #include "core/database/model_repository.h"
 #include "core/database/schema.h"
@@ -83,13 +84,25 @@ namespace {
 class ImportQueueTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        ASSERT_TRUE(m_db.open(":memory:"));
-        ASSERT_TRUE(dw::Schema::initialize(m_db));
+        // Create temporary database file for connection pool
         m_tmpDir = std::filesystem::temp_directory_path() / "dw_test_import";
         std::filesystem::create_directories(m_tmpDir);
+        m_dbPath = m_tmpDir / "test.db";
+
+        // Initialize database and schema
+        dw::Database db;
+        ASSERT_TRUE(db.open(m_dbPath));
+        ASSERT_TRUE(dw::Schema::initialize(db));
+        db.close();
+
+        // Create connection pool (2 connections)
+        m_pool = std::make_unique<dw::ConnectionPool>(m_dbPath, 2);
     }
 
-    void TearDown() override { std::filesystem::remove_all(m_tmpDir); }
+    void TearDown() override {
+        m_pool.reset();
+        std::filesystem::remove_all(m_tmpDir);
+    }
 
     dw::Path writeMiniSTL(const std::string& name) {
         auto path = m_tmpDir / (name + ".stl");
@@ -102,7 +115,8 @@ protected:
         return path;
     }
 
-    dw::Database m_db;
+    std::unique_ptr<dw::ConnectionPool> m_pool;
+    dw::Path m_dbPath;
     std::filesystem::path m_tmpDir;
 };
 
@@ -110,7 +124,7 @@ protected:
 
 TEST_F(ImportQueueTest, EnqueueAndProcess) {
     auto stlPath = writeMiniSTL("test_model");
-    dw::ImportQueue queue(m_db);
+    dw::ImportQueue queue(*m_pool);
 
     queue.enqueue(stlPath);
 
@@ -128,8 +142,9 @@ TEST_F(ImportQueueTest, EnqueueAndProcess) {
     EXPECT_GT(completed[0].modelId, 0);
     EXPECT_NE(completed[0].mesh, nullptr);
 
-    // Verify model is in database
-    dw::ModelRepository repo(m_db);
+    // Verify model is in database (use pooled connection)
+    dw::ScopedConnection conn(*m_pool);
+    dw::ModelRepository repo(*conn);
     auto model = repo.findById(completed[0].modelId);
     ASSERT_TRUE(model.has_value());
     EXPECT_EQ(model->name, "test_model");
@@ -138,7 +153,7 @@ TEST_F(ImportQueueTest, EnqueueAndProcess) {
 
 TEST_F(ImportQueueTest, DuplicateRejected) {
     auto stlPath = writeMiniSTL("dup_test");
-    dw::ImportQueue queue(m_db);
+    dw::ImportQueue queue(*m_pool);
 
     // First import
     queue.enqueue(stlPath);
@@ -159,13 +174,14 @@ TEST_F(ImportQueueTest, DuplicateRejected) {
     EXPECT_EQ(queue.progress().failedFiles.load(), 1);
 
     // Database should still have only 1 model
-    dw::ModelRepository repo(m_db);
+    dw::ScopedConnection conn(*m_pool);
+    dw::ModelRepository repo(*conn);
     EXPECT_EQ(repo.count(), 1);
 }
 
 TEST_F(ImportQueueTest, Progress_TracksCorrectly) {
     auto stlPath = writeMiniSTL("progress_test");
-    dw::ImportQueue queue(m_db);
+    dw::ImportQueue queue(*m_pool);
 
     queue.enqueue(stlPath);
     EXPECT_EQ(queue.progress().totalFiles.load(), 1);
