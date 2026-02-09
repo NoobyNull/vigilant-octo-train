@@ -116,17 +116,25 @@ Database::~Database() {
 }
 
 bool Database::open(const Path& path) {
+    return openWithFlags(path, 0);
+}
+
+bool Database::openWithFlags(const Path& path, int extraFlags) {
     if (m_db) {
         close();
     }
 
-    int result = sqlite3_open(path.string().c_str(), &m_db);
+    int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | extraFlags;
+    int result = sqlite3_open_v2(path.string().c_str(), &m_db, flags, nullptr);
     if (result != SQLITE_OK) {
         log::errorf("Database", "Failed to open: %s", sqlite3_errmsg(m_db));
         sqlite3_close(m_db);
         m_db = nullptr;
         return false;
     }
+
+    // Set busy timeout to 5 seconds for better multi-threaded behavior
+    sqlite3_busy_timeout(m_db, 5000);
 
     // Enable foreign keys
     if (!execute("PRAGMA foreign_keys = ON")) {
@@ -136,6 +144,11 @@ bool Database::open(const Path& path) {
     // Use WAL mode for better concurrency
     if (!execute("PRAGMA journal_mode = WAL")) {
         log::warning("Database", "Failed to set WAL mode");
+    }
+
+    // Set synchronous mode to NORMAL for better performance with WAL
+    if (!execute("PRAGMA synchronous = NORMAL")) {
+        log::warning("Database", "Failed to set synchronous mode");
     }
 
     log::infof("Database", "Opened: %s", path.string().c_str());

@@ -67,6 +67,7 @@ class Database {
 
     // Open/close database
     [[nodiscard]] bool open(const Path& path);
+    [[nodiscard]] bool openWithFlags(const Path& path, int extraFlags);
     void close();
     bool isOpen() const { return m_db != nullptr; }
 
