@@ -22,6 +22,8 @@ set(DW_TEST_SOURCES
     test_exporter.cpp
     # Tier 1 — EventBus
     test_event_bus.cpp
+    # Tier 1 — ConnectionPool
+    test_connection_pool.cpp
     # Tier 1 — core logic
     test_types.cpp
     test_gcode_analyzer.cpp
@@ -59,6 +61,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/optimizer/bin_packer.cpp
     ${CMAKE_SOURCE_DIR}/src/core/optimizer/guillotine.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/database.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/database/connection_pool.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/schema.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/model_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/project_repository.cpp
