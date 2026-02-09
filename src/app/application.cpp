@@ -320,6 +320,10 @@ void Application::quit() {
     m_running = false;
 }
 
+auto Application::eventBus() -> EventBus& {
+    return *m_eventBus;
+}
+
 void Application::processEvents() {
     std::vector<std::string> droppedFiles;
 

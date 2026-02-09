@@ -59,7 +59,7 @@ class Application {
     // Accessors
     auto isRunning() const -> bool { return m_running; }
     auto getWindow() const -> SDL_Window* { return m_window; }
-    auto eventBus() -> EventBus& { return *m_eventBus; }
+    auto eventBus() -> EventBus&;
 
   private:
     void processEvents();
