@@ -8,6 +8,7 @@
 #include "app/workspace.h"
 #include "core/config/config.h"
 #include "core/config/config_watcher.h"
+#include "core/database/connection_pool.h"
 #include "core/database/database.h"
 #include "core/database/schema.h"
 #include "core/events/event_bus.h"
@@ -172,6 +173,9 @@ bool Application::init() {
         return false;
     }
 
+    // Initialize connection pool for background workers (2 connections)
+    m_connectionPool = std::make_unique<ConnectionPool>(paths::getDatabasePath(), 2);
+
     m_libraryManager = std::make_unique<LibraryManager>(*m_database);
     m_projectManager = std::make_unique<ProjectManager>(*m_database);
     m_workspace = std::make_unique<Workspace>();
@@ -182,8 +186,8 @@ bool Application::init() {
         m_libraryManager->setThumbnailGenerator(m_thumbnailGenerator.get());
     }
 
-    // Initialize import queue
-    m_importQueue = std::make_unique<ImportQueue>(*m_database);
+    // Initialize import queue with connection pool
+    m_importQueue = std::make_unique<ImportQueue>(*m_connectionPool);
 
     // Initialize UI panels
     m_viewportPanel = std::make_unique<ViewportPanel>();
@@ -1051,12 +1055,13 @@ void Application::shutdown() {
     m_startPage.reset();
 
     // Destroy core systems
-    m_importQueue.reset(); // Joins worker thread
+    m_importQueue.reset();    // Joins worker thread, releases pooled connections
+    m_connectionPool.reset(); // Closes pooled connections
     m_workspace.reset();
     m_thumbnailGenerator.reset();
     m_projectManager.reset();
     m_libraryManager.reset();
-    m_database.reset();
+    m_database.reset(); // Close main thread connection
     m_eventBus.reset(); // Destroy after all subscribers
 
     ImGui_ImplOpenGL3_Shutdown();

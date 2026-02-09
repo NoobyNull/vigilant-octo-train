@@ -16,6 +16,7 @@ namespace dw {
 // Forward declarations
 class EventBus;
 class Database;
+class ConnectionPool;
 class LibraryManager;
 class ProjectManager;
 class Workspace;
@@ -102,6 +103,7 @@ class Application {
     // Core systems
     std::unique_ptr<EventBus> m_eventBus;
     std::unique_ptr<Database> m_database;
+    std::unique_ptr<ConnectionPool> m_connectionPool;
     std::unique_ptr<LibraryManager> m_libraryManager;
     std::unique_ptr<ProjectManager> m_projectManager;
     std::unique_ptr<Workspace> m_workspace;
