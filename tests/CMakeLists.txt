@@ -20,6 +20,8 @@ set(DW_TEST_SOURCES
     test_loader_factory.cpp
     test_project.cpp
     test_exporter.cpp
+    # Tier 1 — EventBus
+    test_event_bus.cpp
     # Tier 1 — core logic
     test_types.cpp
     test_gcode_analyzer.cpp
@@ -41,6 +43,7 @@ set(DW_TEST_SOURCES
 # Source files needed by the tests (compiled from src/)
 set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/types.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/events/event_bus.cpp
     ${CMAKE_SOURCE_DIR}/src/core/utils/log.cpp
     ${CMAKE_SOURCE_DIR}/src/core/utils/string_utils.cpp
     ${CMAKE_SOURCE_DIR}/src/core/utils/file_utils.cpp
