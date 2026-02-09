@@ -104,9 +104,10 @@ void Renderer::renderMesh(const GPUMesh& gpuMesh, const Mat4& modelMatrix) {
     m_meshShader.setMat4("uView", m_camera.viewMatrix());
     m_meshShader.setMat4("uProjection", m_camera.projectionMatrix());
 
-    // Calculate normal matrix (inverse transpose of model matrix for lighting)
-    // For simplicity, assuming uniform scaling
-    m_meshShader.setMat4("uNormalMatrix", modelMatrix);
+    // Calculate normal matrix: transpose(inverse(mat3(model))) for correct lighting
+    // under non-uniform scaling
+    glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(modelMatrix)));
+    m_meshShader.setMat3("uNormalMatrix", normalMatrix);
 
     m_meshShader.setVec3("uLightDir", m_settings.lightDir);
     m_meshShader.setVec3("uLightColor", m_settings.lightColor);
