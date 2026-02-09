@@ -184,6 +184,12 @@ Plans:
 
 **Why Third:** Builds on understanding from ConnectionPool (1.2). Critical for preventing ImGui threading violations identified in research (Pitfall 3).
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 1.3-01-PLAN.md — TDD: MainThreadQueue core + thread_utils assertions
+- [ ] 1.3-02-PLAN.md — Integrate into Application, add threading contracts and THREADING.md
+
 **Tasks:**
 
 1. **Design MainThreadQueue**
@@ -262,6 +268,13 @@ Plans:
 **Goal:** Extract concerns from Application.cpp (1,071 lines) into focused managers, reducing to ~300 lines (thin coordinator).
 
 **Why Fourth:** This is the highest-risk refactoring. Doing it AFTER infrastructure (EventBus, ConnectionPool, MainThreadQueue) is in place means extracted managers can use those systems immediately.
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 1.4-01-PLAN.md — Wave 1: Extract UIManager (panel/dialog lifecycle, layout)
+- [ ] 1.4-02-PLAN.md — Wave 2: Extract FileIOManager (import/export/project ops)
+- [ ] 1.4-03-PLAN.md — Wave 3: Extract ConfigManager (config watching, restart)
 
 **Tasks:**
 
@@ -350,97 +363,47 @@ Plans:
 
 ## Sub-Phase 1.5: Bug Fixes (BUG-01 through BUG-07)
 
-**Goal:** Fix all 7 bugs identified in TODOS.md, improving performance, correctness, and robustness.
+**Goal:** Fix remaining bugs and add regression tests for already-fixed bugs, improving performance, correctness, and robustness.
 
-**Why Fifth:** Many bugs are independent and can be fixed after infrastructure is stable. BUG-06 (ImportProgress race) is already addressed by MainThreadQueue (1.3).
+**Why Fifth:** Many bugs are independent and can be fixed after infrastructure is stable. BUG-06 (ImportProgress race) deferred to Sub-Phase 1.3.
 
-**Tasks:**
+**Plans:** 3 plans
 
-1. **BUG-01: Cache ViewCube geometry**
-   - File: `src/ui/panels/viewport_panel.cpp:279-451`
-   - Issue: ViewCube recomputed every frame even when camera stationary
-   - Fix: Cache geometry, recompute only on camera change
-   - Add dirty flag set by camera updates
-   - Store cached vertices, faces, depth order
+Plans:
+- [ ] 1.5-01-PLAN.md — Fix shader uniform cache (BUG-04) and normal matrix (BUG-07)
+- [ ] 1.5-02-PLAN.md — Cache ViewCube geometry (BUG-01)
+- [ ] 1.5-03-PLAN.md — Verify already-fixed bugs (BUG-02, BUG-03, BUG-05) and add regression tests
 
-2. **BUG-02: Use fmod for camera angle wrapping**
-   - File: `src/render/camera.cpp:38-41`
-   - Issue: O(n) loop for angle wrapping
-   - Fix: Replace `while (m_yaw > 360) m_yaw -= 360;` with `m_yaw = fmod(m_yaw, 360.0f);`
-   - Apply to both yaw and pitch
-
-3. **BUG-03: Zero dimensions in framebuffer move constructor**
-   - File: `src/render/framebuffer.cpp:12-21`
-   - Issue: Moved-from object retains width/height while GL handles zeroed
-   - Fix: Zero width/height in source object
-   - Add assertions for moved-from state in debug builds
-
-4. **BUG-04: Use std::optional for shader uniform cache**
-   - File: `src/render/shader.cpp:94-103`
-   - Issue: -1 cached identically to valid locations
-   - Fix: Use `std::optional<GLint>` or don't cache -1
-   - Update getUniformLocation to return optional
-   - Update callers to check has_value()
-
-5. **BUG-05: Escape LIKE wildcards in database searches**
-   - Files: `src/core/database/model_repository.cpp:103,139`, `project_repository.cpp:69`
-   - Issue: `%` and `_` in user input not escaped
-   - Fix: Implement LIKE escape function
-   - Replace `%` with `\%`, `_` with `\_`
-   - Use `ESCAPE '\'` in SQL queries
-   - Apply to all LIKE queries in repositories
-
-6. **BUG-06: Fix ImportProgress race condition**
-   - File: `src/core/import/import_queue.cpp`
-   - Issue: `ImportProgress::currentFileName` char[256] written by worker, read by UI without sync
-   - Fix: Already addressed by MainThreadQueue (sub-phase 1.3)
-   - Verify: ImportQueue posts progress updates to MainThreadQueue
-   - UI reads progress from main thread only
-   - Remove char[256], use std::string with proper synchronization
-
-7. **BUG-07: Fix normal matrix for non-uniform scaling**
-   - File: `src/render/renderer.cpp:108-109`
-   - Issue: Normal matrix assumes uniform scaling
-   - Fix: Use `transpose(inverse(mat3(modelMatrix)))` for normal matrix
-   - Update shader to use corrected normal matrix
-   - Test with non-uniformly scaled models
-
-8. **Write/update tests for bug fixes**
-   - Add tests for ViewCube caching (no recomputation when camera unchanged)
-   - Add tests for camera angle wrapping edge cases
-   - Add tests for framebuffer move semantics
-   - Add tests for shader uniform cache with missing uniforms
-   - Add tests for LIKE wildcard escaping (search for "100%" doesn't match everything)
-   - Add tests for non-uniform scaling (verify correct lighting)
+**Bug Status (from research):**
+- BUG-01: NOT FIXED — ViewCube recomputes every frame
+- BUG-02: ALREADY FIXED — camera.cpp uses std::fmod
+- BUG-03: ALREADY FIXED — framebuffer.cpp zeros width/height
+- BUG-04: NOT FIXED — shader cache only stores valid locations
+- BUG-05: ALREADY FIXED — escapeLike exists and is used
+- BUG-06: DEFERRED to Sub-Phase 1.3 (needs MainThreadQueue)
+- BUG-07: NOT FIXED — normal matrix uses model matrix directly
 
 **Files Affected:**
+- MODIFIED: `src/ui/panels/viewport_panel.h` (BUG-01)
 - MODIFIED: `src/ui/panels/viewport_panel.cpp` (BUG-01)
-- MODIFIED: `src/render/camera.cpp` (BUG-02)
-- MODIFIED: `src/render/framebuffer.cpp` (BUG-03)
 - MODIFIED: `src/render/shader.h` (BUG-04)
 - MODIFIED: `src/render/shader.cpp` (BUG-04)
-- MODIFIED: `src/core/database/model_repository.cpp` (BUG-05)
-- MODIFIED: `src/core/database/project_repository.cpp` (BUG-05)
-- MODIFIED: `src/core/import/import_queue.cpp` (BUG-06)
 - MODIFIED: `src/render/renderer.cpp` (BUG-07)
-- MODIFIED: `tests/test_camera.cpp` (BUG-02 tests)
-- MODIFIED: `tests/test_database.cpp` (BUG-05 tests)
-- NEW: `tests/test_viewport_panel.cpp` (BUG-01 tests, if testable)
-- MODIFIED: Various test files for shader, renderer
+- MODIFIED: `src/render/shader_sources.h` (BUG-07)
+- MODIFIED: `tests/test_camera.cpp` (BUG-02 regression tests)
+- MODIFIED: `tests/test_string_utils.cpp` (BUG-05 regression tests)
 
-**Dependencies:**
-- Sub-phase 1.3 (BUG-06 uses MainThreadQueue)
+**Dependencies:** None (BUG-06 deferred)
 
 **Success Criteria:**
-- All 7 bugs fixed and verified
-- New tests added for each bug fix
-- All existing tests still pass
-- Manual testing confirms fixes (especially BUG-01 ViewCube, BUG-07 lighting)
+- BUG-01, BUG-04, BUG-07 fixed
+- BUG-02, BUG-03, BUG-05 verified with regression tests
+- BUG-06 deferred to Sub-Phase 1.3
+- All existing tests pass plus new regression tests
 
 **Risk Flags:**
 - LOW: Most fixes are localized, low risk
 - MEDIUM: BUG-07 (normal matrix) requires shader change, test thoroughly
-- MEDIUM: BUG-05 (LIKE escaping) must be applied consistently across all repositories
 
 ---
 
@@ -539,9 +502,9 @@ Plans:
 |-----------|--------|-----------------|
 | 1.1 - EventBus | ✓ Complete | 2026-02-08 |
 | 1.2 - ConnectionPool | Planning Complete | - |
-| 1.3 - MainThreadQueue | Not Started | - |
-| 1.4 - God Class Decomposition | Not Started | - |
-| 1.5 - Bug Fixes | Not Started | - |
+| 1.3 - MainThreadQueue | Planning Complete | - |
+| 1.4 - God Class Decomposition | Planning Complete | - |
+| 1.5 - Bug Fixes | Planning Complete | - |
 | 1.6 - Dead Code Cleanup | Planning Complete | - |
 
 **Overall Progress:** 1/6 sub-phases complete (17%)
@@ -583,4 +546,5 @@ Plans:
 *Roadmap created: 2026-02-08*
 *Sub-phase 1.1 planned: 2026-02-08*
 *Sub-phase 1.2 planned: 2026-02-08*
+*Sub-phase 1.5 planned: 2026-02-08*
 *Sub-phase 1.6 planned: 2026-02-08*
