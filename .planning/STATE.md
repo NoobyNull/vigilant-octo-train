@@ -1,7 +1,7 @@
 # Project State: Digital Workshop
 
 **Last Updated:** 2026-02-10
-**Current Session:** Phase 2 Import Pipeline - Plan 02 Complete
+**Current Session:** Phase 2 Import Pipeline - Plan 05 Complete
 
 ---
 
@@ -19,12 +19,12 @@ Phase 2: Import Pipeline — Build G-code/mesh file import system with backgroun
 
 **Active Phase:** Phase 2 — Import Pipeline
 
-**Current Plan:** 02-04 (Plan 4/8 complete)
+**Current Plan:** 02-05 (Plan 5/8 complete)
 
-**Status:** Plan 02-04 complete. ImportQueue overhauled with ThreadPool-based parallel import. G-code and mesh files import simultaneously using configurable thread count. Batch summary tracks duplicates and errors. FileHandler integration applies copy/move/leave modes. All 421 tests pass.
+**Status:** Plan 02-05 complete. Background import UI feedback implemented. StatusBar widget shows non-blocking import progress. ToastManager provides stacked notifications with rate limiting. ImportSummaryDialog displays batch results with duplicate/error listings. Import is fully non-blocking - user can continue working during batch imports.
 
 **Progress:**
-[████████░░] 79%
+[█████████░] 86%
 
 Phase 1: [████████████████████] 6/6 sub-phases (100%)
 1.1 EventBus                 [##########] Plan 2/2 complete
@@ -34,11 +34,12 @@ Phase 1: [████████████████████] 6/6 sub-
 1.5 Bug Fixes                [##########] Plan 3/3 complete
 1.6 Dead Code Cleanup        [##########] Plan 1/1 complete
 
-Phase 2: [█████░░░░░] Plan 4/8 (50%)
+Phase 2: [██████░░░░] Plan 5/8 (63%)
 2.1 ThreadPool & Config      [##########] Plan 1/1 complete
 2.2 G-code Schema & Repo     [##########] Plan 1/1 complete
 2.3 G-code Loader & Handler  [##########] Plan 1/1 complete
 2.4 Parallel Import Queue    [##########] Plan 1/1 complete
+2.5 Background Import UI     [##########] Plan 1/1 complete
 
 ---
 
@@ -63,8 +64,9 @@ Phase 2: [█████░░░░░] Plan 4/8 (50%)
 | 2.0   | 02   | 7m 12s   | 2     | 6     | 2026-02-10 |
 | 2.0   | 03   | 5m 2s    | 2     | 7     | 2026-02-10 |
 | 2.0   | 04   | 5m 44s   | 2     | 7     | 2026-02-10 |
+| 2.0   | 05   | 4m 54s   | 2     | 11    | 2026-02-10 |
 
-**Cycle Time:** 3m 40s per plan (16 plans completed)
+**Cycle Time:** 3m 39s per plan (17 plans completed)
 
 **Completion Rate:** 6 sub-phases in 2 days (Phase 1 complete)
 
@@ -73,6 +75,7 @@ Phase 2: [█████░░░░░] Plan 4/8 (50%)
 **Phase 2 Started:** Import Pipeline infrastructure - ThreadPool and Config foundations in place
 
 ---
+| Phase 02 P05 | 294 | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -278,7 +281,7 @@ Phase 2: [█████░░░░░] Plan 4/8 (50%)
 
 ### Current Blockers
 
-**None** -- Plan 02-01 complete, ready for 02-02 (ImportQueue overhaul).
+**None** -- Plan 02-05 complete, ready for 02-06 (Application wiring).
 
 ### Quick Tasks Completed
 
@@ -292,58 +295,58 @@ Phase 2: [█████░░░░░] Plan 4/8 (50%)
 
 ### What Was Just Accomplished
 
-**Session Goal:** Execute Phase 02 Plan 04 (Parallel Import Queue with ThreadPool)
+**Session Goal:** Execute Phase 02 Plan 05 (Background Import UI Feedback)
 
 **Completed:**
-- Task 1: Extended ImportTask for G-code type and batch summary tracking
-- Task 2: Replaced single worker with ThreadPool-based parallel import
-- ImportQueue now uses configurable thread count from Config (Auto/Fixed/Expert tiers)
-- G-code files import via manual GCodeLoader creation with metadata extraction
-- Mesh files continue through existing LoaderFactory path unchanged
-- FileHandler integration applies copy/move/leave modes after successful parse
-- Batch summary tracks duplicates and errors for end-of-batch reporting
-- All 421 functional tests passing (1 lint failure pre-existing)
-- Execution time: 5m 44s
+- Task 1: Created StatusBar widget and ToastManager
+- Task 2: Created ImportSummaryDialog and integrated into UIManager
+- StatusBar shows non-blocking import progress with LoadingState integration
+- ToastManager provides stacked notifications with rate limiting (max 10 errors)
+- ImportSummaryDialog displays batch results with duplicate/error listings
+- UIManager.renderBackgroundUI() orchestrates all background UI rendering
+- Import is fully non-blocking - user can continue working during imports
+- Build passes with no errors
+- Execution time: 4m 54s
 
 **Artifacts Created:**
-- `.planning/phases/02-import-pipeline/02-04-SUMMARY.md` -- Plan 04 summary
+- `.planning/phases/02-import-pipeline/02-05-SUMMARY.md` -- Plan 05 summary
+- `src/ui/widgets/status_bar.h` -- StatusBar widget header
+- `src/ui/widgets/status_bar.cpp` -- StatusBar implementation
+- `src/ui/widgets/toast.h` -- ToastManager singleton
+- `src/ui/widgets/toast.cpp` -- Toast rendering and rate limiting
+- `src/ui/dialogs/import_summary_dialog.h` -- ImportSummaryDialog header
+- `src/ui/dialogs/import_summary_dialog.cpp` -- Batch summary modal
 
 **Artifacts Modified:**
-- `src/core/import/import_task.h` -- Added ImportType, ImportBatchSummary, G-code fields
-- `src/core/import/import_queue.h` -- ThreadPool integration, batch callbacks
-- `src/core/import/import_queue.cpp` -- Parallel processing, type-specific import paths
-- `src/core/import/file_handler.h` -- Forward declare FileHandlingMode
-- `src/core/import/file_handler.cpp` -- Include config.h
-- `src/CMakeLists.txt` -- Added thread_pool.cpp
-- `tests/CMakeLists.txt` -- Added thread_pool.cpp and missing dependencies
+- `src/managers/ui_manager.h` -- Added background UI methods and widget members
+- `src/managers/ui_manager.cpp` -- Integrated StatusBar, ToastManager, ImportSummaryDialog
+- `src/CMakeLists.txt` -- Added new widget and dialog source files
 
 **Commits:**
-- `d1860ba` -- feat(02-04): extend ImportTask for G-code type and batch summary tracking
-- `1b3d659` -- feat(02-04): replace single worker with ThreadPool-based parallel import
+- `08b89bf` -- feat(02-05): create StatusBar widget and ToastManager
+- `d7083b7` -- feat(02-05): create ImportSummaryDialog and integrate background UI into UIManager
 
 ### What to Do Next
 
-**Phase 2 Import Pipeline - 50% Complete**
+**Phase 2 Import Pipeline - 63% Complete**
 
-Completed plans (4/8):
+Completed plans (5/8):
 - Plan 02-01: ThreadPool Infrastructure & Import Config ✓
 - Plan 02-02: Database Schema for G-code Storage ✓
 - Plan 02-03: G-code Loader and File Handler ✓
 - Plan 02-04: Parallel Import Queue ✓
+- Plan 02-05: Background Import UI Feedback ✓
 
-**Success Criteria Met (Plan 02-04):**
-- [x] Files import in parallel (thread count matches Config tier)
-- [x] G-code files parsed via direct GCodeLoader creation
-- [x] Mesh files continue to work via LoaderFactory
-- [x] File handling mode (copy/move/leave) applied after parse
-- [x] Duplicates skipped, recorded in batch summary
-- [x] Errors recorded per-file, do not stop batch
-- [x] Batch complete callback provides full ImportBatchSummary
-- [x] All 421 functional tests pass
+**Success Criteria Met (Plan 02-05):**
+- [x] StatusBar shows import progress (bar, text, counts) when active
+- [x] Toast notifications appear for import errors (rate-limited)
+- [x] Import summary dialog shows at batch completion with duplicate/error details
+- [x] Import is fully non-blocking (no modal overlay)
+- [x] StatusBar integrates LoadingState for existing functionality
+- [x] UIManager.renderBackgroundUI() provides unified background UI rendering
 
 **Next Plans:**
-- Plan 02-05: Background thumbnail generation with main-thread queue
-- Plan 02-06: Import progress UI and batch summary display
+- Plan 02-06: Application wiring (connect import callbacks to UIManager)
 - Plan 02-07: Library panel G-code integration
 - Plan 02-08: Import error handling and recovery
 
@@ -441,3 +444,23 @@ Completed plans (4/8):
     - Decision: Atomic remaining tasks counter, last task fires callback
     - Rationale: Simple, lock-free, no sentinel task or periodic polling needed
     - Impact: Zero coordination overhead between workers, batch completion is instant
+
+36. **StatusBar Widget Integrates LoadingState and ImportProgress (2026-02-10, Plan 02-05)**
+    - Decision: Single StatusBar widget displays both model loading state and import progress
+    - Rationale: Maintains existing LoadingState functionality while adding non-blocking import feedback
+    - Impact: StatusBar serves dual purpose - eliminates need for separate status displays
+
+37. **ToastManager Rate Limiting for Import Errors (2026-02-10, Plan 02-05)**
+    - Decision: Limit to 10 error toasts per batch, then show summary toast
+    - Rationale: Prevents notification flood during large batch imports with many failures
+    - Impact: UI remains responsive even with hundreds of errors, user still aware of issues
+
+38. **Background UI Rendering Method (2026-02-10, Plan 02-05)**
+    - Decision: UIManager.renderBackgroundUI(deltaTime, loadingState) orchestrates StatusBar, ToastManager, ImportSummaryDialog
+    - Rationale: Single entry point for all background UI rendering, clean separation from panels/dialogs
+    - Impact: Application calls one method instead of three separate render calls
+
+39. **Old Modal Methods Deprecated Not Removed (2026-02-10, Plan 02-05)**
+    - Decision: Mark renderImportProgress and renderStatusBar as deprecated, keep functional
+    - Rationale: Application still calls these methods - removal deferred to Plan 06/07 wiring
+    - Impact: No breaking changes to Application in this plan, smooth migration path
