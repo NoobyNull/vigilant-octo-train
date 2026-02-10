@@ -1,5 +1,6 @@
 #include "stl_loader.h"
 
+#include <cmath>
 #include <cstring>
 #include <sstream>
 #include <unordered_map>
@@ -87,6 +88,11 @@ LoadResult STLLoader::loadBinary(const ByteBuffer& data) {
     std::memcpy(&triangleCount, ptr, sizeof(triangleCount));
     ptr += 4;
 
+    // Handle empty STL
+    if (triangleCount == 0) {
+        return LoadResult{nullptr, "STL file contains no geometry (0 triangles)"};
+    }
+
     // Guard against integer overflow: triangleCount * 50 must not wrap
     if (triangleCount > (SIZE_MAX - 84) / 50) {
         return LoadResult{nullptr, "Invalid binary STL: triangle count causes overflow"};
@@ -95,7 +101,9 @@ LoadResult STLLoader::loadBinary(const ByteBuffer& data) {
     // Validate size
     usize expectedSize = 84 + static_cast<usize>(triangleCount) * 50;
     if (data.size() < expectedSize) {
-        return LoadResult{nullptr, "Invalid binary STL: file size mismatch"};
+        std::ostringstream oss;
+        oss << "STL file truncated: expected " << triangleCount << " triangles but file too short";
+        return LoadResult{nullptr, oss.str()};
     }
 
     auto mesh = std::make_shared<Mesh>();
@@ -114,6 +122,11 @@ LoadResult STLLoader::loadBinary(const ByteBuffer& data) {
         std::memcpy(&normal.z, ptr, sizeof(f32));
         ptr += 4;
 
+        // Validate normal for NaN/Inf
+        if (!std::isfinite(normal.x) || !std::isfinite(normal.y) || !std::isfinite(normal.z)) {
+            return LoadResult{nullptr, "STL contains invalid normal data (NaN or Inf values)"};
+        }
+
         // Read 3 vertices (36 bytes)
         u32 indices[3];
         for (int j = 0; j < 3; ++j) {
@@ -125,6 +138,20 @@ LoadResult STLLoader::loadBinary(const ByteBuffer& data) {
             std::memcpy(&v.position.z, ptr, sizeof(f32));
             ptr += 4;
             v.normal = normal;
+
+            // Validate vertex for NaN/Inf
+            if (!std::isfinite(v.position.x) || !std::isfinite(v.position.y) ||
+                !std::isfinite(v.position.z)) {
+                return LoadResult{nullptr, "STL contains invalid vertex data (NaN or Inf values)"};
+            }
+
+            // Bounds check on vertex data
+            constexpr f32 MAX_COORD = 1e6f;
+            if (std::abs(v.position.x) > MAX_COORD ||
+                std::abs(v.position.y) > MAX_COORD ||
+                std::abs(v.position.z) > MAX_COORD) {
+                return LoadResult{nullptr, "STL contains extreme coordinates (>1e6), likely corrupt"};
+            }
 
             // Deduplicate vertices
             auto it = vertexMap.find(v);
@@ -159,8 +186,10 @@ LoadResult STLLoader::loadAscii(const std::string& content) {
     std::string line;
     Vec3 currentNormal{0.0f, 0.0f, 1.0f};
     std::vector<u32> faceIndices;
+    int lineNumber = 0;
 
     while (std::getline(stream, line)) {
+        lineNumber++;
         line = str::trim(line);
         if (line.empty()) {
             continue;
@@ -170,25 +199,63 @@ LoadResult STLLoader::loadAscii(const std::string& content) {
 
         if (str::startsWith(lower, "facet normal")) {
             // Parse normal
-            std::istringstream ns(line.substr(12));
-            ns >> currentNormal.x >> currentNormal.y >> currentNormal.z;
+            try {
+                std::istringstream ns(line.substr(12));
+                ns >> currentNormal.x >> currentNormal.y >> currentNormal.z;
+
+                // Validate normal
+                if (!std::isfinite(currentNormal.x) || !std::isfinite(currentNormal.y) ||
+                    !std::isfinite(currentNormal.z)) {
+                    std::ostringstream oss;
+                    oss << "STL contains invalid normal data at line " << lineNumber
+                        << " (NaN or Inf values)";
+                    return LoadResult{nullptr, oss.str()};
+                }
+            } catch (const std::exception& e) {
+                log::warningf("STL", "Malformed normal at line %d, using default", lineNumber);
+                currentNormal = Vec3{0.0f, 0.0f, 1.0f};
+            }
             faceIndices.clear();
         } else if (str::startsWith(lower, "vertex")) {
             // Parse vertex
-            std::istringstream vs(line.substr(6));
-            Vertex v;
-            vs >> v.position.x >> v.position.y >> v.position.z;
-            v.normal = currentNormal;
+            try {
+                std::istringstream vs(line.substr(6));
+                Vertex v;
+                vs >> v.position.x >> v.position.y >> v.position.z;
+                v.normal = currentNormal;
 
-            // Deduplicate
-            auto it = vertexMap.find(v);
-            if (it != vertexMap.end()) {
-                faceIndices.push_back(it->second);
-            } else {
-                u32 index = mesh->vertexCount();
-                vertexMap[v] = index;
-                mesh->addVertex(v);
-                faceIndices.push_back(index);
+                // Validate vertex
+                if (!std::isfinite(v.position.x) || !std::isfinite(v.position.y) ||
+                    !std::isfinite(v.position.z)) {
+                    std::ostringstream oss;
+                    oss << "STL contains invalid vertex data at line " << lineNumber
+                        << " (NaN or Inf values)";
+                    return LoadResult{nullptr, oss.str()};
+                }
+
+                // Bounds check
+                constexpr f32 MAX_COORD = 1e6f;
+                if (std::abs(v.position.x) > MAX_COORD ||
+                    std::abs(v.position.y) > MAX_COORD ||
+                    std::abs(v.position.z) > MAX_COORD) {
+                    std::ostringstream oss;
+                    oss << "STL contains extreme coordinates at line " << lineNumber
+                        << " (>1e6), likely corrupt";
+                    return LoadResult{nullptr, oss.str()};
+                }
+
+                // Deduplicate
+                auto it = vertexMap.find(v);
+                if (it != vertexMap.end()) {
+                    faceIndices.push_back(it->second);
+                } else {
+                    u32 index = mesh->vertexCount();
+                    vertexMap[v] = index;
+                    mesh->addVertex(v);
+                    faceIndices.push_back(index);
+                }
+            } catch (const std::exception& e) {
+                log::warningf("STL", "Malformed vertex at line %d, skipping", lineNumber);
             }
         } else if (str::startsWith(lower, "endfacet")) {
             // Add triangle

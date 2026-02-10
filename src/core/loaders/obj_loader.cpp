@@ -1,5 +1,6 @@
 #include "obj_loader.h"
 
+#include <cmath>
 #include <sstream>
 #include <unordered_map>
 
@@ -94,8 +95,10 @@ LoadResult OBJLoader::parseContent(const std::string& content) {
 
     std::istringstream stream(content);
     std::string line;
+    int lineNumber = 0;
 
     while (std::getline(stream, line)) {
+        lineNumber++;
         line = str::trim(line);
 
         // Skip empty lines and comments
@@ -103,26 +106,48 @@ LoadResult OBJLoader::parseContent(const std::string& content) {
             continue;
         }
 
-        std::istringstream ls(line);
-        std::string cmd;
-        ls >> cmd;
+        try {
+            std::istringstream ls(line);
+            std::string cmd;
+            ls >> cmd;
 
-        if (cmd == "v") {
-            // Vertex position
-            Vec3 pos;
-            ls >> pos.x >> pos.y >> pos.z;
-            positions.push_back(pos);
-        } else if (cmd == "vt") {
-            // Texture coordinate
-            Vec2 tex;
-            ls >> tex.x >> tex.y;
-            texCoords.push_back(tex);
-        } else if (cmd == "vn") {
-            // Normal
-            Vec3 norm;
-            ls >> norm.x >> norm.y >> norm.z;
-            normals.push_back(norm);
-        } else if (cmd == "f") {
+            if (cmd == "v") {
+                // Vertex position
+                Vec3 pos;
+                ls >> pos.x >> pos.y >> pos.z;
+
+                // Validate position
+                if (!std::isfinite(pos.x) || !std::isfinite(pos.y) || !std::isfinite(pos.z)) {
+                    std::ostringstream oss;
+                    oss << "OBJ contains invalid vertex position at line " << lineNumber
+                        << " (NaN or Inf values)";
+                    return LoadResult{nullptr, oss.str()};
+                }
+
+                positions.push_back(pos);
+            } else if (cmd == "vt") {
+                // Texture coordinate
+                Vec2 tex;
+                ls >> tex.x >> tex.y;
+                texCoords.push_back(tex);
+            } else if (cmd == "vn") {
+                // Normal
+                Vec3 norm;
+                ls >> norm.x >> norm.y >> norm.z;
+
+                // Validate normal
+                if (!std::isfinite(norm.x) || !std::isfinite(norm.y) || !std::isfinite(norm.z)) {
+                    log::warningf("OBJ", "Invalid normal at line %d, skipping", lineNumber);
+                    continue;
+                }
+
+                normals.push_back(norm);
+            } else if (cmd == "mtllib") {
+                // Material library reference - log warning but continue
+                std::string mtlFile;
+                ls >> mtlFile;
+                log::warningf("OBJ", "MTL file reference '%s' found but not loaded - continuing without materials", mtlFile.c_str());
+            } else if (cmd == "f") {
             // Face - can be triangles, quads, or polygons
             std::vector<u32> faceIndices;
             std::string vertexStr;
@@ -163,16 +188,23 @@ LoadResult OBJLoader::parseContent(const std::string& content) {
                 faceIndices.push_back(getOrCreateVertex(key));
             }
 
-            // Triangulate polygon (fan triangulation)
-            for (usize i = 2; i < faceIndices.size(); ++i) {
-                mesh->addTriangle(faceIndices[0], faceIndices[i - 1], faceIndices[i]);
+                // Triangulate polygon (fan triangulation)
+                for (usize i = 2; i < faceIndices.size(); ++i) {
+                    mesh->addTriangle(faceIndices[0], faceIndices[i - 1], faceIndices[i]);
+                }
             }
+            // Ignore: usemtl, g, o, s, etc.
+        } catch (const std::exception& e) {
+            log::warningf("OBJ", "Error parsing line %d: %s - skipping", lineNumber, e.what());
         }
-        // Ignore: mtllib, usemtl, g, o, s, etc.
+    }
+
+    if (positions.empty()) {
+        return LoadResult{nullptr, "OBJ file contains no vertices"};
     }
 
     if (mesh->triangleCount() == 0) {
-        return LoadResult{nullptr, "No faces found in OBJ file"};
+        return LoadResult{nullptr, "OBJ file contains no faces"};
     }
 
     // Calculate normals if not provided

@@ -1,6 +1,7 @@
 #include "threemf_loader.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <fstream>
 #include <sstream>
@@ -189,11 +190,18 @@ std::string getXmlAttribute(const std::string& tag, const std::string& attr) {
 LoadResult ThreeMFLoader::load(const Path& path) {
     LoadResult result;
 
+    // Validate file exists and has minimum size for a ZIP
+    auto fileSize = file::getFileSize(path);
+    if (!fileSize || *fileSize < 22) {
+        result.error = "3MF file has invalid archive structure (too small for ZIP)";
+        return result;
+    }
+
     // Try to extract 3dmodel.model from the ZIP
     std::string modelXml = extractModelXML(path);
     if (modelXml.empty()) {
-        result.error = "Failed to extract model data from 3MF file. "
-                       "The file may use compression not supported by this loader.";
+        result.error = "3MF archive missing required model file (3D/3dmodel.model). "
+                       "Archive may be corrupt or use unsupported compression.";
         return result;
     }
 
@@ -205,10 +213,14 @@ LoadResult ThreeMFLoader::loadFromBuffer(const ByteBuffer& data) {
         return LoadResult{nullptr, "Empty buffer"};
     }
 
+    if (data.size() < 22) {
+        return LoadResult{nullptr, "3MF archive is corrupt or truncated (too small for ZIP)"};
+    }
+
     std::string modelXml = extractModelXMLFromBuffer(data);
     if (modelXml.empty()) {
-        return LoadResult{nullptr, "Failed to extract model data from 3MF buffer. "
-                                   "The file may use compression not supported by this loader."};
+        return LoadResult{nullptr, "3MF archive missing required model file (3D/3dmodel.model). "
+                                   "Archive may be corrupt or use unsupported compression."};
     }
 
     return parseModelXML(modelXml);
@@ -294,6 +306,13 @@ LoadResult ThreeMFLoader::parseModelXML(const std::string& xmlContent) {
         return result;
     }
 
+    // Validate output mesh
+    if (result.mesh->triangleCount() == 0) {
+        result.error = "3MF model contains no geometry";
+        result.mesh.reset();
+        return result;
+    }
+
     result.mesh->recalculateBounds();
 
     log::infof("3MF", "Loaded: %u vertices, %u triangles", result.mesh->vertexCount(),
@@ -332,11 +351,23 @@ bool ThreeMFLoader::parseVertices(const std::string& verticesBlock,
         std::string zStr = getXmlAttribute(tag, "z");
 
         if (!xStr.empty() && !yStr.empty() && !zStr.empty()) {
-            Vec3 v;
-            v.x = std::stof(xStr);
-            v.y = std::stof(yStr);
-            v.z = std::stof(zStr);
-            outVertices.push_back(v);
+            try {
+                Vec3 v;
+                v.x = std::stof(xStr);
+                v.y = std::stof(yStr);
+                v.z = std::stof(zStr);
+
+                // Validate vertex for NaN/Inf
+                if (!std::isfinite(v.x) || !std::isfinite(v.y) || !std::isfinite(v.z)) {
+                    log::warningf("3MF", "Invalid vertex with NaN/Inf coordinates, skipping");
+                    pos = tagEnd + 1;
+                    continue;
+                }
+
+                outVertices.push_back(v);
+            } catch (const std::exception& e) {
+                log::warningf("3MF", "Failed to parse vertex coordinates: %s", e.what());
+            }
         }
 
         pos = tagEnd + 1;
