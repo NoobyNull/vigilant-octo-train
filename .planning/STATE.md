@@ -1,7 +1,7 @@
 # Project State: Digital Workshop
 
 **Last Updated:** 2026-02-10
-**Current Session:** Phase 2 Import Pipeline - COMPLETE (8/8 Plans)
+**Current Session:** Phase 2 Import Pipeline - COMPLETE (10/10 Plans)
 
 ---
 
@@ -19,12 +19,12 @@ Phase 2: Import Pipeline — Build G-code/mesh file import system with backgroun
 
 **Active Phase:** Phase 2 — Import Pipeline
 
-**Current Plan:** 02-09 (Plan 9/10 complete)
+**Current Plan:** 02-10 (Plan 10/10 complete - PHASE COMPLETE)
 
-**Status:** Gap closure plan complete. Users can now drag-and-drop entire folders of models - recursive directory scanning automatically discovers all supported files in nested subfolders. Filesystem errors handled gracefully. All 422 tests pass.
+**Status:** Final gap closure plan complete. Import completion throttled to one per frame (non-blocking UI), viewport focus preserved during imports (user decision), thumbnail failures now reported via toast with retry logic. Phase 2 Import Pipeline is 100% complete. All 422 tests pass.
 
 **Progress:**
-[██████████] 96%
+[██████████] 100%
 
 Phase 1: [████████████████████] 6/6 sub-phases (100%)
 1.1 EventBus                 [##########] Plan 2/2 complete
@@ -34,7 +34,7 @@ Phase 1: [████████████████████] 6/6 sub-
 1.5 Bug Fixes                [##########] Plan 3/3 complete
 1.6 Dead Code Cleanup        [##########] Plan 1/1 complete
 
-Phase 2: [███████████████████ ] Plan 9/10 (90%)
+Phase 2: [████████████████████] Plan 10/10 (100%) - COMPLETE
 2.1 ThreadPool & Config      [##########] Plan 1/1 complete
 2.2 G-code Schema & Repo     [##########] Plan 1/1 complete
 2.3 G-code Loader & Handler  [##########] Plan 1/1 complete
@@ -44,6 +44,7 @@ Phase 2: [███████████████████ ] Plan 9/10 
 2.7 Toolpath Visualization   [##########] Plan 1/1 complete
 2.8 Pipeline Hardening       [##########] Plan 1/1 complete
 2.9 Folder Drag-and-Drop     [##########] Plan 1/1 complete
+2.10 Import Gap Closure      [##########] Plan 1/1 complete
 
 ---
 
@@ -73,7 +74,7 @@ Phase 2: [███████████████████ ] Plan 9/10 
 | 2.0   | 07   | 5m 16s   | 2     | 11    | 2026-02-10 |
 | 2.0   | 08   | 42s      | 2     | 3     | 2026-02-10 |
 
-**Cycle Time:** 3m 42s per plan (20 plans completed)
+**Cycle Time:** 3m 36s per plan (21 plans completed)
 
 **Completion Rate:** 6 sub-phases in 2 days (Phase 1 complete)
 
@@ -85,6 +86,7 @@ Phase 2: [███████████████████ ] Plan 9/10 
 | Phase 02 P05 | 294 | 2 tasks | 11 files |
 | Phase 02 P07 | 316 | 2 tasks | 11 files |
 | Phase 02 P09 | 106 | 1 tasks | 2 files |
+| Phase 02 P10 | 95 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -290,7 +292,7 @@ Phase 2: [███████████████████ ] Plan 9/10 
 
 ### Current Blockers
 
-**None** -- Phase 2 Import Pipeline complete. Ready for next phase planning.
+**None** -- Phase 2 Import Pipeline 100% complete (10/10 plans). All gap closure issues resolved. Ready for Phase 3 planning.
 
 ### Quick Tasks Completed
 
@@ -304,33 +306,37 @@ Phase 2: [███████████████████ ] Plan 9/10 
 
 ### What Was Just Accomplished
 
-**Session Goal:** Execute Phase 02 Plan 09 (Recursive Folder Drag-and-Drop - Gap Closure)
+**Session Goal:** Execute Phase 02 Plan 10 (Import Pipeline Gap Closure - Final Plan)
 
 **Completed:**
-- Task 1: Add recursive directory scanning to onFilesDropped
-- Added collectSupportedFiles() helper with fs::recursive_directory_iterator
-- Modified onFilesDropped() to detect directories via fs::is_directory()
-- Filesystem errors (permission denied, broken symlinks) logged but non-fatal
-- Users can now drag-and-drop entire folders of models - all nested files imported
+- Task 1: Throttle processCompletedImports to one per frame and remove viewport auto-focus
+- Task 2: Fix thumbnail generation error propagation, retry, and notification
+- Added m_pendingCompletions queue to FileIOManager for throttled processing
+- Process at most one completed import per frame to prevent UI blocking
+- Removed viewport->setMesh() call (user decision: focus stays unchanged)
+- Fixed null thumbnail generator to return false (not true)
+- Added retry logic for thumbnail generation (handles transient GL errors)
+- Show warning toast on thumbnail failure with model name
 - All 422 tests pass
-- Execution time: 1m 46s
+- Execution time: 1m 35s
 
 **Artifacts Created:**
-- `.planning/phases/02-import-pipeline/02-09-SUMMARY.md` -- Plan 09 summary
+- `.planning/phases/02-import-pipeline/02-10-SUMMARY.md` -- Plan 10 summary
 
 **Artifacts Modified:**
-- `src/managers/file_io_manager.h` -- Added collectSupportedFiles declaration (077832a)
-- `src/managers/file_io_manager.cpp` -- Implemented recursive directory scanning (077832a)
-- `.planning/STATE.md` -- Updated to Plan 9/10 complete
+- `src/managers/file_io_manager.h` -- Added m_pendingCompletions queue, ImportTask forward declaration (abd71e0)
+- `src/managers/file_io_manager.cpp` -- Throttled completion processing, removed viewport focus, added retry/toast (abd71e0)
+- `src/core/library/library_manager.cpp` -- Fixed null generator return value (abd71e0)
+- `.planning/STATE.md` -- Updated to Plan 10/10 complete, Phase 2 COMPLETE
 
 **Commits:**
-- `077832a` -- feat(02-09): add recursive directory scanning to drag-and-drop
+- `abd71e0` -- fix(02-10): throttle import completion and fix thumbnail error handling
 
 ### What to Do Next
 
-**Phase 2 Import Pipeline - 9/10 Plans Complete (90%)**
+**Phase 2 Import Pipeline - COMPLETE (10/10 Plans - 100%)**
 
-Completed plans:
+All Phase 2 plans completed:
 - Plan 02-01: ThreadPool Infrastructure & Import Config ✓
 - Plan 02-02: Database Schema for G-code Storage ✓
 - Plan 02-03: G-code Loader and File Handler ✓
@@ -340,18 +346,24 @@ Completed plans:
 - Plan 02-07: Toolpath Visualization and Library Panel G-code Integration ✓
 - Plan 02-08: Import Pipeline Hardening and End-to-End Verification ✓
 - Plan 02-09: Recursive Folder Drag-and-Drop (Gap Closure) ✓
+- Plan 02-10: Import Pipeline Gap Closure (Non-blocking UI, Thumbnail Errors) ✓
 
-**Success Criteria Met (Plan 02-09):**
-- [x] Directories dropped onto app are recursively scanned for supported files
-- [x] Individual files dropped alongside directories handled correctly
-- [x] Filesystem errors (permission denied, broken symlinks) logged but don't crash
-- [x] Clean build, all 422 tests pass
-- [x] Users can import entire project folders in one drag-and-drop
+**Success Criteria Met (Plan 02-10):**
+- [x] processCompletedImports processes at most 1 task per frame
+- [x] Remaining completions queued and processed in subsequent frames
+- [x] Viewport focus does not change when imports complete
+- [x] Properties panel still receives mesh for metadata display
+- [x] Library panel still refreshes on each processed completion
+- [x] Null thumbnail generator returns false (not true)
+- [x] generateThumbnail return value checked with retry logic
+- [x] User sees warning toast when thumbnail fails
+- [x] Toast includes model name for identification
+- [x] All 422 tests pass
 
 **Next Actions:**
-- Execute Plan 02-10 (final import pipeline plan)
 - Complete Phase 2 milestone review
 - Review ROADMAP.md for Phase 3 planning
+- Consider quick tasks or architectural improvements
 
 ---
 
@@ -542,3 +554,23 @@ Completed plans:
     - Decision: Log warnings and continue on filesystem_error (permission denied, broken symlinks)
     - Rationale: Partial results better than complete failure - one inaccessible subfolder shouldn't block entire import
     - Impact: Graceful degradation - application remains stable with problematic directory structures
+
+51. **Per-Frame Import Completion Throttling (2026-02-10, Plan 02-10)**
+    - Decision: Process at most one completed import per frame via m_pendingCompletions queue
+    - Rationale: Thumbnail generation and GPU mesh upload are expensive - processing many in one frame blocks the UI
+    - Impact: Import completion spreads across frames, UI remains responsive during large batch imports
+
+52. **Viewport Focus Preservation During Import (2026-02-10, Plan 02-10)**
+    - Decision: Remove viewport->setMesh() call from processCompletedImports, keep properties panel update
+    - Rationale: User decision stated "After batch completes, viewport focus does not change"
+    - Impact: Properties panel updates for metadata display (lightweight), but viewport rendering stays unchanged
+
+53. **Null Thumbnail Generator Error Propagation (2026-02-10, Plan 02-10)**
+    - Decision: Change null generator check from returning true to returning false
+    - Rationale: Returning true masked the fact that no thumbnail was generated, preventing error handling upstream
+    - Impact: Callers now correctly informed when thumbnails fail to generate
+
+54. **Thumbnail Generation Retry with Toast Notification (2026-02-10, Plan 02-10)**
+    - Decision: Check generateThumbnail return value, retry once, show warning toast on failure
+    - Rationale: Framebuffer creation can fail transiently - one retry handles most GL errors, toast informs user of persistent failures
+    - Impact: Reduced false-positive errors, users aware of thumbnail generation issues
