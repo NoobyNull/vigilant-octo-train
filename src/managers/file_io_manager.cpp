@@ -21,6 +21,7 @@
 #include "ui/panels/library_panel.h"
 #include "ui/panels/properties_panel.h"
 #include "ui/panels/viewport_panel.h"
+#include "ui/widgets/toast.h"
 
 namespace dw {
 
@@ -137,35 +138,56 @@ void FileIOManager::onFilesDropped(const std::vector<std::string>& paths) {
 void FileIOManager::processCompletedImports(ViewportPanel* viewport, PropertiesPanel* properties,
                                             LibraryPanel* library,
                                             std::function<void(bool)> setShowStartPage) {
+    // viewport param kept for API compatibility; focus does not change on import (user decision)
+    (void)viewport;
+
     if (!m_importQueue)
         return;
 
-    auto completed = m_importQueue->pollCompleted();
-    if (!completed.empty()) {
+    // Poll for newly completed tasks and add to pending queue
+    auto newlyCompleted = m_importQueue->pollCompleted();
+    if (!newlyCompleted.empty()) {
         setShowStartPage(false);
+        m_pendingCompletions.insert(m_pendingCompletions.end(),
+            std::make_move_iterator(newlyCompleted.begin()),
+            std::make_move_iterator(newlyCompleted.end()));
     }
-    for (auto& task : completed) {
-        // Generate thumbnail on main thread (needs GL context)
-        // Use LibraryManager which writes the file AND updates the DB
-        if (m_thumbnailGenerator && task.mesh && m_libraryManager) {
-            m_libraryManager->setThumbnailGenerator(m_thumbnailGenerator);
-            m_libraryManager->generateThumbnail(task.modelId, *task.mesh);
-        }
 
-        // Select the last imported model and refresh library
-        if (library) {
-            library->refresh();
-        }
+    // Process at most ONE task per frame to avoid blocking the UI
+    if (m_pendingCompletions.empty())
+        return;
 
-        // Focus the newly imported mesh directly (no re-read from disk)
-        if (task.mesh) {
-            m_workspace->setFocusedMesh(task.mesh);
-            if (viewport) {
-                viewport->setMesh(task.mesh);
-            }
-            if (properties) {
-                properties->setMesh(task.mesh, task.record.name);
-            }
+    auto task = std::move(m_pendingCompletions.front());
+    m_pendingCompletions.erase(m_pendingCompletions.begin());
+
+    // Generate thumbnail on main thread (needs GL context)
+    // Use LibraryManager which writes the file AND updates the DB
+    if (m_thumbnailGenerator && task.mesh && m_libraryManager) {
+        m_libraryManager->setThumbnailGenerator(m_thumbnailGenerator);
+        bool thumbnailOk = m_libraryManager->generateThumbnail(task.modelId, *task.mesh);
+        if (!thumbnailOk) {
+            // Retry once - framebuffer creation can fail transiently
+            thumbnailOk = m_libraryManager->generateThumbnail(task.modelId, *task.mesh);
+        }
+        if (!thumbnailOk) {
+            ToastManager::instance().show(
+                ToastType::Warning,
+                "Thumbnail Failed",
+                "Could not generate thumbnail for: " + task.record.name
+            );
+        }
+    }
+
+    // Refresh library to show the newly imported model
+    if (library) {
+        library->refresh();
+    }
+
+    // Set mesh on workspace for properties display (lightweight, not viewport render)
+    if (task.mesh) {
+        m_workspace->setFocusedMesh(task.mesh);
+        if (properties) {
+            properties->setMesh(task.mesh, task.record.name);
         }
     }
 }

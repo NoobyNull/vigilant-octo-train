@@ -19,12 +19,12 @@ Phase 2: Import Pipeline — Build G-code/mesh file import system with backgroun
 
 **Active Phase:** Phase 2 — Import Pipeline
 
-**Current Plan:** 02-08 (Plan 8/8 complete)
+**Current Plan:** 02-09 (Plan 9/10 complete)
 
-**Status:** Phase 2 Import Pipeline COMPLETE. Hardened STL/OBJ/3MF loaders with comprehensive error handling (truncated/corrupt/malformed files). End-to-end verified: parallel import, G-code with toolpath visualization, non-blocking UX, settings configuration. All 422 tests pass.
+**Status:** Gap closure plan complete. Users can now drag-and-drop entire folders of models - recursive directory scanning automatically discovers all supported files in nested subfolders. Filesystem errors handled gracefully. All 422 tests pass.
 
 **Progress:**
-[██████████] 100%
+[██████████] 96%
 
 Phase 1: [████████████████████] 6/6 sub-phases (100%)
 1.1 EventBus                 [##########] Plan 2/2 complete
@@ -34,7 +34,7 @@ Phase 1: [████████████████████] 6/6 sub-
 1.5 Bug Fixes                [##########] Plan 3/3 complete
 1.6 Dead Code Cleanup        [##########] Plan 1/1 complete
 
-Phase 2: [████████████████████] Plan 8/8 (100%)
+Phase 2: [███████████████████ ] Plan 9/10 (90%)
 2.1 ThreadPool & Config      [##########] Plan 1/1 complete
 2.2 G-code Schema & Repo     [##########] Plan 1/1 complete
 2.3 G-code Loader & Handler  [##########] Plan 1/1 complete
@@ -43,6 +43,7 @@ Phase 2: [████████████████████] Plan 8/8
 2.6 Import Pipeline Wiring   [##########] Plan 1/1 complete
 2.7 Toolpath Visualization   [##########] Plan 1/1 complete
 2.8 Pipeline Hardening       [##########] Plan 1/1 complete
+2.9 Folder Drag-and-Drop     [##########] Plan 1/1 complete
 
 ---
 
@@ -83,6 +84,7 @@ Phase 2: [████████████████████] Plan 8/8
 ---
 | Phase 02 P05 | 294 | 2 tasks | 11 files |
 | Phase 02 P07 | 316 | 2 tasks | 11 files |
+| Phase 02 P09 | 106 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -302,37 +304,33 @@ Phase 2: [████████████████████] Plan 8/8
 
 ### What Was Just Accomplished
 
-**Session Goal:** Execute Phase 02 Plan 08 (Import Pipeline Hardening and End-to-End Verification)
+**Session Goal:** Execute Phase 02 Plan 09 (Recursive Folder Drag-and-Drop - Gap Closure)
 
 **Completed:**
-- Task 1: Hardened STL/OBJ/3MF loaders with comprehensive error handling
-- Task 2: End-to-end import pipeline verification (human checkpoint passed)
-- STL: Empty file check, NaN/Inf validation, extreme coordinate bounds (>1e6), truncation detection
-- OBJ: NaN/Inf validation, MTL file warning (continues without materials), per-line error recovery
-- 3MF: Archive size validation, NaN/Inf validation, corrupt/missing file error messages
-- All loaders: try/catch wrappers, descriptive errors, no crashes on corrupt input
-- All 422 tests pass (includes 38 loader tests)
-- Human verification: parallel import, G-code toolpath, settings, error handling all confirmed working
-- Phase 2 Import Pipeline COMPLETE (8/8 plans)
-- Execution time: 42s
+- Task 1: Add recursive directory scanning to onFilesDropped
+- Added collectSupportedFiles() helper with fs::recursive_directory_iterator
+- Modified onFilesDropped() to detect directories via fs::is_directory()
+- Filesystem errors (permission denied, broken symlinks) logged but non-fatal
+- Users can now drag-and-drop entire folders of models - all nested files imported
+- All 422 tests pass
+- Execution time: 1m 46s
 
 **Artifacts Created:**
-- `.planning/phases/02-import-pipeline/02-08-SUMMARY.md` -- Plan 08 summary
+- `.planning/phases/02-import-pipeline/02-09-SUMMARY.md` -- Plan 09 summary
 
 **Artifacts Modified:**
-- `src/core/loaders/stl_loader.cpp` -- Hardened with validation and error handling (4e1f026)
-- `src/core/loaders/obj_loader.cpp` -- Hardened with validation and error handling (4e1f026)
-- `src/core/loaders/threemf_loader.cpp` -- Hardened with validation and error handling (4e1f026)
-- `.planning/STATE.md` -- Updated to Phase 2 complete status
+- `src/managers/file_io_manager.h` -- Added collectSupportedFiles declaration (077832a)
+- `src/managers/file_io_manager.cpp` -- Implemented recursive directory scanning (077832a)
+- `.planning/STATE.md` -- Updated to Plan 9/10 complete
 
 **Commits:**
-- `4e1f026` -- feat(02-08): harden STL/OBJ/3MF loaders with improved error handling
+- `077832a` -- feat(02-09): add recursive directory scanning to drag-and-drop
 
 ### What to Do Next
 
-**Phase 2 Import Pipeline - COMPLETE (100%)**
+**Phase 2 Import Pipeline - 9/10 Plans Complete (90%)**
 
-All 8 plans completed:
+Completed plans:
 - Plan 02-01: ThreadPool Infrastructure & Import Config ✓
 - Plan 02-02: Database Schema for G-code Storage ✓
 - Plan 02-03: G-code Loader and File Handler ✓
@@ -341,22 +339,19 @@ All 8 plans completed:
 - Plan 02-06: Import Pipeline Integration & G-code Auto-Association ✓
 - Plan 02-07: Toolpath Visualization and Library Panel G-code Integration ✓
 - Plan 02-08: Import Pipeline Hardening and End-to-End Verification ✓
+- Plan 02-09: Recursive Folder Drag-and-Drop (Gap Closure) ✓
 
-**Success Criteria Met (Plan 02-08):**
-- [x] Corrupt mesh files return descriptive errors without crashing
-- [x] Empty/truncated files rejected with clear messages
-- [x] Missing MTL references handled gracefully
-- [x] Parallel import processes multiple files simultaneously
-- [x] G-code files import with metadata and render toolpath in viewport
-- [x] Non-blocking UX: status bar progress, toasts, summary dialog
-- [x] Duplicate detection and error handling work correctly
-- [x] Settings app Import tab configures all pipeline options
-- [x] Human verification confirms end-to-end functionality
+**Success Criteria Met (Plan 02-09):**
+- [x] Directories dropped onto app are recursively scanned for supported files
+- [x] Individual files dropped alongside directories handled correctly
+- [x] Filesystem errors (permission denied, broken symlinks) logged but don't crash
+- [x] Clean build, all 422 tests pass
+- [x] Users can import entire project folders in one drag-and-drop
 
 **Next Actions:**
+- Execute Plan 02-10 (final import pipeline plan)
+- Complete Phase 2 milestone review
 - Review ROADMAP.md for Phase 3 planning
-- Identify next priority area (cut optimizer, G-code generation, or other features)
-- Use `/gsd:plan-phase` to plan next phase when ready
 
 ---
 
@@ -537,3 +532,13 @@ All 8 plans completed:
     - Decision: Validate archive size and structure, parse XML for geometry
     - Rationale: Balance between performance and robustness - catch common issues early
     - Impact: 3MF loader detects corrupt/truncated archives before attempting full parse
+
+49. **Recursive Directory Scanning for Drag-and-Drop (2026-02-10, Plan 02-09)**
+    - Decision: Use fs::recursive_directory_iterator to scan dropped folders
+    - Rationale: Enables users to import entire project folders in one drag-and-drop operation
+    - Impact: Gap closure - users can now drop folders of models instead of selecting files individually
+
+50. **Filesystem Error Handling in Directory Scanning (2026-02-10, Plan 02-09)**
+    - Decision: Log warnings and continue on filesystem_error (permission denied, broken symlinks)
+    - Rationale: Partial results better than complete failure - one inaccessible subfolder shouldn't block entire import
+    - Impact: Graceful degradation - application remains stable with problematic directory structures

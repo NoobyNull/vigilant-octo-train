@@ -172,7 +172,8 @@ std::string LibraryManager::computeFileHash(const Path& path) {
 
 bool LibraryManager::generateThumbnail(i64 modelId, const Mesh& mesh) {
     if (!m_thumbnailGen) {
-        return true; // No generator set - skip silently
+        log::warning("Library", "Thumbnail generation skipped - no generator available");
+        return false;
     }
 
     // Ensure thumbnail directory exists

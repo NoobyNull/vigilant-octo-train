@@ -21,6 +21,7 @@ class Database;
 class LibraryManager;
 class ProjectManager;
 class ImportQueue;
+struct ImportTask;
 class Workspace;
 class FileDialog;
 class ThumbnailGenerator;
@@ -60,6 +61,9 @@ class FileIOManager {
     Workspace* m_workspace;
     FileDialog* m_fileDialog;
     ThumbnailGenerator* m_thumbnailGenerator;
+
+    // Pending completions queue for throttled processing (one per frame)
+    std::vector<ImportTask> m_pendingCompletions;
 };
 
 } // namespace dw
