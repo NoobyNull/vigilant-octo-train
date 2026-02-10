@@ -9,7 +9,7 @@
 
 namespace dw {
 
-LibraryManager::LibraryManager(Database& db) : m_db(db), m_modelRepo(db) {}
+LibraryManager::LibraryManager(Database& db) : m_db(db), m_modelRepo(db), m_gcodeRepo(db) {}
 
 ImportResult LibraryManager::importModel(const Path& sourcePath) {
     ImportResult result;
@@ -201,6 +201,105 @@ bool LibraryManager::generateThumbnail(i64 modelId, const Mesh& mesh) {
 
     log::infof("Library", "Generated thumbnail: %s", thumbnailPath.string().c_str());
     return true;
+}
+
+// --- G-code operations ---
+
+std::vector<GCodeRecord> LibraryManager::getAllGCodeFiles() {
+    return m_gcodeRepo.findAll();
+}
+
+std::optional<GCodeRecord> LibraryManager::getGCodeFile(i64 id) {
+    return m_gcodeRepo.findById(id);
+}
+
+bool LibraryManager::deleteGCodeFile(i64 id) {
+    auto record = getGCodeFile(id);
+    if (!record) {
+        return false;
+    }
+
+    // Remove thumbnail if exists (best-effort cleanup)
+    if (!record->thumbnailPath.empty() && file::exists(record->thumbnailPath)) {
+        (void)file::remove(record->thumbnailPath);
+    }
+
+    return m_gcodeRepo.remove(id);
+}
+
+// --- Hierarchy operations ---
+
+std::optional<i64> LibraryManager::createOperationGroup(i64 modelId, const std::string& name, int sortOrder) {
+    return m_gcodeRepo.createGroup(modelId, name, sortOrder);
+}
+
+std::vector<OperationGroup> LibraryManager::getOperationGroups(i64 modelId) {
+    return m_gcodeRepo.getGroups(modelId);
+}
+
+bool LibraryManager::addGCodeToGroup(i64 groupId, i64 gcodeId, int sortOrder) {
+    return m_gcodeRepo.addToGroup(groupId, gcodeId, sortOrder);
+}
+
+bool LibraryManager::removeGCodeFromGroup(i64 groupId, i64 gcodeId) {
+    return m_gcodeRepo.removeFromGroup(groupId, gcodeId);
+}
+
+std::vector<GCodeRecord> LibraryManager::getGroupGCodeFiles(i64 groupId) {
+    return m_gcodeRepo.getGroupMembers(groupId);
+}
+
+bool LibraryManager::deleteOperationGroup(i64 groupId) {
+    return m_gcodeRepo.deleteGroup(groupId);
+}
+
+// --- Template operations ---
+
+std::vector<GCodeTemplate> LibraryManager::getTemplates() {
+    return m_gcodeRepo.getTemplates();
+}
+
+bool LibraryManager::applyTemplate(i64 modelId, const std::string& templateName) {
+    return m_gcodeRepo.applyTemplate(modelId, templateName);
+}
+
+// --- Auto-detect ---
+
+std::optional<i64> LibraryManager::autoDetectModelMatch(const std::string& gcodeFilename) {
+    // Strip extension
+    std::string baseName = gcodeFilename;
+    size_t dotPos = baseName.find_last_of('.');
+    if (dotPos != std::string::npos) {
+        baseName = baseName.substr(0, dotPos);
+    }
+
+    // Strip common G-code suffixes
+    const std::vector<std::string> suffixes = {
+        "_roughing", "_finishing", "_profile", "_profiling", "_drill", "_drilling",
+        "_contour", "_contouring", "_pocket", "_pocketing", "_trace", "_tracing",
+        "_engrave", "_engraving", "_cut", "_cutting", "_mill", "_milling"
+    };
+
+    for (const auto& suffix : suffixes) {
+        if (baseName.size() > suffix.size()) {
+            size_t pos = baseName.size() - suffix.size();
+            if (baseName.substr(pos) == suffix) {
+                baseName = baseName.substr(0, pos);
+                break;
+            }
+        }
+    }
+
+    // Search for models with this base name
+    auto matches = m_modelRepo.findByName(baseName);
+
+    // Only return confident single match
+    if (matches.size() == 1) {
+        return matches[0].id;
+    }
+
+    // Zero or multiple matches: ambiguous, return nullopt
+    return std::nullopt;
 }
 
 } // namespace dw

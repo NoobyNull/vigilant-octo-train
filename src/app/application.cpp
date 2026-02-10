@@ -21,6 +21,7 @@
 #include "core/events/event_bus.h"
 #include "core/import/import_queue.h"
 #include "core/library/library_manager.h"
+#include "core/loaders/loader_factory.h"
 #include "core/paths/app_paths.h"
 #include "core/threading/main_thread_queue.h"
 #include "core/utils/log.h"
@@ -139,7 +140,7 @@ bool Application::init() {
         m_libraryManager->setThumbnailGenerator(m_thumbnailGenerator.get());
     }
 
-    m_importQueue = std::make_unique<ImportQueue>(*m_connectionPool);
+    m_importQueue = std::make_unique<ImportQueue>(*m_connectionPool, m_libraryManager.get());
 
     // Initialize managers
     m_uiManager = std::make_unique<UIManager>();
@@ -302,6 +303,7 @@ void Application::render() {
     m_uiManager->renderMenuBar();
     m_uiManager->renderPanels();
     m_uiManager->renderImportProgress(m_importQueue.get());
+    m_uiManager->renderStatusBar(m_loadingState, m_importQueue.get());
     m_uiManager->renderRestartPopup([this]() { m_configManager->relaunchApp(); });
     m_uiManager->renderAboutDialog();
 
@@ -318,23 +320,56 @@ void Application::render() {
 void Application::onModelSelected(int64_t modelId) {
     if (!m_libraryManager)
         return;
-    auto mesh = m_libraryManager->loadMesh(modelId);
-    if (!mesh)
+
+    // Get model record on main thread (fast DB read)
+    auto record = m_libraryManager->getModel(modelId);
+    if (!record)
         return;
 
-    m_workspace->setFocusedMesh(mesh);
-    if (m_uiManager->viewportPanel())
-        m_uiManager->viewportPanel()->setMesh(mesh);
-    if (m_uiManager->propertiesPanel()) {
-        auto record = m_libraryManager->getModel(modelId);
-        std::string name = record ? record->name : "";
-        m_uiManager->propertiesPanel()->setMesh(mesh, name);
-    }
+    // Bump generation to invalidate any in-flight load
+    uint64_t gen = ++m_loadingState.generation;
+    m_loadingState.set(record->name);
+
+    // Join previous load thread if still running
+    if (m_loadThread.joinable())
+        m_loadThread.join();
+
+    // Capture what we need for the worker
+    Path filePath = record->filePath;
+    std::string name = record->name;
+
+    m_loadThread = std::thread([this, filePath, name, gen]() {
+        auto loadResult = LoaderFactory::load(filePath);
+        if (!loadResult) {
+            m_loadingState.reset();
+            return;
+        }
+        loadResult.mesh->setName(name);
+        auto mesh = loadResult.mesh;
+
+        // Post result to main thread via MainThreadQueue
+        m_mainThreadQueue->enqueue([this, mesh, name, gen]() {
+            // Check generation — if user clicked another model, discard
+            if (gen != m_loadingState.generation.load())
+                return;
+            m_loadingState.reset();
+
+            m_workspace->setFocusedMesh(mesh);
+            if (m_uiManager->viewportPanel())
+                m_uiManager->viewportPanel()->setMesh(mesh);
+            if (m_uiManager->propertiesPanel())
+                m_uiManager->propertiesPanel()->setMesh(mesh, name);
+        });
+    });
 }
 
 void Application::shutdown() {
     if (!m_initialized)
         return;
+
+    // Join load thread before destroying anything it references
+    if (m_loadThread.joinable())
+        m_loadThread.join();
 
     m_configManager->saveWorkspaceState();
 

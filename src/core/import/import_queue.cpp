@@ -5,6 +5,7 @@
 #include "../database/gcode_repository.h"
 #include "../database/model_repository.h"
 #include "../import/file_handler.h"
+#include "../library/library_manager.h"
 #include "../loaders/gcode_loader.h"
 #include "../loaders/loader_factory.h"
 #include "../mesh/hash.h"
@@ -13,7 +14,8 @@
 
 namespace dw {
 
-ImportQueue::ImportQueue(ConnectionPool& pool) : m_pool(pool) {}
+ImportQueue::ImportQueue(ConnectionPool& pool, LibraryManager* libraryManager)
+    : m_pool(pool), m_libraryManager(libraryManager) {}
 
 ImportQueue::~ImportQueue() {
     m_shutdown.store(true);
@@ -387,6 +389,43 @@ void ImportQueue::processTask(ImportTask task) {
 
         log::infof("Import", "G-code '%s' inserted (id=%lld)", record.name.c_str(),
                    static_cast<long long>(*gcodeId));
+
+        // Auto-detect model association if LibraryManager available
+        if (m_libraryManager) {
+            auto matchedModelId = m_libraryManager->autoDetectModelMatch(record.name);
+            if (matchedModelId) {
+                // Confident single match found - auto-associate
+                auto modelRecord = modelRepo.findById(*matchedModelId);
+                if (modelRecord) {
+                    // Check if model already has operation groups
+                    auto groups = m_libraryManager->getOperationGroups(*matchedModelId);
+                    i64 groupId = 0;
+
+                    if (groups.empty()) {
+                        // No groups yet - create default "Imported" group
+                        auto newGroupId = m_libraryManager->createOperationGroup(*matchedModelId, "Imported", 0);
+                        if (newGroupId) {
+                            groupId = *newGroupId;
+                            log::infof("Import", "Created 'Imported' group for model '%s'", modelRecord->name.c_str());
+                        }
+                    } else {
+                        // Use first existing group
+                        groupId = groups[0].id;
+                    }
+
+                    if (groupId > 0) {
+                        // Add G-code to the group
+                        if (m_libraryManager->addGCodeToGroup(groupId, *gcodeId, 0)) {
+                            log::infof("Import", "Auto-associated '%s' with model '%s'",
+                                       record.name.c_str(), modelRecord->name.c_str());
+                        }
+                    }
+                }
+            } else {
+                // No match or ambiguous - standalone import
+                log::infof("Import", "No model match for '%s', imported as standalone", record.name.c_str());
+            }
+        }
 
     } else {
         // Insert mesh model record

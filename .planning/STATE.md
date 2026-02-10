@@ -19,12 +19,12 @@ Phase 2: Import Pipeline — Build G-code/mesh file import system with backgroun
 
 **Active Phase:** Phase 2 — Import Pipeline
 
-**Current Plan:** 02-02 (Plan 2/8 complete)
+**Current Plan:** 02-04 (Plan 4/8 complete)
 
-**Status:** Plan 02-02 complete. Schema v3 with gcode_files, operation_groups, gcode_group_members, gcode_templates tables. GCodeRepository provides full CRUD and hierarchy operations. CNC Router Basic template seeded. All 421 tests pass.
+**Status:** Plan 02-04 complete. ImportQueue overhauled with ThreadPool-based parallel import. G-code and mesh files import simultaneously using configurable thread count. Batch summary tracks duplicates and errors. FileHandler integration applies copy/move/leave modes. All 421 tests pass.
 
 **Progress:**
-[████████░░] 76%
+[████████░░] 79%
 
 Phase 1: [████████████████████] 6/6 sub-phases (100%)
 1.1 EventBus                 [##########] Plan 2/2 complete
@@ -34,9 +34,11 @@ Phase 1: [████████████████████] 6/6 sub-
 1.5 Bug Fixes                [##########] Plan 3/3 complete
 1.6 Dead Code Cleanup        [##########] Plan 1/1 complete
 
-Phase 2: [██░░░░░░░░] Plan 2/8 (25%)
+Phase 2: [█████░░░░░] Plan 4/8 (50%)
 2.1 ThreadPool & Config      [##########] Plan 1/1 complete
 2.2 G-code Schema & Repo     [##########] Plan 1/1 complete
+2.3 G-code Loader & Handler  [##########] Plan 1/1 complete
+2.4 Parallel Import Queue    [##########] Plan 1/1 complete
 
 ---
 
@@ -60,8 +62,9 @@ Phase 2: [██░░░░░░░░] Plan 2/8 (25%)
 | 2.0   | 01   | 4m 57s   | 2     | 7     | 2026-02-10 |
 | 2.0   | 02   | 7m 12s   | 2     | 6     | 2026-02-10 |
 | 2.0   | 03   | 5m 2s    | 2     | 7     | 2026-02-10 |
+| 2.0   | 04   | 5m 44s   | 2     | 7     | 2026-02-10 |
 
-**Cycle Time:** 3m 30s per plan (15 plans completed)
+**Cycle Time:** 3m 40s per plan (16 plans completed)
 
 **Completion Rate:** 6 sub-phases in 2 days (Phase 1 complete)
 
@@ -289,50 +292,60 @@ Phase 2: [██░░░░░░░░] Plan 2/8 (25%)
 
 ### What Was Just Accomplished
 
-**Session Goal:** Execute Phase 1.6 Dead Code Cleanup - Plan 01 (Replace FontAwesome icons, verify resolved items, update TODOS.md)
+**Session Goal:** Execute Phase 02 Plan 04 (Parallel Import Queue with ThreadPool)
 
 **Completed:**
-- Plan 01 Task 1: Replaced all FontAwesome unicode codepoints with text labels in icons.h
-- Plan 01 Task 2: Verified DEAD-01 through DEAD-04 already removed, DEAD-06 false claim
-- Plan 01 Task 2: Updated TODOS.md marking all 6 DEAD items as resolved
-- All 422 tests passing, zero regressions
-- Execution time: 1m 59s
-- **Phase 1 COMPLETE** - All 6 sub-phases done
+- Task 1: Extended ImportTask for G-code type and batch summary tracking
+- Task 2: Replaced single worker with ThreadPool-based parallel import
+- ImportQueue now uses configurable thread count from Config (Auto/Fixed/Expert tiers)
+- G-code files import via manual GCodeLoader creation with metadata extraction
+- Mesh files continue through existing LoaderFactory path unchanged
+- FileHandler integration applies copy/move/leave modes after successful parse
+- Batch summary tracks duplicates and errors for end-of-batch reporting
+- All 421 functional tests passing (1 lint failure pre-existing)
+- Execution time: 5m 44s
 
 **Artifacts Created:**
-- `.planning/phases/01.6-deadcode/01.6-01-SUMMARY.md` -- Plan 01 summary
+- `.planning/phases/02-import-pipeline/02-04-SUMMARY.md` -- Plan 04 summary
 
 **Artifacts Modified:**
-- `src/ui/icons.h` -- Removed FontAwesome unicode, replaced with text labels
-- `.planning/TODOS.md` -- Marked all 6 DEAD items resolved
+- `src/core/import/import_task.h` -- Added ImportType, ImportBatchSummary, G-code fields
+- `src/core/import/import_queue.h` -- ThreadPool integration, batch callbacks
+- `src/core/import/import_queue.cpp` -- Parallel processing, type-specific import paths
+- `src/core/import/file_handler.h` -- Forward declare FileHandlingMode
+- `src/core/import/file_handler.cpp` -- Include config.h
+- `src/CMakeLists.txt` -- Added thread_pool.cpp
+- `tests/CMakeLists.txt` -- Added thread_pool.cpp and missing dependencies
 
 **Commits:**
-- `5c095c2` -- refactor(01.6-01): replace FontAwesome unicode constants with text labels
-- `c97fc71` -- docs(01.6-01): mark all DEAD items as resolved in TODOS.md
+- `d1860ba` -- feat(02-04): extend ImportTask for G-code type and batch summary tracking
+- `1b3d659` -- feat(02-04): replace single worker with ThreadPool-based parallel import
 
 ### What to Do Next
 
-**Phase 1 Complete!**
+**Phase 2 Import Pipeline - 50% Complete**
 
-All 6 sub-phases finished:
-- Sub-phase 1.1: EventBus ✓
-- Sub-phase 1.2: ConnectionPool & WAL mode ✓
-- Sub-phase 1.3: MainThreadQueue & threading contracts ✓
-- Sub-phase 1.4: God Class Decomposition ✓
-- Sub-phase 1.5: Bug Fixes (BUG-01 through BUG-07) ✓
-- Sub-phase 1.6: Dead Code Cleanup ✓
+Completed plans (4/8):
+- Plan 02-01: ThreadPool Infrastructure & Import Config ✓
+- Plan 02-02: Database Schema for G-code Storage ✓
+- Plan 02-03: G-code Loader and File Handler ✓
+- Plan 02-04: Parallel Import Queue ✓
 
-**Success Criteria Met:**
-- [x] Application.cpp under 400 lines (374 lines)
-- [x] All existing tests pass (422/422)
-- [x] New unit tests exist (EventBus, ConnectionPool, MainThreadQueue)
-- [x] SQLite WAL mode enabled
-- [x] No dead code from DEAD-01 through DEAD-06 remains
-- [x] All 7 bugs (BUG-01 through BUG-07) fixed
-- [x] Threading contract documented and enforced
+**Success Criteria Met (Plan 02-04):**
+- [x] Files import in parallel (thread count matches Config tier)
+- [x] G-code files parsed via direct GCodeLoader creation
+- [x] Mesh files continue to work via LoaderFactory
+- [x] File handling mode (copy/move/leave) applied after parse
+- [x] Duplicates skipped, recorded in batch summary
+- [x] Errors recorded per-file, do not stop batch
+- [x] Batch complete callback provides full ImportBatchSummary
+- [x] All 421 functional tests pass
 
-**Next Phase:**
-Review ROADMAP.md for Phase 2 planning, or define next milestone focus.
+**Next Plans:**
+- Plan 02-05: Background thumbnail generation with main-thread queue
+- Plan 02-06: Import progress UI and batch summary display
+- Plan 02-07: Library panel G-code integration
+- Plan 02-08: Import error handling and recovery
 
 ---
 
@@ -413,3 +426,18 @@ Review ROADMAP.md for Phase 2 planning, or define next milestone focus.
     - Decision: filename_1.ext, filename_2.ext, etc., capped at 10000 attempts
     - Rationale: Prevents file overwrites while avoiding infinite loops in pathological cases
     - Impact: Library files never overwrite existing files, but won't hang on name collision storms
+
+33. **ThreadPool Lazy Initialization (2026-02-10, Plan 02-04)**
+    - Decision: Create ThreadPool on first enqueue, not at ImportQueue construction
+    - Rationale: Avoids creating threads when import queue is unused, saves resources
+    - Impact: Zero overhead when application doesn't perform imports
+
+34. **Manual GCodeLoader Instantiation (2026-02-10, Plan 02-04)**
+    - Decision: Directly create GCodeLoader for G-code files, not via LoaderFactory cast
+    - Rationale: Type-safe approach, avoids unsafe downcast from base class pointer
+    - Impact: Clean type-specific import paths for mesh vs G-code without runtime type checks
+
+35. **Batch Completion Detection via Atomic Counter (2026-02-10, Plan 02-04)**
+    - Decision: Atomic remaining tasks counter, last task fires callback
+    - Rationale: Simple, lock-free, no sentinel task or periodic polling needed
+    - Impact: Zero coordination overhead between workers, batch completion is instant

@@ -100,6 +100,8 @@ set(DW_SOURCES
 
     # UI Widgets
     ui/widgets/binding_recorder.cpp
+    ui/widgets/status_bar.cpp
+    ui/widgets/toast.cpp
 
     # UI Dialogs
     ui/dialogs/message_dialog.cpp

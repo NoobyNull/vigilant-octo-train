@@ -12,9 +12,12 @@
 
 namespace dw {
 
+// Forward declaration
+class LibraryManager;
+
 class ImportQueue {
   public:
-    explicit ImportQueue(ConnectionPool& pool);
+    explicit ImportQueue(ConnectionPool& pool, LibraryManager* libraryManager = nullptr);
     ~ImportQueue();
 
     // Enqueue files for import (called from main thread)
@@ -52,6 +55,7 @@ class ImportQueue {
     void processTask(ImportTask task);  // Note: takes by value for move into lambda
 
     ConnectionPool& m_pool;
+    LibraryManager* m_libraryManager;  // Optional, for auto-detect
 
     // Thread management
     std::unique_ptr<ThreadPool> m_threadPool;  // Lazily created

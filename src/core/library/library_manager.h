@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "../database/database.h"
+#include "../database/gcode_repository.h"
 #include "../database/model_repository.h"
 #include "../mesh/mesh.h"
 #include "../types.h"
@@ -77,11 +78,32 @@ class LibraryManager {
     // Generate thumbnail and update DB record
     bool generateThumbnail(i64 modelId, const Mesh& mesh);
 
+    // G-code operations
+    std::vector<GCodeRecord> getAllGCodeFiles();
+    std::optional<GCodeRecord> getGCodeFile(i64 id);
+    bool deleteGCodeFile(i64 id);
+
+    // Hierarchy operations
+    std::optional<i64> createOperationGroup(i64 modelId, const std::string& name, int sortOrder = 0);
+    std::vector<OperationGroup> getOperationGroups(i64 modelId);
+    bool addGCodeToGroup(i64 groupId, i64 gcodeId, int sortOrder = 0);
+    bool removeGCodeFromGroup(i64 groupId, i64 gcodeId);
+    std::vector<GCodeRecord> getGroupGCodeFiles(i64 groupId);
+    bool deleteOperationGroup(i64 groupId);
+
+    // Template operations
+    std::vector<GCodeTemplate> getTemplates();
+    bool applyTemplate(i64 modelId, const std::string& templateName);
+
+    // Auto-detect: try to match G-code filename to model name
+    std::optional<i64> autoDetectModelMatch(const std::string& gcodeFilename);
+
   private:
     std::string computeFileHash(const Path& path);
 
     Database& m_db;
     ModelRepository m_modelRepo;
+    GCodeRepository m_gcodeRepo;
     DuplicateHandler m_duplicateHandler;
     ThumbnailGenerator* m_thumbnailGen = nullptr;
 };
