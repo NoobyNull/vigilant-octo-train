@@ -2,6 +2,7 @@
 
 #include "../utils/file_utils.h"
 #include "../utils/string_utils.h"
+#include "gcode_loader.h"
 #include "obj_loader.h"
 #include "stl_loader.h"
 #include "threemf_loader.h"
@@ -24,6 +25,9 @@ std::unique_ptr<MeshLoader> LoaderFactory::getLoaderByExtension(const std::strin
     }
     if (lower == "3mf") {
         return std::make_unique<ThreeMFLoader>();
+    }
+    if (lower == "gcode" || lower == "nc" || lower == "ngc" || lower == "tap") {
+        return std::make_unique<GCodeLoader>();
     }
 
     return nullptr;
@@ -53,7 +57,7 @@ bool LoaderFactory::isSupported(const std::string& extension) {
 }
 
 std::vector<std::string> LoaderFactory::supportedExtensions() {
-    return {"stl", "obj", "3mf"};
+    return {"stl", "obj", "3mf", "gcode", "nc", "ngc", "tap"};
 }
 
 } // namespace dw

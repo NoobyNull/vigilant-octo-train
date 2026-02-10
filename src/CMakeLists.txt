@@ -48,6 +48,7 @@ set(DW_SOURCES
     core/loaders/stl_loader.cpp
     core/loaders/obj_loader.cpp
     core/loaders/threemf_loader.cpp
+    core/loaders/gcode_loader.cpp
 
     # Project
     core/project/project.cpp
