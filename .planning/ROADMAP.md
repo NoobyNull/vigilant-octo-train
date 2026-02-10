@@ -547,17 +547,19 @@ Plans:
 
 **Goal:** Overhaul the import pipeline with parallel workers, G-code import with toolpath visualization, non-blocking UX, file handling options, and hardened mesh loaders.
 **Depends on:** Phase 1
-**Plans:** 8 plans
+**Plans:** 10 plans (8 core + 2 gap closure)
 
 Plans:
-- [ ] 02-01-PLAN.md — ThreadPool infrastructure and Config/Settings import settings
-- [ ] 02-02-PLAN.md — Database schema v3 with G-code tables and GCodeRepository
-- [ ] 02-03-PLAN.md — GCodeLoader with toolpath-to-mesh conversion and FileHandler
-- [ ] 02-04-PLAN.md — Parallel ImportQueue overhaul with G-code support
-- [ ] 02-05-PLAN.md — Import UX: StatusBar, ToastManager, ImportSummaryDialog
-- [ ] 02-06-PLAN.md — G-code DB integration, LibraryManager extensions, Application wiring
-- [ ] 02-07-PLAN.md — Toolpath rendering in viewport and library panel G-code display
-- [ ] 02-08-PLAN.md — Loader hardening and end-to-end verification checkpoint
+- [x] 02-01-PLAN.md — ThreadPool infrastructure and Config/Settings import settings
+- [x] 02-02-PLAN.md — Database schema v3 with G-code tables and GCodeRepository
+- [x] 02-03-PLAN.md — GCodeLoader with toolpath-to-mesh conversion and FileHandler
+- [x] 02-04-PLAN.md — Parallel ImportQueue overhaul with G-code support
+- [x] 02-05-PLAN.md — Import UX: StatusBar, ToastManager, ImportSummaryDialog
+- [x] 02-06-PLAN.md — G-code DB integration, LibraryManager extensions, Application wiring
+- [x] 02-07-PLAN.md — Toolpath rendering in viewport and library panel G-code display
+- [x] 02-08-PLAN.md — Loader hardening and end-to-end verification checkpoint
+- [ ] 02-09-PLAN.md — Gap closure: Recursive folder drop support for drag-and-drop import
+- [ ] 02-10-PLAN.md — Gap closure: Non-blocking import completion and thumbnail failure handling
 
 ---
 
