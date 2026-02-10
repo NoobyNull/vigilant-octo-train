@@ -10,6 +10,7 @@ set(SETTINGS_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/paths/app_paths.cpp
     ${CMAKE_SOURCE_DIR}/src/core/config/config.cpp
     ${CMAKE_SOURCE_DIR}/src/core/config/input_binding.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/threading/thread_pool.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/widgets/binding_recorder.cpp
 )

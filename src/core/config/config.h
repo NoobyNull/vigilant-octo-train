@@ -9,11 +9,21 @@
 
 namespace dw {
 
+// Forward declaration for ParallelismTier from thread_pool.h
+enum class ParallelismTier;
+
 // Navigation style for 3D viewport
 enum class NavStyle : int {
     Default = 0, // Left=Orbit, Shift+Left=Pan, Middle=Pan, Right=Zoom
     CAD = 1,     // Middle=Orbit, Shift+Middle=Pan, Right=Pan, Scroll=Zoom
     Maya = 2,    // Alt+Left=Orbit, Alt+Middle=Pan, Alt+Right=Zoom
+};
+
+// File handling mode for imported models
+enum class FileHandlingMode : int {
+    LeaveInPlace = 0,   // Leave files at original location (no copy)
+    CopyToLibrary = 1,  // Copy imported files to library directory
+    MoveToLibrary = 2,  // Move imported files to library directory (delete original)
 };
 
 // Application configuration (persisted to config directory)
@@ -50,6 +60,12 @@ class Config {
 
     bool getAutoOrient() const { return m_autoOrient; }
     void setAutoOrient(bool v) { m_autoOrient = v; }
+
+    bool getInvertOrbitX() const { return m_invertOrbitX; }
+    void setInvertOrbitX(bool v) { m_invertOrbitX = v; }
+
+    bool getInvertOrbitY() const { return m_invertOrbitY; }
+    void setInvertOrbitY(bool v) { m_invertOrbitY = v; }
 
     NavStyle getNavStyle() const { return m_navStyle; }
     void setNavStyle(NavStyle style) { m_navStyle = style; }
@@ -126,8 +142,21 @@ class Config {
     i64 getLastSelectedModelId() const { return m_wsLastSelectedModelId; }
     void setLastSelectedModelId(i64 id) { m_wsLastSelectedModelId = id; }
 
+    // Import pipeline settings
+    ParallelismTier getParallelismTier() const { return m_parallelismTier; }
+    void setParallelismTier(ParallelismTier tier) { m_parallelismTier = tier; }
+
+    FileHandlingMode getFileHandlingMode() const { return m_fileHandlingMode; }
+    void setFileHandlingMode(FileHandlingMode mode) { m_fileHandlingMode = mode; }
+
+    Path getLibraryDir() const { return m_libraryDir; }
+    void setLibraryDir(const Path& path) { m_libraryDir = path; }
+
+    bool getShowImportErrorToasts() const { return m_showImportErrorToasts; }
+    void setShowImportErrorToasts(bool show) { m_showImportErrorToasts = show; }
+
   private:
-    Config() { initDefaultBindings(); }
+    Config();
     void initDefaultBindings();
     ~Config() = default;
     Config(const Config&) = delete;
@@ -145,6 +174,8 @@ class Config {
     bool m_showGrid = true;
     bool m_showAxis = true;
     bool m_autoOrient = true;
+    bool m_invertOrbitX = false;
+    bool m_invertOrbitY = false;
     NavStyle m_navStyle = NavStyle::Default;
 
     // Render settings
@@ -179,6 +210,12 @@ class Config {
 
     // Input bindings
     std::array<InputBinding, static_cast<int>(BindAction::COUNT)> m_bindings;
+
+    // Import pipeline settings
+    ParallelismTier m_parallelismTier;
+    FileHandlingMode m_fileHandlingMode = FileHandlingMode::LeaveInPlace;
+    Path m_libraryDir; // Empty means default (app data dir / "library")
+    bool m_showImportErrorToasts = true;
 };
 
 } // namespace dw

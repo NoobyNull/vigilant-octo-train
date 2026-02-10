@@ -5,11 +5,16 @@
 #include <sstream>
 
 #include "../paths/app_paths.h"
+#include "../threading/thread_pool.h"
 #include "../utils/file_utils.h"
 #include "../utils/log.h"
 #include "../utils/string_utils.h"
 
 namespace dw {
+
+Config::Config() : m_parallelismTier(ParallelismTier::Auto) {
+    initDefaultBindings();
+}
 
 Config& Config::instance() {
     static Config instance;
@@ -73,6 +78,10 @@ bool Config::load() {
                 m_showAxis = (value == "true" || value == "1");
             } else if (key == "auto_orient") {
                 m_autoOrient = (value == "true" || value == "1");
+            } else if (key == "invert_orbit_x") {
+                m_invertOrbitX = (value == "true" || value == "1");
+            } else if (key == "invert_orbit_y") {
+                m_invertOrbitY = (value == "true" || value == "1");
             } else if (key == "nav_style") {
                 int style = 0;
                 str::parseInt(value, style);
@@ -152,6 +161,22 @@ bool Config::load() {
                 m_bindings[static_cast<int>(BindAction::LightIntensityDrag)] =
                     InputBinding::deserialize(value);
             }
+        } else if (section == "import") {
+            if (key == "parallelism_tier") {
+                int tier = 0;
+                str::parseInt(value, tier);
+                if (tier >= 0 && tier <= 2)
+                    m_parallelismTier = static_cast<ParallelismTier>(tier);
+            } else if (key == "file_handling_mode") {
+                int mode = 0;
+                str::parseInt(value, mode);
+                if (mode >= 0 && mode <= 2)
+                    m_fileHandlingMode = static_cast<FileHandlingMode>(mode);
+            } else if (key == "library_dir") {
+                m_libraryDir = value;
+            } else if (key == "show_error_toasts") {
+                m_showImportErrorToasts = (value == "true" || value == "1");
+            }
         } else if (section == "recent") {
             if (str::startsWith(key, "project")) {
                 if (!value.empty() && file::exists(value)) {
@@ -186,6 +211,8 @@ bool Config::save() {
     ss << "show_grid=" << (m_showGrid ? "true" : "false") << "\n";
     ss << "show_axis=" << (m_showAxis ? "true" : "false") << "\n";
     ss << "auto_orient=" << (m_autoOrient ? "true" : "false") << "\n";
+    ss << "invert_orbit_x=" << (m_invertOrbitX ? "true" : "false") << "\n";
+    ss << "invert_orbit_y=" << (m_invertOrbitY ? "true" : "false") << "\n";
     ss << "nav_style=" << static_cast<int>(m_navStyle) << "\n";
     ss << "\n";
 
@@ -249,6 +276,16 @@ bool Config::save() {
        << "\n";
     ss << "light_intensity_drag="
        << m_bindings[static_cast<int>(BindAction::LightIntensityDrag)].serialize() << "\n";
+    ss << "\n";
+
+    // Import section
+    ss << "[import]\n";
+    ss << "parallelism_tier=" << static_cast<int>(m_parallelismTier) << "\n";
+    ss << "file_handling_mode=" << static_cast<int>(m_fileHandlingMode) << "\n";
+    if (!m_libraryDir.empty()) {
+        ss << "library_dir=" << m_libraryDir.string() << "\n";
+    }
+    ss << "show_error_toasts=" << (m_showImportErrorToasts ? "true" : "false") << "\n";
     ss << "\n";
 
     // Recent projects section

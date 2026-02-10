@@ -10,8 +10,13 @@
 #include <imgui_impl_sdl2.h>
 
 #include "../src/core/paths/app_paths.h"
+#include "../src/core/threading/thread_pool.h"
+#include "../src/core/utils/file_utils.h"
 #include "../src/core/utils/log.h"
 #include "../src/ui/theme.h"
+
+#include <cstring>
+#include <filesystem>
 
 namespace dw {
 
@@ -39,6 +44,8 @@ bool SettingsApp::init() {
     m_logLevel = cfg.getLogLevel();
     m_showStartPage = cfg.getShowStartPage();
     m_autoOrient = cfg.getAutoOrient();
+    m_invertOrbitX = cfg.getInvertOrbitX();
+    m_invertOrbitY = cfg.getInvertOrbitY();
     m_navStyle = cfg.getNavStyleIndex();
     m_lightDir = cfg.getRenderLightDir();
     m_lightColor = cfg.getRenderLightColor();
@@ -54,6 +61,19 @@ bool SettingsApp::init() {
     for (int i = 0; i < static_cast<int>(BindAction::COUNT); ++i) {
         m_bindings[static_cast<size_t>(i)] = cfg.getBinding(static_cast<BindAction>(i));
     }
+
+    // Import settings
+    m_parallelismTier = static_cast<int>(cfg.getParallelismTier());
+    m_fileHandlingMode = static_cast<int>(cfg.getFileHandlingMode());
+    m_showImportErrorToasts = cfg.getShowImportErrorToasts();
+
+    Path libraryPath = cfg.getLibraryDir();
+    if (libraryPath.empty()) {
+        // Default to app data dir / "library"
+        libraryPath = paths::getDataDir() / "library";
+    }
+    std::strncpy(m_libraryDir, libraryPath.string().c_str(), sizeof(m_libraryDir) - 1);
+    m_libraryDir[sizeof(m_libraryDir) - 1] = '\0';
 
     // Initialize SDL2
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -166,6 +186,10 @@ void SettingsApp::render() {
                 renderRenderingTab();
                 ImGui::EndTabItem();
             }
+            if (ImGui::BeginTabItem("Import")) {
+                renderImportTab();
+                ImGui::EndTabItem();
+            }
             if (ImGui::BeginTabItem("Bindings")) {
                 renderBindingsTab();
                 ImGui::EndTabItem();
@@ -234,6 +258,10 @@ void SettingsApp::renderGeneralTab() {
     if (ImGui::Checkbox("Show Axis", &m_showAxis))
         m_dirty = true;
     if (ImGui::Checkbox("Auto-orient models", &m_autoOrient))
+        m_dirty = true;
+    if (ImGui::Checkbox("Invert orbit X", &m_invertOrbitX))
+        m_dirty = true;
+    if (ImGui::Checkbox("Invert orbit Y", &m_invertOrbitY))
         m_dirty = true;
 
     ImGui::Spacing();
@@ -411,6 +439,99 @@ void SettingsApp::renderRenderingTab() {
     ImGui::Unindent();
 }
 
+void SettingsApp::renderImportTab() {
+    ImGui::Spacing();
+
+    // Parallelism section
+    ImGui::Text("Parallelism");
+    ImGui::Indent();
+
+    const char* parallelismOptions[] = {
+        "Auto (60% cores)",
+        "Performance (90% cores)",
+        "Expert (100% cores)",
+    };
+
+    if (ImGui::Combo("##Parallelism", &m_parallelismTier, parallelismOptions, 3)) {
+        m_dirty = true;
+    }
+
+    // Show actual thread count
+    size_t threadCount = calculateThreadCount(static_cast<ParallelismTier>(m_parallelismTier));
+    ImGui::TextDisabled("Will use %zu threads on this machine", threadCount);
+
+    ImGui::Unindent();
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // File Handling section
+    ImGui::Text("File Handling");
+    ImGui::Indent();
+
+    const char* fileHandlingOptions[] = {
+        "Leave in place (default)",
+        "Copy to library",
+        "Move to library",
+    };
+
+    if (ImGui::Combo("##FileHandling", &m_fileHandlingMode, fileHandlingOptions, 3)) {
+        m_dirty = true;
+    }
+
+    ImGui::Spacing();
+
+    // Show library directory input only when copy or move is selected
+    if (m_fileHandlingMode == 1 || m_fileHandlingMode == 2) {
+        ImGui::Text("Library Directory:");
+
+        if (ImGui::InputText("##LibraryDir", m_libraryDir, sizeof(m_libraryDir))) {
+            m_dirty = true;
+
+            // Validate path
+            Path libPath(m_libraryDir);
+            if (libPath.empty()) {
+                m_libraryDirValid = false;
+            } else if (std::filesystem::exists(libPath)) {
+                m_libraryDirValid = std::filesystem::is_directory(libPath);
+            } else {
+                // Path doesn't exist - check if we can create it
+                std::error_code ec;
+                std::filesystem::create_directories(libPath, ec);
+                m_libraryDirValid = !ec;
+            }
+        }
+
+        // Show validation indicator
+        ImGui::SameLine();
+        if (m_libraryDirValid) {
+            ImGui::TextColored(ImVec4(0.3f, 0.8f, 0.3f, 1.0f), "[OK]");
+        } else {
+            ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "[Invalid]");
+        }
+
+        ImGui::TextDisabled("Imported files will be %s to this directory",
+                            m_fileHandlingMode == 1 ? "copied" : "moved");
+    }
+
+    ImGui::Unindent();
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // Notifications section
+    ImGui::Text("Notifications");
+    ImGui::Indent();
+
+    if (ImGui::Checkbox("Show toast notifications for import errors", &m_showImportErrorToasts)) {
+        m_dirty = true;
+    }
+
+    ImGui::Unindent();
+}
+
 void SettingsApp::renderPathsTab() {
     ImGui::Spacing();
 
@@ -518,6 +639,8 @@ void SettingsApp::applySettings() {
     cfg.setLogLevel(m_logLevel);
     cfg.setShowStartPage(m_showStartPage);
     cfg.setAutoOrient(m_autoOrient);
+    cfg.setInvertOrbitX(m_invertOrbitX);
+    cfg.setInvertOrbitY(m_invertOrbitY);
     cfg.setNavStyleIndex(m_navStyle);
 
     cfg.setRenderLightDir(m_lightDir);
@@ -529,6 +652,12 @@ void SettingsApp::applySettings() {
     for (int i = 0; i < static_cast<int>(BindAction::COUNT); ++i) {
         cfg.setBinding(static_cast<BindAction>(i), m_bindings[static_cast<size_t>(i)]);
     }
+
+    // Import settings
+    cfg.setParallelismTier(static_cast<ParallelismTier>(m_parallelismTier));
+    cfg.setFileHandlingMode(static_cast<FileHandlingMode>(m_fileHandlingMode));
+    cfg.setLibraryDir(Path(m_libraryDir));
+    cfg.setShowImportErrorToasts(m_showImportErrorToasts);
 
     cfg.save();
     m_dirty = false;

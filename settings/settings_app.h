@@ -29,6 +29,7 @@ class SettingsApp {
     void renderGeneralTab();
     void renderAppearanceTab();
     void renderRenderingTab();
+    void renderImportTab();
     void renderPathsTab();
     void renderBindingsTab();
     void renderAboutTab();
@@ -51,6 +52,8 @@ class SettingsApp {
     bool m_showGrid = true;
     bool m_showAxis = true;
     bool m_autoOrient = true;
+    bool m_invertOrbitX = false;
+    bool m_invertOrbitY = false;
     int m_navStyle = 0;
     int m_logLevel = 1;
     bool m_showStartPage = true;
@@ -65,6 +68,13 @@ class SettingsApp {
     // Input bindings
     std::array<InputBinding, static_cast<int>(BindAction::COUNT)> m_bindings;
     BindingRecorder m_bindingRecorder;
+
+    // Import settings
+    int m_parallelismTier = 0; // 0=Auto, 1=Fixed, 2=Expert
+    int m_fileHandlingMode = 0; // 0=LeaveInPlace, 1=Copy, 2=Move
+    char m_libraryDir[512]{};
+    bool m_showImportErrorToasts = true;
+    bool m_libraryDirValid = true; // Validation state for library directory
 
     static constexpr int WINDOW_WIDTH = 520;
     static constexpr int WINDOW_HEIGHT = 480;
