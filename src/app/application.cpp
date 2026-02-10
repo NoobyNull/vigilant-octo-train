@@ -24,6 +24,7 @@
 #include "core/loaders/loader_factory.h"
 #include "core/paths/app_paths.h"
 #include "core/threading/main_thread_queue.h"
+#include "core/threading/thread_pool.h"
 #include "core/utils/log.h"
 #include "core/utils/thread_utils.h"
 #include "managers/config_manager.h"
@@ -35,6 +36,7 @@
 #include "ui/panels/properties_panel.h"
 #include "ui/panels/start_page.h"
 #include "ui/panels/viewport_panel.h"
+#include "ui/widgets/toast.h"
 #include "version.h"
 
 namespace dw {
@@ -130,7 +132,13 @@ bool Application::init() {
         return false;
     }
 
-    m_connectionPool = std::make_unique<ConnectionPool>(paths::getDatabasePath(), 2);
+    // Size ConnectionPool for parallel workers + main thread
+    // Calculate max thread count from config, add 2 for main thread + overhead
+    auto tier = Config::instance().getParallelismTier();
+    size_t maxWorkers = calculateThreadCount(tier);
+    size_t poolSize = std::max(static_cast<size_t>(4), maxWorkers + 2);
+    m_connectionPool = std::make_unique<ConnectionPool>(paths::getDatabasePath(), poolSize);
+
     m_libraryManager = std::make_unique<LibraryManager>(*m_database);
     m_projectManager = std::make_unique<ProjectManager>(*m_database);
     m_workspace = std::make_unique<Workspace>();
@@ -154,6 +162,32 @@ bool Application::init() {
     m_configManager = std::make_unique<ConfigManager>(m_eventBus.get(), m_uiManager.get());
     m_configManager->init(m_window);
     m_configManager->setQuitCallback([this]() { quit(); });
+
+    // Wire ImportQueue callbacks for UI feedback
+    m_importQueue->setOnBatchComplete([this](const ImportBatchSummary& summary) {
+        // Post to main thread for UI updates
+        m_mainThreadQueue->enqueue([this, summary]() {
+            // Show error toasts if config allows and there are failures
+            if (Config::instance().getShowImportErrorToasts()) {
+                if (summary.hasIssues()) {
+                    if (summary.failedCount > 0) {
+                        std::string msg =
+                            std::to_string(summary.failedCount) + " file(s) failed to import";
+                        ToastManager::instance().show(ToastType::Error, "Import Errors", msg);
+                    }
+                    if (summary.duplicateCount > 0) {
+                        std::string msg =
+                            std::to_string(summary.duplicateCount) + " duplicate(s) skipped";
+                        ToastManager::instance().show(ToastType::Warning, "Duplicates", msg);
+                    }
+                } else if (summary.successCount > 0) {
+                    std::string msg =
+                        std::to_string(summary.successCount) + " file(s) imported successfully";
+                    ToastManager::instance().show(ToastType::Success, "Import Complete", msg);
+                }
+            }
+        });
+    });
 
     // Wire StartPage callbacks
     if (m_uiManager->startPage()) {
@@ -302,7 +336,6 @@ void Application::render() {
     m_uiManager->handleKeyboardShortcuts();
     m_uiManager->renderMenuBar();
     m_uiManager->renderPanels();
-    m_uiManager->renderImportProgress(m_importQueue.get());
     m_uiManager->renderStatusBar(m_loadingState, m_importQueue.get());
     m_uiManager->renderRestartPopup([this]() { m_configManager->relaunchApp(); });
     m_uiManager->renderAboutDialog();

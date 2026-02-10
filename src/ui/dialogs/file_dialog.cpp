@@ -309,10 +309,11 @@ bool FileDialog::matchesFilter(const std::string& filename) const {
 }
 
 std::vector<FileFilter> FileDialog::modelFilters() {
-    return {{"3D Models", "*.stl;*.obj;*.3mf"},
+    return {{"3D Models & G-code", "*.stl;*.obj;*.3mf;*.gcode;*.nc;*.ngc;*.tap"},
             {"STL Files", "*.stl"},
             {"OBJ Files", "*.obj"},
             {"3MF Files", "*.3mf"},
+            {"G-code Files", "*.gcode;*.nc;*.ngc;*.tap"},
             {"All Files", "*.*"}};
 }
 
