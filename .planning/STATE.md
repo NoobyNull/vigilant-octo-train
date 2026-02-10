@@ -1,7 +1,7 @@
 # Project State: Digital Workshop
 
-**Last Updated:** 2026-02-09
-**Current Session:** Phase 1.5 Bug Fixes - Plan 02 Complete
+**Last Updated:** 2026-02-10
+**Current Session:** Phase 2 Import Pipeline - Plan 03 Complete
 
 ---
 
@@ -11,29 +11,31 @@
 A single focused workspace where a CNC woodworker can manage their model library, analyze toolpaths, and optimize material usage — without switching between tools.
 
 **Current Focus:**
-Phase 1: Architectural Foundation & Thread Safety — Decompose the Application god class, establish thread-safe infrastructure, and fix existing bugs/debt.
+Phase 2: Import Pipeline — Build G-code/mesh file import system with background processing, metadata extraction, and library management.
 
 ---
 
 ## Current Position
 
-**Active Phase:** Phase 1 — Architectural Foundation & Thread Safety
+**Active Phase:** Phase 2 — Import Pipeline
 
-**Current Sub-Phase:** 1.6 Dead Code Cleanup (complete - Plan 1/1 complete)
+**Current Plan:** 02-03 (Plan 3/8 complete)
 
-**Status:** Plan 01.6-01 complete. All dead code items resolved: FontAwesome unicode replaced with text labels, DEAD-01 through DEAD-06 verified and documented. All 422 tests pass.
+**Status:** Plan 02-03 complete. GCodeLoader registered for .gcode/.nc/.ngc/.tap extensions with toolpath-to-mesh conversion. FileHandler implements copy/move/leave-in-place modes with cross-filesystem support. All 421 tests pass.
 
 **Progress:**
-```
-Phase 1: [████████████████████] 6/6 sub-phases (100%)
+[███████░░░] 71%
 
+Phase 1: [████████████████████] 6/6 sub-phases (100%)
 1.1 EventBus                 [##########] Plan 2/2 complete
 1.2 ConnectionPool           [##########] Plan 2/2 complete
 1.3 MainThreadQueue          [##########] Plan 2/2 complete
 1.4 God Class Decomposition  [##########] Plan 3/3 complete
 1.5 Bug Fixes                [##########] Plan 3/3 complete
 1.6 Dead Code Cleanup        [##########] Plan 1/1 complete
-```
+
+Phase 2: [█░░░░░░░░░] Plan 1/8 (13%)
+2.1 ThreadPool & Config      [##########] Plan 1/1 complete
 
 ---
 
@@ -54,16 +56,24 @@ Phase 1: [████████████████████] 6/6 sub-
 | 1.5   | 02   | 2m 51s   | 1     | 2     | 2026-02-09 |
 | 1.5   | 03   | 2m 45s   | 1     | 3     | 2026-02-09 |
 | 1.6   | 01   | 1m 59s   | 2     | 2     | 2026-02-09 |
+| 2.0   | 01   | 4m 57s   | 2     | 7     | 2026-02-10 |
+| 2.0   | 03   | 5m 2s    | 2     | 7     | 2026-02-10 |
 
-**Cycle Time:** 3m 15s per plan (13 plans completed)
+**Cycle Time:** 3m 23s per plan (14 plans completed)
 
 **Completion Rate:** 6 sub-phases in 2 days (Phase 1 complete)
 
 **Phase 1 Complete:** All architectural foundation and thread safety work done
 
+**Phase 2 Started:** Import Pipeline infrastructure - ThreadPool and Config foundations in place
+
 ---
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 2 added: Import Pipeline
 
 ### Key Decisions Made
 
@@ -203,6 +213,21 @@ Phase 1: [████████████████████] 6/6 sub-
     - Rationale: Avoids cache misses from floating-point imprecision while detecting meaningful movement
     - Impact: Robust cache hit rate without false misses from float comparison
 
+28. **ParallelismTier Calculation Strategy (2026-02-10, Plan 02-01)**
+    - Decision: Auto=60%, Fixed=90%, Expert=100% of cores
+    - Rationale: Auto leaves headroom for UI and system tasks, Fixed maximizes throughput with minimal reserve, Expert uses all cores for maximum parallelism
+    - Impact: User can control import concurrency level based on workflow needs
+
+29. **Library Path Validation Approach (2026-02-10, Plan 02-01)**
+    - Decision: Inline validation with filesystem::exists and create_directories
+    - Rationale: Immediate feedback without platform-specific dialog, validates both existing paths and creatable paths
+    - Impact: User gets instant visual feedback on path validity without modal dialogs
+
+30. **FileHandlingMode Enum vs Int (2026-02-10, Plan 02-01)**
+    - Decision: Dedicated enum with explicit values (LeaveInPlace/CopyToLibrary/MoveToLibrary)
+    - Rationale: Type safety, clear intent, easy to extend, matches existing Config patterns
+    - Impact: Safer code, self-documenting API, harder to misuse
+
 ### Open Questions
 
 1. **File Dialog Implementation (DEAD-04)**
@@ -224,16 +249,22 @@ Phase 1: [████████████████████] 6/6 sub-
 
 ### Active TODOs
 
-*From ROADMAP.md -- tracked per sub-phase*
+*From ROADMAP.md -- tracked per phase*
 
 **Next Immediate Actions:**
-1. Plan sub-phase 1.5 (Bug Fixes)
-2. Execute sub-phase 1.5 plans
-3. Plan sub-phase 1.6 (Dead Code Cleanup)
+1. Execute Plan 02-02: ImportQueue overhaul with ThreadPool integration
+2. Execute Plan 02-03: Metadata extraction and database schema
+3. Execute remaining Phase 2 plans (02-04 through 02-08)
 
 ### Current Blockers
 
-**None** -- Sub-phase 1.4 complete, ready for 1.5.
+**None** -- Plan 02-01 complete, ready for 02-02 (ImportQueue overhaul).
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 2 | Fix panel UI clipping when docks are resized smaller than content | 2026-02-10 | dc897b7 | [2-fix-panel-ui-clipping-when-docks-are-res](./quick/2-fix-panel-ui-clipping-when-docks-are-res/) |
 
 ---
 
@@ -344,4 +375,4 @@ Review ROADMAP.md for Phase 2 planning, or define next milestone focus.
 ---
 
 *State initialized: 2026-02-08*
-*Last session: 2026-02-09 -- Completed 01.6-01-PLAN.md -- Phase 1 Complete*
+*Last activity: 2026-02-10 - Completed quick task 2: Fix panel UI clipping when docks are resized smaller than content*
