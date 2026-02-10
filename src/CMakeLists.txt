@@ -38,6 +38,7 @@ set(DW_SOURCES
     core/database/schema.cpp
     core/database/model_repository.cpp
     core/database/project_repository.cpp
+    core/database/gcode_repository.cpp
 
     # Mesh
     core/mesh/mesh.cpp
