@@ -12,6 +12,20 @@
 
 namespace dw {
 
+// Forward declarations
+struct GCodeMetadata;
+
+// Import type enum - determines processing path
+enum class ImportType { Mesh, GCode };
+
+// Helper function to determine import type from extension
+inline ImportType importTypeFromExtension(const std::string& ext) {
+    if (ext == "gcode" || ext == "nc" || ext == "ngc" || ext == "tap") {
+        return ImportType::GCode;
+    }
+    return ImportType::Mesh;
+}
+
 // Stage of an individual import task
 enum class ImportStage {
     Pending,
@@ -25,11 +39,24 @@ enum class ImportStage {
     Failed
 };
 
+// Batch summary for import operations
+struct ImportBatchSummary {
+    int totalFiles = 0;
+    int successCount = 0;
+    int failedCount = 0;
+    int duplicateCount = 0;
+    std::vector<std::string> duplicateNames;  // Names of skipped duplicates
+    std::vector<std::pair<std::string, std::string>> errors; // (filename, error message)
+
+    bool hasIssues() const { return failedCount > 0 || duplicateCount > 0; }
+};
+
 // One import job — tracks a single file through the pipeline
 struct ImportTask {
     // Input
     Path sourcePath;
     std::string extension;
+    ImportType importType = ImportType::Mesh;
 
     // Pipeline data (populated as stages complete)
     ByteBuffer fileData;
@@ -37,6 +64,10 @@ struct ImportTask {
     MeshPtr mesh;
     ModelRecord record;
     i64 modelId = 0;
+
+    // G-code specific data (only populated when importType == GCode)
+    GCodeMetadata* gcodeMetadata = nullptr;  // Heap-allocated to avoid header dependency
+    i64 gcodeId = 0;
 
     // State
     ImportStage stage = ImportStage::Pending;
