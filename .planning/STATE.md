@@ -1,7 +1,7 @@
 # Project State: Digital Workshop
 
 **Last Updated:** 2026-02-10
-**Current Session:** Phase 2 Import Pipeline - Plan 06 Complete
+**Current Session:** Phase 2 Import Pipeline - COMPLETE (8/8 Plans)
 
 ---
 
@@ -19,12 +19,12 @@ Phase 2: Import Pipeline — Build G-code/mesh file import system with backgroun
 
 **Active Phase:** Phase 2 — Import Pipeline
 
-**Current Plan:** 02-06 (Plan 6/8 complete)
+**Current Plan:** 02-08 (Plan 8/8 complete)
 
-**Status:** Plan 02-06 complete. LibraryManager extended with G-code operations and auto-detect model association. Auto-detect strips filename suffixes and matches G-code to models on confident single-match. Application wired for import UI feedback via batch callbacks, StatusBar progress, and toast notifications. ConnectionPool sized for parallel workers. File dialog accepts G-code extensions. Modal import overlay removed.
+**Status:** Phase 2 Import Pipeline COMPLETE. Hardened STL/OBJ/3MF loaders with comprehensive error handling (truncated/corrupt/malformed files). End-to-end verified: parallel import, G-code with toolpath visualization, non-blocking UX, settings configuration. All 422 tests pass.
 
 **Progress:**
-[███████████░] 92%
+[██████████] 100%
 
 Phase 1: [████████████████████] 6/6 sub-phases (100%)
 1.1 EventBus                 [##########] Plan 2/2 complete
@@ -34,13 +34,15 @@ Phase 1: [████████████████████] 6/6 sub-
 1.5 Bug Fixes                [##########] Plan 3/3 complete
 1.6 Dead Code Cleanup        [##########] Plan 1/1 complete
 
-Phase 2: [███████░░░] Plan 6/8 (75%)
+Phase 2: [████████████████████] Plan 8/8 (100%)
 2.1 ThreadPool & Config      [##########] Plan 1/1 complete
 2.2 G-code Schema & Repo     [##########] Plan 1/1 complete
 2.3 G-code Loader & Handler  [##########] Plan 1/1 complete
 2.4 Parallel Import Queue    [##########] Plan 1/1 complete
 2.5 Background Import UI     [##########] Plan 1/1 complete
 2.6 Import Pipeline Wiring   [##########] Plan 1/1 complete
+2.7 Toolpath Visualization   [##########] Plan 1/1 complete
+2.8 Pipeline Hardening       [##########] Plan 1/1 complete
 
 ---
 
@@ -67,8 +69,10 @@ Phase 2: [███████░░░] Plan 6/8 (75%)
 | 2.0   | 04   | 5m 44s   | 2     | 7     | 2026-02-10 |
 | 2.0   | 05   | 4m 54s   | 2     | 11    | 2026-02-10 |
 | 2.0   | 06   | 6m 20s   | 2     | 6     | 2026-02-10 |
+| 2.0   | 07   | 5m 16s   | 2     | 11    | 2026-02-10 |
+| 2.0   | 08   | 42s      | 2     | 3     | 2026-02-10 |
 
-**Cycle Time:** 3m 49s per plan (18 plans completed)
+**Cycle Time:** 3m 42s per plan (20 plans completed)
 
 **Completion Rate:** 6 sub-phases in 2 days (Phase 1 complete)
 
@@ -78,6 +82,7 @@ Phase 2: [███████░░░] Plan 6/8 (75%)
 
 ---
 | Phase 02 P05 | 294 | 2 tasks | 11 files |
+| Phase 02 P07 | 316 | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -283,7 +288,7 @@ Phase 2: [███████░░░] Plan 6/8 (75%)
 
 ### Current Blockers
 
-**None** -- Plan 02-05 complete, ready for 02-06 (Application wiring).
+**None** -- Phase 2 Import Pipeline complete. Ready for next phase planning.
 
 ### Quick Tasks Completed
 
@@ -297,63 +302,61 @@ Phase 2: [███████░░░] Plan 6/8 (75%)
 
 ### What Was Just Accomplished
 
-**Session Goal:** Execute Phase 02 Plan 06 (Import Pipeline Integration and G-code Auto-Association)
+**Session Goal:** Execute Phase 02 Plan 08 (Import Pipeline Hardening and End-to-End Verification)
 
 **Completed:**
-- Task 1: Extended LibraryManager with G-code operations and auto-detect model matching (pre-existing from Plan 02-05)
-- Task 2: Wired Application import pipeline to UI feedback (StatusBar, ToastManager, batch callbacks)
-- LibraryManager provides 17 G-code operations (CRUD, hierarchy, templates, auto-detect)
-- Auto-detect strips filename suffixes and matches G-code to models on confident single-match
-- Auto-association creates "Imported" group or uses first existing group
-- Application batch complete callback shows toast notifications on main thread
-- ConnectionPool sized to max(4, workerCount + 2) for parallel imports
-- File dialog accepts G-code extensions (.gcode/.nc/.ngc/.tap)
-- Modal import overlay removed - StatusBar provides lightweight progress
-- Toast notifications respect ShowImportErrorToasts config setting
-- Build passes with 421/422 tests (lint failure addressed)
-- Execution time: 6m 20s
+- Task 1: Hardened STL/OBJ/3MF loaders with comprehensive error handling
+- Task 2: End-to-end import pipeline verification (human checkpoint passed)
+- STL: Empty file check, NaN/Inf validation, extreme coordinate bounds (>1e6), truncation detection
+- OBJ: NaN/Inf validation, MTL file warning (continues without materials), per-line error recovery
+- 3MF: Archive size validation, NaN/Inf validation, corrupt/missing file error messages
+- All loaders: try/catch wrappers, descriptive errors, no crashes on corrupt input
+- All 422 tests pass (includes 38 loader tests)
+- Human verification: parallel import, G-code toolpath, settings, error handling all confirmed working
+- Phase 2 Import Pipeline COMPLETE (8/8 plans)
+- Execution time: 42s
 
 **Artifacts Created:**
-- `.planning/phases/02-import-pipeline/02-06-SUMMARY.md` -- Plan 06 summary
+- `.planning/phases/02-import-pipeline/02-08-SUMMARY.md` -- Plan 08 summary
 
 **Artifacts Modified:**
-- `src/core/library/library_manager.h` -- Added 17 G-code methods (08b89bf)
-- `src/core/library/library_manager.cpp` -- Implemented G-code operations and auto-detect (08b89bf)
-- `src/core/import/import_queue.h` -- Added LibraryManager parameter (08b89bf)
-- `src/core/import/import_queue.cpp` -- Added auto-association logic (08b89bf)
-- `src/app/application.cpp` -- ConnectionPool sizing, batch callback wiring, modal removal (85a9c97)
-- `src/ui/dialogs/file_dialog.cpp` -- Added G-code file extensions to filters (85a9c97)
+- `src/core/loaders/stl_loader.cpp` -- Hardened with validation and error handling (4e1f026)
+- `src/core/loaders/obj_loader.cpp` -- Hardened with validation and error handling (4e1f026)
+- `src/core/loaders/threemf_loader.cpp` -- Hardened with validation and error handling (4e1f026)
+- `.planning/STATE.md` -- Updated to Phase 2 complete status
 
 **Commits:**
-- `85a9c97` -- feat(02-06): wire Application import pipeline to UI feedback
+- `4e1f026` -- feat(02-08): harden STL/OBJ/3MF loaders with improved error handling
 
 ### What to Do Next
 
-**Phase 2 Import Pipeline - 75% Complete**
+**Phase 2 Import Pipeline - COMPLETE (100%)**
 
-Completed plans (6/8):
+All 8 plans completed:
 - Plan 02-01: ThreadPool Infrastructure & Import Config ✓
 - Plan 02-02: Database Schema for G-code Storage ✓
 - Plan 02-03: G-code Loader and File Handler ✓
 - Plan 02-04: Parallel Import Queue ✓
 - Plan 02-05: Background Import UI Feedback ✓
 - Plan 02-06: Import Pipeline Integration & G-code Auto-Association ✓
+- Plan 02-07: Toolpath Visualization and Library Panel G-code Integration ✓
+- Plan 02-08: Import Pipeline Hardening and End-to-End Verification ✓
 
-**Success Criteria Met (Plan 02-06):**
-- [x] G-code imports persist to database with full metadata
-- [x] G-code files appear in library alongside mesh models
-- [x] Operation groups can be created for models with template support
-- [x] Application wires ImportQueue batch callbacks to UI (status bar, toasts)
-- [x] Auto-detect associates G-code with model on confident single-match
-- [x] ConnectionPool sized for parallel workers (max(4, workers + 2))
-- [x] File dialog accepts G-code extensions (.gcode/.nc/.ngc/.tap)
-- [x] Old modal import overlay removed, StatusBar provides progress
-- [x] Toasts respect ShowImportErrorToasts config setting
+**Success Criteria Met (Plan 02-08):**
+- [x] Corrupt mesh files return descriptive errors without crashing
+- [x] Empty/truncated files rejected with clear messages
+- [x] Missing MTL references handled gracefully
+- [x] Parallel import processes multiple files simultaneously
+- [x] G-code files import with metadata and render toolpath in viewport
+- [x] Non-blocking UX: status bar progress, toasts, summary dialog
+- [x] Duplicate detection and error handling work correctly
+- [x] Settings app Import tab configures all pipeline options
+- [x] Human verification confirms end-to-end functionality
 
-**Next Plans:**
-- Plan 02-06: Application wiring (connect import callbacks to UIManager)
-- Plan 02-07: Library panel G-code integration
-- Plan 02-08: Import error handling and recovery
+**Next Actions:**
+- Review ROADMAP.md for Phase 3 planning
+- Identify next priority area (cut optimizer, G-code generation, or other features)
+- Use `/gsd:plan-phase` to plan next phase when ready
 
 ---
 
@@ -489,3 +492,48 @@ Completed plans (6/8):
     - Decision: Mark renderImportProgress and renderStatusBar as deprecated, keep functional
     - Rationale: Application still calls these methods - removal deferred to Plan 06/07 wiring
     - Impact: No breaking changes to Application in this plan, smooth migration path
+
+40. **Toolpath Color Scheme (2026-02-10, Plan 02-07)**
+    - Decision: Blue for cutting (G1), orange-red for rapid (G0) with shader blending
+    - Rationale: Visually distinct colors, rapid moves slightly transparent (0.8 alpha)
+    - Impact: Clear visual distinction between move types without separate render passes
+
+41. **Library View Organization (2026-02-10, Plan 02-07)**
+    - Decision: Tabbed view with All | Models | G-code tabs
+    - Rationale: Clear separation, user can filter by type or see everything
+    - Impact: Scalable UI as more file types added (e.g., cut plans in future)
+
+42. **Camera Auto-Fit Behavior for Toolpath (2026-02-10, Plan 02-07)**
+    - Decision: Auto-fit to toolpath bounds only when no mesh is displayed
+    - Rationale: Prevents disrupting user's view when model + toolpath both loaded
+    - Impact: Toolpath-only viewing gets proper framing, mixed viewing preserves model focus
+
+43. **Grid and Axis Rendering (2026-02-10, Plan 02-07)**
+    - Decision: Add renderGrid() and renderAxis() calls to ViewportPanel
+    - Rationale: Renderer provides these methods, viewport should use them for spatial context
+    - Impact: Users can see 3D orientation and scale reference (deviation - missing functionality)
+
+44. **Loader Error Handling Strategy (2026-02-10, Plan 02-08)**
+    - Decision: Return descriptive LoadResult with error strings, never crash on corrupt input
+    - Rationale: Corrupt user files should provide helpful feedback, not crash the application
+    - Impact: All loaders wrap parse logic in try/catch, return actionable error messages
+
+45. **NaN/Inf Validation in Mesh Loaders (2026-02-10, Plan 02-08)**
+    - Decision: Wrap float parsing in try/catch, reject file on NaN/Inf detection
+    - Rationale: NaN/Inf values corrupt mesh rendering and physics, better to reject file early
+    - Impact: STL/OBJ/3MF loaders validate all vertex coordinates before accepting file
+
+46. **Extreme Coordinate Bounds Check (2026-02-10, Plan 02-08)**
+    - Decision: Reject vertices with any coordinate >1e6 as likely corrupt
+    - Rationale: Legitimate models rarely exceed 1000 units, >1e6 indicates corruption or unit errors
+    - Impact: Early detection of corrupted files with nonsensical coordinate values
+
+47. **Missing MTL File Handling (2026-02-10, Plan 02-08)**
+    - Decision: Log warning and continue loading OBJ without materials
+    - Rationale: Geometry is valid, missing colors/textures shouldn't prevent import
+    - Impact: Graceful degradation - user gets model even if material file is missing
+
+48. **3MF Archive Validation Level (2026-02-10, Plan 02-08)**
+    - Decision: Validate archive size and structure, parse XML for geometry
+    - Rationale: Balance between performance and robustness - catch common issues early
+    - Impact: 3MF loader detects corrupt/truncated archives before attempting full parse
