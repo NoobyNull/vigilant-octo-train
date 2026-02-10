@@ -107,6 +107,7 @@ set(DW_SOURCES
     ui/dialogs/message_dialog.cpp
     ui/dialogs/file_dialog.cpp
     ui/dialogs/lighting_dialog.cpp
+    ui/dialogs/import_summary_dialog.cpp
 )
 
 # Create executable

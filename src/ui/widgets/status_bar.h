@@ -8,6 +8,7 @@ namespace dw {
 
 // Forward declarations
 struct ImportProgress;
+struct LoadingState;
 
 class StatusBar {
   public:
@@ -15,7 +16,7 @@ class StatusBar {
     ~StatusBar() = default;
 
     // Render the status bar. Call each frame from UIManager.
-    void render();
+    void render(const LoadingState* loadingState);
 
     // Set import progress reference (called when import starts)
     void setImportProgress(const ImportProgress* progress);

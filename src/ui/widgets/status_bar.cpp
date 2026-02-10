@@ -7,10 +7,11 @@
 #include <imgui.h>
 
 #include "core/import/import_task.h"
+#include "core/threading/loading_state.h"
 
 namespace dw {
 
-void StatusBar::render() {
+void StatusBar::render(const LoadingState* loadingState) {
     auto* viewport = ImGui::GetMainViewport();
     float barHeight = ImGui::GetFrameHeight() + ImGui::GetStyle().WindowPadding.y * 2;
 
@@ -26,6 +27,16 @@ void StatusBar::render() {
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 4));
     if (ImGui::Begin("##StatusBar", nullptr, flags)) {
+        // Left side: loading status or "Ready"
+        if (loadingState && loadingState->active.load()) {
+            int dots = (static_cast<int>(ImGui::GetTime() * 3.0) % 3) + 1;
+            std::string dotsStr(static_cast<size_t>(dots), '.');
+            ImGui::Text("Loading %s%s", loadingState->getName().c_str(), dotsStr.c_str());
+        } else if (!m_progress || !m_progress->active.load()) {
+            ImGui::TextDisabled("Ready");
+        }
+
+        // Right side: import progress if active
         if (m_progress && m_progress->active.load()) {
             // Show import progress
             int completed = m_progress->completedFiles.load();
@@ -40,11 +51,16 @@ void StatusBar::render() {
                 ImGui::TextDisabled("- %s", importStageName(m_progress->currentStage.load()));
             }
 
-            // Right: progress bar and counts
+            // Align to right side
             float progressBarWidth = 200.0f;
-            float textWidth = ImGui::CalcTextSize("999/999").x;
-            float totalWidth = progressBarWidth + textWidth + 16; // spacing
-            ImGui::SameLine(ImGui::GetWindowWidth() - totalWidth - 8);
+            float cancelButtonWidth = ImGui::CalcTextSize("X").x + ImGui::GetStyle().FramePadding.x * 2;
+            float totalWidth = progressBarWidth + cancelButtonWidth + 16; // spacing
+            float windowWidth = ImGui::GetWindowWidth();
+            if (windowWidth > totalWidth + 100) { // Ensure enough space
+                ImGui::SameLine(windowWidth - totalWidth - 8);
+            } else {
+                ImGui::SameLine();
+            }
 
             // Progress bar
             float fraction =
@@ -61,14 +77,10 @@ void StatusBar::render() {
                 // For now, this is a visual placeholder.
             }
 
-            // Show failed count if > 0
-            if (failed > 0) {
-                ImGui::SameLine();
-                ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "%d failed", failed);
+            // Show failed count if > 0 (in tooltip to save space)
+            if (failed > 0 && ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("%d files failed", failed);
             }
-        } else {
-            // No active import — show general status
-            ImGui::TextDisabled("Ready");
         }
     }
     ImGui::End();

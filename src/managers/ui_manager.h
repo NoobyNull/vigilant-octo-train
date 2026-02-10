@@ -28,12 +28,19 @@ class StartPage;
 // Forward declarations - dialogs
 class FileDialog;
 class LightingDialog;
+class ImportSummaryDialog;
 
 // Forward declarations - core
+struct LoadingState;
+struct ImportBatchSummary;
+struct ImportProgress;
 class LibraryManager;
 class ProjectManager;
 class ImportQueue;
 class Workspace;
+
+// Forward declarations - widgets
+class StatusBar;
 
 // Callback types for actions that remain in Application
 using ActionCallback = std::function<void()>;
@@ -63,11 +70,15 @@ class UIManager {
     // --- Per-frame rendering ---
     void renderMenuBar();
     void renderPanels();
-    void renderImportProgress(ImportQueue* importQueue);
+    void renderImportProgress(ImportQueue* importQueue);  // DEPRECATED: Use renderBackgroundUI instead
+    void renderStatusBar(const LoadingState& loadingState, ImportQueue* importQueue);  // DEPRECATED: Use renderBackgroundUI instead
     void renderAboutDialog();
     void renderRestartPopup(ActionCallback onRelaunch);
     void setupDefaultDockLayout(ImGuiID dockspaceId);
     void handleKeyboardShortcuts();
+
+    // --- New background UI methods (Plan 02-05) ---
+    void renderBackgroundUI(float deltaTime, const LoadingState* loadingState);  // Renders StatusBar, ToastManager, ImportSummaryDialog
 
     // --- Dock layout first-frame logic ---
     bool isFirstFrame() const { return m_firstFrame; }
@@ -83,6 +94,7 @@ class UIManager {
     StartPage* startPage() { return m_startPage.get(); }
     FileDialog* fileDialog() { return m_fileDialog.get(); }
     LightingDialog* lightingDialog() { return m_lightingDialog.get(); }
+    ImportSummaryDialog* importSummaryDialog() { return m_importSummaryDialog.get(); }
 
     // --- Visibility state ---
     bool& showViewport() { return m_showViewport; }
@@ -103,6 +115,10 @@ class UIManager {
     void setOnQuit(ActionCallback cb) { m_onQuit = std::move(cb); }
     void setOnSpawnSettings(ActionCallback cb) { m_onSpawnSettings = std::move(cb); }
     void setOnShowAbout(ActionCallback cb) { m_onShowAbout = std::move(cb); }
+
+    // --- Import progress callbacks (Plan 02-05) ---
+    void setImportProgress(const ImportProgress* progress);
+    void showImportSummary(const ImportBatchSummary& summary);
 
     // --- Workspace state save/restore helpers ---
     void restoreVisibilityFromConfig();
@@ -132,6 +148,10 @@ class UIManager {
     // Dialogs
     std::unique_ptr<FileDialog> m_fileDialog;
     std::unique_ptr<LightingDialog> m_lightingDialog;
+    std::unique_ptr<ImportSummaryDialog> m_importSummaryDialog;
+
+    // Widgets (Plan 02-05)
+    std::unique_ptr<StatusBar> m_statusBar;
 
     // Restart popup state
     bool m_showRestartPopup = false;

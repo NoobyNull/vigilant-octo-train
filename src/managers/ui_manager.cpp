@@ -13,8 +13,10 @@
 #include "core/config/config.h"
 #include "core/import/import_queue.h"
 #include "core/import/import_task.h"
+#include "core/threading/loading_state.h"
 #include "core/utils/thread_utils.h"
 #include "ui/dialogs/file_dialog.h"
+#include "ui/dialogs/import_summary_dialog.h"
 #include "ui/dialogs/lighting_dialog.h"
 #include "ui/panels/cut_optimizer_panel.h"
 #include "ui/panels/gcode_panel.h"
@@ -23,6 +25,8 @@
 #include "ui/panels/properties_panel.h"
 #include "ui/panels/start_page.h"
 #include "ui/panels/viewport_panel.h"
+#include "ui/widgets/status_bar.h"
+#include "ui/widgets/toast.h"
 #include "version.h"
 
 namespace dw {
@@ -46,6 +50,10 @@ void UIManager::init(LibraryManager* libraryManager, ProjectManager* projectMana
     // Create dialogs
     m_fileDialog = std::make_unique<FileDialog>();
     m_lightingDialog = std::make_unique<LightingDialog>();
+    m_importSummaryDialog = std::make_unique<ImportSummaryDialog>();
+
+    // Create widgets
+    m_statusBar = std::make_unique<StatusBar>();
 
     // Connect viewport render settings to lighting dialog
     if (m_viewportPanel) {
@@ -65,6 +73,10 @@ void UIManager::shutdown() {
     // Destroy dialogs
     m_fileDialog.reset();
     m_lightingDialog.reset();
+    m_importSummaryDialog.reset();
+
+    // Destroy widgets
+    m_statusBar.reset();
 
     // Destroy panels
     m_viewportPanel.reset();
@@ -187,6 +199,10 @@ void UIManager::renderPanels() {
     if (m_lightingDialog) {
         m_lightingDialog->render();
     }
+
+    if (m_importSummaryDialog) {
+        m_importSummaryDialog->render();
+    }
 }
 
 void UIManager::renderImportProgress(ImportQueue* importQueue) {
@@ -213,7 +229,7 @@ void UIManager::renderImportProgress(ImportQueue* importQueue) {
         int failed = prog.failedFiles.load();
 
         // Current file and stage
-        ImGui::Text("%s", prog.getCurrentFileName().c_str());
+        ImGui::TextWrapped("%s", prog.getCurrentFileName().c_str());
         ImGui::TextDisabled("%s", importStageName(prog.currentStage.load()));
 
         // Overall progress bar
@@ -232,6 +248,47 @@ void UIManager::renderImportProgress(ImportQueue* importQueue) {
         }
     }
     ImGui::End();
+}
+
+void UIManager::renderStatusBar(const LoadingState& loadingState, ImportQueue* importQueue) {
+    auto* viewport = ImGui::GetMainViewport();
+    float barHeight = ImGui::GetFrameHeight() + ImGui::GetStyle().WindowPadding.y * 2;
+
+    ImVec2 pos(viewport->WorkPos.x, viewport->WorkPos.y + viewport->WorkSize.y - barHeight);
+    ImVec2 size(viewport->WorkSize.x, barHeight);
+
+    ImGui::SetNextWindowPos(pos);
+    ImGui::SetNextWindowSize(size);
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+                             ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
+                             ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking;
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 4));
+    if (ImGui::Begin("##StatusBar", nullptr, flags)) {
+        // Left: loading status
+        if (loadingState.active.load()) {
+            int dots = (static_cast<int>(ImGui::GetTime() * 3.0) % 3) + 1;
+            std::string dotsStr(static_cast<size_t>(dots), '.');
+            ImGui::Text("Loading %s%s", loadingState.getName().c_str(), dotsStr.c_str());
+        } else {
+            ImGui::TextDisabled("Ready");
+        }
+
+        // Right: import progress (if active)
+        if (importQueue != nullptr && importQueue->isActive()) {
+            const auto& prog = importQueue->progress();
+            int completed = prog.completedFiles.load();
+            int total = prog.totalFiles.load();
+            char buf[64];
+            std::snprintf(buf, sizeof(buf), "Importing %d/%d", completed, total);
+            float textWidth = ImGui::CalcTextSize(buf).x;
+            ImGui::SameLine(ImGui::GetWindowWidth() - textWidth - 8);
+            ImGui::Text("%s", buf);
+        }
+    }
+    ImGui::End();
+    ImGui::PopStyleVar();
 }
 
 void UIManager::renderAboutDialog() {
@@ -398,6 +455,33 @@ int64_t UIManager::getSelectedModelId() const {
         return m_libraryPanel->selectedModelId();
     }
     return -1;
+}
+
+void UIManager::renderBackgroundUI(float deltaTime, const LoadingState* loadingState) {
+    // Render status bar (replaces old renderStatusBar and renderImportProgress)
+    if (m_statusBar) {
+        m_statusBar->render(loadingState);
+    }
+
+    // Render toast notifications
+    ToastManager::instance().render(deltaTime);
+
+    // Render import summary dialog
+    if (m_importSummaryDialog) {
+        m_importSummaryDialog->render();
+    }
+}
+
+void UIManager::setImportProgress(const ImportProgress* progress) {
+    if (m_statusBar) {
+        m_statusBar->setImportProgress(progress);
+    }
+}
+
+void UIManager::showImportSummary(const ImportBatchSummary& summary) {
+    if (m_importSummaryDialog) {
+        m_importSummaryDialog->open(summary);
+    }
 }
 
 } // namespace dw
