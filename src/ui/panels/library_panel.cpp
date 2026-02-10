@@ -118,7 +118,22 @@ void LibraryPanel::render() {
     if (ImGui::Begin(m_title.c_str(), &m_open)) {
         renderToolbar();
         ImGui::Separator();
-        renderModelList();
+        renderTabs();
+        ImGui::Separator();
+
+        // Render content based on active tab
+        switch (m_activeTab) {
+        case ViewTab::Models:
+            renderModelList();
+            break;
+        case ViewTab::GCode:
+            renderGCodeList();
+            break;
+        case ViewTab::All:
+            renderCombinedList();
+            break;
+        }
+
         renderRenameDialog();
     }
     ImGui::End();
@@ -128,22 +143,29 @@ void LibraryPanel::refresh() {
     if (m_library) {
         if (m_searchQuery.empty()) {
             m_models = m_library->getAllModels();
+            m_gcodeFiles = m_library->getAllGCodeFiles();
         } else {
             m_models = m_library->searchModels(m_searchQuery);
+            // For now, G-code search is not implemented - show all
+            m_gcodeFiles = m_library->getAllGCodeFiles();
         }
     }
 }
 
 void LibraryPanel::renderToolbar() {
-    // Search input with responsive width
     float avail = ImGui::GetContentRegionAvail().x;
-    float searchWidth;
-    if (avail < 150.0f) {
-        // Very narrow: use half the available width
-        searchWidth = avail * 0.5f;
-    } else {
-        // Normal: reserve 100px for buttons
-        searchWidth = -100.0f;
+    float style = ImGui::GetStyle().ItemSpacing.x;
+
+    // Calculate actual button widths dynamically
+    float refreshBtnW = ImGui::CalcTextSize(Icons::Refresh).x + ImGui::GetStyle().FramePadding.x * 2;
+    const char* viewIcon = m_showThumbnails ? Icons::Grid : Icons::List;
+    float viewBtnW = ImGui::CalcTextSize(viewIcon).x + ImGui::GetStyle().FramePadding.x * 2;
+    float buttonsW = refreshBtnW + viewBtnW + style * 2; // 2 SameLine gaps
+
+    // Search input takes remaining space after buttons
+    float searchWidth = avail - buttonsW;
+    if (searchWidth < 50.0f) {
+        searchWidth = 50.0f;
     }
 
     ImGui::SetNextItemWidth(searchWidth);
@@ -175,11 +197,29 @@ void LibraryPanel::renderToolbar() {
     ImGui::SameLine();
 
     // View toggle
-    if (ImGui::Button(m_showThumbnails ? Icons::Grid : Icons::List)) {
+    if (ImGui::Button(viewIcon)) {
         m_showThumbnails = !m_showThumbnails;
     }
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip(m_showThumbnails ? "List view" : "Grid view");
+    }
+}
+
+void LibraryPanel::renderTabs() {
+    if (ImGui::BeginTabBar("LibraryTabs")) {
+        if (ImGui::BeginTabItem("All")) {
+            m_activeTab = ViewTab::All;
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("Models")) {
+            m_activeTab = ViewTab::Models;
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("G-code")) {
+            m_activeTab = ViewTab::GCode;
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
     }
 }
 
@@ -357,6 +397,189 @@ void LibraryPanel::renderContextMenu(const ModelRecord& model) {
 
     if (ImGui::MenuItem("Copy Path")) {
         ImGui::SetClipboardText(model.filePath.string().c_str());
+    }
+}
+
+void LibraryPanel::renderGCodeList() {
+    ImGui::BeginChild("GCodeList", ImVec2(0, 0), false);
+
+    if (m_gcodeFiles.empty()) {
+        ImGui::TextDisabled("No G-code files in library");
+        ImGui::TextDisabled("Import G-code using File > Import");
+    } else {
+        for (size_t i = 0; i < m_gcodeFiles.size(); ++i) {
+            renderGCodeItem(m_gcodeFiles[i], static_cast<int>(i));
+        }
+    }
+
+    ImGui::EndChild();
+}
+
+void LibraryPanel::renderCombinedList() {
+    ImGui::BeginChild("CombinedList", ImVec2(0, 0), false);
+
+    if (m_models.empty() && m_gcodeFiles.empty()) {
+        ImGui::TextDisabled("Library is empty");
+        ImGui::TextDisabled("Import files using File > Import");
+    } else {
+        // Render models first
+        for (size_t i = 0; i < m_models.size(); ++i) {
+            renderModelItem(m_models[i], static_cast<int>(i));
+        }
+
+        // Then G-code files
+        for (size_t i = 0; i < m_gcodeFiles.size(); ++i) {
+            renderGCodeItem(m_gcodeFiles[i], static_cast<int>(i + m_models.size()));
+        }
+    }
+
+    ImGui::EndChild();
+}
+
+void LibraryPanel::renderGCodeItem(const GCodeRecord& gcode, int index) {
+    ImGui::PushID(static_cast<int>(gcode.id + 1000000)); // Offset to avoid ID collision with models
+
+    bool isSelected = (gcode.id == m_selectedGCodeId);
+
+    if (m_showThumbnails) {
+        // Thumbnail view
+        float itemHeight = m_thumbnailSize + 8.0f;
+
+        if (ImGui::Selectable("##gcodeitem", isSelected, ImGuiSelectableFlags_AllowDoubleClick,
+                              ImVec2(0, itemHeight))) {
+            m_selectedGCodeId = gcode.id;
+            m_selectedModelId = -1; // Deselect models
+            if (ImGui::IsMouseDoubleClicked(0)) {
+                if (m_onGCodeOpened)
+                    m_onGCodeOpened(gcode.id);
+            } else {
+                if (m_onGCodeSelected)
+                    m_onGCodeSelected(gcode.id);
+            }
+        }
+
+        if (ImGui::BeginPopupContextItem("GCodeContext")) {
+            renderGCodeContextMenu(gcode);
+            ImGui::EndPopup();
+        }
+
+        // Draw placeholder and text
+        ImVec2 itemMin = ImGui::GetItemRectMin();
+        ImVec2 itemMax = ImGui::GetItemRectMax();
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+        float pad = 4.0f;
+        ImVec2 thumbMin = ImVec2(itemMin.x + pad, itemMin.y + pad);
+        ImVec2 thumbMax = ImVec2(thumbMin.x + m_thumbnailSize, thumbMin.y + m_thumbnailSize);
+
+        // Draw placeholder with "GC" text
+        drawList->AddRectFilled(thumbMin, thumbMax, IM_COL32(50, 70, 90, 255), 4.0f);
+        drawList->AddRect(thumbMin, thumbMax, IM_COL32(70, 100, 130, 255), 4.0f);
+
+        // Center "GC" text in placeholder
+        const char* icon = "GC";
+        ImVec2 iconSize = ImGui::CalcTextSize(icon);
+        ImVec2 iconPos = ImVec2(thumbMin.x + (m_thumbnailSize - iconSize.x) * 0.5f,
+                                thumbMin.y + (m_thumbnailSize - iconSize.y) * 0.5f);
+        drawList->AddText(iconPos, IM_COL32(150, 180, 220, 255), icon);
+
+        // Text to the right of thumbnail
+        float textX = thumbMax.x + 8.0f;
+        float textMaxX = itemMax.x - pad;
+
+        // G-code name
+        ImVec4 clipRect(textX, itemMin.y, textMaxX, itemMax.y);
+        drawList->AddText(nullptr, 0.0f, ImVec2(textX, thumbMin.y),
+                          ImGui::GetColorU32(ImGuiCol_Text), gcode.name.c_str(), nullptr, 0.0f,
+                          &clipRect);
+
+        // Format info line with time and distance
+        std::string info = "G-code";
+        if (gcode.estimatedTime > 0) {
+            int minutes = static_cast<int>(gcode.estimatedTime);
+            info += " | " + std::to_string(minutes) + "min";
+        }
+        if (gcode.totalDistance > 0) {
+            info += " | " + std::to_string(static_cast<int>(gcode.totalDistance)) + "mm";
+        }
+        float lineHeight = ImGui::GetTextLineHeightWithSpacing();
+        drawList->AddText(nullptr, 0.0f, ImVec2(textX, thumbMin.y + lineHeight),
+                          ImGui::GetColorU32(ImGuiCol_TextDisabled), info.c_str(), nullptr, 0.0f,
+                          &clipRect);
+    } else {
+        // List view - compact row
+        if (ImGui::Selectable("##gcodeitem", isSelected, ImGuiSelectableFlags_AllowDoubleClick,
+                              ImVec2(0, 24.0f))) {
+            m_selectedGCodeId = gcode.id;
+            m_selectedModelId = -1;
+            if (ImGui::IsMouseDoubleClicked(0)) {
+                if (m_onGCodeOpened)
+                    m_onGCodeOpened(gcode.id);
+            } else {
+                if (m_onGCodeSelected)
+                    m_onGCodeSelected(gcode.id);
+            }
+        }
+
+        if (ImGui::BeginPopupContextItem("GCodeContext")) {
+            renderGCodeContextMenu(gcode);
+            ImGui::EndPopup();
+        }
+
+        // Draw text
+        ImVec2 itemMin = ImGui::GetItemRectMin();
+        ImVec2 itemMax = ImGui::GetItemRectMax();
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        float pad = 4.0f;
+
+        // Name on the left with icon
+        std::string label = "GC " + gcode.name;
+        float textMaxX = itemMax.x - 70.0f;
+        ImVec4 clipRect(itemMin.x + pad, itemMin.y, textMaxX, itemMax.y);
+        drawList->AddText(nullptr, 0.0f, ImVec2(itemMin.x + pad, itemMin.y + 3.0f),
+                          ImGui::GetColorU32(ImGuiCol_Text), label.c_str(), nullptr, 0.0f,
+                          &clipRect);
+
+        // Format on the right
+        const char* format = "G-code";
+        ImVec2 fmtSize = ImGui::CalcTextSize(format);
+        drawList->AddText(ImVec2(itemMax.x - fmtSize.x - pad, itemMin.y + 3.0f),
+                          ImGui::GetColorU32(ImGuiCol_TextDisabled), format);
+    }
+
+    ImGui::PopID();
+}
+
+void LibraryPanel::renderGCodeContextMenu(const GCodeRecord& gcode) {
+    if (ImGui::MenuItem("Open")) {
+        if (m_onGCodeOpened) {
+            m_onGCodeOpened(gcode.id);
+        }
+    }
+
+    ImGui::Separator();
+
+    if (ImGui::MenuItem("Delete")) {
+        if (m_library) {
+            m_library->deleteGCodeFile(gcode.id);
+            refresh();
+        }
+    }
+
+    ImGui::Separator();
+
+    if (ImGui::MenuItem("Show in Explorer")) {
+        auto parentDir = gcode.filePath.parent_path();
+        if (!parentDir.empty()) {
+#ifdef _WIN32
+            ShellExecuteW(nullptr, L"explore",
+                          reinterpret_cast<LPCWSTR>(parentDir.u16string().c_str()), nullptr,
+                          nullptr, SW_SHOWNORMAL);
+#else
+            std::string cmd = "xdg-open \"" + parentDir.string() + "\"";
+            std::system(cmd.c_str());
+#endif
+        }
     }
 }
 

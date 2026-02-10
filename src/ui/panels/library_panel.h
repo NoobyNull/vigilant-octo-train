@@ -29,7 +29,18 @@ class LibraryPanel : public Panel {
     // Callback when a model is double-clicked (load into viewport)
     void setOnModelOpened(ModelSelectedCallback callback) { m_onModelOpened = std::move(callback); }
 
-    // Refresh the model list
+    // Callback when a G-code file is selected
+    using GCodeSelectedCallback = std::function<void(int64_t gcodeId)>;
+    void setOnGCodeSelected(GCodeSelectedCallback callback) {
+        m_onGCodeSelected = std::move(callback);
+    }
+
+    // Callback when a G-code file is double-clicked (load into viewport)
+    void setOnGCodeOpened(GCodeSelectedCallback callback) {
+        m_onGCodeOpened = std::move(callback);
+    }
+
+    // Refresh the model and G-code lists
     void refresh();
 
     // Get/set currently selected model ID (-1 if none)
@@ -37,10 +48,17 @@ class LibraryPanel : public Panel {
     void setSelectedModelId(int64_t id) { m_selectedModelId = id; }
 
   private:
+    enum class ViewTab { All, Models, GCode };
+
     void renderToolbar();
+    void renderTabs();
     void renderModelList();
+    void renderGCodeList();
+    void renderCombinedList();
     void renderModelItem(const ModelRecord& model, int index);
+    void renderGCodeItem(const GCodeRecord& gcode, int index);
     void renderContextMenu(const ModelRecord& model);
+    void renderGCodeContextMenu(const GCodeRecord& gcode);
     void renderRenameDialog();
 
     // Load a TGA file into an OpenGL texture, returns 0 on failure
@@ -54,11 +72,17 @@ class LibraryPanel : public Panel {
 
     LibraryManager* m_library;
     std::vector<ModelRecord> m_models;
+    std::vector<GCodeRecord> m_gcodeFiles;
     std::string m_searchQuery;
     int64_t m_selectedModelId = -1;
+    int64_t m_selectedGCodeId = -1;
+
+    ViewTab m_activeTab = ViewTab::All;
 
     ModelSelectedCallback m_onModelSelected;
     ModelSelectedCallback m_onModelOpened;
+    GCodeSelectedCallback m_onGCodeSelected;
+    GCodeSelectedCallback m_onGCodeOpened;
 
     // Thumbnail texture cache: model ID -> GL texture
     std::unordered_map<int64_t, GLuint> m_textureCache;
