@@ -124,12 +124,15 @@ target_link_libraries(digital_workshop PRIVATE
     glm::glm
     SQLite::SQLite3
     ZLIB::ZLIB
+    miniz_static
+    nlohmann_json::nlohmann_json
 )
 
 # Include directories
 target_include_directories(digital_workshop PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}/generated
+    ${stb_SOURCE_DIR}
 )
 
 # Platform-specific linking
