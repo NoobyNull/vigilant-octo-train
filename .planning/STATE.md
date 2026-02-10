@@ -1,7 +1,7 @@
 # Project State: Digital Workshop
 
 **Last Updated:** 2026-02-10
-**Current Session:** Phase 2 Import Pipeline - Plan 03 Complete
+**Current Session:** Phase 2 Import Pipeline - Plan 02 Complete
 
 ---
 
@@ -19,12 +19,12 @@ Phase 2: Import Pipeline — Build G-code/mesh file import system with backgroun
 
 **Active Phase:** Phase 2 — Import Pipeline
 
-**Current Plan:** 02-03 (Plan 3/8 complete)
+**Current Plan:** 02-02 (Plan 2/8 complete)
 
-**Status:** Plan 02-03 complete. GCodeLoader registered for .gcode/.nc/.ngc/.tap extensions with toolpath-to-mesh conversion. FileHandler implements copy/move/leave-in-place modes with cross-filesystem support. All 421 tests pass.
+**Status:** Plan 02-02 complete. Schema v3 with gcode_files, operation_groups, gcode_group_members, gcode_templates tables. GCodeRepository provides full CRUD and hierarchy operations. CNC Router Basic template seeded. All 421 tests pass.
 
 **Progress:**
-[███████░░░] 71%
+[████████░░] 76%
 
 Phase 1: [████████████████████] 6/6 sub-phases (100%)
 1.1 EventBus                 [##########] Plan 2/2 complete
@@ -34,8 +34,9 @@ Phase 1: [████████████████████] 6/6 sub-
 1.5 Bug Fixes                [##########] Plan 3/3 complete
 1.6 Dead Code Cleanup        [##########] Plan 1/1 complete
 
-Phase 2: [█░░░░░░░░░] Plan 1/8 (13%)
+Phase 2: [██░░░░░░░░] Plan 2/8 (25%)
 2.1 ThreadPool & Config      [##########] Plan 1/1 complete
+2.2 G-code Schema & Repo     [##########] Plan 1/1 complete
 
 ---
 
@@ -57,9 +58,10 @@ Phase 2: [█░░░░░░░░░] Plan 1/8 (13%)
 | 1.5   | 03   | 2m 45s   | 1     | 3     | 2026-02-09 |
 | 1.6   | 01   | 1m 59s   | 2     | 2     | 2026-02-09 |
 | 2.0   | 01   | 4m 57s   | 2     | 7     | 2026-02-10 |
+| 2.0   | 02   | 7m 12s   | 2     | 6     | 2026-02-10 |
 | 2.0   | 03   | 5m 2s    | 2     | 7     | 2026-02-10 |
 
-**Cycle Time:** 3m 23s per plan (14 plans completed)
+**Cycle Time:** 3m 30s per plan (15 plans completed)
 
 **Completion Rate:** 6 sub-phases in 2 days (Phase 1 complete)
 
@@ -228,6 +230,21 @@ Phase 2: [█░░░░░░░░░] Plan 1/8 (13%)
     - Rationale: Type safety, clear intent, easy to extend, matches existing Config patterns
     - Impact: Safer code, self-documenting API, harder to misuse
 
+31. **G-code Metadata JSON Serialization (2026-02-10, Plan 02-02)**
+    - Decision: Feed rates and tool numbers stored as JSON arrays following ModelRepository tags pattern
+    - Rationale: Consistent with existing patterns, simple parsing, no external dependencies
+    - Impact: Uniform JSON handling across repositories, easy to extend
+
+32. **Operation Groups Hierarchy Design (2026-02-10, Plan 02-02)**
+    - Decision: Operation groups use model_id foreign key for Model -> Groups -> G-code hierarchy
+    - Rationale: Natural parent-child relationship, cascade deletes handle cleanup, supports multiple groups per model
+    - Impact: Clean hierarchy management, safe deletion, flexible organization
+
+33. **G-code Template Storage (2026-02-10, Plan 02-02)**
+    - Decision: Templates stored as JSON arrays of group names, applied by creating groups in order
+    - Rationale: Simple data structure, easy to add new templates, preserves order
+    - Impact: Extensible template system, CNC Router Basic seeded, users can define custom templates later
+
 ### Open Questions
 
 1. **File Dialog Implementation (DEAD-04)**
@@ -376,3 +393,23 @@ Review ROADMAP.md for Phase 2 planning, or define next milestone focus.
 
 *State initialized: 2026-02-08*
 *Last activity: 2026-02-10 - Completed quick task 2: Fix panel UI clipping when docks are resized smaller than content*
+
+29. **Toolpath Visualization via Extruded Quads (2026-02-10, Plan 02-03)**
+    - Decision: Convert G-code path segments to extruded quads (0.5mm cutting, 0.2mm rapid)
+    - Rationale: Existing renderer expects triangle meshes; thin extrusions provide visual distinction between move types
+    - Impact: G-code toolpaths render in viewport using existing mesh infrastructure
+
+30. **Move Type Encoding in Vertex TexCoord (2026-02-10, Plan 02-03)**
+    - Decision: Store rapid/cutting flag in vertex texCoord.x (1.0 = rapid, 0.0 = cutting)
+    - Rationale: Enables shader-based visual differentiation (e.g., different colors for rapid vs cutting moves)
+    - Impact: Shader can distinguish move types without additional vertex attributes
+
+31. **Cross-Filesystem Move Strategy (2026-02-10, Plan 02-03)**
+    - Decision: Try atomic rename first, fallback to copy + size verification + delete source
+    - Rationale: Atomic rename is faster when possible; cross-filesystem requires copy+delete (per research Pitfall 4)
+    - Impact: Robust file moves work across different mount points and filesystems
+
+32. **Unique Filename Generation Pattern (2026-02-10, Plan 02-03)**
+    - Decision: filename_1.ext, filename_2.ext, etc., capped at 10000 attempts
+    - Rationale: Prevents file overwrites while avoiding infinite loops in pathological cases
+    - Impact: Library files never overwrite existing files, but won't hang on name collision storms
