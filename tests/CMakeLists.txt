@@ -57,6 +57,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/loaders/stl_loader.cpp
     ${CMAKE_SOURCE_DIR}/src/core/loaders/obj_loader.cpp
     ${CMAKE_SOURCE_DIR}/src/core/loaders/threemf_loader.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/loaders/gcode_loader.cpp
     ${CMAKE_SOURCE_DIR}/src/core/loaders/loader_factory.cpp
     ${CMAKE_SOURCE_DIR}/src/core/gcode/gcode_parser.cpp
     ${CMAKE_SOURCE_DIR}/src/core/gcode/gcode_analyzer.cpp
