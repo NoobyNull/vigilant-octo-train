@@ -21,21 +21,35 @@ void GCodePanel::render() {
         if (hasGCode()) {
             ImGui::Separator();
 
-            // Split view: stats on left, path view on right
-            float statsWidth = 250.0f;
+            // Responsive layout: side-by-side when wide, stacked when narrow
             float availWidth = ImGui::GetContentRegionAvail().x;
 
-            // Statistics panel
-            ImGui::BeginChild("Stats", ImVec2(statsWidth, 0), true);
-            renderStatistics();
-            ImGui::EndChild();
+            if (availWidth < 420.0f) {
+                // Stacked layout for narrow docks
+                ImGui::BeginChild("Stats", ImVec2(0, 250), true);
+                renderStatistics();
+                ImGui::EndChild();
 
-            ImGui::SameLine();
+                // Path view below
+                ImGui::BeginChild("PathView", ImVec2(0, 0), true);
+                renderPathView();
+                ImGui::EndChild();
+            } else {
+                // Side-by-side layout for wide docks
+                float statsWidth = std::min(250.0f, availWidth * 0.4f);
 
-            // Path view
-            ImGui::BeginChild("PathView", ImVec2(availWidth - statsWidth - 8, 0), true);
-            renderPathView();
-            ImGui::EndChild();
+                // Statistics panel
+                ImGui::BeginChild("Stats", ImVec2(statsWidth, 0), true);
+                renderStatistics();
+                ImGui::EndChild();
+
+                ImGui::SameLine();
+
+                // Path view
+                ImGui::BeginChild("PathView", ImVec2(availWidth - statsWidth - 8, 0), true);
+                renderPathView();
+                ImGui::EndChild();
+            }
         } else {
             ImGui::TextDisabled("No G-code loaded");
             ImGui::TextDisabled("Open a G-code file to view");
@@ -102,6 +116,14 @@ void GCodePanel::renderToolbar() {
         ImGui::Separator();
         ImGui::SameLine();
 
+        float availWidth = ImGui::GetContentRegionAvail().x;
+
+        // Wrap checkboxes to new line at narrow widths
+        if (availWidth < 350.0f) {
+            // Not enough space, put checkboxes on new line
+            ImGui::NewLine();
+        }
+
         ImGui::Checkbox("Travel", &m_showTravel);
         ImGui::SameLine();
         ImGui::Checkbox("Extrusion", &m_showExtrusion);
@@ -123,7 +145,7 @@ void GCodePanel::renderStatistics() {
         if (pos != std::string::npos) {
             filename = filename.substr(pos + 1);
         }
-        ImGui::Text("File: %s", filename.c_str());
+        ImGui::TextWrapped("File: %s", filename.c_str());
         ImGui::Text("Lines: %d", m_stats.lineCount);
         ImGui::Text("Commands: %d", m_stats.commandCount);
         ImGui::Unindent();

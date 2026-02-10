@@ -22,29 +22,51 @@ void CutOptimizerPanel::render() {
         renderToolbar();
         ImGui::Separator();
 
-        // Two-column layout: config on left, results on right
-        float configWidth = 300.0f;
+        // Responsive layout: side-by-side when wide, stacked when narrow
         float availWidth = ImGui::GetContentRegionAvail().x;
 
-        // Left column: configuration
-        ImGui::BeginChild("Config", ImVec2(configWidth, 0), true);
-        renderPartsEditor();
-        ImGui::Separator();
-        renderSheetConfig();
-        ImGui::EndChild();
-
-        ImGui::SameLine();
-
-        // Right column: results
-        ImGui::BeginChild("Results", ImVec2(availWidth - configWidth - 8, 0), true);
-        if (m_hasResults) {
-            renderResults();
+        if (availWidth < 500.0f) {
+            // Stacked layout for narrow docks
+            ImGui::BeginChild("Config", ImVec2(0, 300), true);
+            renderPartsEditor();
             ImGui::Separator();
-            renderVisualization();
+            renderSheetConfig();
+            ImGui::EndChild();
+
+            // Results below
+            ImGui::BeginChild("Results", ImVec2(0, 0), true);
+            if (m_hasResults) {
+                renderResults();
+                ImGui::Separator();
+                renderVisualization();
+            } else {
+                ImGui::TextDisabled("Add parts and click 'Optimize' to see results");
+            }
+            ImGui::EndChild();
         } else {
-            ImGui::TextDisabled("Add parts and click 'Optimize' to see results");
+            // Side-by-side layout for wide docks
+            float configWidth = std::min(300.0f, availWidth * 0.45f);
+
+            // Left column: configuration
+            ImGui::BeginChild("Config", ImVec2(configWidth, 0), true);
+            renderPartsEditor();
+            ImGui::Separator();
+            renderSheetConfig();
+            ImGui::EndChild();
+
+            ImGui::SameLine();
+
+            // Right column: results
+            ImGui::BeginChild("Results", ImVec2(availWidth - configWidth - 8, 0), true);
+            if (m_hasResults) {
+                renderResults();
+                ImGui::Separator();
+                renderVisualization();
+            } else {
+                ImGui::TextDisabled("Add parts and click 'Optimize' to see results");
+            }
+            ImGui::EndChild();
         }
-        ImGui::EndChild();
     }
     ImGui::End();
 }
@@ -70,6 +92,15 @@ void CutOptimizerPanel::renderToolbar() {
     ImGui::SameLine();
     ImGui::Separator();
     ImGui::SameLine();
+
+    float availWidth = ImGui::GetContentRegionAvail().x;
+
+    // Wrap Algorithm combo and checkbox to new line at narrow widths
+    if (availWidth < 400.0f) {
+        // Not enough space, put controls on new line
+        ImGui::NewLine();
+        availWidth = ImGui::GetContentRegionAvail().x;
+    }
 
     // Algorithm selection
     ImGui::SetNextItemWidth(120);
@@ -129,15 +160,29 @@ void CutOptimizerPanel::renderPartsEditor() {
             auto& part = m_parts[i];
             ImGui::PushID(static_cast<int>(i));
 
-            ImGui::Text("%s", part.name.c_str());
-            ImGui::SameLine(150);
-            ImGui::Text("%.0f x %.0f", static_cast<double>(part.width),
-                        static_cast<double>(part.height));
-            ImGui::SameLine(230);
-            ImGui::Text("x%d", part.quantity);
-            ImGui::SameLine(260);
-            if (ImGui::SmallButton("X")) {
-                toRemove = static_cast<int>(i);
+            float availWidth = ImGui::GetContentRegionAvail().x;
+
+            if (availWidth < 200.0f) {
+                // Very narrow: stack everything vertically
+                ImGui::TextWrapped("%s", part.name.c_str());
+                ImGui::Text("%.0f x %.0f", static_cast<double>(part.width),
+                            static_cast<double>(part.height));
+                ImGui::Text("x%d", part.quantity);
+                if (ImGui::SmallButton("X")) {
+                    toRemove = static_cast<int>(i);
+                }
+            } else {
+                // Use proportional positioning for side-by-side layout
+                ImGui::TextWrapped("%s", part.name.c_str());
+                ImGui::SameLine(availWidth * 0.45f);
+                ImGui::Text("%.0f x %.0f", static_cast<double>(part.width),
+                            static_cast<double>(part.height));
+                ImGui::SameLine(availWidth * 0.7f);
+                ImGui::Text("x%d", part.quantity);
+                ImGui::SameLine(availWidth * 0.82f);
+                if (ImGui::SmallButton("X")) {
+                    toRemove = static_cast<int>(i);
+                }
             }
 
             ImGui::PopID();
@@ -153,6 +198,8 @@ void CutOptimizerPanel::renderPartsEditor() {
 
 void CutOptimizerPanel::renderSheetConfig() {
     ImGui::Text("%s Sheet Settings", Icons::Folder);
+
+    float availWidth = ImGui::GetContentRegionAvail().x;
 
     ImGui::SetNextItemWidth(80);
     if (ImGui::InputFloat("Width##sheet", &m_sheet.width, 0, 0, "%.0f")) {
@@ -170,7 +217,14 @@ void CutOptimizerPanel::renderSheetConfig() {
     if (ImGui::InputFloat("Kerf", &m_kerf, 0, 0, "%.1f")) {
         m_hasResults = false;
     }
-    ImGui::SameLine();
+
+    // Stack Margin at narrow widths
+    if (availWidth < 250.0f) {
+        // Narrow: stack Margin below Kerf
+    } else {
+        ImGui::SameLine();
+    }
+
     ImGui::SetNextItemWidth(80);
     if (ImGui::InputFloat("Margin", &m_margin, 0, 0, "%.1f")) {
         m_hasResults = false;
@@ -182,13 +236,26 @@ void CutOptimizerPanel::renderSheetConfig() {
         m_sheet.height = 1220.0f;
         m_hasResults = false;
     }
-    ImGui::SameLine();
+
+    // Stack preset buttons at narrow widths
+    if (availWidth < 300.0f) {
+        // Narrow: stack preset buttons
+    } else {
+        ImGui::SameLine();
+    }
+
     if (ImGui::Button("5x5 ft")) {
         m_sheet.width = 1524.0f;
         m_sheet.height = 1524.0f;
         m_hasResults = false;
     }
-    ImGui::SameLine();
+
+    if (availWidth < 300.0f) {
+        // Narrow: stack preset buttons
+    } else {
+        ImGui::SameLine();
+    }
+
     if (ImGui::Button("MDF")) {
         m_sheet.width = 2440.0f;
         m_sheet.height = 1220.0f;
@@ -209,7 +276,8 @@ void CutOptimizerPanel::renderResults() {
     // Unplaced parts warning
     if (!m_result.unplacedParts.empty()) {
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
-        ImGui::Text("Warning: %zu parts could not be placed!", m_result.unplacedParts.size());
+        ImGui::TextWrapped("Warning: %zu parts could not be placed!",
+                           m_result.unplacedParts.size());
         ImGui::PopStyleColor();
     }
 
