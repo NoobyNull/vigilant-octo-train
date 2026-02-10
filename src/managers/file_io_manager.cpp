@@ -13,6 +13,8 @@
 #include "core/library/library_manager.h"
 #include "core/loaders/loader_factory.h"
 #include "core/project/project.h"
+#include "core/utils/file_utils.h"
+#include "core/utils/log.h"
 #include "render/thumbnail_generator.h"
 #include "ui/dialogs/file_dialog.h"
 #include "ui/dialogs/message_dialog.h"
@@ -83,6 +85,27 @@ void FileIOManager::exportModel() {
     }
 }
 
+void FileIOManager::collectSupportedFiles(const Path& directory, std::vector<Path>& outPaths) {
+    try {
+        for (const auto& entry : fs::recursive_directory_iterator(directory)) {
+            // Skip non-regular files (directories, symlinks, etc.)
+            if (!entry.is_regular_file()) {
+                continue;
+            }
+
+            // Get extension and check if supported
+            auto ext = file::getExtension(entry.path());
+            if (LoaderFactory::isSupported(ext)) {
+                outPaths.push_back(entry.path());
+            }
+        }
+    } catch (const fs::filesystem_error& e) {
+        // Log warning but continue - don't crash on permission denied or broken symlinks
+        log::warningf("FileIO", "Failed to scan directory %s: %s",
+                      directory.string().c_str(), e.what());
+    }
+}
+
 void FileIOManager::onFilesDropped(const std::vector<std::string>& paths) {
     if (!m_importQueue)
         return;
@@ -90,12 +113,19 @@ void FileIOManager::onFilesDropped(const std::vector<std::string>& paths) {
     std::vector<Path> importPaths;
     for (const auto& p : paths) {
         Path path{p};
-        auto ext = path.extension().string();
-        if (!ext.empty() && ext[0] == '.')
-            ext = ext.substr(1);
 
-        if (LoaderFactory::isSupported(ext)) {
-            importPaths.push_back(path);
+        // Check if this is a directory
+        if (fs::is_directory(path)) {
+            collectSupportedFiles(path, importPaths);
+        } else {
+            // Regular file - check extension
+            auto ext = path.extension().string();
+            if (!ext.empty() && ext[0] == '.')
+                ext = ext.substr(1);
+
+            if (LoaderFactory::isSupported(ext)) {
+                importPaths.push_back(path);
+            }
         }
     }
 

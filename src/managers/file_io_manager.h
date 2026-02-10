@@ -49,6 +49,9 @@ class FileIOManager {
     void openRecentProject(const Path& path, std::function<void(bool)> setShowStartPage);
 
   private:
+    // Recursive directory scanning helper
+    void collectSupportedFiles(const Path& directory, std::vector<Path>& outPaths);
+
     EventBus* m_eventBus;
     Database* m_database;
     LibraryManager* m_libraryManager;
