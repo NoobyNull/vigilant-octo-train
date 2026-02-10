@@ -107,8 +107,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 1.2-01-PLAN.md — TDD: ConnectionPool and ScopedConnection with Database enhancements
-- [ ] 1.2-02-PLAN.md — Integrate ConnectionPool into ImportQueue and Application
+- [x] 1.2-01-PLAN.md — TDD: ConnectionPool and ScopedConnection with Database enhancements
+- [x] 1.2-02-PLAN.md — Integrate ConnectionPool into ImportQueue and Application
 
 **Tasks:**
 
@@ -187,8 +187,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 1.3-01-PLAN.md — TDD: MainThreadQueue core + thread_utils assertions
-- [ ] 1.3-02-PLAN.md — Integrate into Application, add threading contracts and THREADING.md
+- [x] 1.3-01-PLAN.md — TDD: MainThreadQueue core + thread_utils assertions
+- [x] 1.3-02-PLAN.md — Integrate into Application, add threading contracts and THREADING.md
 
 **Tasks:**
 
@@ -272,9 +272,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 1.4-01-PLAN.md — Wave 1: Extract UIManager (panel/dialog lifecycle, layout)
-- [ ] 1.4-02-PLAN.md — Wave 2: Extract FileIOManager (import/export/project ops)
-- [ ] 1.4-03-PLAN.md — Wave 3: Extract ConfigManager (config watching, restart)
+- [x] 1.4-01-PLAN.md — Wave 1: Extract UIManager (panel/dialog lifecycle, layout)
+- [x] 1.4-02-PLAN.md — Wave 2: Extract FileIOManager (import/export/project ops)
+- [x] 1.4-03-PLAN.md — Wave 3: Extract ConfigManager (config watching, restart)
 
 **Tasks:**
 
@@ -337,12 +337,12 @@ Plans:
 - NEW: `src/managers/file_io_manager.h`
 - NEW: `src/managers/file_io_manager.cpp`
 - MODIFIED: `src/app/application.h` (add manager members, reduce responsibilities)
-- MODIFIED: `src/app/application.cpp` (refactor from 1,071 → ~300 lines)
+- MODIFIED: `src/app/application.cpp` (refactor from 1,071 -> ~300 lines)
 - MODIFIED: All panels (update constructor signatures if manager dependencies change)
 
 **Dependencies:**
-- Sub-phase 1.1 (EventBus for decoupled communication)
-- Sub-phase 1.3 (MainThreadQueue for worker communication)
+- Sub-phase 1.1 (EventBus for decoupled communication) — hard dependency, EventBus used by managers
+- Sub-phase 1.3 (MainThreadQueue for worker communication) — soft dependency: understanding of threading patterns, but MainThreadQueue not directly used in extraction plans
 
 **Success Criteria:**
 - Application.cpp is under 400 lines (target ~300)
@@ -370,9 +370,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 1.5-01-PLAN.md — Fix shader uniform cache (BUG-04) and normal matrix (BUG-07)
-- [ ] 1.5-02-PLAN.md — Cache ViewCube geometry (BUG-01)
-- [ ] 1.5-03-PLAN.md — Verify already-fixed bugs (BUG-02, BUG-03, BUG-05) and add regression tests
+- [x] 1.5-01-PLAN.md — Fix shader uniform cache (BUG-04) and normal matrix (BUG-07)
+- [x] 1.5-02-PLAN.md — Cache ViewCube geometry (BUG-01)
+- [x] 1.5-03-PLAN.md — Verify already-fixed bugs (BUG-02, BUG-03, BUG-05) and add regression tests
 
 **Bug Status (from research):**
 - BUG-01: NOT FIXED — ViewCube recomputes every frame
@@ -416,7 +416,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 01.6-01-PLAN.md — Replace FontAwesome icon codepoints with text labels, verify resolved items, update TODOS.md
+- [x] 01.6-01-PLAN.md — Replace FontAwesome icon codepoints with text labels, verify resolved items, update TODOS.md
 
 **Tasks:**
 
@@ -500,14 +500,14 @@ Plans:
 
 | Sub-Phase | Status | Completion Date |
 |-----------|--------|-----------------|
-| 1.1 - EventBus | ✓ Complete | 2026-02-08 |
-| 1.2 - ConnectionPool | Planning Complete | - |
-| 1.3 - MainThreadQueue | Planning Complete | - |
-| 1.4 - God Class Decomposition | Planning Complete | - |
-| 1.5 - Bug Fixes | Planning Complete | - |
-| 1.6 - Dead Code Cleanup | Planning Complete | - |
+| 1.1 - EventBus | Complete | 2026-02-08 |
+| 1.2 - ConnectionPool | Complete | 2026-02-08 |
+| 1.3 - MainThreadQueue | Complete | 2026-02-08 |
+| 1.4 - God Class Decomposition | Complete | 2026-02-08 |
+| 1.5 - Bug Fixes | Complete | 2026-02-08 |
+| 1.6 - Dead Code Cleanup | Complete | 2026-02-08 |
 
-**Overall Progress:** 1/6 sub-phases complete (17%)
+**Overall Progress:** 6/6 sub-phases complete (100%)
 
 ---
 
@@ -521,7 +521,7 @@ Plans:
 - 1.6 depends on 1.4 (FileIOManager may clarify dead code decisions)
 
 **Critical Path:**
-1.1 EventBus → 1.3 MainThreadQueue → 1.4 God Class Decomposition → 1.5 Bug Fixes → 1.6 Cleanup
+1.1 EventBus -> 1.3 MainThreadQueue -> 1.4 God Class Decomposition -> 1.5 Bug Fixes -> 1.6 Cleanup
 
 **Parallel Work Opportunities:**
 - 1.1 and 1.2 can be done simultaneously (independent)
@@ -529,7 +529,7 @@ Plans:
 
 **File Size Compliance:**
 - All new files must adhere to limits: .cpp max 800 lines, .h max 400 lines
-- Application decomposition (1.4) specifically targets reducing Application.cpp from 1,071 → ~300 lines
+- Application decomposition (1.4) specifically targets reducing Application.cpp from 1,071 -> ~300 lines
 
 **Testing Strategy:**
 - Each sub-phase includes unit test creation
@@ -543,8 +543,27 @@ Plans:
 
 ---
 
+### Phase 2: Import Pipeline
+
+**Goal:** Overhaul the import pipeline with parallel workers, G-code import with toolpath visualization, non-blocking UX, file handling options, and hardened mesh loaders.
+**Depends on:** Phase 1
+**Plans:** 8 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — ThreadPool infrastructure and Config/Settings import settings
+- [ ] 02-02-PLAN.md — Database schema v3 with G-code tables and GCodeRepository
+- [ ] 02-03-PLAN.md — GCodeLoader with toolpath-to-mesh conversion and FileHandler
+- [ ] 02-04-PLAN.md — Parallel ImportQueue overhaul with G-code support
+- [ ] 02-05-PLAN.md — Import UX: StatusBar, ToastManager, ImportSummaryDialog
+- [ ] 02-06-PLAN.md — G-code DB integration, LibraryManager extensions, Application wiring
+- [ ] 02-07-PLAN.md — Toolpath rendering in viewport and library panel G-code display
+- [ ] 02-08-PLAN.md — Loader hardening and end-to-end verification checkpoint
+
+---
+
 *Roadmap created: 2026-02-08*
 *Sub-phase 1.1 planned: 2026-02-08*
 *Sub-phase 1.2 planned: 2026-02-08*
 *Sub-phase 1.5 planned: 2026-02-08*
 *Sub-phase 1.6 planned: 2026-02-08*
+*Phase 2 planned: 2026-02-09*
