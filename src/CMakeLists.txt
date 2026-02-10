@@ -23,6 +23,7 @@ set(DW_SOURCES
 
     # Threading
     core/threading/main_thread_queue.cpp
+    core/threading/thread_pool.cpp
 
     # Core paths
     core/paths/app_paths.cpp

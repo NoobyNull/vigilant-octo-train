@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <system_error>
 
+#include "../config/config.h"
 #include "../paths/app_paths.h"
 #include "../utils/log.h"
 

@@ -6,12 +6,8 @@
 
 namespace dw {
 
-// File handling mode for imported files
-enum class FileHandlingMode {
-    LeaveInPlace = 0,   // Keep file at original location
-    CopyToLibrary = 1,  // Copy file to library directory
-    MoveToLibrary = 2   // Move file to library directory
-};
+// Forward declaration - actual definition in config.h
+enum class FileHandlingMode : int;
 
 // Handles post-import file operations (copy/move/leave-in-place)
 class FileHandler {

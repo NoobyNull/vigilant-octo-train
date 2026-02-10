@@ -1,7 +1,11 @@
 #include "import_queue.h"
 
+#include "../config/config.h"
 #include "../database/connection_pool.h"
+#include "../database/gcode_repository.h"
 #include "../database/model_repository.h"
+#include "../import/file_handler.h"
+#include "../loaders/gcode_loader.h"
 #include "../loaders/loader_factory.h"
 #include "../mesh/hash.h"
 #include "../utils/file_utils.h"
@@ -13,30 +17,59 @@ ImportQueue::ImportQueue(ConnectionPool& pool) : m_pool(pool) {}
 
 ImportQueue::~ImportQueue() {
     m_shutdown.store(true);
-    if (m_worker.joinable()) {
-        m_worker.join();
+    if (m_threadPool) {
+        m_threadPool->shutdown();
     }
 }
 
 void ImportQueue::enqueue(const std::vector<Path>& paths) {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    if (paths.empty()) {
+        return;
+    }
 
+    // Reset batch summary
+    {
+        std::lock_guard<std::mutex> lock(m_summaryMutex);
+        m_batchSummary = ImportBatchSummary{};
+        m_batchSummary.totalFiles = static_cast<int>(paths.size());
+    }
+
+    // Get thread count from config
+    auto tier = Config::instance().getParallelismTier();
+    size_t threadCount = calculateThreadCount(tier);
+
+    // Lazy-create or recreate ThreadPool with current thread count
+    if (!m_threadPool || m_threadPool->isIdle()) {
+        m_threadPool = std::make_unique<ThreadPool>(threadCount);
+    }
+
+    // Warn if thread count exceeds connection pool size
+    // Note: ConnectionPool size is fixed at construction, so we can't resize it here
+    // This is a wiring concern for Application to ensure pool has adequate size
+    log::infof("Import", "Starting batch import: %zu files, %zu workers",
+               paths.size(), threadCount);
+
+    // Reset progress
+    m_progress.reset();
+    m_progress.totalFiles.store(static_cast<int>(paths.size()));
+    m_progress.active.store(true);
+    m_cancelRequested.store(false);
+
+    // Set remaining task counter for batch completion detection
+    m_remainingTasks.store(static_cast<int>(paths.size()));
+
+    // Enqueue each file as a task
     for (const auto& path : paths) {
         ImportTask task;
         task.sourcePath = path;
         task.extension = file::getExtension(path);
-        m_pending.push_back(std::move(task));
-    }
+        task.importType = importTypeFromExtension(task.extension);
 
-    m_progress.totalFiles.fetch_add(static_cast<int>(paths.size()));
-    m_progress.active.store(true);
-    m_cancelRequested.store(false);
-
-    // Start worker if not already running
-    if (m_worker.joinable()) {
-        m_worker.join(); // Previous batch finished, clean up
+        // Enqueue to thread pool - capture task by value (moved into lambda)
+        m_threadPool->enqueue([this, task = std::move(task)]() mutable {
+            processTask(std::move(task));
+        });
     }
-    m_worker = std::thread(&ImportQueue::workerLoop, this);
 }
 
 void ImportQueue::enqueue(const Path& path) {
@@ -78,73 +111,53 @@ void ImportQueue::setOnComplete(ImportCallback callback) {
     m_onComplete = std::move(callback);
 }
 
-// --- Background thread ---
-
-void ImportQueue::workerLoop() {
-    log::info("Import", "Worker thread started");
-
-    while (!m_shutdown.load()) {
-        ImportTask task;
-
-        // Grab next pending task
-        {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            if (m_pending.empty()) {
-                break; // No more work
-            }
-            task = std::move(m_pending.front());
-            m_pending.erase(m_pending.begin());
-        }
-
-        // Check for cancellation between tasks
-        if (m_cancelRequested.load()) {
-            task.stage = ImportStage::Failed;
-            task.error = "Cancelled";
-            m_progress.failedFiles.fetch_add(1);
-            m_progress.completedFiles.fetch_add(1);
-            continue;
-        }
-
-        // Update progress with current file name (thread-safe)
-        m_progress.setCurrentFileName(file::getStem(task.sourcePath));
-
-        processTask(task);
-
-        bool failed = (task.stage == ImportStage::Failed);
-
-        // Move completed task to appropriate place
-        {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            if (task.stage == ImportStage::WaitingForThumbnail) {
-                m_completed.push_back(std::move(task));
-            }
-        }
-
-        if (failed) {
-            m_progress.failedFiles.fetch_add(1);
-        }
-        m_progress.completedFiles.fetch_add(1);
-    }
-
-    // Drain remaining tasks if cancelled
-    if (m_cancelRequested.load()) {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        int remaining = static_cast<int>(m_pending.size());
-        m_progress.failedFiles.fetch_add(remaining);
-        m_progress.completedFiles.fetch_add(remaining);
-        m_pending.clear();
-    }
-
-    m_progress.active.store(false);
-    log::infof("Import", "Worker finished (%d/%d completed, %d failed)",
-               m_progress.completedFiles.load(), m_progress.totalFiles.load(),
-               m_progress.failedFiles.load());
+const ImportBatchSummary& ImportQueue::batchSummary() const {
+    std::lock_guard<std::mutex> lock(m_summaryMutex);
+    return m_batchSummary;
 }
 
-void ImportQueue::processTask(ImportTask& task) {
+void ImportQueue::setOnBatchComplete(SummaryCallback callback) {
+    m_onBatchComplete = std::move(callback);
+}
+
+// --- Worker task processing (runs on ThreadPool worker) ---
+
+void ImportQueue::processTask(ImportTask task) {
+    // Check for cancellation at start
+    if (m_cancelRequested.load()) {
+        task.stage = ImportStage::Failed;
+        task.error = "Cancelled";
+
+        // Update summary
+        {
+            std::lock_guard<std::mutex> lock(m_summaryMutex);
+            m_batchSummary.failedCount++;
+            m_batchSummary.errors.push_back({file::getStem(task.sourcePath), task.error});
+        }
+
+        m_progress.failedFiles.fetch_add(1);
+        m_progress.completedFiles.fetch_add(1);
+
+        // Check if this was the last task
+        if (m_remainingTasks.fetch_sub(1) == 1) {
+            m_progress.active.store(false);
+            if (m_onBatchComplete) {
+                std::lock_guard<std::mutex> lock(m_summaryMutex);
+                m_onBatchComplete(m_batchSummary);
+            }
+        }
+        return;
+    }
+
     // Acquire a pooled connection for this task
     ScopedConnection conn(m_pool);
+
+    // Create repositories based on import type
     ModelRepository modelRepo(*conn);
+    GCodeRepository gcodeRepo(*conn);
+
+    // Update progress with current file name (thread-safe)
+    m_progress.setCurrentFileName(file::getStem(task.sourcePath));
 
     // Stage 1: Reading
     task.stage = ImportStage::Reading;
@@ -155,6 +168,25 @@ void ImportQueue::processTask(ImportTask& task) {
         task.stage = ImportStage::Failed;
         task.error = "Failed to read file: " + task.sourcePath.string();
         log::errorf("Import", "%s", task.error.c_str());
+
+        // Update summary
+        {
+            std::lock_guard<std::mutex> lock(m_summaryMutex);
+            m_batchSummary.failedCount++;
+            m_batchSummary.errors.push_back({file::getStem(task.sourcePath), task.error});
+        }
+
+        m_progress.failedFiles.fetch_add(1);
+        m_progress.completedFiles.fetch_add(1);
+
+        // Check if this was the last task
+        if (m_remainingTasks.fetch_sub(1) == 1) {
+            m_progress.active.store(false);
+            if (m_onBatchComplete) {
+                std::lock_guard<std::mutex> lock(m_summaryMutex);
+                m_onBatchComplete(m_batchSummary);
+            }
+        }
         return;
     }
     task.fileData = std::move(*fileData);
@@ -165,32 +197,126 @@ void ImportQueue::processTask(ImportTask& task) {
 
     task.fileHash = hash::computeBuffer(task.fileData);
 
-    // Stage 3: Check duplicate
+    // Stage 3: Check duplicate (use appropriate repository)
     task.stage = ImportStage::CheckingDuplicate;
     m_progress.currentStage.store(ImportStage::CheckingDuplicate);
 
-    auto existing = modelRepo.findByHash(task.fileHash);
-    if (existing) {
+    bool isDuplicate = false;
+    std::string duplicateName;
+
+    if (task.importType == ImportType::GCode) {
+        auto existing = gcodeRepo.findByHash(task.fileHash);
+        if (existing) {
+            isDuplicate = true;
+            duplicateName = existing->name;
+        }
+    } else {
+        auto existing = modelRepo.findByHash(task.fileHash);
+        if (existing) {
+            isDuplicate = true;
+            duplicateName = existing->name;
+        }
+    }
+
+    if (isDuplicate) {
         task.isDuplicate = true;
         task.stage = ImportStage::Failed;
-        task.error = "Duplicate of existing model: " + existing->name;
+        task.error = "Duplicate of existing file: " + duplicateName;
+
+        // Update summary
+        {
+            std::lock_guard<std::mutex> lock(m_summaryMutex);
+            m_batchSummary.duplicateCount++;
+            m_batchSummary.duplicateNames.push_back(file::getStem(task.sourcePath));
+        }
+
         log::warningf("Import", "Skipping duplicate '%s'",
                       task.sourcePath.filename().string().c_str());
+
+        // Count duplicates as both completed and failed (for backward compatibility with tests)
+        m_progress.failedFiles.fetch_add(1);
+        m_progress.completedFiles.fetch_add(1);
+
+        // Check if this was the last task
+        if (m_remainingTasks.fetch_sub(1) == 1) {
+            m_progress.active.store(false);
+            if (m_onBatchComplete) {
+                std::lock_guard<std::mutex> lock(m_summaryMutex);
+                m_onBatchComplete(m_batchSummary);
+            }
+        }
         return;
     }
 
-    // Stage 4: Parsing
+    // Stage 4: Parsing (type-specific)
     task.stage = ImportStage::Parsing;
     m_progress.currentStage.store(ImportStage::Parsing);
 
-    auto loadResult = LoaderFactory::loadFromBuffer(task.fileData, task.extension);
-    if (!loadResult) {
-        task.stage = ImportStage::Failed;
-        task.error = "Parse failed: " + loadResult.error;
-        log::errorf("Import", "%s", task.error.c_str());
-        return;
+    if (task.importType == ImportType::GCode) {
+        // Manually create GCodeLoader for G-code files
+        GCodeLoader gcodeLoader;
+        auto result = gcodeLoader.loadFromBuffer(task.fileData);
+        if (!result) {
+            task.stage = ImportStage::Failed;
+            task.error = "Parse failed: " + result.error;
+            log::errorf("Import", "%s", task.error.c_str());
+
+            // Update summary
+            {
+                std::lock_guard<std::mutex> lock(m_summaryMutex);
+                m_batchSummary.failedCount++;
+                m_batchSummary.errors.push_back({file::getStem(task.sourcePath), task.error});
+            }
+
+            m_progress.failedFiles.fetch_add(1);
+            m_progress.completedFiles.fetch_add(1);
+
+            // Check if this was the last task
+            if (m_remainingTasks.fetch_sub(1) == 1) {
+                m_progress.active.store(false);
+                if (m_onBatchComplete) {
+                    std::lock_guard<std::mutex> lock(m_summaryMutex);
+                    m_onBatchComplete(m_batchSummary);
+                }
+            }
+            return;
+        }
+
+        task.mesh = result.mesh;
+
+        // Extract and store metadata (heap-allocate to avoid header dependencies)
+        task.gcodeMetadata = new GCodeMetadata(gcodeLoader.lastMetadata());
+
+    } else {
+        // Existing mesh loading via LoaderFactory
+        auto loadResult = LoaderFactory::loadFromBuffer(task.fileData, task.extension);
+        if (!loadResult) {
+            task.stage = ImportStage::Failed;
+            task.error = "Parse failed: " + loadResult.error;
+            log::errorf("Import", "%s", task.error.c_str());
+
+            // Update summary
+            {
+                std::lock_guard<std::mutex> lock(m_summaryMutex);
+                m_batchSummary.failedCount++;
+                m_batchSummary.errors.push_back({file::getStem(task.sourcePath), task.error});
+            }
+
+            m_progress.failedFiles.fetch_add(1);
+            m_progress.completedFiles.fetch_add(1);
+
+            // Check if this was the last task
+            if (m_remainingTasks.fetch_sub(1) == 1) {
+                m_progress.active.store(false);
+                if (m_onBatchComplete) {
+                    std::lock_guard<std::mutex> lock(m_summaryMutex);
+                    m_onBatchComplete(m_batchSummary);
+                }
+            }
+            return;
+        }
+        task.mesh = loadResult.mesh;
     }
-    task.mesh = loadResult.mesh;
 
     // Capture file size before releasing buffer
     u64 actualFileSize = static_cast<u64>(task.fileData.size());
@@ -199,39 +325,185 @@ void ImportQueue::processTask(ImportTask& task) {
     task.fileData.clear();
     task.fileData.shrink_to_fit();
 
-    // Stage 5: Inserting
+    // Stage 5: Inserting (type-specific)
     task.stage = ImportStage::Inserting;
     m_progress.currentStage.store(ImportStage::Inserting);
 
-    ModelRecord record;
-    record.hash = task.fileHash;
-    record.name = file::getStem(task.sourcePath);
-    record.filePath = task.sourcePath;
-    record.fileFormat = task.extension;
-    record.fileSize = actualFileSize;
-    record.vertexCount = task.mesh->vertexCount();
-    record.triangleCount = task.mesh->triangleCount();
+    Path finalPath = task.sourcePath;
 
-    const auto& bounds = task.mesh->bounds();
-    record.boundsMin = bounds.min;
-    record.boundsMax = bounds.max;
+    if (task.importType == ImportType::GCode) {
+        // Insert G-code record
+        GCodeRecord record;
+        record.hash = task.fileHash;
+        record.name = file::getStem(task.sourcePath);
+        record.filePath = task.sourcePath;
+        record.fileSize = actualFileSize;
 
-    auto modelId = modelRepo.insert(record);
-    if (!modelId) {
-        task.stage = ImportStage::Failed;
-        task.error = "Failed to insert into database";
-        log::errorf("Import", "%s for '%s'", task.error.c_str(),
-                    task.sourcePath.filename().string().c_str());
-        return;
+        // Populate metadata from extracted data
+        if (task.gcodeMetadata) {
+            record.boundsMin = task.gcodeMetadata->boundsMin;
+            record.boundsMax = task.gcodeMetadata->boundsMax;
+            record.totalDistance = task.gcodeMetadata->totalDistance;
+            record.estimatedTime = task.gcodeMetadata->estimatedTime;
+            record.feedRates = task.gcodeMetadata->feedRates;
+            record.toolNumbers = task.gcodeMetadata->toolNumbers;
+        }
+
+        auto gcodeId = gcodeRepo.insert(record);
+        if (!gcodeId) {
+            task.stage = ImportStage::Failed;
+            task.error = "Failed to insert into database";
+            log::errorf("Import", "%s for '%s'", task.error.c_str(),
+                        task.sourcePath.filename().string().c_str());
+
+            // Cleanup
+            if (task.gcodeMetadata) {
+                delete task.gcodeMetadata;
+                task.gcodeMetadata = nullptr;
+            }
+
+            // Update summary
+            {
+                std::lock_guard<std::mutex> lock(m_summaryMutex);
+                m_batchSummary.failedCount++;
+                m_batchSummary.errors.push_back({file::getStem(task.sourcePath), task.error});
+            }
+
+            m_progress.failedFiles.fetch_add(1);
+            m_progress.completedFiles.fetch_add(1);
+
+            // Check if this was the last task
+            if (m_remainingTasks.fetch_sub(1) == 1) {
+                m_progress.active.store(false);
+                if (m_onBatchComplete) {
+                    std::lock_guard<std::mutex> lock(m_summaryMutex);
+                    m_onBatchComplete(m_batchSummary);
+                }
+            }
+            return;
+        }
+
+        task.gcodeId = *gcodeId;
+
+        log::infof("Import", "G-code '%s' inserted (id=%lld)", record.name.c_str(),
+                   static_cast<long long>(*gcodeId));
+
+    } else {
+        // Insert mesh model record
+        ModelRecord record;
+        record.hash = task.fileHash;
+        record.name = file::getStem(task.sourcePath);
+        record.filePath = task.sourcePath;
+        record.fileFormat = task.extension;
+        record.fileSize = actualFileSize;
+        record.vertexCount = task.mesh->vertexCount();
+        record.triangleCount = task.mesh->triangleCount();
+
+        const auto& bounds = task.mesh->bounds();
+        record.boundsMin = bounds.min;
+        record.boundsMax = bounds.max;
+
+        auto modelId = modelRepo.insert(record);
+        if (!modelId) {
+            task.stage = ImportStage::Failed;
+            task.error = "Failed to insert into database";
+            log::errorf("Import", "%s for '%s'", task.error.c_str(),
+                        task.sourcePath.filename().string().c_str());
+
+            // Update summary
+            {
+                std::lock_guard<std::mutex> lock(m_summaryMutex);
+                m_batchSummary.failedCount++;
+                m_batchSummary.errors.push_back({file::getStem(task.sourcePath), task.error});
+            }
+
+            m_progress.failedFiles.fetch_add(1);
+            m_progress.completedFiles.fetch_add(1);
+
+            // Check if this was the last task
+            if (m_remainingTasks.fetch_sub(1) == 1) {
+                m_progress.active.store(false);
+                if (m_onBatchComplete) {
+                    std::lock_guard<std::mutex> lock(m_summaryMutex);
+                    m_onBatchComplete(m_batchSummary);
+                }
+            }
+            return;
+        }
+
+        task.modelId = *modelId;
+        task.record = record;
+        task.record.id = *modelId;
+
+        log::infof("Import", "Mesh '%s' inserted (id=%lld)", record.name.c_str(),
+                   static_cast<long long>(*modelId));
     }
 
-    task.modelId = *modelId;
-    task.record = record;
-    task.record.id = *modelId;
+    // Stage 5.5: File Handling (apply copy/move/leave mode)
+    auto mode = Config::instance().getFileHandlingMode();
+    auto libraryDir = Config::instance().getLibraryDir();
+    if (libraryDir.empty()) {
+        libraryDir = FileHandler::defaultLibraryDir();
+    }
+
+    if (mode != FileHandlingMode::LeaveInPlace) {
+        std::string error;
+        Path handledPath = FileHandler::handleImportedFile(task.sourcePath, mode, libraryDir, error);
+
+        if (handledPath.empty()) {
+            // File handling failed - log warning but don't fail the import
+            log::warningf("Import", "File handling failed for '%s': %s",
+                          file::getStem(task.sourcePath).c_str(), error.c_str());
+        } else {
+            // Update the record's file path in DB
+            finalPath = handledPath;
+
+            if (task.importType == ImportType::GCode) {
+                auto record = gcodeRepo.findById(task.gcodeId);
+                if (record) {
+                    record->filePath = finalPath;
+                    gcodeRepo.update(*record);
+                }
+            } else {
+                task.record.filePath = finalPath;
+                modelRepo.update(task.record);
+            }
+
+            log::infof("Import", "File handled: %s -> %s",
+                       task.sourcePath.filename().string().c_str(),
+                       finalPath.filename().string().c_str());
+        }
+    }
+
+    // Stage 6: WaitingForThumbnail (both mesh and G-code need thumbnails)
     task.stage = ImportStage::WaitingForThumbnail;
 
-    log::infof("Import", "'%s' ready for thumbnail (id=%lld)", record.name.c_str(),
-               static_cast<long long>(*modelId));
+    // Move completed task to queue for main thread processing
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_completed.push_back(std::move(task));
+    }
+
+    m_progress.completedFiles.fetch_add(1);
+
+    // Update batch summary
+    {
+        std::lock_guard<std::mutex> lock(m_summaryMutex);
+        m_batchSummary.successCount++;
+    }
+
+    // Check if this was the last task - if so, fire batch complete callback
+    if (m_remainingTasks.fetch_sub(1) == 1) {
+        m_progress.active.store(false);
+        log::infof("Import", "Batch complete: %d successful, %d failed, %d duplicates",
+                   m_batchSummary.successCount, m_batchSummary.failedCount,
+                   m_batchSummary.duplicateCount);
+
+        if (m_onBatchComplete) {
+            std::lock_guard<std::mutex> lock(m_summaryMutex);
+            m_onBatchComplete(m_batchSummary);
+        }
+    }
 }
 
 } // namespace dw

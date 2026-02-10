@@ -49,6 +49,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/types.cpp
     ${CMAKE_SOURCE_DIR}/src/core/events/event_bus.cpp
     ${CMAKE_SOURCE_DIR}/src/core/threading/main_thread_queue.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/threading/thread_pool.cpp
     ${CMAKE_SOURCE_DIR}/src/core/utils/log.cpp
     ${CMAKE_SOURCE_DIR}/src/core/utils/string_utils.cpp
     ${CMAKE_SOURCE_DIR}/src/core/utils/file_utils.cpp
@@ -70,12 +71,16 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/database/model_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/project_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/cost_repository.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/database/gcode_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/project/project.cpp
     ${CMAKE_SOURCE_DIR}/src/core/export/model_exporter.cpp
     ${CMAKE_SOURCE_DIR}/src/core/archive/archive.cpp
     ${CMAKE_SOURCE_DIR}/src/core/library/library_manager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/import/import_queue.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/import/file_handler.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/config/config.cpp
     ${CMAKE_SOURCE_DIR}/src/core/config/config_watcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/config/input_binding.cpp
     ${CMAKE_SOURCE_DIR}/src/core/paths/app_paths.cpp
     ${CMAKE_SOURCE_DIR}/src/render/camera.cpp
 )
@@ -90,6 +95,7 @@ dw_configure_target(dw_tests)
 target_link_libraries(dw_tests PRIVATE
     GTest::gtest
     GTest::gtest_main
+    imgui
     glm::glm
     SQLite::SQLite3
     ZLIB::ZLIB

@@ -1,11 +1,13 @@
 #pragma once
 
+#include <atomic>
 #include <functional>
+#include <memory>
 #include <mutex>
-#include <thread>
 #include <vector>
 
 #include "../database/connection_pool.h"
+#include "../threading/thread_pool.h"
 #include "import_task.h"
 
 namespace dw {
@@ -39,24 +41,35 @@ class ImportQueue {
     using ImportCallback = std::function<void(const ImportTask& task)>;
     void setOnComplete(ImportCallback callback);
 
+    // Get batch summary (thread-safe read)
+    const ImportBatchSummary& batchSummary() const;
+
+    // Set callback for when batch completes
+    using SummaryCallback = std::function<void(const ImportBatchSummary&)>;
+    void setOnBatchComplete(SummaryCallback callback);
+
   private:
-    void workerLoop();
-    void processTask(ImportTask& task);
+    void processTask(ImportTask task);  // Note: takes by value for move into lambda
 
     ConnectionPool& m_pool;
 
     // Thread management
-    std::thread m_worker;
+    std::unique_ptr<ThreadPool> m_threadPool;  // Lazily created
     std::mutex m_mutex;
     std::atomic<bool> m_shutdown{false};
     std::atomic<bool> m_cancelRequested{false};
 
     // Task queues (protected by m_mutex)
-    std::vector<ImportTask> m_pending;
     std::vector<ImportTask> m_completed; // Ready for main-thread thumbnail
+
+    // Batch tracking
+    mutable std::mutex m_summaryMutex;
+    ImportBatchSummary m_batchSummary;
+    std::atomic<int> m_remainingTasks{0};
 
     ImportProgress m_progress;
     ImportCallback m_onComplete;
+    SummaryCallback m_onBatchComplete;
 };
 
 } // namespace dw
