@@ -103,6 +103,10 @@ GLint Shader::getUniformLocation(const std::string& name) {
     return location;
 }
 
+void Shader::setBool(const std::string& name, bool value) {
+    glUniform1i(getUniformLocation(name), value ? 1 : 0);
+}
+
 void Shader::setInt(const std::string& name, int value) {
     glUniform1i(getUniformLocation(name), value);
 }

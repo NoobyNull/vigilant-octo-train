@@ -30,6 +30,12 @@ class Workspace {
     auto hasFocusedGCode() const -> bool { return m_focusedGCode != nullptr; }
     void clearFocusedGCode();
 
+    // Focused toolpath mesh (generated from G-code)
+    void setFocusedToolpath(std::shared_ptr<Mesh> toolpathMesh);
+    auto getFocusedToolpath() const -> std::shared_ptr<Mesh> { return m_focusedToolpath; }
+    auto hasFocusedToolpath() const -> bool { return m_focusedToolpath != nullptr; }
+    void clearFocusedToolpath();
+
     // Focused cut plan (2D optimizer result)
     void setFocusedCutPlan(std::shared_ptr<CutPlan> plan);
     auto getFocusedCutPlan() const -> std::shared_ptr<CutPlan> { return m_focusedCutPlan; }
@@ -42,6 +48,7 @@ class Workspace {
   private:
     std::shared_ptr<Mesh> m_focusedMesh;
     std::shared_ptr<GCodeFile> m_focusedGCode;
+    std::shared_ptr<Mesh> m_focusedToolpath;
     std::shared_ptr<CutPlan> m_focusedCutPlan;
 };
 

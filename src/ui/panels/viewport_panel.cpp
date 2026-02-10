@@ -70,6 +70,32 @@ void ViewportPanel::clearMesh() {
     m_viewCubeCache.valid = false;
 }
 
+void ViewportPanel::setToolpathMesh(MeshPtr toolpathMesh) {
+    m_toolpathMesh = toolpathMesh;
+
+    if (m_gpuToolpath.vao != 0) {
+        m_gpuToolpath.destroy();
+    }
+
+    if (m_toolpathMesh && m_toolpathMesh->isValid()) {
+        m_gpuToolpath = m_renderer.uploadMesh(*m_toolpathMesh);
+
+        // Auto-fit camera to toolpath bounds if no mesh is currently displayed
+        if (!m_mesh) {
+            const auto& bounds = m_toolpathMesh->bounds();
+            m_camera.fitToBounds(bounds.min, bounds.max);
+            m_viewCubeCache.valid = false;
+        }
+    }
+}
+
+void ViewportPanel::clearToolpathMesh() {
+    m_toolpathMesh = nullptr;
+    if (m_gpuToolpath.vao != 0) {
+        m_gpuToolpath.destroy();
+    }
+}
+
 void ViewportPanel::resetView() {
     m_camera.reset();
 
@@ -256,9 +282,18 @@ void ViewportPanel::renderViewport() {
     m_renderer.beginFrame(Color{0.15f, 0.16f, 0.17f, 1.0f});
     m_renderer.setCamera(m_camera);
 
+    // Render grid and axis (if enabled in settings)
+    m_renderer.renderGrid(20.0f, 1.0f);
+    m_renderer.renderAxis(2.0f);
+
     // Render mesh
     if (m_gpuMesh.vao != 0) {
         m_renderer.renderMesh(m_gpuMesh);
+    }
+
+    // Render toolpath (if present)
+    if (m_gpuToolpath.vao != 0) {
+        m_renderer.renderToolpath(*m_toolpathMesh);
     }
 
     m_renderer.endFrame();

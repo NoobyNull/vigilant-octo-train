@@ -55,6 +55,9 @@ class Renderer {
     void renderMesh(const Mesh& mesh, const Mat4& modelMatrix = Mat4(1.0f));
     void renderMesh(const GPUMesh& gpuMesh, const Mat4& modelMatrix = Mat4(1.0f));
 
+    // Render a toolpath mesh with color distinction for rapid vs cutting moves
+    void renderToolpath(const Mesh& toolpathMesh, const Mat4& modelMatrix = Mat4(1.0f));
+
     // Render grid
     void renderGrid(f32 size = 10.0f, f32 spacing = 1.0f);
 

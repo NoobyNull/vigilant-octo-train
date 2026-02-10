@@ -26,6 +26,16 @@ void Workspace::clearFocusedGCode() {
     m_focusedGCode.reset();
 }
 
+void Workspace::setFocusedToolpath(std::shared_ptr<Mesh> toolpathMesh) {
+    ASSERT_MAIN_THREAD();
+    m_focusedToolpath = std::move(toolpathMesh);
+}
+
+void Workspace::clearFocusedToolpath() {
+    ASSERT_MAIN_THREAD();
+    m_focusedToolpath.reset();
+}
+
 void Workspace::setFocusedCutPlan(std::shared_ptr<CutPlan> plan) {
     ASSERT_MAIN_THREAD();
     m_focusedCutPlan = std::move(plan);
@@ -40,6 +50,7 @@ void Workspace::clearAll() {
     ASSERT_MAIN_THREAD();
     m_focusedMesh.reset();
     m_focusedGCode.reset();
+    m_focusedToolpath.reset();
     m_focusedCutPlan.reset();
 }
 

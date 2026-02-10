@@ -42,6 +42,7 @@ uniform vec3 uAmbient;
 uniform vec3 uObjectColor;
 uniform vec3 uViewPos;
 uniform float uShininess;
+uniform bool uIsToolpath;
 
 out vec4 FragColor;
 
@@ -49,12 +50,21 @@ void main() {
     vec3 normal = normalize(vNormal);
     vec3 lightDir = normalize(-uLightDir);
 
+    vec3 objectColor = uObjectColor;
+
+    // Toolpath mode: blend between cutting (blue-green) and rapid (orange-red) based on texCoord.x
+    if (uIsToolpath) {
+        vec3 cuttingColor = vec3(0.2, 0.6, 1.0);  // Blue for cutting moves (G1)
+        vec3 rapidColor = vec3(1.0, 0.4, 0.1);     // Orange-red for rapid moves (G0)
+        objectColor = mix(cuttingColor, rapidColor, vTexCoord.x);
+    }
+
     // Ambient
-    vec3 ambient = uAmbient * uObjectColor;
+    vec3 ambient = uAmbient * objectColor;
 
     // Diffuse
     float diff = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = diff * uLightColor * uObjectColor;
+    vec3 diffuse = diff * uLightColor * objectColor;
 
     // Specular
     vec3 viewDir = normalize(uViewPos - vWorldPos);
@@ -63,7 +73,14 @@ void main() {
     vec3 specular = spec * uLightColor * 0.5;
 
     vec3 result = ambient + diffuse + specular;
-    FragColor = vec4(result, 1.0);
+
+    // Slight transparency for rapid moves in toolpath mode
+    float alpha = 1.0;
+    if (uIsToolpath && vTexCoord.x > 0.5) {
+        alpha = 0.8;
+    }
+
+    FragColor = vec4(result, alpha);
 }
 )";
 

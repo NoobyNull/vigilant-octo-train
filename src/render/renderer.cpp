@@ -109,13 +109,17 @@ void Renderer::renderMesh(const GPUMesh& gpuMesh, const Mat4& modelMatrix) {
     glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(modelMatrix)));
     m_meshShader.setMat3("uNormalMatrix", normalMatrix);
 
-    m_meshShader.setVec3("uLightDir", m_settings.lightDir);
+    // Transform light direction into world space relative to camera orientation
+    // so lighting stays consistent regardless of orbit angle
+    Vec3 viewLightDir = glm::mat3(glm::inverse(m_camera.viewMatrix())) * m_settings.lightDir;
+    m_meshShader.setVec3("uLightDir", viewLightDir);
     m_meshShader.setVec3("uLightColor", m_settings.lightColor);
     m_meshShader.setVec3("uAmbient", m_settings.ambient);
     m_meshShader.setVec3("uObjectColor", Vec3{m_settings.objectColor.r, m_settings.objectColor.g,
                                               m_settings.objectColor.b});
     m_meshShader.setVec3("uViewPos", m_camera.position());
     m_meshShader.setFloat("uShininess", m_settings.shininess);
+    m_meshShader.setBool("uIsToolpath", false);
 
     glBindVertexArray(gpuMesh.vao);
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(gpuMesh.indexCount), GL_UNSIGNED_INT,
@@ -125,6 +129,59 @@ void Renderer::renderMesh(const GPUMesh& gpuMesh, const Mat4& modelMatrix) {
     if (m_settings.wireframe) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
+}
+
+void Renderer::renderToolpath(const Mesh& toolpathMesh, const Mat4& modelMatrix) {
+    if (!toolpathMesh.isValid()) {
+        return;
+    }
+
+    // Upload or get cached GPU mesh
+    u64 key = hash::fromHex(hash::computeMesh(toolpathMesh));
+    auto it = m_meshCache.find(key);
+    if (it == m_meshCache.end()) {
+        it = m_meshCache.emplace(key, uploadMesh(toolpathMesh)).first;
+    }
+
+    const GPUMesh& gpuMesh = it->second;
+    if (gpuMesh.vao == 0 || gpuMesh.indexCount == 0) {
+        return;
+    }
+
+    // Disable back-face culling for toolpath (thin geometry visible from both sides)
+    glDisable(GL_CULL_FACE);
+
+    m_meshShader.bind();
+
+    // Set standard mesh uniforms
+    m_meshShader.setMat4("uModel", modelMatrix);
+    m_meshShader.setMat4("uView", m_camera.viewMatrix());
+    m_meshShader.setMat4("uProjection", m_camera.projectionMatrix());
+
+    glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(modelMatrix)));
+    m_meshShader.setMat3("uNormalMatrix", normalMatrix);
+
+    Vec3 viewLightDir = glm::mat3(glm::inverse(m_camera.viewMatrix())) * m_settings.lightDir;
+    m_meshShader.setVec3("uLightDir", viewLightDir);
+    m_meshShader.setVec3("uLightColor", m_settings.lightColor);
+    m_meshShader.setVec3("uAmbient", m_settings.ambient);
+    m_meshShader.setVec3("uObjectColor", Vec3{1.0f, 1.0f, 1.0f}); // Will be overridden by shader
+    m_meshShader.setVec3("uViewPos", m_camera.position());
+    m_meshShader.setFloat("uShininess", m_settings.shininess);
+
+    // Enable toolpath rendering mode
+    m_meshShader.setBool("uIsToolpath", true);
+
+    glBindVertexArray(gpuMesh.vao);
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(gpuMesh.indexCount), GL_UNSIGNED_INT,
+                   nullptr);
+    glBindVertexArray(0);
+
+    // Disable toolpath mode for subsequent renders
+    m_meshShader.setBool("uIsToolpath", false);
+
+    // Re-enable back-face culling
+    glEnable(GL_CULL_FACE);
 }
 
 void Renderer::renderGrid(f32 size, f32 spacing) {

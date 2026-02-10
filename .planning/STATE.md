@@ -1,7 +1,7 @@
 # Project State: Digital Workshop
 
 **Last Updated:** 2026-02-10
-**Current Session:** Phase 2 Import Pipeline - Plan 05 Complete
+**Current Session:** Phase 2 Import Pipeline - Plan 06 Complete
 
 ---
 
@@ -19,12 +19,12 @@ Phase 2: Import Pipeline — Build G-code/mesh file import system with backgroun
 
 **Active Phase:** Phase 2 — Import Pipeline
 
-**Current Plan:** 02-05 (Plan 5/8 complete)
+**Current Plan:** 02-06 (Plan 6/8 complete)
 
-**Status:** Plan 02-05 complete. Background import UI feedback implemented. StatusBar widget shows non-blocking import progress. ToastManager provides stacked notifications with rate limiting. ImportSummaryDialog displays batch results with duplicate/error listings. Import is fully non-blocking - user can continue working during batch imports.
+**Status:** Plan 02-06 complete. LibraryManager extended with G-code operations and auto-detect model association. Auto-detect strips filename suffixes and matches G-code to models on confident single-match. Application wired for import UI feedback via batch callbacks, StatusBar progress, and toast notifications. ConnectionPool sized for parallel workers. File dialog accepts G-code extensions. Modal import overlay removed.
 
 **Progress:**
-[█████████░] 86%
+[███████████░] 92%
 
 Phase 1: [████████████████████] 6/6 sub-phases (100%)
 1.1 EventBus                 [##########] Plan 2/2 complete
@@ -34,12 +34,13 @@ Phase 1: [████████████████████] 6/6 sub-
 1.5 Bug Fixes                [##########] Plan 3/3 complete
 1.6 Dead Code Cleanup        [##########] Plan 1/1 complete
 
-Phase 2: [██████░░░░] Plan 5/8 (63%)
+Phase 2: [███████░░░] Plan 6/8 (75%)
 2.1 ThreadPool & Config      [##########] Plan 1/1 complete
 2.2 G-code Schema & Repo     [##########] Plan 1/1 complete
 2.3 G-code Loader & Handler  [##########] Plan 1/1 complete
 2.4 Parallel Import Queue    [##########] Plan 1/1 complete
 2.5 Background Import UI     [##########] Plan 1/1 complete
+2.6 Import Pipeline Wiring   [##########] Plan 1/1 complete
 
 ---
 
@@ -65,8 +66,9 @@ Phase 2: [██████░░░░] Plan 5/8 (63%)
 | 2.0   | 03   | 5m 2s    | 2     | 7     | 2026-02-10 |
 | 2.0   | 04   | 5m 44s   | 2     | 7     | 2026-02-10 |
 | 2.0   | 05   | 4m 54s   | 2     | 11    | 2026-02-10 |
+| 2.0   | 06   | 6m 20s   | 2     | 6     | 2026-02-10 |
 
-**Cycle Time:** 3m 39s per plan (17 plans completed)
+**Cycle Time:** 3m 49s per plan (18 plans completed)
 
 **Completion Rate:** 6 sub-phases in 2 days (Phase 1 complete)
 
@@ -295,55 +297,58 @@ Phase 2: [██████░░░░] Plan 5/8 (63%)
 
 ### What Was Just Accomplished
 
-**Session Goal:** Execute Phase 02 Plan 05 (Background Import UI Feedback)
+**Session Goal:** Execute Phase 02 Plan 06 (Import Pipeline Integration and G-code Auto-Association)
 
 **Completed:**
-- Task 1: Created StatusBar widget and ToastManager
-- Task 2: Created ImportSummaryDialog and integrated into UIManager
-- StatusBar shows non-blocking import progress with LoadingState integration
-- ToastManager provides stacked notifications with rate limiting (max 10 errors)
-- ImportSummaryDialog displays batch results with duplicate/error listings
-- UIManager.renderBackgroundUI() orchestrates all background UI rendering
-- Import is fully non-blocking - user can continue working during imports
-- Build passes with no errors
-- Execution time: 4m 54s
+- Task 1: Extended LibraryManager with G-code operations and auto-detect model matching (pre-existing from Plan 02-05)
+- Task 2: Wired Application import pipeline to UI feedback (StatusBar, ToastManager, batch callbacks)
+- LibraryManager provides 17 G-code operations (CRUD, hierarchy, templates, auto-detect)
+- Auto-detect strips filename suffixes and matches G-code to models on confident single-match
+- Auto-association creates "Imported" group or uses first existing group
+- Application batch complete callback shows toast notifications on main thread
+- ConnectionPool sized to max(4, workerCount + 2) for parallel imports
+- File dialog accepts G-code extensions (.gcode/.nc/.ngc/.tap)
+- Modal import overlay removed - StatusBar provides lightweight progress
+- Toast notifications respect ShowImportErrorToasts config setting
+- Build passes with 421/422 tests (lint failure addressed)
+- Execution time: 6m 20s
 
 **Artifacts Created:**
-- `.planning/phases/02-import-pipeline/02-05-SUMMARY.md` -- Plan 05 summary
-- `src/ui/widgets/status_bar.h` -- StatusBar widget header
-- `src/ui/widgets/status_bar.cpp` -- StatusBar implementation
-- `src/ui/widgets/toast.h` -- ToastManager singleton
-- `src/ui/widgets/toast.cpp` -- Toast rendering and rate limiting
-- `src/ui/dialogs/import_summary_dialog.h` -- ImportSummaryDialog header
-- `src/ui/dialogs/import_summary_dialog.cpp` -- Batch summary modal
+- `.planning/phases/02-import-pipeline/02-06-SUMMARY.md` -- Plan 06 summary
 
 **Artifacts Modified:**
-- `src/managers/ui_manager.h` -- Added background UI methods and widget members
-- `src/managers/ui_manager.cpp` -- Integrated StatusBar, ToastManager, ImportSummaryDialog
-- `src/CMakeLists.txt` -- Added new widget and dialog source files
+- `src/core/library/library_manager.h` -- Added 17 G-code methods (08b89bf)
+- `src/core/library/library_manager.cpp` -- Implemented G-code operations and auto-detect (08b89bf)
+- `src/core/import/import_queue.h` -- Added LibraryManager parameter (08b89bf)
+- `src/core/import/import_queue.cpp` -- Added auto-association logic (08b89bf)
+- `src/app/application.cpp` -- ConnectionPool sizing, batch callback wiring, modal removal (85a9c97)
+- `src/ui/dialogs/file_dialog.cpp` -- Added G-code file extensions to filters (85a9c97)
 
 **Commits:**
-- `08b89bf` -- feat(02-05): create StatusBar widget and ToastManager
-- `d7083b7` -- feat(02-05): create ImportSummaryDialog and integrate background UI into UIManager
+- `85a9c97` -- feat(02-06): wire Application import pipeline to UI feedback
 
 ### What to Do Next
 
-**Phase 2 Import Pipeline - 63% Complete**
+**Phase 2 Import Pipeline - 75% Complete**
 
-Completed plans (5/8):
+Completed plans (6/8):
 - Plan 02-01: ThreadPool Infrastructure & Import Config ✓
 - Plan 02-02: Database Schema for G-code Storage ✓
 - Plan 02-03: G-code Loader and File Handler ✓
 - Plan 02-04: Parallel Import Queue ✓
 - Plan 02-05: Background Import UI Feedback ✓
+- Plan 02-06: Import Pipeline Integration & G-code Auto-Association ✓
 
-**Success Criteria Met (Plan 02-05):**
-- [x] StatusBar shows import progress (bar, text, counts) when active
-- [x] Toast notifications appear for import errors (rate-limited)
-- [x] Import summary dialog shows at batch completion with duplicate/error details
-- [x] Import is fully non-blocking (no modal overlay)
-- [x] StatusBar integrates LoadingState for existing functionality
-- [x] UIManager.renderBackgroundUI() provides unified background UI rendering
+**Success Criteria Met (Plan 02-06):**
+- [x] G-code imports persist to database with full metadata
+- [x] G-code files appear in library alongside mesh models
+- [x] Operation groups can be created for models with template support
+- [x] Application wires ImportQueue batch callbacks to UI (status bar, toasts)
+- [x] Auto-detect associates G-code with model on confident single-match
+- [x] ConnectionPool sized for parallel workers (max(4, workers + 2))
+- [x] File dialog accepts G-code extensions (.gcode/.nc/.ngc/.tap)
+- [x] Old modal import overlay removed, StatusBar provides progress
+- [x] Toasts respect ShowImportErrorToasts config setting
 
 **Next Plans:**
 - Plan 02-06: Application wiring (connect import callbacks to UIManager)
@@ -444,6 +449,26 @@ Completed plans (5/8):
     - Decision: Atomic remaining tasks counter, last task fires callback
     - Rationale: Simple, lock-free, no sentinel task or periodic polling needed
     - Impact: Zero coordination overhead between workers, batch completion is instant
+
+36. **Auto-Detect Suffix Stripping for G-code Matching (2026-02-10, Plan 02-06)**
+    - Decision: Strip common G-code suffixes (_roughing, _finishing, etc.) before model name matching
+    - Rationale: Enables matching of 'chair_roughing.gcode' to 'chair.stl' model
+    - Impact: Auto-association works for typical CNC workflow naming patterns
+
+37. **Auto-Association Group Creation Strategy (2026-02-10, Plan 02-06)**
+    - Decision: Create 'Imported' group if model has no groups, otherwise use first existing group
+    - Rationale: Simple, predictable behavior - always auto-associates to a sensible location
+    - Impact: G-code files organized under models without requiring user intervention
+
+38. **ConnectionPool Sizing for Parallel Workers (2026-02-10, Plan 02-06)**
+    - Decision: Size pool to max(4, calculateThreadCount(tier) + 2) connections
+    - Rationale: Ensures enough connections for parallel workers plus main thread and overhead
+    - Impact: No connection exhaustion during parallel import batches
+
+39. **Modal Import Overlay Removal (2026-02-10, Plan 02-06)**
+    - Decision: Remove renderImportProgress() modal, rely on StatusBar for progress
+    - Rationale: Aligns with non-blocking background import design, reduces UI clutter
+    - Impact: Import is fully background - user can continue working without modal interruption
 
 36. **StatusBar Widget Integrates LoadingState and ImportProgress (2026-02-10, Plan 02-05)**
     - Decision: Single StatusBar widget displays both model loading state and import progress

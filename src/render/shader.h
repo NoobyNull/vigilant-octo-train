@@ -32,6 +32,7 @@ class Shader {
     GLuint handle() const { return m_program; }
 
     // Uniform setters
+    void setBool(const std::string& name, bool value);
     void setInt(const std::string& name, int value);
     void setFloat(const std::string& name, f32 value);
     void setVec2(const std::string& name, const Vec2& value);

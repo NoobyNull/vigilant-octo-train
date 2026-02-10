@@ -8,6 +8,7 @@
 #include "../../render/camera.h"
 #include "../../render/framebuffer.h"
 #include "../../render/renderer.h"
+#include "../context_menu.h"
 #include "panel.h"
 
 namespace dw {
@@ -27,6 +28,10 @@ class ViewportPanel : public Panel {
     // Set mesh to display
     void setMesh(MeshPtr mesh);
     void clearMesh();
+
+    // Set toolpath mesh to display
+    void setToolpathMesh(MeshPtr toolpathMesh);
+    void clearToolpathMesh();
 
     // Camera access
     Camera& camera() { return m_camera; }
@@ -66,6 +71,9 @@ class ViewportPanel : public Panel {
     MeshPtr m_mesh;
     GPUMesh m_gpuMesh;
 
+    MeshPtr m_toolpathMesh;
+    GPUMesh m_gpuToolpath;
+
     // Light drag state
     bool m_lightDirDragging = false;
     bool m_lightIntensityDragging = false;
@@ -76,6 +84,9 @@ class ViewportPanel : public Panel {
 
     // ViewCube cache
     ViewCubeCache m_viewCubeCache;
+
+    // Context menu
+    ContextMenu m_contextMenu{"##ViewportContext"};
 };
 
 } // namespace dw
