@@ -57,10 +57,10 @@ void PropertiesPanel::renderModelRecordInfo() {
     if (ImGui::CollapsingHeader("Model Info", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
 
-        ImGui::Text("Name: %s", r.name.c_str());
-        ImGui::Text("Format: %s", r.fileFormat.c_str());
+        ImGui::TextWrapped("Name: %s", r.name.c_str());
+        ImGui::TextWrapped("Format: %s", r.fileFormat.c_str());
 
-        ImGui::Text("File Size: %s", str::formatFileSize(r.fileSize).c_str());
+        ImGui::TextWrapped("File Size: %s", str::formatFileSize(r.fileSize).c_str());
 
         // Vertex count
         if (r.vertexCount >= 1000000) {
@@ -81,7 +81,7 @@ void PropertiesPanel::renderModelRecordInfo() {
         }
 
         if (!r.importedAt.empty()) {
-            ImGui::Text("Imported: %s", r.importedAt.c_str());
+            ImGui::TextWrapped("Imported: %s", r.importedAt.c_str());
         }
 
         ImGui::Unindent();
@@ -93,11 +93,13 @@ void PropertiesPanel::renderModelRecordInfo() {
         ImGui::Spacing();
         if (ImGui::CollapsingHeader("Bounds", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Indent();
-            ImGui::Text("Min: (%.3f, %.3f, %.3f)", r.boundsMin.x, r.boundsMin.y, r.boundsMin.z);
-            ImGui::Text("Max: (%.3f, %.3f, %.3f)", r.boundsMax.x, r.boundsMax.y, r.boundsMax.z);
+            ImGui::TextWrapped("Min: (%.3f, %.3f, %.3f)", r.boundsMin.x, r.boundsMin.y,
+                               r.boundsMin.z);
+            ImGui::TextWrapped("Max: (%.3f, %.3f, %.3f)", r.boundsMax.x, r.boundsMax.y,
+                               r.boundsMax.z);
             Vec3 size{r.boundsMax.x - r.boundsMin.x, r.boundsMax.y - r.boundsMin.y,
                       r.boundsMax.z - r.boundsMin.z};
-            ImGui::Text("Size: %.3f x %.3f x %.3f", size.x, size.y, size.z);
+            ImGui::TextWrapped("Size: %.3f x %.3f x %.3f", size.x, size.y, size.z);
             ImGui::Unindent();
         }
     }
@@ -122,7 +124,7 @@ void PropertiesPanel::renderMeshInfo() {
 
         // Name
         if (!m_meshName.empty()) {
-            ImGui::Text("Name: %s", m_meshName.c_str());
+            ImGui::TextWrapped("Name: %s", m_meshName.c_str());
         }
 
         // Vertex count
@@ -151,7 +153,7 @@ void PropertiesPanel::renderMeshInfo() {
 
         // Memory usage estimate
         size_t memoryBytes = vertexCount * sizeof(Vertex) + indexCount * sizeof(uint32_t);
-        ImGui::Text("Memory: %s", str::formatFileSize(memoryBytes).c_str());
+        ImGui::TextWrapped("Memory: %s", str::formatFileSize(memoryBytes).c_str());
 
         ImGui::Unindent();
     }
@@ -163,17 +165,17 @@ void PropertiesPanel::renderBoundsInfo() {
 
         const AABB& bounds = m_mesh->bounds();
 
-        ImGui::Text("Min: (%.3f, %.3f, %.3f)", bounds.min.x, bounds.min.y, bounds.min.z);
-        ImGui::Text("Max: (%.3f, %.3f, %.3f)", bounds.max.x, bounds.max.y, bounds.max.z);
+        ImGui::TextWrapped("Min: (%.3f, %.3f, %.3f)", bounds.min.x, bounds.min.y, bounds.min.z);
+        ImGui::TextWrapped("Max: (%.3f, %.3f, %.3f)", bounds.max.x, bounds.max.y, bounds.max.z);
 
         Vec3 size = bounds.size();
-        ImGui::Text("Size: %.3f x %.3f x %.3f", size.x, size.y, size.z);
+        ImGui::TextWrapped("Size: %.3f x %.3f x %.3f", size.x, size.y, size.z);
 
         Vec3 center = bounds.center();
-        ImGui::Text("Center: (%.3f, %.3f, %.3f)", center.x, center.y, center.z);
+        ImGui::TextWrapped("Center: (%.3f, %.3f, %.3f)", center.x, center.y, center.z);
 
         float diagonal = bounds.diagonal();
-        ImGui::Text("Diagonal: %.3f", diagonal);
+        ImGui::TextWrapped("Diagonal: %.3f", diagonal);
 
         ImGui::Unindent();
     }
@@ -245,8 +247,7 @@ void PropertiesPanel::renderTransformInfo() {
 
         // Translate
         ImGui::DragFloat3("Translate", m_translate, 0.1f);
-        ImGui::SameLine();
-        if (ImGui::Button("Apply##Translate")) {
+        if (ImGui::Button("Apply##Translate", ImVec2(-1, 0))) {
             Mat4 mat =
                 glm::translate(Mat4(1.0f), Vec3{m_translate[0], m_translate[1], m_translate[2]});
             m_mesh->transform(mat);
@@ -258,8 +259,7 @@ void PropertiesPanel::renderTransformInfo() {
 
         // Rotate (degrees)
         ImGui::DragFloat3("Rotate (deg)", m_rotateDeg, 1.0f);
-        ImGui::SameLine();
-        if (ImGui::Button("Apply##Rotate")) {
+        if (ImGui::Button("Apply##Rotate", ImVec2(-1, 0))) {
             constexpr float DEG2RAD = 3.14159265358979f / 180.0f;
             Mat4 mat = Mat4(1.0f);
             if (m_rotateDeg[0] != 0.0f)
@@ -280,8 +280,7 @@ void PropertiesPanel::renderTransformInfo() {
 
         // Scale
         ImGui::DragFloat3("Scale", m_scaleVal, 0.01f, 0.01f, 100.0f);
-        ImGui::SameLine();
-        if (ImGui::Button("Apply##Scale")) {
+        if (ImGui::Button("Apply##Scale", ImVec2(-1, 0))) {
             Mat4 mat = glm::scale(Mat4(1.0f), Vec3{m_scaleVal[0], m_scaleVal[1], m_scaleVal[2]});
             m_mesh->transform(mat);
             m_scaleVal[0] = m_scaleVal[1] = m_scaleVal[2] = 1.0f;

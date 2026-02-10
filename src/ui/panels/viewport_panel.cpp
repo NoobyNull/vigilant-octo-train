@@ -73,6 +73,17 @@ void ViewportPanel::clearMesh() {
 void ViewportPanel::resetView() {
     m_camera.reset();
 
+    // Reset light to defaults
+    auto& rs = m_renderer.settings();
+    rs.lightDir = Vec3{-0.5f, -1.0f, -0.3f};
+    rs.lightColor = Vec3{1.0f, 1.0f, 1.0f};
+
+    // Persist reset light settings
+    auto& cfg = Config::instance();
+    cfg.setRenderLightDir(rs.lightDir);
+    cfg.setRenderLightColor(rs.lightColor);
+    cfg.save();
+
     // Invalidate ViewCube cache (camera changed)
     m_viewCubeCache.valid = false;
 }
@@ -93,7 +104,10 @@ void ViewportPanel::handleInput() {
     }
 
     ImGuiIO& io = ImGui::GetIO();
-    NavStyle nav = Config::instance().getNavStyle();
+    auto& cfg = Config::instance();
+    NavStyle nav = cfg.getNavStyle();
+    f32 orbitSignX = cfg.getInvertOrbitX() ? 1.0f : -1.0f;
+    f32 orbitSignY = cfg.getInvertOrbitY() ? 1.0f : -1.0f;
 
     // Mouse wheel zoom (all styles)
     if (io.MouseWheel != 0.0f) {
@@ -101,7 +115,6 @@ void ViewportPanel::handleInput() {
     }
 
     // --- Configurable light controls ---
-    auto& cfg = Config::instance();
     InputBinding lightDirBind = cfg.getBinding(BindAction::LightDirDrag);
     InputBinding lightIntBind = cfg.getBinding(BindAction::LightIntensityDrag);
 
@@ -168,7 +181,7 @@ void ViewportPanel::handleInput() {
             if (io.KeyShift) {
                 m_camera.pan(-delta.x, delta.y);
             } else {
-                m_camera.orbit(-delta.x, -delta.y);
+                m_camera.orbit(orbitSignX * delta.x, orbitSignY * delta.y);
             }
         }
         if (ImGui::IsMouseDragging(ImGuiMouseButton_Right)) {
@@ -182,7 +195,7 @@ void ViewportPanel::handleInput() {
         if (io.KeyAlt) {
             if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
                 ImVec2 delta = io.MouseDelta;
-                m_camera.orbit(-delta.x, -delta.y);
+                m_camera.orbit(orbitSignX * delta.x, orbitSignY * delta.y);
             }
             if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle)) {
                 ImVec2 delta = io.MouseDelta;
@@ -202,7 +215,7 @@ void ViewportPanel::handleInput() {
             if (io.KeyShift) {
                 m_camera.pan(-delta.x, delta.y);
             } else {
-                m_camera.orbit(-delta.x, -delta.y);
+                m_camera.orbit(orbitSignX * delta.x, orbitSignY * delta.y);
             }
         }
         if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle)) {
@@ -255,6 +268,35 @@ void ViewportPanel::renderViewport() {
     ImGui::Image(static_cast<ImTextureID>(m_framebuffer.colorTexture()), contentSize, ImVec2(0, 1),
                  ImVec2(1, 0));
 
+    // Context menu on right-click (only when not dragging)
+    if (ImGui::IsItemClicked(ImGuiMouseButton_Right) &&
+        !ImGui::IsMouseDragging(ImGuiMouseButton_Right)) {
+        auto& cfg = Config::instance();
+        m_contextMenu.clear();
+        m_contextMenu.addItem("Reset View", [this]() { resetView(); });
+        m_contextMenu.addItem("Fit to Model", [this]() { fitToModel(); }, m_mesh != nullptr);
+        m_contextMenu.addSeparator();
+        m_contextMenu.addToggle("Invert Orbit X", cfg.getInvertOrbitX(), [&cfg]() {
+            cfg.setInvertOrbitX(!cfg.getInvertOrbitX());
+            cfg.save();
+        });
+        m_contextMenu.addToggle("Invert Orbit Y", cfg.getInvertOrbitY(), [&cfg]() {
+            cfg.setInvertOrbitY(!cfg.getInvertOrbitY());
+            cfg.save();
+        });
+        m_contextMenu.addSeparator();
+        m_contextMenu.addToggle("Show Grid", cfg.getShowGrid(), [&cfg]() {
+            cfg.setShowGrid(!cfg.getShowGrid());
+            cfg.save();
+        });
+        m_contextMenu.addToggle("Show Axis", cfg.getShowAxis(), [&cfg]() {
+            cfg.setShowAxis(!cfg.getShowAxis());
+            cfg.save();
+        });
+        m_contextMenu.open();
+    }
+    m_contextMenu.render();
+
     renderViewCube();
 }
 
@@ -274,6 +316,11 @@ void ViewportPanel::renderToolbar() {
 
     ImGui::Separator();
     ImGui::SameLine();
+
+    // Wrap Wireframe checkbox to new line if too narrow
+    if (ImGui::GetContentRegionAvail().x < 100.0f) {
+        ImGui::NewLine();
+    }
 
     bool wireframe = m_renderer.settings().wireframe;
     if (ImGui::Checkbox("Wireframe", &wireframe)) {

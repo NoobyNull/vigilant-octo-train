@@ -40,7 +40,7 @@ void ProjectPanel::renderProjectInfo() {
         if (project->isModified()) {
             nameLabel += " *";
         }
-        ImGui::Text("%s %s", Icons::Project, nameLabel.c_str());
+        ImGui::TextWrapped("%s %s", Icons::Project, nameLabel.c_str());
 
         // Description
         if (!project->description().empty()) {
@@ -61,7 +61,12 @@ void ProjectPanel::renderProjectInfo() {
                 m_projectManager->save(*project);
             }
         }
-        ImGui::SameLine();
+
+        // Wrap Close button to new line if narrow
+        if (ImGui::GetContentRegionAvail().x > 100.0f) {
+            ImGui::SameLine();
+        }
+
         if (ImGui::Button("Close")) {
             m_projectManager->close(*project);
             m_projectManager->setCurrentProject(nullptr);
@@ -127,7 +132,10 @@ void ProjectPanel::renderNoProject() {
         }
     }
 
-    ImGui::SameLine();
+    // Wrap Open button to new line if narrow
+    if (ImGui::GetContentRegionAvail().x > 100.0f) {
+        ImGui::SameLine();
+    }
 
     if (ImGui::Button("Open Project")) {
         if (m_openProjectCallback) {

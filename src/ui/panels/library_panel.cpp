@@ -135,8 +135,18 @@ void LibraryPanel::refresh() {
 }
 
 void LibraryPanel::renderToolbar() {
-    // Search input
-    ImGui::SetNextItemWidth(-100.0f);
+    // Search input with responsive width
+    float avail = ImGui::GetContentRegionAvail().x;
+    float searchWidth;
+    if (avail < 150.0f) {
+        // Very narrow: use half the available width
+        searchWidth = avail * 0.5f;
+    } else {
+        // Normal: reserve 100px for buttons
+        searchWidth = -100.0f;
+    }
+
+    ImGui::SetNextItemWidth(searchWidth);
     if (ImGui::InputTextWithHint(
             "##Search", "Search models...", m_searchQuery.data(), 256,
             ImGuiInputTextFlags_CallbackResize,
