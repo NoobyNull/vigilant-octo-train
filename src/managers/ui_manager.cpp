@@ -5,7 +5,7 @@
 
 #include "managers/ui_manager.h"
 
-#include <cstdio>
+#include <array>
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -90,72 +90,83 @@ void UIManager::shutdown() {
 
 void UIManager::renderMenuBar() {
     if (ImGui::BeginMainMenuBar()) {
-        if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("New Project", "Ctrl+N")) {
-                if (m_onNewProject)
-                    m_onNewProject();
-            }
-            if (ImGui::MenuItem("Open Project", "Ctrl+O")) {
-                if (m_onOpenProject)
-                    m_onOpenProject();
-            }
-            if (ImGui::MenuItem("Save Project", "Ctrl+S")) {
-                if (m_onSaveProject)
-                    m_onSaveProject();
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem("Import Model", "Ctrl+I")) {
-                if (m_onImportModel)
-                    m_onImportModel();
-            }
-            if (ImGui::MenuItem("Export Model", "Ctrl+E")) {
-                if (m_onExportModel)
-                    m_onExportModel();
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem("Exit", "Alt+F4")) {
-                if (m_onQuit)
-                    m_onQuit();
-            }
-            ImGui::EndMenu();
-        }
-
-        if (ImGui::BeginMenu("View")) {
-            ImGui::MenuItem("Start Page", nullptr, &m_showStartPage);
-            ImGui::Separator();
-            ImGui::MenuItem("Viewport", nullptr, &m_showViewport);
-            ImGui::MenuItem("Library", nullptr, &m_showLibrary);
-            ImGui::MenuItem("Properties", nullptr, &m_showProperties);
-            ImGui::MenuItem("Project", nullptr, &m_showProject);
-            ImGui::Separator();
-            ImGui::MenuItem("G-code Viewer", nullptr, &m_showGCode);
-            ImGui::MenuItem("Cut Optimizer", nullptr, &m_showCutOptimizer);
-            ImGui::Separator();
-            if (ImGui::MenuItem("Lighting Settings", "Ctrl+L")) {
-                if (m_lightingDialog) {
-                    m_lightingDialog->open();
-                }
-            }
-            ImGui::EndMenu();
-        }
-
-        if (ImGui::BeginMenu("Edit")) {
-            if (ImGui::MenuItem("Settings", "Ctrl+,")) {
-                if (m_onSpawnSettings)
-                    m_onSpawnSettings();
-            }
-            ImGui::EndMenu();
-        }
-
-        if (ImGui::BeginMenu("Help")) {
-            if (ImGui::MenuItem("About Digital Workshop")) {
-                ImGui::OpenPopup("About Digital Workshop");
-            }
-            ImGui::EndMenu();
-        }
-
+        renderFileMenu();
+        renderViewMenu();
+        renderEditMenu();
+        renderHelpMenu();
         ImGui::EndMainMenuBar();
     }
+}
+
+void UIManager::renderFileMenu() {
+    if (!ImGui::BeginMenu("File")) {
+        return;
+    }
+
+    if (ImGui::MenuItem("New Project", "Ctrl+N") && m_onNewProject) {
+        m_onNewProject();
+    }
+    if (ImGui::MenuItem("Open Project", "Ctrl+O") && m_onOpenProject) {
+        m_onOpenProject();
+    }
+    if (ImGui::MenuItem("Save Project", "Ctrl+S") && m_onSaveProject) {
+        m_onSaveProject();
+    }
+    ImGui::Separator();
+    if (ImGui::MenuItem("Import Model", "Ctrl+I") && m_onImportModel) {
+        m_onImportModel();
+    }
+    if (ImGui::MenuItem("Export Model", "Ctrl+E") && m_onExportModel) {
+        m_onExportModel();
+    }
+    ImGui::Separator();
+    if (ImGui::MenuItem("Exit", "Alt+F4") && m_onQuit) {
+        m_onQuit();
+    }
+    ImGui::EndMenu();
+}
+
+void UIManager::renderViewMenu() {
+    if (!ImGui::BeginMenu("View")) {
+        return;
+    }
+
+    ImGui::MenuItem("Start Page", nullptr, &m_showStartPage);
+    ImGui::Separator();
+    ImGui::MenuItem("Viewport", nullptr, &m_showViewport);
+    ImGui::MenuItem("Library", nullptr, &m_showLibrary);
+    ImGui::MenuItem("Properties", nullptr, &m_showProperties);
+    ImGui::MenuItem("Project", nullptr, &m_showProject);
+    ImGui::Separator();
+    ImGui::MenuItem("G-code Viewer", nullptr, &m_showGCode);
+    ImGui::MenuItem("Cut Optimizer", nullptr, &m_showCutOptimizer);
+    ImGui::Separator();
+    if (ImGui::MenuItem("Lighting Settings", "Ctrl+L") && m_lightingDialog) {
+        m_lightingDialog->open();
+    }
+    ImGui::EndMenu();
+}
+
+void UIManager::renderEditMenu() {
+    if (!ImGui::BeginMenu("Edit")) {
+        return;
+    }
+
+    if (ImGui::MenuItem("Settings", "Ctrl+,") && m_onSpawnSettings) {
+        m_onSpawnSettings();
+    }
+    ImGui::EndMenu();
+}
+
+void UIManager::renderHelpMenu() {
+    if (!ImGui::BeginMenu("Help")) {
+        return;
+    }
+
+    if (ImGui::MenuItem("About Digital Workshop")) {
+        ImGui::OpenPopup("About Digital Workshop");
+    }
+    ImGui::EndMenu();
 }
 
 void UIManager::renderPanels() {
@@ -205,92 +216,6 @@ void UIManager::renderPanels() {
     }
 }
 
-void UIManager::renderImportProgress(ImportQueue* importQueue) {
-    if (!importQueue || !importQueue->isActive())
-        return;
-
-    const auto& prog = importQueue->progress();
-
-    // Overlay in bottom-right corner
-    const float padding = 16.0f;
-    auto* viewport = ImGui::GetMainViewport();
-    ImVec2 windowPos(viewport->WorkPos.x + viewport->WorkSize.x - padding,
-                     viewport->WorkPos.y + viewport->WorkSize.y - padding);
-    ImGui::SetNextWindowPos(windowPos, ImGuiCond_Always, ImVec2(1.0f, 1.0f));
-    ImGui::SetNextWindowSize(ImVec2(320, 0), ImGuiCond_Always);
-
-    ImGuiWindowFlags flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
-                             ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoNav |
-                             ImGuiWindowFlags_AlwaysAutoResize;
-
-    if (ImGui::Begin("Importing...", nullptr, flags)) {
-        int completed = prog.completedFiles.load();
-        int total = prog.totalFiles.load();
-        int failed = prog.failedFiles.load();
-
-        // Current file and stage
-        ImGui::TextWrapped("%s", prog.getCurrentFileName().c_str());
-        ImGui::TextDisabled("%s", importStageName(prog.currentStage.load()));
-
-        // Overall progress bar
-        float fraction =
-            total > 0 ? static_cast<float>(completed) / static_cast<float>(total) : 0.0f;
-        char overlay[64];
-        std::snprintf(overlay, sizeof(overlay), "%d / %d", completed, total);
-        ImGui::ProgressBar(fraction, ImVec2(-1, 0), overlay);
-
-        if (failed > 0) {
-            ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "%d failed", failed);
-        }
-
-        if (ImGui::Button("Cancel")) {
-            importQueue->cancel();
-        }
-    }
-    ImGui::End();
-}
-
-void UIManager::renderStatusBar(const LoadingState& loadingState, ImportQueue* importQueue) {
-    auto* viewport = ImGui::GetMainViewport();
-    float barHeight = ImGui::GetFrameHeight() + ImGui::GetStyle().WindowPadding.y * 2;
-
-    ImVec2 pos(viewport->WorkPos.x, viewport->WorkPos.y + viewport->WorkSize.y - barHeight);
-    ImVec2 size(viewport->WorkSize.x, barHeight);
-
-    ImGui::SetNextWindowPos(pos);
-    ImGui::SetNextWindowSize(size);
-
-    ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-                             ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
-                             ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking;
-
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 4));
-    if (ImGui::Begin("##StatusBar", nullptr, flags)) {
-        // Left: loading status
-        if (loadingState.active.load()) {
-            int dots = (static_cast<int>(ImGui::GetTime() * 3.0) % 3) + 1;
-            std::string dotsStr(static_cast<size_t>(dots), '.');
-            ImGui::Text("Loading %s%s", loadingState.getName().c_str(), dotsStr.c_str());
-        } else {
-            ImGui::TextDisabled("Ready");
-        }
-
-        // Right: import progress (if active)
-        if (importQueue != nullptr && importQueue->isActive()) {
-            const auto& prog = importQueue->progress();
-            int completed = prog.completedFiles.load();
-            int total = prog.totalFiles.load();
-            char buf[64];
-            std::snprintf(buf, sizeof(buf), "Importing %d/%d", completed, total);
-            float textWidth = ImGui::CalcTextSize(buf).x;
-            ImGui::SameLine(ImGui::GetWindowWidth() - textWidth - 8);
-            ImGui::Text("%s", buf);
-        }
-    }
-    ImGui::End();
-    ImGui::PopStyleVar();
-}
-
 void UIManager::renderAboutDialog() {
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
@@ -316,9 +241,10 @@ void UIManager::renderAboutDialog() {
     }
 }
 
-void UIManager::renderRestartPopup(ActionCallback onRelaunch) {
-    if (!m_showRestartPopup)
+void UIManager::renderRestartPopup(const ActionCallback& onRelaunch) {
+    if (!m_showRestartPopup) {
         return;
+    }
 
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
@@ -333,8 +259,9 @@ void UIManager::renderRestartPopup(ActionCallback onRelaunch) {
 
         if (ImGui::Button("Relaunch Now", ImVec2(140, 0))) {
             m_showRestartPopup = false;
-            if (onRelaunch)
+            if (onRelaunch) {
                 onRelaunch();
+            }
         }
         ImGui::SameLine();
         if (ImGui::Button("Later", ImVec2(140, 0))) {
@@ -348,39 +275,37 @@ void UIManager::handleKeyboardShortcuts() {
     auto& io = ImGui::GetIO();
 
     // Only handle shortcuts when not typing in a text field
-    if (io.WantTextInput)
+    if (io.WantTextInput) {
         return;
+    }
 
-    bool ctrl = io.KeyCtrl;
+    if (!io.KeyCtrl) {
+        return;
+    }
 
-    if (ctrl && ImGui::IsKeyPressed(ImGuiKey_N)) {
-        if (m_onNewProject)
-            m_onNewProject();
-    }
-    if (ctrl && ImGui::IsKeyPressed(ImGuiKey_O)) {
-        if (m_onOpenProject)
-            m_onOpenProject();
-    }
-    if (ctrl && ImGui::IsKeyPressed(ImGuiKey_S)) {
-        if (m_onSaveProject)
-            m_onSaveProject();
-    }
-    if (ctrl && ImGui::IsKeyPressed(ImGuiKey_I)) {
-        if (m_onImportModel)
-            m_onImportModel();
-    }
-    if (ctrl && ImGui::IsKeyPressed(ImGuiKey_E)) {
-        if (m_onExportModel)
-            m_onExportModel();
-    }
-    if (ctrl && ImGui::IsKeyPressed(ImGuiKey_Comma)) {
-        if (m_onSpawnSettings)
-            m_onSpawnSettings();
-    }
-    if (ctrl && ImGui::IsKeyPressed(ImGuiKey_L)) {
-        if (m_lightingDialog) {
-            m_lightingDialog->open();
+    // Ctrl+key shortcut dispatch
+    struct Shortcut {
+        ImGuiKey key;
+        const ActionCallback* action;
+    };
+    const std::array<Shortcut, 6> kShortcuts = {{
+        {ImGuiKey_N, &m_onNewProject},
+        {ImGuiKey_O, &m_onOpenProject},
+        {ImGuiKey_S, &m_onSaveProject},
+        {ImGuiKey_I, &m_onImportModel},
+        {ImGuiKey_E, &m_onExportModel},
+        {ImGuiKey_Comma, &m_onSpawnSettings},
+    }};
+
+    for (const auto& [key, action] : kShortcuts) {
+        if (ImGui::IsKeyPressed(key) && *action) {
+            (*action)();
+            return;
         }
+    }
+
+    if (ImGui::IsKeyPressed(ImGuiKey_L) && m_lightingDialog) {
+        m_lightingDialog->open();
     }
 }
 
@@ -436,8 +361,9 @@ void UIManager::saveVisibilityToConfig() {
 }
 
 void UIManager::applyRenderSettingsFromConfig() {
-    if (!m_viewportPanel)
+    if (!m_viewportPanel) {
         return;
+    }
 
     auto& cfg = Config::instance();
     auto& rs = m_viewportPanel->renderSettings();

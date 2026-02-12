@@ -12,7 +12,7 @@
 
 #include "../core/types.h"
 
-typedef unsigned int ImGuiID;
+using ImGuiID = unsigned int;
 
 namespace dw {
 
@@ -70,10 +70,8 @@ class UIManager {
     // --- Per-frame rendering ---
     void renderMenuBar();
     void renderPanels();
-    void renderImportProgress(ImportQueue* importQueue);  // DEPRECATED: Use renderBackgroundUI instead
-    void renderStatusBar(const LoadingState& loadingState, ImportQueue* importQueue);  // DEPRECATED: Use renderBackgroundUI instead
     void renderAboutDialog();
-    void renderRestartPopup(ActionCallback onRelaunch);
+    void renderRestartPopup(const ActionCallback& onRelaunch);
     void setupDefaultDockLayout(ImGuiID dockspaceId);
     void handleKeyboardShortcuts();
 
@@ -81,7 +79,7 @@ class UIManager {
     void renderBackgroundUI(float deltaTime, const LoadingState* loadingState);  // Renders StatusBar, ToastManager, ImportSummaryDialog
 
     // --- Dock layout first-frame logic ---
-    bool isFirstFrame() const { return m_firstFrame; }
+    [[nodiscard]] bool isFirstFrame() const { return m_firstFrame; }
     void clearFirstFrame() { m_firstFrame = false; }
 
     // --- Panel accessors (Application needs these for wiring callbacks) ---
@@ -124,7 +122,7 @@ class UIManager {
     void restoreVisibilityFromConfig();
     void saveVisibilityToConfig();
     void applyRenderSettingsFromConfig();
-    int64_t getSelectedModelId() const;
+    [[nodiscard]] int64_t getSelectedModelId() const;
 
   private:
     // UI Panels
@@ -158,6 +156,12 @@ class UIManager {
 
     // First frame flag for dock layout
     bool m_firstFrame = true;
+
+    // Menu rendering helpers (extracted from renderMenuBar for complexity)
+    void renderFileMenu();
+    void renderViewMenu();
+    void renderEditMenu();
+    void renderHelpMenu();
 
     // Action callbacks (delegated to Application)
     ActionCallback m_onNewProject;
