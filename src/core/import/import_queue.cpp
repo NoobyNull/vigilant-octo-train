@@ -430,6 +430,14 @@ void ImportQueue::processTask(ImportTask task) {
         }
 
     } else {
+        // Precompute autoOrient on the worker thread (pure CPU, no GL)
+        // Results are stored in DB so model loads skip recomputation
+        if (Config::instance().getAutoOrient() && task.mesh && task.mesh->isValid()) {
+            f32 orientYaw = task.mesh->autoOrient();
+            task.record.orientYaw = orientYaw;
+            task.record.orientMatrix = task.mesh->getOrientMatrix();
+        }
+
         // Insert mesh model record
         ModelRecord record;
         record.hash = task.fileHash;
@@ -443,6 +451,10 @@ void ImportQueue::processTask(ImportTask task) {
         const auto& bounds = task.mesh->bounds();
         record.boundsMin = bounds.min;
         record.boundsMax = bounds.max;
+
+        // Carry orient data to the DB record
+        record.orientYaw = task.record.orientYaw;
+        record.orientMatrix = task.record.orientMatrix;
 
         auto modelId = modelRepo.insert(record);
         if (!modelId) {

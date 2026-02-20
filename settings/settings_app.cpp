@@ -47,6 +47,7 @@ bool SettingsApp::init() {
     m_invertOrbitX = cfg.getInvertOrbitX();
     m_invertOrbitY = cfg.getInvertOrbitY();
     m_navStyle = cfg.getNavStyleIndex();
+    m_enableFloatingWindows = cfg.getEnableFloatingWindows();
     m_lightDir = cfg.getRenderLightDir();
     m_lightColor = cfg.getRenderLightColor();
     m_ambient = cfg.getRenderAmbient();
@@ -292,6 +293,22 @@ void SettingsApp::renderGeneralTab() {
     const char* logLevels[] = {"Debug", "Info", "Warning", "Error"};
     if (ImGui::Combo("Log Level", &m_logLevel, logLevels, 4))
         m_dirty = true;
+    ImGui::Unindent();
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    ImGui::Text("Windows");
+    ImGui::Indent();
+    if (ImGui::Checkbox("Enable Floating Windows", &m_enableFloatingWindows))
+        m_dirty = true;
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Allow undocked panels to float as independent OS windows.\n"
+                          "Forces X11 mode on Wayland (via XWayland).\n"
+                          "Requires application restart.");
+    }
+    ImGui::TextDisabled("Requires restart. Uses X11/XWayland on Wayland.");
     ImGui::Unindent();
 }
 
@@ -658,6 +675,7 @@ void SettingsApp::applySettings() {
     cfg.setFileHandlingMode(static_cast<FileHandlingMode>(m_fileHandlingMode));
     cfg.setLibraryDir(Path(m_libraryDir));
     cfg.setShowImportErrorToasts(m_showImportErrorToasts);
+    cfg.setEnableFloatingWindows(m_enableFloatingWindows);
 
     cfg.save();
     m_dirty = false;

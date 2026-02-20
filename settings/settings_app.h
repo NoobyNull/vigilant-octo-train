@@ -57,6 +57,7 @@ class SettingsApp {
     int m_navStyle = 0;
     int m_logLevel = 1;
     bool m_showStartPage = true;
+    bool m_enableFloatingWindows = false;
 
     // Render settings
     Vec3 m_lightDir{-0.5f, -1.0f, -0.3f};

@@ -60,6 +60,26 @@ void ViewportPanel::setMesh(MeshPtr mesh) {
     m_viewCubeCache.valid = false;
 }
 
+void ViewportPanel::setPreOrientedMesh(MeshPtr mesh, f32 orientYaw) {
+    m_mesh = mesh;
+
+    if (m_gpuMesh.vao != 0) {
+        m_gpuMesh.destroy();
+    }
+
+    if (m_mesh && m_mesh->isValid()) {
+        m_gpuMesh = m_renderer.uploadMesh(*m_mesh);
+        fitToModel();
+
+        if (m_mesh->wasAutoOriented()) {
+            m_camera.setYaw(orientYaw);
+            m_camera.setPitch(0.0f);
+        }
+    }
+
+    m_viewCubeCache.valid = false;
+}
+
 void ViewportPanel::clearMesh() {
     m_mesh = nullptr;
     if (m_gpuMesh.vao != 0) {

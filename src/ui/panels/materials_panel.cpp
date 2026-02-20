@@ -129,6 +129,31 @@ void MaterialsPanel::renderToolbar() {
 
     ImGui::SameLine();
 
+    // Assign to model button (only active when material selected AND model loaded)
+    bool canAssign = hasSelection && m_modelLoaded;
+    if (!canAssign) {
+        ImGui::BeginDisabled();
+    }
+    if (ImGui::Button("Assign")) {
+        if (canAssign && m_onMaterialAssigned) {
+            m_onMaterialAssigned(m_selectedMaterialId);
+        }
+    }
+    if (!canAssign) {
+        ImGui::EndDisabled();
+    }
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+        if (!hasSelection) {
+            ImGui::SetTooltip("Select a material first");
+        } else if (!m_modelLoaded) {
+            ImGui::SetTooltip("Load a model into the viewport first");
+        } else {
+            ImGui::SetTooltip("Assign selected material to loaded model");
+        }
+    }
+
+    ImGui::SameLine();
+
     // Refresh button
     if (ImGui::Button(Icons::Refresh)) {
         refresh();

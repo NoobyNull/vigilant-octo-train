@@ -87,6 +87,8 @@ bool Config::load() {
                 str::parseInt(value, style);
                 if (style >= 0 && style <= 2)
                     m_navStyle = static_cast<NavStyle>(style);
+            } else if (key == "floating_windows") {
+                m_enableFloatingWindows = (value == "true" || value == "1");
             }
         } else if (section == "render") {
             if (key == "light_dir_x")
@@ -214,6 +216,7 @@ bool Config::save() {
     ss << "invert_orbit_x=" << (m_invertOrbitX ? "true" : "false") << "\n";
     ss << "invert_orbit_y=" << (m_invertOrbitY ? "true" : "false") << "\n";
     ss << "nav_style=" << static_cast<int>(m_navStyle) << "\n";
+    ss << "floating_windows=" << (m_enableFloatingWindows ? "true" : "false") << "\n";
     ss << "\n";
 
     // Render section

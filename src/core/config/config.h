@@ -155,6 +155,9 @@ class Config {
     bool getShowImportErrorToasts() const { return m_showImportErrorToasts; }
     void setShowImportErrorToasts(bool show) { m_showImportErrorToasts = show; }
 
+    bool getEnableFloatingWindows() const { return m_enableFloatingWindows; }
+    void setEnableFloatingWindows(bool enable) { m_enableFloatingWindows = enable; }
+
   private:
     Config();
     void initDefaultBindings();
@@ -216,6 +219,7 @@ class Config {
     FileHandlingMode m_fileHandlingMode = FileHandlingMode::LeaveInPlace;
     Path m_libraryDir; // Empty means default (app data dir / "library")
     bool m_showImportErrorToasts = true;
+    bool m_enableFloatingWindows = false;
 };
 
 } // namespace dw

@@ -17,7 +17,9 @@ class Schema {
     static int getVersion(Database& db);
 
   private:
-    static constexpr int CURRENT_VERSION = 4;
+    static constexpr int CURRENT_VERSION = 5;
+
+    static bool migrate(Database& db, int fromVersion);
 
     static bool createTables(Database& db);
     static bool setVersion(Database& db, int version);

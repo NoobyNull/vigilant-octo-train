@@ -210,6 +210,11 @@ void UIManager::renderPanels() {
 
     if (m_showMaterials && m_materialsPanel) {
         m_materialsPanel->render();
+        // Sync: if user closed panel via X button, update menu checkbox state
+        if (!m_materialsPanel->isOpen()) {
+            m_showMaterials = false;
+            m_materialsPanel->setOpen(true); // reset for next View menu toggle
+        }
     }
 
     // Render dialogs

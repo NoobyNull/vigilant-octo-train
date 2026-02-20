@@ -39,6 +39,9 @@ class MaterialsPanel : public Panel {
     // Get currently selected material ID (-1 if none)
     i64 selectedMaterialId() const { return m_selectedMaterialId; }
 
+    // Set whether a model is loaded (enables/disables Assign button)
+    void setModelLoaded(bool loaded) { m_modelLoaded = loaded; }
+
   private:
     enum class CategoryTab { All, Hardwood, Softwood, Domestic, Composite };
 
@@ -86,6 +89,7 @@ class MaterialsPanel : public Panel {
     MaterialSelectedCallback m_onMaterialSelected;
     MaterialAssignedCallback m_onMaterialAssigned;
 
+    bool m_modelLoaded = false;
     float m_thumbnailSize = 96.0f;
 };
 

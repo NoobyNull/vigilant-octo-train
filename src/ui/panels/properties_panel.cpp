@@ -336,6 +336,7 @@ void PropertiesPanel::renderMaterialInfo() {
 
             float grainDir = mat.grainDirectionDeg;
             if (ImGui::SliderFloat("Grain Direction (deg)", &grainDir, 0.0f, 360.0f, "%.1f")) {
+                m_material->grainDirectionDeg = grainDir;
                 if (m_onGrainDirectionChanged) {
                     m_onGrainDirectionChanged(grainDir);
                 }

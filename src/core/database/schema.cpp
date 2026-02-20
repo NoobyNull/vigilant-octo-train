@@ -17,9 +17,14 @@ bool Schema::initialize(Database& db) {
             log::debug("Schema", "Already up to date");
             return true;
         }
-        // TODO(v2.0): Implement version-aware ALTER TABLE migrations.
-        // For now, tables use IF NOT EXISTS so new columns must be added via
-        // ALTER TABLE in a migrate(oldVersion, newVersion) function.
+        if (version < CURRENT_VERSION) {
+            log::infof("Schema", "Migrating from version %d to %d", version, CURRENT_VERSION);
+            if (!migrate(db, version)) {
+                log::error("Schema", "Migration failed");
+                return false;
+            }
+            return true;
+        }
         log::warningf("Schema", "Version mismatch (have %d, want %d) - attempting table creation",
                       version, CURRENT_VERSION);
     }
@@ -104,7 +109,9 @@ bool Schema::createTables(Database& db) {
             thumbnail_path TEXT,
             imported_at TEXT DEFAULT CURRENT_TIMESTAMP,
             tags TEXT DEFAULT '[]',
-            material_id INTEGER DEFAULT NULL
+            material_id INTEGER DEFAULT NULL,
+            orient_yaw REAL DEFAULT NULL,
+            orient_matrix TEXT DEFAULT NULL
         )
     )")) {
         return false;
@@ -263,6 +270,30 @@ bool Schema::createTables(Database& db) {
     }
 
     log::info("Schema", "Database schema initialized successfully");
+    return true;
+}
+
+bool Schema::migrate(Database& db, int fromVersion) {
+    Transaction txn(db);
+
+    if (fromVersion < 5) {
+        // v5: Add orient columns to models table
+        (void)db.execute("ALTER TABLE models ADD COLUMN orient_yaw REAL DEFAULT NULL");
+        (void)db.execute("ALTER TABLE models ADD COLUMN orient_matrix TEXT DEFAULT NULL");
+        log::info("Schema", "Added orient_yaw and orient_matrix columns to models");
+    }
+
+    if (!setVersion(db, CURRENT_VERSION)) {
+        txn.rollback();
+        return false;
+    }
+
+    if (!txn.commit()) {
+        log::error("Schema", "Failed to commit migration");
+        return false;
+    }
+
+    log::infof("Schema", "Migrated to version %d", CURRENT_VERSION);
     return true;
 }
 

@@ -37,6 +37,11 @@ ConfigManager::~ConfigManager() {
 void ConfigManager::init(SDL_Window* window) {
     m_window = window;
 
+    // Snapshot restart-sensitive settings before applying, so applyConfig()
+    // doesn't immediately detect a mismatch on first launch.
+    m_lastAppliedUiScale = Config::instance().getUiScale();
+    m_lastAppliedFloatingWindows = Config::instance().getEnableFloatingWindows();
+
     // Apply initial config (theme, render settings, log level)
     applyConfig();
 
@@ -44,7 +49,6 @@ void ConfigManager::init(SDL_Window* window) {
     m_configWatcher = std::make_unique<ConfigWatcher>();
     m_configWatcher->setOnChanged([this]() { onConfigFileChanged(); });
     m_configWatcher->watch(Config::instance().configFilePath());
-    m_lastAppliedUiScale = Config::instance().getUiScale();
 }
 
 void ConfigManager::poll(uint64_t ticksMs) {
@@ -85,8 +89,9 @@ void ConfigManager::applyConfig() {
     // Log level (live)
     log::setLevel(static_cast<log::Level>(cfg.getLogLevel()));
 
-    // UI scale requires restart
-    if (cfg.getUiScale() != m_lastAppliedUiScale) {
+    // UI scale and floating windows require restart
+    if (cfg.getUiScale() != m_lastAppliedUiScale ||
+        cfg.getEnableFloatingWindows() != m_lastAppliedFloatingWindows) {
         m_uiManager->showRestartPopup() = true;
     }
 }

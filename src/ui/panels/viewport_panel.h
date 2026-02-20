@@ -28,6 +28,8 @@ class ViewportPanel : public Panel {
 
     // Set mesh to display
     void setMesh(MeshPtr mesh);
+    // Set mesh that was already auto-oriented on worker thread
+    void setPreOrientedMesh(MeshPtr mesh, f32 orientYaw);
     void clearMesh();
 
     // Set toolpath mesh to display

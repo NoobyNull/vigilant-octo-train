@@ -106,69 +106,41 @@ LoadResult STLLoader::loadBinary(const ByteBuffer& data) {
         return LoadResult{nullptr, oss.str()};
     }
 
-    auto mesh = std::make_shared<Mesh>();
-    mesh->reserve(triangleCount * 3, triangleCount * 3);
+    // Binary STL stores per-face normals, so shared-position vertices have different
+    // normals and almost never deduplicate. Skip dedup — build flat arrays directly.
+    const u32 vertexCount = triangleCount * 3;
+    std::vector<Vertex> vertices(vertexCount);
+    std::vector<u32> indices(vertexCount);
 
-    // Use hash map for vertex deduplication
-    std::unordered_map<Vertex, u32> vertexMap;
-
+    // Each binary STL triangle: 12 bytes normal + 3×12 bytes vertices + 2 bytes attr = 50 bytes
     for (u32 i = 0; i < triangleCount; ++i) {
-        // Read normal (12 bytes)
-        Vec3 normal;
-        std::memcpy(&normal.x, ptr, sizeof(f32));
-        ptr += 4;
-        std::memcpy(&normal.y, ptr, sizeof(f32));
-        ptr += 4;
-        std::memcpy(&normal.z, ptr, sizeof(f32));
-        ptr += 4;
+        float triData[12]; // normal(3) + v0(3) + v1(3) + v2(3)
+        std::memcpy(triData, ptr, 48);
+        ptr += 50; // 48 bytes geometry + 2 bytes attribute
 
-        // Validate normal for NaN/Inf
-        if (!std::isfinite(normal.x) || !std::isfinite(normal.y) || !std::isfinite(normal.z)) {
+        // Validate normal
+        if (!std::isfinite(triData[0]) || !std::isfinite(triData[1]) ||
+            !std::isfinite(triData[2])) {
             return LoadResult{nullptr, "STL contains invalid normal data (NaN or Inf values)"};
         }
 
-        // Read 3 vertices (36 bytes)
-        u32 indices[3];
-        for (int j = 0; j < 3; ++j) {
-            Vertex v;
-            std::memcpy(&v.position.x, ptr, sizeof(f32));
-            ptr += 4;
-            std::memcpy(&v.position.y, ptr, sizeof(f32));
-            ptr += 4;
-            std::memcpy(&v.position.z, ptr, sizeof(f32));
-            ptr += 4;
-            v.normal = normal;
+        Vec3 normal{triData[0], triData[1], triData[2]};
+        u32 base = i * 3;
 
-            // Validate vertex for NaN/Inf
-            if (!std::isfinite(v.position.x) || !std::isfinite(v.position.y) ||
-                !std::isfinite(v.position.z)) {
+        // 3 vertices starting at triData[3]
+        for (int j = 0; j < 3; ++j) {
+            int off = 3 + j * 3;
+            if (!std::isfinite(triData[off]) || !std::isfinite(triData[off + 1]) ||
+                !std::isfinite(triData[off + 2])) {
                 return LoadResult{nullptr, "STL contains invalid vertex data (NaN or Inf values)"};
             }
-
-            // Bounds check on vertex data
-            constexpr f32 MAX_COORD = 1e6f;
-            if (std::abs(v.position.x) > MAX_COORD || std::abs(v.position.y) > MAX_COORD ||
-                std::abs(v.position.z) > MAX_COORD) {
-                return LoadResult{nullptr,
-                                  "STL contains extreme coordinates (>1e6), likely corrupt"};
-            }
-
-            // Deduplicate vertices
-            auto it = vertexMap.find(v);
-            if (it != vertexMap.end()) {
-                indices[j] = it->second;
-            } else {
-                indices[j] = mesh->vertexCount();
-                vertexMap[v] = indices[j];
-                mesh->addVertex(v);
-            }
+            vertices[base + j] =
+                Vertex{Vec3{triData[off], triData[off + 1], triData[off + 2]}, normal};
+            indices[base + j] = base + j;
         }
-
-        mesh->addTriangle(indices[0], indices[1], indices[2]);
-
-        // Skip attribute byte count (2 bytes)
-        ptr += 2;
     }
+
+    auto mesh = std::make_shared<Mesh>(std::move(vertices), std::move(indices));
 
     mesh->recalculateBounds();
 

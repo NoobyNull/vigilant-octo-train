@@ -50,6 +50,10 @@ class Mesh {
     f32 autoOrient();
     void revertAutoOrient();
     bool wasAutoOriented() const { return m_autoOriented; }
+    const Mat4& getOrientMatrix() const { return m_orientMatrix; }
+
+    // Apply a previously computed orient matrix (fast path — skips axis detection and normal counting)
+    void applyStoredOrient(const Mat4& matrix);
 
     // Create a copy
     Mesh clone() const;

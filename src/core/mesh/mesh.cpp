@@ -163,6 +163,19 @@ f32 Mesh::autoOrient() {
     return (posZ >= negZ) ? 0.0f : 180.0f;
 }
 
+void Mesh::applyStoredOrient(const Mat4& matrix) {
+    if (!isValid()) {
+        return;
+    }
+
+    // Only apply if not identity
+    if (matrix != Mat4(1.0f)) {
+        transform(matrix);
+    }
+    m_orientMatrix = matrix;
+    m_autoOriented = true;
+}
+
 void Mesh::revertAutoOrient() {
     if (!m_autoOriented) {
         return;

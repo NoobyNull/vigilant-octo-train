@@ -17,6 +17,7 @@
 #include "core/config/config.h"
 #include "core/database/connection_pool.h"
 #include "core/database/database.h"
+#include "core/database/model_repository.h"
 #include "core/database/schema.h"
 #include "core/events/event_bus.h"
 #include "core/import/import_queue.h"
@@ -58,6 +59,11 @@ bool Application::init() {
     paths::ensureDirectoriesExist();
     Config::instance().load();
     log::setLevel(static_cast<log::Level>(Config::instance().getLogLevel()));
+
+    // Multi-viewport requires X11 — Wayland SDL2 backend lacks platform viewport support
+    if (Config::instance().getEnableFloatingWindows()) {
+        SDL_SetHint(SDL_HINT_VIDEODRIVER, "x11");
+    }
 
     // Initialize SDL2
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
@@ -116,11 +122,25 @@ bool Application::init() {
     auto& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    if (Config::instance().getEnableFloatingWindows()) {
+        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    }
     static std::string imguiIniPath = (paths::getConfigDir() / "imgui.ini").string();
     io.IniFilename = imguiIniPath.c_str();
 
     ImGui_ImplSDL2_InitForOpenGL(m_window, m_glContext);
     ImGui_ImplOpenGL3_Init("#version 330");
+
+    if (Config::instance().getEnableFloatingWindows()) {
+        bool platformOk = (io.BackendFlags & ImGuiBackendFlags_PlatformHasViewports) != 0;
+        bool rendererOk = (io.BackendFlags & ImGuiBackendFlags_RendererHasViewports) != 0;
+        if (!platformOk || !rendererOk) {
+            log::errorf("Application",
+                        "Floating windows: platform=%s renderer=%s — viewports disabled",
+                        platformOk ? "ok" : "NO", rendererOk ? "ok" : "NO");
+            io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
+        }
+    }
 
     // Initialize core systems
     dw::threading::initMainThread();
@@ -385,6 +405,12 @@ void Application::render() {
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     SDL_GL_SwapWindow(m_window);
+
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+        SDL_GL_MakeCurrent(m_window, m_glContext);
+    }
 }
 
 void Application::onModelSelected(int64_t modelId) {
@@ -428,30 +454,54 @@ void Application::onModelSelected(int64_t modelId) {
     // Capture what we need for the worker
     Path filePath = record->filePath;
     std::string name = record->name;
+    auto storedOrientYaw = record->orientYaw;
+    auto storedOrientMatrix = record->orientMatrix;
 
-    m_loadThread = std::thread([this, filePath, name, gen]() {
-        auto loadResult = LoaderFactory::load(filePath);
-        if (!loadResult) {
-            m_loadingState.reset();
-            return;
-        }
-        loadResult.mesh->setName(name);
-        auto mesh = loadResult.mesh;
-
-        // Post result to main thread via MainThreadQueue
-        m_mainThreadQueue->enqueue([this, mesh, name, gen]() {
-            // Check generation — if user clicked another model, discard
-            if (gen != m_loadingState.generation.load())
+    m_loadThread =
+        std::thread([this, filePath, name, gen, modelId, storedOrientYaw, storedOrientMatrix]() {
+            auto loadResult = LoaderFactory::load(filePath);
+            if (!loadResult) {
+                m_loadingState.reset();
                 return;
-            m_loadingState.reset();
+            }
+            loadResult.mesh->setName(name);
 
-            m_workspace->setFocusedMesh(mesh);
-            if (m_uiManager->viewportPanel())
-                m_uiManager->viewportPanel()->setMesh(mesh);
-            if (m_uiManager->propertiesPanel())
-                m_uiManager->propertiesPanel()->setMesh(mesh, name);
+            // Orient on worker thread (pure CPU, no GL calls)
+            f32 orientYaw = 0.0f;
+            if (Config::instance().getAutoOrient()) {
+                if (storedOrientYaw && storedOrientMatrix) {
+                    // Fast path: apply stored orient (skips axis detection + normal counting)
+                    loadResult.mesh->applyStoredOrient(*storedOrientMatrix);
+                    orientYaw = *storedOrientYaw;
+                } else {
+                    // Fallback: full autoOrient + lazy-write back to DB
+                    orientYaw = loadResult.mesh->autoOrient();
+
+                    // Write computed orient back to DB for future loads
+                    ScopedConnection conn(*m_connectionPool);
+                    ModelRepository repo(*conn);
+                    repo.updateOrient(modelId, orientYaw, loadResult.mesh->getOrientMatrix());
+                }
+            }
+
+            auto mesh = loadResult.mesh;
+
+            // Post result to main thread via MainThreadQueue
+            m_mainThreadQueue->enqueue([this, mesh, name, gen, orientYaw]() {
+                // Check generation — if user clicked another model, discard
+                if (gen != m_loadingState.generation.load())
+                    return;
+                m_loadingState.reset();
+
+                m_workspace->setFocusedMesh(mesh);
+                if (m_uiManager->viewportPanel())
+                    m_uiManager->viewportPanel()->setPreOrientedMesh(mesh, orientYaw);
+                if (m_uiManager->propertiesPanel())
+                    m_uiManager->propertiesPanel()->setMesh(mesh, name);
+                if (m_uiManager->materialsPanel())
+                    m_uiManager->materialsPanel()->setModelLoaded(true);
+            });
         });
-    });
 }
 
 void Application::assignMaterialToCurrentModel(int64_t materialId) {
@@ -570,6 +620,11 @@ void Application::shutdown() {
     m_libraryManager.reset();
     m_database.reset();
     m_eventBus.reset();
+
+    // Destroy any multi-viewport platform windows before backend shutdown
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+        ImGui::DestroyPlatformWindows();
+    }
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
