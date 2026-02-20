@@ -1,5 +1,6 @@
 #include "mesh.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include "../utils/log.h"
@@ -220,6 +221,93 @@ bool Mesh::hasNormals() const {
         }
     }
     return false;
+}
+
+bool Mesh::needsUVGeneration() const {
+    if (m_vertices.empty()) {
+        return true;
+    }
+    return std::all_of(m_vertices.begin(), m_vertices.end(), [](const Vertex& v) {
+        return std::fabs(v.texCoord.x) < 0.0001f && std::fabs(v.texCoord.y) < 0.0001f;
+    });
+}
+
+void Mesh::generatePlanarUVs(float grainRotationDeg) {
+    if (m_vertices.empty()) {
+        return;
+    }
+
+    // Ensure bounds are current
+    recalculateBounds();
+
+    Vec3 size = m_bounds.size();
+
+    // Determine projection plane by picking the two largest dimensions.
+    // The smallest dimension is the "depth" axis (perpendicular to projection).
+    // Projection plane candidates and their areas:
+    //   XY plane: size.x * size.y
+    //   XZ plane: size.x * size.z
+    //   YZ plane: size.y * size.z
+    float areaXY = size.x * size.y;
+    float areaXZ = size.x * size.z;
+    float areaYZ = size.y * size.z;
+
+    // axis1/axis2 index into position: 0=X, 1=Y, 2=Z
+    int axis1 = 0;
+    int axis2 = 1;
+    float axis1Size = size.x;
+    float axis2Size = size.y;
+
+    if (areaXZ >= areaXY && areaXZ >= areaYZ) {
+        // XZ plane
+        axis1 = 0; axis2 = 2;
+        axis1Size = size.x;
+        axis2Size = size.z;
+    } else if (areaYZ >= areaXY && areaYZ >= areaXZ) {
+        // YZ plane
+        axis1 = 1; axis2 = 2;
+        axis1Size = size.y;
+        axis2Size = size.z;
+    }
+    // else XY plane (default, already set)
+
+    // Guard against degenerate meshes (zero-size dimensions)
+    if (axis1Size < 1e-6f) axis1Size = 1.0f;
+    if (axis2Size < 1e-6f) axis2Size = 1.0f;
+
+    auto getAxis = [](const Vec3& v, int axis) -> float {
+        if (axis == 0) return v.x;
+        if (axis == 1) return v.y;
+        return v.z;
+    };
+
+    float minAxis1 = getAxis(m_bounds.min, axis1);
+    float minAxis2 = getAxis(m_bounds.min, axis2);
+
+    bool doRotate = std::fabs(grainRotationDeg) > 0.0001f;
+    float rad = 0.0f;
+    float cosR = 1.0f, sinR = 0.0f;
+    if (doRotate) {
+        // glm::radians equivalent without including all of GLM
+        rad = grainRotationDeg * 3.14159265358979323846f / 180.0f;
+        cosR = std::cos(rad);
+        sinR = std::sin(rad);
+    }
+
+    for (auto& vertex : m_vertices) {
+        float u = (getAxis(vertex.position, axis1) - minAxis1) / axis1Size;
+        float v = (getAxis(vertex.position, axis2) - minAxis2) / axis2Size;
+
+        if (doRotate) {
+            // Rotate around UV center (0.5, 0.5)
+            float du = u - 0.5f;
+            float dv = v - 0.5f;
+            u = du * cosR - dv * sinR + 0.5f;
+            v = du * sinR + dv * cosR + 0.5f;
+        }
+
+        vertex.texCoord = Vec2{u, v};
+    }
 }
 
 bool Mesh::hasTexCoords() const {

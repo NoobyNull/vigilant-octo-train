@@ -11,8 +11,8 @@ struct Vertex {
     Vec2 texCoord;
 
     Vertex() = default;
-    Vertex(const Vec3& pos) : position(pos) {}
-    Vertex(const Vec3& pos, const Vec3& norm) : position(pos), normal(norm) {}
+    Vertex(const Vec3& pos) : position(pos), normal{0.0f, 0.0f, 0.0f}, texCoord{0.0f, 0.0f} {}
+    Vertex(const Vec3& pos, const Vec3& norm) : position(pos), normal(norm), texCoord{0.0f, 0.0f} {}
     Vertex(const Vec3& pos, const Vec3& norm, const Vec2& tex)
         : position(pos), normal(norm), texCoord(tex) {}
 

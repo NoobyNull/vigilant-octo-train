@@ -41,6 +41,7 @@ set(DW_TEST_SOURCES
     test_cost_repository.cpp
     test_material_archive.cpp
     test_material_manager.cpp
+    test_mesh_uv.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
     # Stubs for GL-dependent classes
