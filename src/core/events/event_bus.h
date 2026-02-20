@@ -16,17 +16,16 @@ namespace dw {
 // Type-safe event bus for decoupled subsystem communication
 // THREADING CONTRACT: Main thread only - no internal synchronization
 class EventBus {
-public:
+  public:
     // Subscription token - caller holds this to keep handler alive
     using SubscriptionId = std::shared_ptr<void>;
 
     // Subscribe to events of type EventType
     // Returns a subscription token - handler remains active while token is alive
-    template <typename EventType, typename Handler>
-    SubscriptionId subscribe(Handler&& handler) {
+    template <typename EventType, typename Handler> SubscriptionId subscribe(Handler&& handler) {
         // Wrap handler in a shared_ptr to manage lifetime
-        auto handlerFunc = std::make_shared<std::function<void(const EventType&)>>(
-            std::forward<Handler>(handler));
+        auto handlerFunc =
+            std::make_shared<std::function<void(const EventType&)>>(std::forward<Handler>(handler));
 
         // Store a weak_ptr to the handler in the handlers map
         auto typeIndex = std::type_index(typeid(EventType));
@@ -39,8 +38,7 @@ public:
     // Publish an event to all subscribed handlers
     // Handlers are invoked synchronously in registration order
     // Exception in one handler does not prevent others from running
-    template <typename EventType>
-    void publish(const EventType& event) {
+    template <typename EventType> void publish(const EventType& event) {
         ASSERT_MAIN_THREAD();
 
         auto typeIndex = std::type_index(typeid(EventType));
@@ -79,7 +77,7 @@ public:
             originalList.end());
     }
 
-private:
+  private:
     // Internal storage: type_index -> list of weak_ptr to handlers
     std::unordered_map<std::type_index, std::vector<std::weak_ptr<void>>> m_handlers;
 };

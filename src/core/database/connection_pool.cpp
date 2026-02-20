@@ -4,8 +4,8 @@
 
 #include <sqlite3.h>
 
-#include "database.h"
 #include "../utils/log.h"
+#include "database.h"
 
 namespace dw {
 
