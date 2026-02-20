@@ -24,6 +24,7 @@
 #include "ui/panels/library_panel.h"
 #include "ui/panels/project_panel.h"
 #include "ui/panels/properties_panel.h"
+#include "ui/panels/materials_panel.h"
 #include "ui/panels/start_page.h"
 #include "ui/panels/viewport_panel.h"
 #include "ui/widgets/status_bar.h"
@@ -38,7 +39,8 @@ UIManager::~UIManager() {
     shutdown();
 }
 
-void UIManager::init(LibraryManager* libraryManager, ProjectManager* projectManager) {
+void UIManager::init(LibraryManager* libraryManager, ProjectManager* projectManager,
+                     MaterialManager* materialManager) {
     // Create panels
     m_viewportPanel = std::make_unique<ViewportPanel>();
     m_libraryPanel = std::make_unique<LibraryPanel>(libraryManager);
@@ -46,6 +48,7 @@ void UIManager::init(LibraryManager* libraryManager, ProjectManager* projectMana
     m_projectPanel = std::make_unique<ProjectPanel>(projectManager);
     m_gcodePanel = std::make_unique<GCodePanel>();
     m_cutOptimizerPanel = std::make_unique<CutOptimizerPanel>();
+    m_materialsPanel = std::make_unique<MaterialsPanel>(materialManager);
     m_startPage = std::make_unique<StartPage>();
 
     // Create dialogs
@@ -86,6 +89,7 @@ void UIManager::shutdown() {
     m_projectPanel.reset();
     m_gcodePanel.reset();
     m_cutOptimizerPanel.reset();
+    m_materialsPanel.reset();
     m_startPage.reset();
 }
 
@@ -141,6 +145,7 @@ void UIManager::renderViewMenu() {
     ImGui::Separator();
     ImGui::MenuItem("G-code Viewer", nullptr, &m_showGCode);
     ImGui::MenuItem("Cut Optimizer", nullptr, &m_showCutOptimizer);
+    ImGui::MenuItem("Materials", nullptr, &m_showMaterials);
     ImGui::Separator();
     if (ImGui::MenuItem("Lighting Settings", "Ctrl+L") && m_lightingDialog) {
         m_lightingDialog->open();
@@ -201,6 +206,10 @@ void UIManager::renderPanels() {
 
     if (m_showCutOptimizer && m_cutOptimizerPanel) {
         m_cutOptimizerPanel->render();
+    }
+
+    if (m_showMaterials && m_materialsPanel) {
+        m_materialsPanel->render();
     }
 
     // Render dialogs

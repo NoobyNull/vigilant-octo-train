@@ -23,6 +23,7 @@ class PropertiesPanel;
 class ProjectPanel;
 class GCodePanel;
 class CutOptimizerPanel;
+class MaterialsPanel;
 class StartPage;
 
 // Forward declarations - dialogs
@@ -36,6 +37,7 @@ struct ImportBatchSummary;
 struct ImportProgress;
 class LibraryManager;
 class ProjectManager;
+class MaterialManager;
 class ImportQueue;
 class Workspace;
 
@@ -62,7 +64,8 @@ class UIManager {
     // Initialize all panels and dialogs.
     // Does NOT wire StartPage callbacks (Application does that after
     // both UIManager and FileIOManager exist).
-    void init(LibraryManager* libraryManager, ProjectManager* projectManager);
+    void init(LibraryManager* libraryManager, ProjectManager* projectManager,
+              MaterialManager* materialManager);
 
     // Shutdown and destroy all UI resources
     void shutdown();
@@ -89,6 +92,7 @@ class UIManager {
     ProjectPanel* projectPanel() { return m_projectPanel.get(); }
     GCodePanel* gcodePanel() { return m_gcodePanel.get(); }
     CutOptimizerPanel* cutOptimizerPanel() { return m_cutOptimizerPanel.get(); }
+    MaterialsPanel* materialsPanel() { return m_materialsPanel.get(); }
     StartPage* startPage() { return m_startPage.get(); }
     FileDialog* fileDialog() { return m_fileDialog.get(); }
     LightingDialog* lightingDialog() { return m_lightingDialog.get(); }
@@ -101,6 +105,7 @@ class UIManager {
     bool& showProject() { return m_showProject; }
     bool& showGCode() { return m_showGCode; }
     bool& showCutOptimizer() { return m_showCutOptimizer; }
+    bool& showMaterials() { return m_showMaterials; }
     bool& showStartPage() { return m_showStartPage; }
     bool& showRestartPopup() { return m_showRestartPopup; }
 
@@ -133,6 +138,7 @@ class UIManager {
     std::unique_ptr<ProjectPanel> m_projectPanel;
     std::unique_ptr<GCodePanel> m_gcodePanel;
     std::unique_ptr<CutOptimizerPanel> m_cutOptimizerPanel;
+    std::unique_ptr<MaterialsPanel> m_materialsPanel;
     std::unique_ptr<StartPage> m_startPage;
 
     // Panel visibility
@@ -142,6 +148,7 @@ class UIManager {
     bool m_showProject = true;
     bool m_showGCode = false;
     bool m_showCutOptimizer = false;
+    bool m_showMaterials = false;
     bool m_showStartPage = true;
 
     // Dialogs

@@ -30,7 +30,12 @@
 #include "managers/config_manager.h"
 #include "managers/file_io_manager.h"
 #include "managers/ui_manager.h"
+#include "core/materials/material_manager.h"
+#include "core/materials/material_archive.h"
+#include "core/loaders/texture_loader.h"
 #include "render/thumbnail_generator.h"
+#include "render/texture.h"
+#include "ui/panels/materials_panel.h"
 #include "ui/panels/library_panel.h"
 #include "ui/panels/project_panel.h"
 #include "ui/panels/properties_panel.h"
@@ -141,6 +146,8 @@ bool Application::init() {
 
     m_libraryManager = std::make_unique<LibraryManager>(*m_database);
     m_projectManager = std::make_unique<ProjectManager>(*m_database);
+    m_materialManager = std::make_unique<MaterialManager>(*m_database);
+    m_materialManager->seedDefaults();
     m_workspace = std::make_unique<Workspace>();
 
     m_thumbnailGenerator = std::make_unique<ThumbnailGenerator>();
@@ -152,7 +159,7 @@ bool Application::init() {
 
     // Initialize managers
     m_uiManager = std::make_unique<UIManager>();
-    m_uiManager->init(m_libraryManager.get(), m_projectManager.get());
+    m_uiManager->init(m_libraryManager.get(), m_projectManager.get(), m_materialManager.get());
 
     m_fileIOManager = std::make_unique<FileIOManager>(
         m_eventBus.get(), m_database.get(), m_libraryManager.get(), m_projectManager.get(),
@@ -244,6 +251,12 @@ bool Application::init() {
             if (m_uiManager->viewportPanel())
                 m_uiManager->viewportPanel()->renderSettings().objectColor = color;
         });
+    }
+
+    // Wire MaterialsPanel callbacks
+    if (m_uiManager->materialsPanel()) {
+        m_uiManager->materialsPanel()->setOnMaterialAssigned(
+            [this](int64_t materialId) { assignMaterialToCurrentModel(materialId); });
     }
 
     // Wire UIManager action callbacks (menu bar and keyboard shortcuts)
@@ -401,6 +414,48 @@ void Application::onModelSelected(int64_t modelId) {
                 m_uiManager->propertiesPanel()->setMesh(mesh, name);
         });
     });
+}
+
+void Application::assignMaterialToCurrentModel(int64_t materialId) {
+    if (!m_materialManager || !m_workspace || !m_uiManager->viewportPanel())
+        return;
+
+    // Get the currently focused mesh
+    auto mesh = m_workspace->getFocusedMesh();
+    if (!mesh)
+        return;
+
+    // Get material record
+    auto material = m_materialManager->getMaterial(materialId);
+    if (!material)
+        return;
+
+    // Load and upload material texture if archive path exists
+    if (!material->archivePath.empty()) {
+        auto matData = MaterialArchive::load(material->archivePath.string());
+        if (matData) {
+            // Decode texture PNG from memory
+            auto textureOpt =
+                TextureLoader::loadPNGFromMemory(matData->textureData.data(), matData->textureData.size());
+            if (textureOpt) {
+                m_activeMaterialTexture = std::make_unique<Texture>();
+                m_activeMaterialTexture->upload(textureOpt->pixels.data(), textureOpt->width, textureOpt->height);
+            }
+        }
+    }
+
+    // Generate UVs if needed
+    if (mesh->needsUVGeneration()) {
+        mesh->generatePlanarUVs(material->grainDirectionDeg);
+    }
+
+    // Store active material ID
+    m_activeMaterialId = materialId;
+
+    // Trigger viewport redraw
+    if (m_uiManager->viewportPanel()) {
+        m_uiManager->viewportPanel()->setMesh(mesh);
+    }
 }
 
 void Application::shutdown() {
