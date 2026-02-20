@@ -40,6 +40,7 @@ set(DW_TEST_SOURCES
     test_app_paths.cpp
     test_cost_repository.cpp
     test_material_archive.cpp
+    test_material_manager.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
     # Stubs for GL-dependent classes
@@ -79,6 +80,9 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/export/model_exporter.cpp
     ${CMAKE_SOURCE_DIR}/src/core/archive/archive.cpp
     ${CMAKE_SOURCE_DIR}/src/core/materials/material_archive.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/materials/default_materials.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/materials/material_manager.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/loaders/texture_loader.cpp
     ${CMAKE_SOURCE_DIR}/src/core/library/library_manager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/import/import_queue.cpp
     ${CMAKE_SOURCE_DIR}/src/core/import/file_handler.cpp
@@ -111,6 +115,7 @@ target_link_libraries(dw_tests PRIVATE
 target_include_directories(dw_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_BINARY_DIR}/generated
+    ${stb_SOURCE_DIR}
 )
 
 # Pass source dir to lint compliance tests

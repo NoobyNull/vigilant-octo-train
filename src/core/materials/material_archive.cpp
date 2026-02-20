@@ -70,11 +70,15 @@ ArchiveResult MaterialArchive::create(const std::string& archivePath,
         return ArchiveResult::fail("Failed to create archive file: " + archivePath);
     }
 
-    // Add texture.png from file
-    if (!mz_zip_writer_add_file(&zip, kTextureEntry, texturePath.c_str(), nullptr, 0,
-                                kCompressionLevel)) {
-        mz_zip_writer_end(&zip);
-        return ArchiveResult::fail("Failed to add texture to archive: " + texturePath);
+    // Add texture.png from file (optional — default materials have no texture)
+    std::vector<std::string> archivedFiles;
+    if (!texturePath.empty()) {
+        if (!mz_zip_writer_add_file(&zip, kTextureEntry, texturePath.c_str(), nullptr, 0,
+                                    kCompressionLevel)) {
+            mz_zip_writer_end(&zip);
+            return ArchiveResult::fail("Failed to add texture to archive: " + texturePath);
+        }
+        archivedFiles.push_back(kTextureEntry);
     }
 
     // Serialize metadata to JSON and add it
@@ -92,8 +96,10 @@ ArchiveResult MaterialArchive::create(const std::string& archivePath,
 
     mz_zip_writer_end(&zip);
 
-    log::infof("MaterialArchive", "Created: %s", archivePath.c_str());
-    return ArchiveResult::ok({kTextureEntry, kMetadataEntry});
+    archivedFiles.push_back(kMetadataEntry);
+    log::infof("MaterialArchive", "Created: %s (%zu entries)", archivePath.c_str(),
+               archivedFiles.size());
+    return ArchiveResult::ok(std::move(archivedFiles));
 }
 
 // ---------------------------------------------------------------------------
@@ -109,22 +115,19 @@ std::optional<MaterialData> MaterialArchive::load(const std::string& archivePath
         return std::nullopt;
     }
 
-    // Extract texture.png to heap (raw PNG bytes — not decoded)
+    // Extract texture.png to heap (optional — metadata-only archives may omit it)
     size_t textureSize = 0;
     void* textureBuf = mz_zip_reader_extract_file_to_heap(&zip, kTextureEntry, &textureSize, 0);
-    if (!textureBuf) {
-        log::errorf("MaterialArchive", "texture.png not found in archive: %s", archivePath.c_str());
-        mz_zip_reader_end(&zip);
-        return std::nullopt;
-    }
 
-    // Extract metadata.json to heap
+    // Extract metadata.json to heap (required)
     size_t metaSize = 0;
     void* metaBuf = mz_zip_reader_extract_file_to_heap(&zip, kMetadataEntry, &metaSize, 0);
     if (!metaBuf) {
         log::errorf("MaterialArchive", "metadata.json not found in archive: %s",
                     archivePath.c_str());
-        mz_free(textureBuf);
+        if (textureBuf) {
+            mz_free(textureBuf);
+        }
         mz_zip_reader_end(&zip);
         return std::nullopt;
     }
@@ -137,16 +140,21 @@ std::optional<MaterialData> MaterialArchive::load(const std::string& archivePath
 
     auto record = jsonToMaterial(metaJson);
     if (!record) {
-        mz_free(textureBuf);
+        if (textureBuf) {
+            mz_free(textureBuf);
+        }
         return std::nullopt;
     }
 
     // Build result
     MaterialData data;
-    data.textureData.assign(static_cast<uint8_t*>(textureBuf),
-                            static_cast<uint8_t*>(textureBuf) + textureSize);
     data.metadata = std::move(*record);
-    mz_free(textureBuf);
+
+    if (textureBuf) {
+        data.textureData.assign(static_cast<uint8_t*>(textureBuf),
+                                static_cast<uint8_t*>(textureBuf) + textureSize);
+        mz_free(textureBuf);
+    }
 
     return data;
 }

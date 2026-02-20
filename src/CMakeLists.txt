@@ -52,6 +52,7 @@ set(DW_SOURCES
     core/loaders/obj_loader.cpp
     core/loaders/threemf_loader.cpp
     core/loaders/gcode_loader.cpp
+    core/loaders/texture_loader.cpp
 
     # Project
     core/project/project.cpp
@@ -79,7 +80,9 @@ set(DW_SOURCES
     core/archive/archive.cpp
 
     # Materials
+    core/materials/default_materials.cpp
     core/materials/material_archive.cpp
+    core/materials/material_manager.cpp
 
     # Render
     render/gl_utils.cpp
@@ -88,6 +91,7 @@ set(DW_SOURCES
     render/framebuffer.cpp
     render/renderer.cpp
     render/thumbnail_generator.cpp
+    render/texture.cpp
 
     # UI
     # ui/ui_manager.cpp  -- dead code, replaced by managers/ui_manager.cpp (Phase 1.6 cleanup)
