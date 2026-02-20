@@ -31,6 +31,9 @@ Path getDatabasePath();
 // Log file path
 Path getLogPath();
 
+// Materials directory (app-managed .dwmat files)
+Path getMaterialsDir();
+
 // Ensure all application directories exist
 bool ensureDirectoriesExist();
 

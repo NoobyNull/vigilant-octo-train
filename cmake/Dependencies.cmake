@@ -126,9 +126,17 @@ FetchContent_Declare(
 FetchContent_GetProperties(miniz)
 if(NOT miniz_POPULATED)
     FetchContent_Populate(miniz)
-    # Create miniz static library target manually (avoid CMake version conflicts)
+    # miniz 3.0.2 splits the library into multiple .c files:
+    #   miniz.c         - zlib API (deflate/inflate)
+    #   miniz_tdef.c    - deflate compressor
+    #   miniz_tinfl.c   - inflate decompressor
+    #   miniz_zip.c     - ZIP reader/writer
+    # All four are required for ZIP operations (mz_zip_*).
     add_library(miniz_static STATIC
         ${miniz_SOURCE_DIR}/miniz.c
+        ${miniz_SOURCE_DIR}/miniz_tdef.c
+        ${miniz_SOURCE_DIR}/miniz_tinfl.c
+        ${miniz_SOURCE_DIR}/miniz_zip.c
     )
     target_include_directories(miniz_static PUBLIC ${miniz_SOURCE_DIR})
     # Define MINIZ_EXPORT to avoid export header dependency

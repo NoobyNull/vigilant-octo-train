@@ -78,6 +78,9 @@ set(DW_SOURCES
     # Archive
     core/archive/archive.cpp
 
+    # Materials
+    core/materials/material_archive.cpp
+
     # Render
     render/gl_utils.cpp
     render/shader.cpp

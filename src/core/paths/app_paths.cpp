@@ -144,6 +144,10 @@ Path getLogPath() {
     return getDataDir() / "digital_workshop.log";
 }
 
+Path getMaterialsDir() {
+    return getDataDir() / "materials";
+}
+
 bool ensureDirectoriesExist() {
     bool success = true;
 
@@ -161,6 +165,7 @@ bool ensureDirectoriesExist() {
     ensureDir(getCacheDir(), "cache");
     ensureDir(getThumbnailDir(), "thumbnail");
     ensureDir(getDefaultProjectsDir(), "projects");
+    ensureDir(getMaterialsDir(), "materials");
 
     return success;
 }
