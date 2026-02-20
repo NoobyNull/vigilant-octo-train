@@ -234,7 +234,8 @@ bool LibraryManager::deleteGCodeFile(i64 id) {
 
 // --- Hierarchy operations ---
 
-std::optional<i64> LibraryManager::createOperationGroup(i64 modelId, const std::string& name, int sortOrder) {
+std::optional<i64> LibraryManager::createOperationGroup(i64 modelId, const std::string& name,
+                                                        int sortOrder) {
     return m_gcodeRepo.createGroup(modelId, name, sortOrder);
 }
 
@@ -280,10 +281,9 @@ std::optional<i64> LibraryManager::autoDetectModelMatch(const std::string& gcode
 
     // Strip common G-code suffixes
     const std::vector<std::string> suffixes = {
-        "_roughing", "_finishing", "_profile", "_profiling", "_drill", "_drilling",
-        "_contour", "_contouring", "_pocket", "_pocketing", "_trace", "_tracing",
-        "_engrave", "_engraving", "_cut", "_cutting", "_mill", "_milling"
-    };
+        "_roughing", "_finishing",  "_profile", "_profiling", "_drill", "_drilling",
+        "_contour",  "_contouring", "_pocket",  "_pocketing", "_trace", "_tracing",
+        "_engrave",  "_engraving",  "_cut",     "_cutting",   "_mill",  "_milling"};
 
     for (const auto& suffix : suffixes) {
         if (baseName.size() > suffix.size()) {

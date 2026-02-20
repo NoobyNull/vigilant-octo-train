@@ -286,9 +286,9 @@ void ViewportPanel::renderViewport() {
     m_renderer.renderGrid(20.0f, 1.0f);
     m_renderer.renderAxis(2.0f);
 
-    // Render mesh
+    // Render mesh (with material texture if assigned)
     if (m_gpuMesh.vao != 0) {
-        m_renderer.renderMesh(m_gpuMesh);
+        m_renderer.renderMesh(m_gpuMesh, m_materialTexture);
     }
 
     // Render toolpath (if present)

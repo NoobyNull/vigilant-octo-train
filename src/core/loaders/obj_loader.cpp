@@ -146,47 +146,50 @@ LoadResult OBJLoader::parseContent(const std::string& content) {
                 // Material library reference - log warning but continue
                 std::string mtlFile;
                 ls >> mtlFile;
-                log::warningf("OBJ", "MTL file reference '%s' found but not loaded - continuing without materials", mtlFile.c_str());
+                log::warningf(
+                    "OBJ",
+                    "MTL file reference '%s' found but not loaded - continuing without materials",
+                    mtlFile.c_str());
             } else if (cmd == "f") {
-            // Face - can be triangles, quads, or polygons
-            std::vector<u32> faceIndices;
-            std::string vertexStr;
+                // Face - can be triangles, quads, or polygons
+                std::vector<u32> faceIndices;
+                std::string vertexStr;
 
-            while (ls >> vertexStr) {
-                VertexKey key;
+                while (ls >> vertexStr) {
+                    VertexKey key;
 
-                // Parse v, v/vt, v/vt/vn, or v//vn format
-                // Cannot use str::split because it skips empty tokens (v//vn -> ["v","vn"])
-                std::string components[3];
-                int componentCount = 0;
-                for (char c : vertexStr) {
-                    if (c == '/' && componentCount < 2) {
-                        componentCount++;
-                    } else {
-                        components[componentCount] += c;
+                    // Parse v, v/vt, v/vt/vn, or v//vn format
+                    // Cannot use str::split because it skips empty tokens (v//vn -> ["v","vn"])
+                    std::string components[3];
+                    int componentCount = 0;
+                    for (char c : vertexStr) {
+                        if (c == '/' && componentCount < 2) {
+                            componentCount++;
+                        } else {
+                            components[componentCount] += c;
+                        }
                     }
-                }
-                componentCount++; // Convert from index to count
+                    componentCount++; // Convert from index to count
 
-                auto parseIndex = [](const std::string& s, int totalCount) -> int {
-                    int idx = 0;
-                    if (s.empty() || !str::parseInt(s, idx))
-                        return -1;
-                    return (idx > 0) ? idx - 1 : totalCount + idx;
-                };
+                    auto parseIndex = [](const std::string& s, int totalCount) -> int {
+                        int idx = 0;
+                        if (s.empty() || !str::parseInt(s, idx))
+                            return -1;
+                        return (idx > 0) ? idx - 1 : totalCount + idx;
+                    };
 
-                if (componentCount >= 1) {
-                    key.pos = parseIndex(components[0], static_cast<int>(positions.size()));
-                }
-                if (componentCount >= 2) {
-                    key.tex = parseIndex(components[1], static_cast<int>(texCoords.size()));
-                }
-                if (componentCount >= 3) {
-                    key.norm = parseIndex(components[2], static_cast<int>(normals.size()));
-                }
+                    if (componentCount >= 1) {
+                        key.pos = parseIndex(components[0], static_cast<int>(positions.size()));
+                    }
+                    if (componentCount >= 2) {
+                        key.tex = parseIndex(components[1], static_cast<int>(texCoords.size()));
+                    }
+                    if (componentCount >= 3) {
+                        key.norm = parseIndex(components[2], static_cast<int>(normals.size()));
+                    }
 
-                faceIndices.push_back(getOrCreateVertex(key));
-            }
+                    faceIndices.push_back(getOrCreateVertex(key));
+                }
 
                 // Triangulate polygon (fan triangulation)
                 for (usize i = 2; i < faceIndices.size(); ++i) {

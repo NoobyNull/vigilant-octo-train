@@ -43,7 +43,7 @@ struct ImportBatchSummary {
     int successCount = 0;
     int failedCount = 0;
     int duplicateCount = 0;
-    std::vector<std::string> duplicateNames;  // Names of skipped duplicates
+    std::vector<std::string> duplicateNames;                 // Names of skipped duplicates
     std::vector<std::pair<std::string, std::string>> errors; // (filename, error message)
 
     bool hasIssues() const { return failedCount > 0 || duplicateCount > 0; }
@@ -64,7 +64,7 @@ struct ImportTask {
     i64 modelId = 0;
 
     // G-code specific data (only populated when importType == GCode)
-    GCodeMetadata* gcodeMetadata = nullptr;  // Heap-allocated to avoid header dependency
+    GCodeMetadata* gcodeMetadata = nullptr; // Heap-allocated to avoid header dependency
     i64 gcodeId = 0;
 
     // State

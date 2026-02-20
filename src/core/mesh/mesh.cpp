@@ -260,24 +260,30 @@ void Mesh::generatePlanarUVs(float grainRotationDeg) {
 
     if (areaXZ >= areaXY && areaXZ >= areaYZ) {
         // XZ plane
-        axis1 = 0; axis2 = 2;
+        axis1 = 0;
+        axis2 = 2;
         axis1Size = size.x;
         axis2Size = size.z;
     } else if (areaYZ >= areaXY && areaYZ >= areaXZ) {
         // YZ plane
-        axis1 = 1; axis2 = 2;
+        axis1 = 1;
+        axis2 = 2;
         axis1Size = size.y;
         axis2Size = size.z;
     }
     // else XY plane (default, already set)
 
     // Guard against degenerate meshes (zero-size dimensions)
-    if (axis1Size < 1e-6f) axis1Size = 1.0f;
-    if (axis2Size < 1e-6f) axis2Size = 1.0f;
+    if (axis1Size < 1e-6f)
+        axis1Size = 1.0f;
+    if (axis2Size < 1e-6f)
+        axis2Size = 1.0f;
 
     auto getAxis = [](const Vec3& v, int axis) -> float {
-        if (axis == 0) return v.x;
-        if (axis == 1) return v.y;
+        if (axis == 0)
+            return v.x;
+        if (axis == 1)
+            return v.y;
         return v.z;
     };
 

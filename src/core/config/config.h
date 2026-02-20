@@ -21,9 +21,9 @@ enum class NavStyle : int {
 
 // File handling mode for imported models
 enum class FileHandlingMode : int {
-    LeaveInPlace = 0,   // Leave files at original location (no copy)
-    CopyToLibrary = 1,  // Copy imported files to library directory
-    MoveToLibrary = 2,  // Move imported files to library directory (delete original)
+    LeaveInPlace = 0,  // Leave files at original location (no copy)
+    CopyToLibrary = 1, // Copy imported files to library directory
+    MoveToLibrary = 2, // Move imported files to library directory (delete original)
 };
 
 // Application configuration (persisted to config directory)

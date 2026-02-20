@@ -123,7 +123,8 @@ void MaterialsPanel::renderToolbar() {
         ImGui::EndDisabled();
     }
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-        ImGui::SetTooltip(hasSelection ? "Delete selected material" : "Select a material to delete");
+        ImGui::SetTooltip(hasSelection ? "Delete selected material"
+                                       : "Select a material to delete");
     }
 
     ImGui::SameLine();
@@ -278,7 +279,8 @@ void MaterialsPanel::renderMaterialGrid(const std::vector<MaterialRecord>& mater
                 m_showEditForm = true;
             }
             if (ImGui::MenuItem("Export")) {
-                log::info("MaterialsPanel", "Export material requested (file dialog not yet wired)");
+                log::info("MaterialsPanel",
+                          "Export material requested (file dialog not yet wired)");
             }
             ImGui::Separator();
             if (ImGui::MenuItem("Delete")) {
@@ -294,16 +296,15 @@ void MaterialsPanel::renderMaterialGrid(const std::vector<MaterialRecord>& mater
         ImDrawList* drawList = ImGui::GetWindowDrawList();
 
         ImVec2 thumbMin = ImVec2(itemMin.x + 4.0f, itemMin.y + 4.0f);
-        ImVec2 thumbMax = ImVec2(thumbMin.x + m_thumbnailSize - 8.0f,
-                                 thumbMin.y + m_thumbnailSize - 8.0f);
+        ImVec2 thumbMax =
+            ImVec2(thumbMin.x + m_thumbnailSize - 8.0f, thumbMin.y + m_thumbnailSize - 8.0f);
         float thumbW = thumbMax.x - thumbMin.x;
         float thumbH = thumbMax.y - thumbMin.y;
 
         GLuint tex = getThumbnailTexture(mat);
         if (tex != 0) {
-            drawList->AddImageRounded((ImTextureID)(intptr_t)tex, thumbMin, thumbMax,
-                                      ImVec2(0, 0), ImVec2(1, 1),
-                                      IM_COL32(255, 255, 255, 255), 4.0f);
+            drawList->AddImageRounded((ImTextureID)(intptr_t)tex, thumbMin, thumbMax, ImVec2(0, 0),
+                                      ImVec2(1, 1), IM_COL32(255, 255, 255, 255), 4.0f);
         } else {
             // Colored placeholder with category initial
             ImU32 bgColor = categoryPlaceholderColor(mat.category);
@@ -319,19 +320,18 @@ void MaterialsPanel::renderMaterialGrid(const std::vector<MaterialRecord>& mater
 
         // Selection highlight border
         if (isSelected) {
-            drawList->AddRect(thumbMin, thumbMax,
-                              ImGui::GetColorU32(ImGuiCol_ButtonActive), 4.0f, 0, 2.0f);
+            drawList->AddRect(thumbMin, thumbMax, ImGui::GetColorU32(ImGuiCol_ButtonActive), 4.0f,
+                              0, 2.0f);
         }
 
         // Material name below thumbnail (truncated)
-        ImVec2 textPos = ImVec2(itemMin.x + 4.0f,
-                                itemMin.y + m_thumbnailSize + 2.0f);
+        ImVec2 textPos = ImVec2(itemMin.x + 4.0f, itemMin.y + m_thumbnailSize + 2.0f);
         float maxNameW = m_thumbnailSize - 8.0f;
         const char* nameStart = mat.name.c_str();
         ImVec4 clipRect(textPos.x, textPos.y, textPos.x + maxNameW,
                         textPos.y + ImGui::GetTextLineHeight());
-        drawList->AddText(nullptr, 0.0f, textPos, ImGui::GetColorU32(ImGuiCol_Text),
-                          nameStart, nullptr, maxNameW, &clipRect);
+        drawList->AddText(nullptr, 0.0f, textPos, ImGui::GetColorU32(ImGuiCol_Text), nameStart,
+                          nullptr, maxNameW, &clipRect);
 
         ImGui::EndGroup();
 
@@ -447,8 +447,7 @@ void MaterialsPanel::renderEditForm() {
                     // For new materials we use updateMaterial after inserting.
                     // Since MaterialManager has no standalone insert, we log a placeholder.
                     // TODO(01-05): wire to insertMaterial when available.
-                    log::info("MaterialsPanel",
-                              "New material creation not yet wired to DB insert");
+                    log::info("MaterialsPanel", "New material creation not yet wired to DB insert");
                 } else {
                     if (m_materialManager->updateMaterial(m_editBuffer)) {
                         refresh();
@@ -611,13 +610,13 @@ const char* MaterialsPanel::categoryInitial(MaterialCategory cat) {
 ImU32 MaterialsPanel::categoryPlaceholderColor(MaterialCategory cat) {
     switch (cat) {
     case MaterialCategory::Hardwood:
-        return IM_COL32(120, 80, 40, 220);  // warm brown
+        return IM_COL32(120, 80, 40, 220); // warm brown
     case MaterialCategory::Softwood:
-        return IM_COL32(60, 100, 60, 220);  // forest green
+        return IM_COL32(60, 100, 60, 220); // forest green
     case MaterialCategory::Domestic:
-        return IM_COL32(90, 70, 110, 220);  // muted purple
+        return IM_COL32(90, 70, 110, 220); // muted purple
     case MaterialCategory::Composite:
-        return IM_COL32(60, 80, 100, 220);  // slate blue
+        return IM_COL32(60, 80, 100, 220); // slate blue
     default:
         return IM_COL32(80, 80, 80, 220);
     }

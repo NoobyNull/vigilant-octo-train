@@ -97,8 +97,8 @@ std::vector<MaterialRecord> MaterialRepository::findByCategory(MaterialCategory 
 std::vector<MaterialRecord> MaterialRepository::findByName(std::string_view searchTerm) {
     std::vector<MaterialRecord> results;
 
-    auto stmt = m_db.prepare(
-        "SELECT * FROM materials WHERE name LIKE ? ESCAPE '\\' ORDER BY name ASC");
+    auto stmt =
+        m_db.prepare("SELECT * FROM materials WHERE name LIKE ? ESCAPE '\\' ORDER BY name ASC");
     if (!stmt.isValid()) {
         return results;
     }

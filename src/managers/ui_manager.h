@@ -79,7 +79,9 @@ class UIManager {
     void handleKeyboardShortcuts();
 
     // --- New background UI methods (Plan 02-05) ---
-    void renderBackgroundUI(float deltaTime, const LoadingState* loadingState);  // Renders StatusBar, ToastManager, ImportSummaryDialog
+    void renderBackgroundUI(
+        float deltaTime,
+        const LoadingState* loadingState); // Renders StatusBar, ToastManager, ImportSummaryDialog
 
     // --- Dock layout first-frame logic ---
     [[nodiscard]] bool isFirstFrame() const { return m_firstFrame; }

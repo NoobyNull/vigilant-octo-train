@@ -22,6 +22,9 @@
 #include "core/import/import_queue.h"
 #include "core/library/library_manager.h"
 #include "core/loaders/loader_factory.h"
+#include "core/loaders/texture_loader.h"
+#include "core/materials/material_archive.h"
+#include "core/materials/material_manager.h"
 #include "core/paths/app_paths.h"
 #include "core/threading/main_thread_queue.h"
 #include "core/threading/thread_pool.h"
@@ -30,13 +33,10 @@
 #include "managers/config_manager.h"
 #include "managers/file_io_manager.h"
 #include "managers/ui_manager.h"
-#include "core/materials/material_manager.h"
-#include "core/materials/material_archive.h"
-#include "core/loaders/texture_loader.h"
-#include "render/thumbnail_generator.h"
 #include "render/texture.h"
-#include "ui/panels/materials_panel.h"
+#include "render/thumbnail_generator.h"
 #include "ui/panels/library_panel.h"
+#include "ui/panels/materials_panel.h"
 #include "ui/panels/project_panel.h"
 #include "ui/panels/properties_panel.h"
 #include "ui/panels/start_page.h"
@@ -379,6 +379,27 @@ void Application::onModelSelected(int64_t modelId) {
     if (!record)
         return;
 
+    // Track focused model ID for material assignment
+    m_focusedModelId = modelId;
+
+    // Check if this model has a material assigned — load texture proactively
+    if (m_materialManager) {
+        auto assignedMaterial = m_materialManager->getModelMaterial(modelId);
+        if (assignedMaterial) {
+            // Load material texture for this model
+            loadMaterialTextureForModel(modelId);
+            // Update PropertiesPanel material display
+            if (m_uiManager->propertiesPanel())
+                m_uiManager->propertiesPanel()->setMaterial(*assignedMaterial);
+        } else {
+            // No material assigned — clear active texture and material display
+            m_activeMaterialTexture.reset();
+            m_activeMaterialId = -1;
+            if (m_uiManager->propertiesPanel())
+                m_uiManager->propertiesPanel()->clearMaterial();
+        }
+    }
+
     // Bump generation to invalidate any in-flight load
     uint64_t gen = ++m_loadingState.generation;
     m_loadingState.set(record->name);
@@ -417,7 +438,7 @@ void Application::onModelSelected(int64_t modelId) {
 }
 
 void Application::assignMaterialToCurrentModel(int64_t materialId) {
-    if (!m_materialManager || !m_workspace || !m_uiManager->viewportPanel())
+    if (!m_materialManager || !m_workspace)
         return;
 
     // Get the currently focused mesh
@@ -430,16 +451,23 @@ void Application::assignMaterialToCurrentModel(int64_t materialId) {
     if (!material)
         return;
 
+    // Persist the assignment to the database
+    if (m_focusedModelId > 0) {
+        m_materialManager->assignMaterialToModel(materialId, m_focusedModelId);
+    }
+
     // Load and upload material texture if archive path exists
+    m_activeMaterialTexture.reset();
     if (!material->archivePath.empty()) {
         auto matData = MaterialArchive::load(material->archivePath.string());
-        if (matData) {
+        if (matData && !matData->textureData.empty()) {
             // Decode texture PNG from memory
-            auto textureOpt =
-                TextureLoader::loadPNGFromMemory(matData->textureData.data(), matData->textureData.size());
+            auto textureOpt = TextureLoader::loadPNGFromMemory(matData->textureData.data(),
+                                                               matData->textureData.size());
             if (textureOpt) {
                 m_activeMaterialTexture = std::make_unique<Texture>();
-                m_activeMaterialTexture->upload(textureOpt->pixels.data(), textureOpt->width, textureOpt->height);
+                m_activeMaterialTexture->upload(textureOpt->pixels.data(), textureOpt->width,
+                                                textureOpt->height);
             }
         }
     }
@@ -452,10 +480,51 @@ void Application::assignMaterialToCurrentModel(int64_t materialId) {
     // Store active material ID
     m_activeMaterialId = materialId;
 
-    // Trigger viewport redraw
+    // Update PropertiesPanel to show material info
+    if (m_uiManager->propertiesPanel()) {
+        m_uiManager->propertiesPanel()->setMaterial(*material);
+    }
+
+    // Update viewport material texture pointer
     if (m_uiManager->viewportPanel()) {
+        m_uiManager->viewportPanel()->setMaterialTexture(m_activeMaterialTexture.get());
+        // Re-upload mesh with updated UVs
         m_uiManager->viewportPanel()->setMesh(mesh);
     }
+}
+
+void Application::loadMaterialTextureForModel(int64_t modelId) {
+    if (!m_materialManager)
+        return;
+
+    auto material = m_materialManager->getModelMaterial(modelId);
+    if (!material) {
+        m_activeMaterialTexture.reset();
+        m_activeMaterialId = -1;
+        if (m_uiManager && m_uiManager->viewportPanel())
+            m_uiManager->viewportPanel()->setMaterialTexture(nullptr);
+        return;
+    }
+
+    m_activeMaterialId = material->id;
+    m_activeMaterialTexture.reset();
+
+    if (!material->archivePath.empty()) {
+        auto matData = MaterialArchive::load(material->archivePath.string());
+        if (matData && !matData->textureData.empty()) {
+            auto textureOpt = TextureLoader::loadPNGFromMemory(matData->textureData.data(),
+                                                               matData->textureData.size());
+            if (textureOpt) {
+                m_activeMaterialTexture = std::make_unique<Texture>();
+                m_activeMaterialTexture->upload(textureOpt->pixels.data(), textureOpt->width,
+                                                textureOpt->height);
+            }
+        }
+    }
+
+    // Update viewport texture pointer
+    if (m_uiManager && m_uiManager->viewportPanel())
+        m_uiManager->viewportPanel()->setMaterialTexture(m_activeMaterialTexture.get());
 }
 
 void Application::shutdown() {

@@ -8,6 +8,7 @@
 #include "../../render/camera.h"
 #include "../../render/framebuffer.h"
 #include "../../render/renderer.h"
+#include "../../render/texture.h"
 #include "../context_menu.h"
 #include "panel.h"
 
@@ -32,6 +33,9 @@ class ViewportPanel : public Panel {
     // Set toolpath mesh to display
     void setToolpathMesh(MeshPtr toolpathMesh);
     void clearToolpathMesh();
+
+    // Set active material texture for rendering (nullptr = solid color)
+    void setMaterialTexture(const Texture* texture) { m_materialTexture = texture; }
 
     // Camera access
     Camera& camera() { return m_camera; }
@@ -73,6 +77,9 @@ class ViewportPanel : public Panel {
 
     MeshPtr m_toolpathMesh;
     GPUMesh m_gpuToolpath;
+
+    // Active material texture (not owned — pointer to Application-managed texture)
+    const Texture* m_materialTexture = nullptr;
 
     // Light drag state
     bool m_lightDirDragging = false;

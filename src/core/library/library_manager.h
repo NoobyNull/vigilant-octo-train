@@ -85,7 +85,8 @@ class LibraryManager {
     bool deleteGCodeFile(i64 id);
 
     // Hierarchy operations
-    std::optional<i64> createOperationGroup(i64 modelId, const std::string& name, int sortOrder = 0);
+    std::optional<i64> createOperationGroup(i64 modelId, const std::string& name,
+                                            int sortOrder = 0);
     std::vector<OperationGroup> getOperationGroups(i64 modelId);
     bool addGCodeToGroup(i64 groupId, i64 gcodeId, int sortOrder = 0);
     bool removeGCodeFromGroup(i64 groupId, i64 gcodeId);

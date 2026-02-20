@@ -107,6 +107,9 @@ class Application {
     // Materials Manager - coordinates material archives, defaults, and database
     std::unique_ptr<MaterialManager> m_materialManager;
 
+    // Currently focused model ID (for material assignment)
+    int64_t m_focusedModelId = -1;
+
     // Active material texture for rendering (cached GPU texture)
     std::unique_ptr<Texture> m_activeMaterialTexture;
     int64_t m_activeMaterialId = -1;

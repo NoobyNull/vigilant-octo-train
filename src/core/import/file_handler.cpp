@@ -10,7 +10,7 @@
 namespace dw {
 
 Path FileHandler::handleImportedFile(const Path& source, FileHandlingMode mode,
-                                      const Path& libraryRoot, std::string& error) {
+                                     const Path& libraryRoot, std::string& error) {
     error.clear();
 
     // Leave in place - just return the original path

@@ -294,58 +294,123 @@ void PropertiesPanel::renderTransformInfo() {
 }
 
 void PropertiesPanel::renderMaterialInfo() {
-    if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::Indent();
+    // If material is assigned, show material properties
+    if (m_material) {
+        if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Indent();
 
-        float color[3] = {m_objectColor.r, m_objectColor.g, m_objectColor.b};
-        if (ImGui::ColorEdit3("Object Color", color,
-                              ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel)) {
-            m_objectColor.r = color[0];
-            m_objectColor.g = color[1];
-            m_objectColor.b = color[2];
-            if (m_onColorChanged) {
-                m_onColorChanged(m_objectColor);
+            const auto& mat = m_material.value();
+
+            // Material name header
+            ImGui::Text("Name: %s", mat.name.c_str());
+
+            // Category badge
+            ImGui::Spacing();
+            const char* categoryStr = materialCategoryToString(mat.category).c_str();
+            ImGui::Text("Category: %s", categoryStr);
+
+            // Read-only material properties
+            ImGui::Spacing();
+            ImGui::Text("Properties");
+            ImGui::Spacing();
+
+            // Format Janka hardness as lbf
+            ImGui::Text("Janka Hardness: %.0f lbf", mat.jankaHardness);
+
+            // Format feed rate as in/min
+            ImGui::Text("Feed Rate: %.0f in/min", mat.feedRate);
+
+            // Format spindle speed as RPM
+            ImGui::Text("Spindle Speed: %.0f RPM", mat.spindleSpeed);
+
+            // Format depth of cut as inches
+            ImGui::Text("Depth of Cut: %.3f in", mat.depthOfCut);
+
+            // Format cost as $/bf
+            ImGui::Text("Cost: $%.2f/bf", mat.costPerBoardFoot);
+
+            // Grain direction slider (editable)
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            float grainDir = mat.grainDirectionDeg;
+            if (ImGui::SliderFloat("Grain Direction (deg)", &grainDir, 0.0f, 360.0f, "%.1f")) {
+                if (m_onGrainDirectionChanged) {
+                    m_onGrainDirectionChanged(grainDir);
+                }
             }
+
+            // Action buttons
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            if (ImGui::Button("Remove Material", ImVec2(-1, 0))) {
+                clearMaterial();
+                if (m_onMaterialRemoved) {
+                    m_onMaterialRemoved();
+                }
+            }
+
+            ImGui::Unindent();
         }
+    } else {
+        // No material assigned: show color picker as fallback
+        if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Indent();
 
-        // Color presets
-        ImGui::Spacing();
-        ImGui::Text("Presets");
-        ImGui::Spacing();
-
-        struct ColorPreset {
-            const char* name;
-            u32 hex;
-        };
-
-        static const ColorPreset presets[] = {
-            {"Steel Blue", 0x6699CC}, {"Silver", 0xC0C0C0},    {"Gold", 0xDAA520},
-            {"Copper", 0xB87333},     {"Red", 0xCC3333},       {"Green", 0x33CC33},
-            {"White", 0xEEEEEE},      {"Dark Gray", 0x555555},
-        };
-
-        for (int i = 0; i < 8; i++) {
-            Color c = Color::fromHex(presets[i].hex);
-            ImVec4 imColor(c.r, c.g, c.b, 1.0f);
-
-            if (i > 0 && i % 4 != 0) {
-                ImGui::SameLine();
-            }
-
-            ImGui::PushID(i);
-            if (ImGui::ColorButton(presets[i].name, imColor, 0, ImVec2(24, 24))) {
-                m_objectColor = c;
+            float color[3] = {m_objectColor.r, m_objectColor.g, m_objectColor.b};
+            if (ImGui::ColorEdit3("Object Color", color,
+                                  ImGuiColorEditFlags_NoInputs |
+                                      ImGuiColorEditFlags_PickerHueWheel)) {
+                m_objectColor.r = color[0];
+                m_objectColor.g = color[1];
+                m_objectColor.b = color[2];
                 if (m_onColorChanged) {
                     m_onColorChanged(m_objectColor);
                 }
             }
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("%s", presets[i].name);
-            }
-            ImGui::PopID();
-        }
 
-        ImGui::Unindent();
+            // Color presets
+            ImGui::Spacing();
+            ImGui::Text("Presets");
+            ImGui::Spacing();
+
+            struct ColorPreset {
+                const char* name;
+                u32 hex;
+            };
+
+            static const ColorPreset presets[] = {
+                {"Steel Blue", 0x6699CC}, {"Silver", 0xC0C0C0},    {"Gold", 0xDAA520},
+                {"Copper", 0xB87333},     {"Red", 0xCC3333},       {"Green", 0x33CC33},
+                {"White", 0xEEEEEE},      {"Dark Gray", 0x555555},
+            };
+
+            for (int i = 0; i < 8; i++) {
+                Color c = Color::fromHex(presets[i].hex);
+                ImVec4 imColor(c.r, c.g, c.b, 1.0f);
+
+                if (i > 0 && i % 4 != 0) {
+                    ImGui::SameLine();
+                }
+
+                ImGui::PushID(i);
+                if (ImGui::ColorButton(presets[i].name, imColor, 0, ImVec2(24, 24))) {
+                    m_objectColor = c;
+                    if (m_onColorChanged) {
+                        m_onColorChanged(m_objectColor);
+                    }
+                }
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("%s", presets[i].name);
+                }
+                ImGui::PopID();
+            }
+
+            ImGui::Unindent();
+        }
     }
 }
 

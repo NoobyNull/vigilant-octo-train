@@ -147,10 +147,10 @@ LoadResult STLLoader::loadBinary(const ByteBuffer& data) {
 
             // Bounds check on vertex data
             constexpr f32 MAX_COORD = 1e6f;
-            if (std::abs(v.position.x) > MAX_COORD ||
-                std::abs(v.position.y) > MAX_COORD ||
+            if (std::abs(v.position.x) > MAX_COORD || std::abs(v.position.y) > MAX_COORD ||
                 std::abs(v.position.z) > MAX_COORD) {
-                return LoadResult{nullptr, "STL contains extreme coordinates (>1e6), likely corrupt"};
+                return LoadResult{nullptr,
+                                  "STL contains extreme coordinates (>1e6), likely corrupt"};
             }
 
             // Deduplicate vertices
@@ -235,8 +235,7 @@ LoadResult STLLoader::loadAscii(const std::string& content) {
 
                 // Bounds check
                 constexpr f32 MAX_COORD = 1e6f;
-                if (std::abs(v.position.x) > MAX_COORD ||
-                    std::abs(v.position.y) > MAX_COORD ||
+                if (std::abs(v.position.x) > MAX_COORD || std::abs(v.position.y) > MAX_COORD ||
                     std::abs(v.position.z) > MAX_COORD) {
                     std::ostringstream oss;
                     oss << "STL contains extreme coordinates at line " << lineNumber
