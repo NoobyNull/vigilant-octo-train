@@ -7,13 +7,11 @@
 #include <vector>
 
 #include "../database/model_repository.h"
+#include "../loaders/gcode_loader.h"
 #include "../mesh/mesh.h"
 #include "../types.h"
 
 namespace dw {
-
-// Forward declarations
-struct GCodeMetadata;
 
 // Import type enum - determines processing path
 enum class ImportType { Mesh, GCode };

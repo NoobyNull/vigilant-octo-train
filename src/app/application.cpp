@@ -163,6 +163,13 @@ bool Application::init() {
     m_configManager->init(m_window);
     m_configManager->setQuitCallback([this]() { quit(); });
 
+    // Wire StatusBar cancel button to ImportQueue
+    m_uiManager->setImportCancelCallback([this]() {
+        if (m_importQueue) {
+            m_importQueue->cancel();
+        }
+    });
+
     // Wire ImportQueue callbacks for UI feedback
     m_importQueue->setOnBatchComplete([this](const ImportBatchSummary& summary) {
         // Post to main thread for UI updates
@@ -336,7 +343,7 @@ void Application::render() {
     m_uiManager->handleKeyboardShortcuts();
     m_uiManager->renderMenuBar();
     m_uiManager->renderPanels();
-    m_uiManager->renderStatusBar(m_loadingState, m_importQueue.get());
+    m_uiManager->renderBackgroundUI(ImGui::GetIO().DeltaTime, &m_loadingState);
     m_uiManager->renderRestartPopup([this]() { m_configManager->relaunchApp(); });
     m_uiManager->renderAboutDialog();
 

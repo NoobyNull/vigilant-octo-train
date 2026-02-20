@@ -193,6 +193,24 @@ void FileIOManager::processCompletedImports(ViewportPanel* viewport, PropertiesP
 }
 
 void FileIOManager::newProject(std::function<void(bool)> setShowStartPage) {
+    auto current = m_projectManager->currentProject();
+    if (current && current->isModified()) {
+        MessageDialog::question(
+            "Unsaved Changes",
+            "Current project has unsaved changes. Save before creating a new project?",
+            [this, setShowStartPage](DialogResult result) {
+                if (result == DialogResult::Yes) {
+                    saveProject();
+                }
+                if (result != DialogResult::No && result != DialogResult::Yes) {
+                    return; // Dialog closed without answering
+                }
+                auto project = m_projectManager->create("New Project");
+                m_projectManager->setCurrentProject(project);
+                setShowStartPage(false);
+            });
+        return;
+    }
     auto project = m_projectManager->create("New Project");
     m_projectManager->setCurrentProject(project);
     setShowStartPage(false);
@@ -201,6 +219,23 @@ void FileIOManager::newProject(std::function<void(bool)> setShowStartPage) {
 void FileIOManager::openProject(std::function<void(bool)> setShowStartPage) {
     if (!m_fileDialog)
         return;
+
+    auto current = m_projectManager->currentProject();
+    if (current && current->isModified()) {
+        MessageDialog::question(
+            "Unsaved Changes",
+            "Current project has unsaved changes. Save before opening another project?",
+            [this, setShowStartPage](DialogResult result) {
+                if (result == DialogResult::Yes) {
+                    saveProject();
+                }
+                if (result != DialogResult::No && result != DialogResult::Yes) {
+                    return;
+                }
+                openProject(setShowStartPage);
+            });
+        return;
+    }
 
     m_fileDialog->showOpen("Open Project", FileDialog::projectFilters(),
                            [this, setShowStartPage](const std::string& path) {

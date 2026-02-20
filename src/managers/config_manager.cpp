@@ -112,11 +112,17 @@ void ConfigManager::spawnSettingsApp() {
         if (slash != std::string::npos) {
             dir = dir.substr(0, slash);
         }
-        std::string cmd = dir + "/dw_settings &";
-        std::system(cmd.c_str());
+        std::string cmd = "\"" + dir + "/dw_settings\" &";
+        int ret = std::system(cmd.c_str());
+        if (ret != 0) {
+            log::warningf("Config", "Failed to launch settings app (exit code %d)", ret);
+        }
         return;
     }
-    std::system("dw_settings &");
+    int ret = std::system("dw_settings &");
+    if (ret != 0) {
+        log::warning("Config", "Failed to launch settings app");
+    }
 #endif
 }
 

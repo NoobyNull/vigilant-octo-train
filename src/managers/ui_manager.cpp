@@ -18,6 +18,7 @@
 #include "ui/dialogs/file_dialog.h"
 #include "ui/dialogs/import_summary_dialog.h"
 #include "ui/dialogs/lighting_dialog.h"
+#include "ui/dialogs/message_dialog.h"
 #include "ui/panels/cut_optimizer_panel.h"
 #include "ui/panels/gcode_panel.h"
 #include "ui/panels/library_panel.h"
@@ -389,6 +390,9 @@ void UIManager::renderBackgroundUI(float deltaTime, const LoadingState* loadingS
         m_statusBar->render(loadingState);
     }
 
+    // Render global message dialog (singleton)
+    MessageDialog::renderGlobal();
+
     // Render toast notifications
     ToastManager::instance().render(deltaTime);
 
@@ -407,6 +411,12 @@ void UIManager::setImportProgress(const ImportProgress* progress) {
 void UIManager::showImportSummary(const ImportBatchSummary& summary) {
     if (m_importSummaryDialog) {
         m_importSummaryDialog->open(summary);
+    }
+}
+
+void UIManager::setImportCancelCallback(std::function<void()> callback) {
+    if (m_statusBar) {
+        m_statusBar->setOnCancel(std::move(callback));
     }
 }
 

@@ -26,6 +26,11 @@ class MessageDialog : public Dialog {
     static void info(const std::string& title, const std::string& message);
     static void warning(const std::string& title, const std::string& message);
     static void error(const std::string& title, const std::string& message);
+    static void question(const std::string& title, const std::string& message,
+                         std::function<void(DialogResult)> callback);
+
+    // Render the global singleton dialog (call once per frame)
+    static void renderGlobal();
 
   private:
     std::string m_message;

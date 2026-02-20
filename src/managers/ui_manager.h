@@ -117,6 +117,7 @@ class UIManager {
     // --- Import progress callbacks (Plan 02-05) ---
     void setImportProgress(const ImportProgress* progress);
     void showImportSummary(const ImportBatchSummary& summary);
+    void setImportCancelCallback(std::function<void()> callback);
 
     // --- Workspace state save/restore helpers ---
     void restoreVisibilityFromConfig();

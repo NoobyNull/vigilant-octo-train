@@ -53,7 +53,8 @@ void StatusBar::render(const LoadingState* loadingState) {
 
             // Align to right side
             float progressBarWidth = 200.0f;
-            float cancelButtonWidth = ImGui::CalcTextSize("X").x + ImGui::GetStyle().FramePadding.x * 2;
+            float cancelButtonWidth =
+                ImGui::CalcTextSize("X").x + ImGui::GetStyle().FramePadding.x * 2;
             float totalWidth = progressBarWidth + cancelButtonWidth + 16; // spacing
             float windowWidth = ImGui::GetWindowWidth();
             if (windowWidth > totalWidth + 100) { // Ensure enough space
@@ -71,10 +72,8 @@ void StatusBar::render(const LoadingState* loadingState) {
 
             // Cancel button
             ImGui::SameLine();
-            if (ImGui::SmallButton("X")) {
-                // Note: We don't have direct access to ImportQueue here.
-                // Application wiring will handle cancellation if needed.
-                // For now, this is a visual placeholder.
+            if (ImGui::SmallButton("X") && m_onCancel) {
+                m_onCancel();
             }
 
             // Show failed count if > 0 (in tooltip to save space)
