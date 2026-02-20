@@ -1,0 +1,279 @@
+#include "material_manager.h"
+
+#include "../paths/app_paths.h"
+#include "../utils/file_utils.h"
+#include "../utils/log.h"
+#include "default_materials.h"
+#include "material_archive.h"
+
+namespace dw {
+
+MaterialManager::MaterialManager(Database& db) : m_db(db), m_repo(db) {}
+
+// ---------------------------------------------------------------------------
+// seedDefaults
+// ---------------------------------------------------------------------------
+
+void MaterialManager::seedDefaults() {
+    i64 existing = m_repo.count();
+    if (existing > 0) {
+        log::debugf("MaterialManager", "seedDefaults: %lld materials already present, skipping",
+                    static_cast<long long>(existing));
+        return;
+    }
+
+    auto defaults = getDefaultMaterials();
+    int seeded = 0;
+
+    Transaction txn(m_db);
+    for (const auto& mat : defaults) {
+        auto id = m_repo.insert(mat);
+        if (id) {
+            ++seeded;
+        } else {
+            log::warningf("MaterialManager", "seedDefaults: failed to insert '%s'",
+                          mat.name.c_str());
+        }
+    }
+
+    if (!txn.commit()) {
+        log::error("MaterialManager", "seedDefaults: transaction commit failed");
+        return;
+    }
+
+    log::infof("MaterialManager", "Seeded %d default materials", seeded);
+}
+
+// ---------------------------------------------------------------------------
+// importMaterial
+// ---------------------------------------------------------------------------
+
+std::optional<i64> MaterialManager::importMaterial(const Path& dwmatPath) {
+    if (!file::isFile(dwmatPath)) {
+        log::errorf("MaterialManager", "importMaterial: source does not exist: %s",
+                    dwmatPath.string().c_str());
+        return std::nullopt;
+    }
+
+    // Validate archive before copying
+    if (!MaterialArchive::isValidArchive(dwmatPath.string())) {
+        log::errorf("MaterialManager", "importMaterial: not a valid .dwmat archive: %s",
+                    dwmatPath.string().c_str());
+        return std::nullopt;
+    }
+
+    // Determine destination path in app-managed materials directory
+    Path destPath = uniqueArchivePath(dwmatPath.filename().string());
+
+    // Copy to managed directory (prevents path invalidation: Pitfall 3)
+    if (!file::copy(dwmatPath, destPath)) {
+        log::errorf("MaterialManager", "importMaterial: failed to copy %s -> %s",
+                    dwmatPath.string().c_str(), destPath.string().c_str());
+        return std::nullopt;
+    }
+
+    // Load metadata from the managed copy
+    auto data = MaterialArchive::load(destPath.string());
+    if (!data) {
+        log::errorf("MaterialManager", "importMaterial: failed to load metadata from: %s",
+                    destPath.string().c_str());
+        // Clean up the copy on failure
+        file::remove(destPath);
+        return std::nullopt;
+    }
+
+    // Build record from archive metadata, pointing to managed copy
+    MaterialRecord record = data->metadata;
+    record.archivePath = destPath;
+
+    // Insert into database
+    auto id = m_repo.insert(record);
+    if (!id) {
+        log::errorf("MaterialManager", "importMaterial: database insert failed for: %s",
+                    record.name.c_str());
+        file::remove(destPath);
+        return std::nullopt;
+    }
+
+    log::infof("MaterialManager", "Imported material '%s' (id=%lld) from %s", record.name.c_str(),
+               static_cast<long long>(*id), dwmatPath.string().c_str());
+    return id;
+}
+
+// ---------------------------------------------------------------------------
+// exportMaterial
+// ---------------------------------------------------------------------------
+
+bool MaterialManager::exportMaterial(i64 materialId, const Path& outputPath) {
+    auto matOpt = m_repo.findById(materialId);
+    if (!matOpt) {
+        log::errorf("MaterialManager", "exportMaterial: material %lld not found",
+                    static_cast<long long>(materialId));
+        return false;
+    }
+
+    const MaterialRecord& mat = *matOpt;
+
+    if (!mat.archivePath.empty() && file::isFile(mat.archivePath)) {
+        // Material has a managed archive — just copy it to the output path
+        if (!file::copy(mat.archivePath, outputPath)) {
+            log::errorf("MaterialManager", "exportMaterial: copy failed %s -> %s",
+                        mat.archivePath.string().c_str(), outputPath.string().c_str());
+            return false;
+        }
+        log::infof("MaterialManager", "Exported material '%s' to %s", mat.name.c_str(),
+                   outputPath.string().c_str());
+        return true;
+    }
+
+    // Default species — no texture file, create a metadata-only .dwmat.
+    // Pass empty texture path to create archive without texture entry.
+    auto result = MaterialArchive::create(outputPath.string(), std::string{}, mat);
+    if (!result.success) {
+        log::errorf("MaterialManager", "exportMaterial: create archive failed: %s",
+                    result.error.c_str());
+        return false;
+    }
+
+    log::infof("MaterialManager", "Exported default material '%s' as metadata-only archive to %s",
+               mat.name.c_str(), outputPath.string().c_str());
+    return true;
+}
+
+// ---------------------------------------------------------------------------
+// Read operations
+// ---------------------------------------------------------------------------
+
+std::vector<MaterialRecord> MaterialManager::getAllMaterials() {
+    return m_repo.findAll();
+}
+
+std::vector<MaterialRecord> MaterialManager::getMaterialsByCategory(MaterialCategory category) {
+    return m_repo.findByCategory(category);
+}
+
+std::optional<MaterialRecord> MaterialManager::getMaterial(i64 id) {
+    return m_repo.findById(id);
+}
+
+// ---------------------------------------------------------------------------
+// Write operations
+// ---------------------------------------------------------------------------
+
+bool MaterialManager::updateMaterial(const MaterialRecord& record) {
+    return m_repo.update(record);
+}
+
+bool MaterialManager::removeMaterial(i64 id) {
+    auto matOpt = m_repo.findById(id);
+    if (!matOpt) {
+        return false;
+    }
+
+    // Delete managed .dwmat file if it exists
+    if (!matOpt->archivePath.empty() && file::isFile(matOpt->archivePath)) {
+        if (!file::remove(matOpt->archivePath)) {
+            log::warningf("MaterialManager", "removeMaterial: could not delete archive file: %s",
+                          matOpt->archivePath.string().c_str());
+            // Don't abort — remove from DB regardless
+        }
+    }
+
+    return m_repo.remove(id);
+}
+
+// ---------------------------------------------------------------------------
+// Material-to-model assignment
+// ---------------------------------------------------------------------------
+
+bool MaterialManager::assignMaterialToModel(i64 materialId, i64 modelId) {
+    // Verify the material exists
+    if (!m_repo.findById(materialId)) {
+        log::errorf("MaterialManager", "assignMaterialToModel: material %lld not found",
+                    static_cast<long long>(materialId));
+        return false;
+    }
+
+    auto stmt = m_db.prepare("UPDATE models SET material_id = ? WHERE id = ?");
+    if (!stmt.isValid()) {
+        return false;
+    }
+    if (!stmt.bindInt(1, materialId) || !stmt.bindInt(2, modelId)) {
+        return false;
+    }
+
+    if (!stmt.execute()) {
+        log::errorf("MaterialManager", "assignMaterialToModel: UPDATE failed for model %lld",
+                    static_cast<long long>(modelId));
+        return false;
+    }
+
+    return m_db.changesCount() > 0;
+}
+
+bool MaterialManager::clearMaterialAssignment(i64 modelId) {
+    auto stmt = m_db.prepare("UPDATE models SET material_id = NULL WHERE id = ?");
+    if (!stmt.isValid()) {
+        return false;
+    }
+    if (!stmt.bindInt(1, modelId)) {
+        return false;
+    }
+    return stmt.execute() && m_db.changesCount() > 0;
+}
+
+std::optional<MaterialRecord> MaterialManager::getModelMaterial(i64 modelId) {
+    auto stmt = m_db.prepare("SELECT material_id FROM models WHERE id = ?");
+    if (!stmt.isValid()) {
+        return std::nullopt;
+    }
+    if (!stmt.bindInt(1, modelId)) {
+        return std::nullopt;
+    }
+    if (!stmt.step()) {
+        return std::nullopt; // Model not found
+    }
+    if (stmt.isNull(0)) {
+        return std::nullopt; // No material assigned
+    }
+
+    i64 materialId = stmt.getInt(0);
+    return m_repo.findById(materialId);
+}
+
+// ---------------------------------------------------------------------------
+// Private helpers
+// ---------------------------------------------------------------------------
+
+Path MaterialManager::uniqueArchivePath(const std::string& originalFilename) const {
+    Path materialsDir = paths::getMaterialsDir();
+
+    // Ensure directory exists
+    file::createDirectories(materialsDir);
+
+    Path candidate = materialsDir / originalFilename;
+    if (!file::exists(candidate)) {
+        return candidate;
+    }
+
+    // Extract stem and extension to build collision-safe names
+    Path p(originalFilename);
+    std::string stem = file::getStem(p);
+    std::string ext = "." + file::getExtension(p);
+    if (ext == ".") {
+        ext = ".dwmat";
+    }
+
+    for (int i = 1; i < 1000; ++i) {
+        std::string newName = stem + "_" + std::to_string(i) + ext;
+        candidate = materialsDir / newName;
+        if (!file::exists(candidate)) {
+            return candidate;
+        }
+    }
+
+    // Fallback (should never happen in practice)
+    return materialsDir / (originalFilename + ".dwmat");
+}
+
+} // namespace dw
