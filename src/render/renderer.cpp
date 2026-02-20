@@ -80,15 +80,25 @@ void Renderer::setCamera(const Camera& camera) {
 }
 
 void Renderer::renderMesh(const Mesh& mesh, const Mat4& modelMatrix) {
+    renderMesh(mesh, nullptr, modelMatrix);
+}
+
+void Renderer::renderMesh(const GPUMesh& gpuMesh, const Mat4& modelMatrix) {
+    renderMesh(gpuMesh, nullptr, modelMatrix);
+}
+
+void Renderer::renderMesh(const Mesh& mesh, const Texture* materialTexture,
+                          const Mat4& modelMatrix) {
     u64 key = hash::fromHex(hash::computeMesh(mesh));
     auto it = m_meshCache.find(key);
     if (it == m_meshCache.end()) {
         it = m_meshCache.emplace(key, uploadMesh(mesh)).first;
     }
-    renderMesh(it->second, modelMatrix);
+    renderMesh(it->second, materialTexture, modelMatrix);
 }
 
-void Renderer::renderMesh(const GPUMesh& gpuMesh, const Mat4& modelMatrix) {
+void Renderer::renderMesh(const GPUMesh& gpuMesh, const Texture* materialTexture,
+                          const Mat4& modelMatrix) {
     if (gpuMesh.vao == 0 || gpuMesh.indexCount == 0) {
         return;
     }
@@ -121,10 +131,23 @@ void Renderer::renderMesh(const GPUMesh& gpuMesh, const Mat4& modelMatrix) {
     m_meshShader.setFloat("uShininess", m_settings.shininess);
     m_meshShader.setBool("uIsToolpath", false);
 
+    // Bind material texture if provided and valid
+    bool useTexture = (materialTexture != nullptr && materialTexture->isValid());
+    m_meshShader.setBool("uUseTexture", useTexture);
+    if (useTexture) {
+        materialTexture->bind(0);
+        m_meshShader.setInt("uMaterialTexture", 0);
+    }
+
     glBindVertexArray(gpuMesh.vao);
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(gpuMesh.indexCount), GL_UNSIGNED_INT,
                    nullptr);
     glBindVertexArray(0);
+
+    // Unbind texture after draw to keep state clean
+    if (useTexture) {
+        materialTexture->unbind();
+    }
 
     if (m_settings.wireframe) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -169,8 +192,9 @@ void Renderer::renderToolpath(const Mesh& toolpathMesh, const Mat4& modelMatrix)
     m_meshShader.setVec3("uViewPos", m_camera.position());
     m_meshShader.setFloat("uShininess", m_settings.shininess);
 
-    // Enable toolpath rendering mode
+    // Enable toolpath rendering mode (texture disabled)
     m_meshShader.setBool("uIsToolpath", true);
+    m_meshShader.setBool("uUseTexture", false);
 
     glBindVertexArray(gpuMesh.vao);
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(gpuMesh.indexCount), GL_UNSIGNED_INT,
