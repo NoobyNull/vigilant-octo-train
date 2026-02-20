@@ -102,6 +102,9 @@ See: `.planning/PROJECT.md` (updated 2026-02-10)
 - **01-03:** 32 built-in materials seeded via MaterialManager.seedDefaults() using count()==0 guard (idempotent)
 - **01-03:** importMaterial() copies .dwmat to getMaterialsDir() to prevent path invalidation (Pitfall 3)
 - **01-03:** MaterialArchive::create() handles empty texturePath for metadata-only archives (default species export)
+- **01-04:** Planar UV projection selects largest-area face (XY/XZ/YZ) from mesh bounds
+- **01-04:** uUseTexture shader toggle — toolpath overrides texture, texture overrides solid color
+- **01-04:** Vertex(pos) and Vertex(pos,norm) constructors zero-initialize texCoord (bug fix)
 - **01-05:** MaterialsPanel edit form uses modal popup (not inline) to avoid grid layout height complexity
 - **01-05:** Category placeholders use distinct hues: brown (Hardwood), green (Softwood), purple (Domestic), slate (Composite)
 - **01-05:** File dialog and insertMaterial() deferred to plan 06 (application wiring)
@@ -111,10 +114,11 @@ See: `.planning/PROJECT.md` (updated 2026-02-10)
 - **01-01 DONE:** Dependencies (miniz/stb/nlohmann-json), MaterialRecord, schema v4, MaterialRepository
 - **01-02 DONE:** MaterialArchive, TextureLoader, Texture RAII wrapper
 - **01-03 DONE:** Default materials (32 species), MaterialManager, getMaterialsDir()
+- **01-04 DONE:** Texture mapping pipeline — planar UV generation on Mesh, MESH_FRAGMENT shader with uUseTexture/uMaterialTexture, Renderer textured renderMesh overloads
 - **01-05 DONE:** MaterialsPanel — category tabs, thumbnail grid, edit modal, import/export/add/delete toolbar
-- **482 tests passing**
+- **491 tests passing**
 
 ---
 
 *State initialized: 2026-02-08*
-*Last activity: 2026-02-20 — Phase 01 plan 05 complete (MaterialsPanel)*
+*Last activity: 2026-02-20 — Phase 01 plan 04 complete (texture mapping pipeline)*
