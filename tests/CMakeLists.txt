@@ -39,6 +39,7 @@ set(DW_TEST_SOURCES
     test_config_watcher.cpp
     test_app_paths.cpp
     test_cost_repository.cpp
+    test_material_archive.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
     # Stubs for GL-dependent classes
@@ -77,6 +78,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/project/project.cpp
     ${CMAKE_SOURCE_DIR}/src/core/export/model_exporter.cpp
     ${CMAKE_SOURCE_DIR}/src/core/archive/archive.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/materials/material_archive.cpp
     ${CMAKE_SOURCE_DIR}/src/core/library/library_manager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/import/import_queue.cpp
     ${CMAKE_SOURCE_DIR}/src/core/import/file_handler.cpp
@@ -101,6 +103,8 @@ target_link_libraries(dw_tests PRIVATE
     glm::glm
     SQLite::SQLite3
     ZLIB::ZLIB
+    miniz_static
+    nlohmann_json::nlohmann_json
 )
 
 # Include source directories for testing internal modules
