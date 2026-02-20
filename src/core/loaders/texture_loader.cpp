@@ -1,9 +1,9 @@
 // STB_IMAGE_IMPLEMENTATION must be defined in exactly ONE .cpp file.
 // It is defined here so that stb_image.h compiles its implementation once.
 #define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
 #include "texture_loader.h"
+
+#include <stb_image.h>
 
 #include "../utils/log.h"
 
@@ -15,10 +15,11 @@ std::optional<TextureData> TextureLoader::loadPNG(const Path& path) {
     int srcChannels = 0;
 
     // Force RGBA (4 channels) regardless of source format
-    unsigned char* raw = stbi_load(path.string().c_str(), &width, &height, &srcChannels, STBI_rgb_alpha);
+    unsigned char* raw =
+        stbi_load(path.string().c_str(), &width, &height, &srcChannels, STBI_rgb_alpha);
     if (!raw) {
-        log::errorf("TextureLoader", "Failed to load PNG '%s': %s",
-                    path.string().c_str(), stbi_failure_reason());
+        log::errorf("TextureLoader", "Failed to load PNG '%s': %s", path.string().c_str(),
+                    stbi_failure_reason());
         return std::nullopt;
     }
 
@@ -44,14 +45,12 @@ std::optional<TextureData> TextureLoader::loadPNGFromMemory(const uint8_t* data,
     int srcChannels = 0;
 
     // Force RGBA (4 channels)
-    unsigned char* raw = stbi_load_from_memory(
-        reinterpret_cast<const stbi_uc*>(data),
-        static_cast<int>(size),
-        &width, &height, &srcChannels, STBI_rgb_alpha);
+    unsigned char* raw =
+        stbi_load_from_memory(reinterpret_cast<const stbi_uc*>(data), static_cast<int>(size),
+                              &width, &height, &srcChannels, STBI_rgb_alpha);
 
     if (!raw) {
-        log::errorf("TextureLoader", "Failed to decode PNG from memory: %s",
-                    stbi_failure_reason());
+        log::errorf("TextureLoader", "Failed to decode PNG from memory: %s", stbi_failure_reason());
         return std::nullopt;
     }
 
