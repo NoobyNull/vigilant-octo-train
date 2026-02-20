@@ -1,7 +1,7 @@
 # Project State: Digital Workshop
 
 **Last Updated:** 2026-02-20
-**Current Session:** Phase 01 in progress — Plan 05 complete (MaterialsPanel UI)
+**Current Session:** Phase 01 in progress — Plan 06 tasks 1-2 complete, awaiting human verification (Task 3)
 
 ---
 
@@ -11,7 +11,7 @@ See: `.planning/PROJECT.md` (updated 2026-02-10)
 
 **Core Value:** A single focused workspace where a CNC woodworker can manage their model library, analyze toolpaths, and optimize material usage — without switching between tools.
 
-**Current Focus:** Phase 01 - Materials mapping with coordinated materials database (Plan 05/6 complete)
+**Current Focus:** Phase 01 - Materials mapping with coordinated materials database (Plan 06 tasks 1-2 complete, checkpoint pending)
 
 ---
 
@@ -108,6 +108,9 @@ See: `.planning/PROJECT.md` (updated 2026-02-10)
 - **01-05:** MaterialsPanel edit form uses modal popup (not inline) to avoid grid layout height complexity
 - **01-05:** Category placeholders use distinct hues: brown (Hardwood), green (Softwood), purple (Domestic), slate (Composite)
 - **01-05:** File dialog and insertMaterial() deferred to plan 06 (application wiring)
+- **01-06:** ViewportPanel stores const Texture* (non-owning) — Application owns GPU texture lifetime via unique_ptr
+- **01-06:** m_focusedModelId tracked in Application (not Workspace) for material assignment scope
+- **01-06:** PropertiesPanel gates on optional<MaterialRecord>: material display or color picker fallback
 
 ### Phase 01 Progress (2026-02-20)
 
@@ -116,9 +119,10 @@ See: `.planning/PROJECT.md` (updated 2026-02-10)
 - **01-03 DONE:** Default materials (32 species), MaterialManager, getMaterialsDir()
 - **01-04 DONE:** Texture mapping pipeline — planar UV generation on Mesh, MESH_FRAGMENT shader with uUseTexture/uMaterialTexture, Renderer textured renderMesh overloads
 - **01-05 DONE:** MaterialsPanel — category tabs, thumbnail grid, edit modal, import/export/add/delete toolbar
-- **491 tests passing**
+- **01-06 TASKS 1-2 DONE:** MaterialManager+MaterialsPanel wired into Application; PropertiesPanel shows material info; ViewportPanel renders with material texture; grain direction slider regenerates UVs; material assignment persists to DB — awaiting human verification (Task 3 checkpoint)
+- **492 tests passing**
 
 ---
 
 *State initialized: 2026-02-08*
-*Last activity: 2026-02-20 — Phase 01 plan 04 complete (texture mapping pipeline)*
+*Last activity: 2026-02-20 — Phase 01 plan 06 tasks 1-2 complete; awaiting human verification at Task 3 checkpoint*
