@@ -1,7 +1,7 @@
 # Project State: Digital Workshop
 
 **Last Updated:** 2026-02-20
-**Current Session:** Phase 01 in progress — Plan 03 complete (default materials + MaterialManager)
+**Current Session:** Phase 01 in progress — Plan 05 complete (MaterialsPanel UI)
 
 ---
 
@@ -11,7 +11,7 @@ See: `.planning/PROJECT.md` (updated 2026-02-10)
 
 **Core Value:** A single focused workspace where a CNC woodworker can manage their model library, analyze toolpaths, and optimize material usage — without switching between tools.
 
-**Current Focus:** Phase 01 - Materials mapping with coordinated materials database (Plan 03/6 complete)
+**Current Focus:** Phase 01 - Materials mapping with coordinated materials database (Plan 05/6 complete)
 
 ---
 
@@ -102,15 +102,19 @@ See: `.planning/PROJECT.md` (updated 2026-02-10)
 - **01-03:** 32 built-in materials seeded via MaterialManager.seedDefaults() using count()==0 guard (idempotent)
 - **01-03:** importMaterial() copies .dwmat to getMaterialsDir() to prevent path invalidation (Pitfall 3)
 - **01-03:** MaterialArchive::create() handles empty texturePath for metadata-only archives (default species export)
+- **01-05:** MaterialsPanel edit form uses modal popup (not inline) to avoid grid layout height complexity
+- **01-05:** Category placeholders use distinct hues: brown (Hardwood), green (Softwood), purple (Domestic), slate (Composite)
+- **01-05:** File dialog and insertMaterial() deferred to plan 06 (application wiring)
 
 ### Phase 01 Progress (2026-02-20)
 
 - **01-01 DONE:** Dependencies (miniz/stb/nlohmann-json), MaterialRecord, schema v4, MaterialRepository
 - **01-02 DONE:** MaterialArchive, TextureLoader, Texture RAII wrapper
 - **01-03 DONE:** Default materials (32 species), MaterialManager, getMaterialsDir()
+- **01-05 DONE:** MaterialsPanel — category tabs, thumbnail grid, edit modal, import/export/add/delete toolbar
 - **482 tests passing**
 
 ---
 
 *State initialized: 2026-02-08*
-*Last activity: 2026-02-20 — Phase 01 plan 03 complete*
+*Last activity: 2026-02-20 — Phase 01 plan 05 complete (MaterialsPanel)*
