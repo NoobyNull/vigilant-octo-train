@@ -16,6 +16,7 @@ set(DW_TEST_SOURCES
     test_mesh.cpp
     test_database.cpp
     test_model_repository.cpp
+    test_material_repository.cpp
     test_project_repository.cpp
     test_loader_factory.cpp
     test_project.cpp
@@ -69,6 +70,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/database/connection_pool.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/schema.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/model_repository.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/database/material_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/project_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/cost_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/gcode_repository.cpp
