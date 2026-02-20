@@ -1,170 +1,180 @@
 # Technology Stack
 
-**Analysis Date:** 2026-02-08
+**Analysis Date:** 2026-02-19
 
 ## Languages
 
 **Primary:**
-- C++17 - Desktop application core engine, graphics rendering, and data processing
-  - Location: `src/` (main application logic)
-  - Enforced via CMakeLists.txt: `set(CMAKE_CXX_STANDARD 17)`
+- C++ 17 - Core application, all business logic, UI, rendering, and database management
+- C - SQLite3 dependency (compiled from source)
 
-**Secondary:**
-- C - SQLite3 integration and compilation
-  - Location: Dependencies fetched and compiled from source
-  - Used for: Database layer bindings
+**Build System:**
+- CMake 3.20+ - Cross-platform build configuration and dependency management
 
 ## Runtime
 
 **Environment:**
-- Native compiled binary (no virtual machine)
-- Cross-platform: Linux, Windows, macOS support
-- Compiled to single executable: `digital_workshop` or `dw_settings`
+- Desktop application (cross-platform: Linux, Windows, macOS via SDL2/OpenGL)
+- No external runtime required; all dependencies bundled or fetched at build time
 
-**Package Manager:**
-- CMake - Version 3.20+ required
-- Lockfile: No lockfile - dependencies pinned by git tag in CMakeLists.txt
+**Platform Support:**
+- Windows (NSIS installer generation, desktop/start menu shortcuts)
+- Linux (TGZ archive packaging)
+- macOS (via SDL2/OpenGL support)
 
 ## Frameworks
 
-**Core GUI:**
-- Dear ImGui (docking branch) - Immediate-mode UI toolkit
-  - Repository: https://github.com/ocornut/imgui
-  - Branch: docking (not main release)
-  - Purpose: Complete UI framework including panels, windows, menus
-  - Compiled as static library: `imgui` target in `cmake/Dependencies.cmake`
+**Core UI & Windowing:**
+- SDL2 2.30.0 - Window management, input handling, event loop
+  - Strategy: System library with fallback to FetchContent from GitHub
+  - Build mode: Static library (SDL_STATIC=ON)
+  - Location: `cmake/Dependencies.cmake` (lines 6-25)
 
-**Graphics & Windowing:**
-- SDL2 (2.30.0) - Windowing, input events, cross-platform abstraction
-  - Repository: https://github.com/libsdl-org/SDL.git
-  - Tag: release-2.30.0
-  - Purpose: Window management, keyboard/mouse input, event loop
-  - Link mode: Prefers system SDL2, falls back to static compilation
-  - Configuration: `set(SDL_STATIC ON)`, `set(SDL_SHARED OFF)`
+**Dear ImGui (docking branch)** - Immediate mode GUI framework
+  - Branch: `docking` (for multi-viewport/window docking support)
+  - Integration: Custom backends for SDL2 (`imgui_impl_sdl2.cpp`) and OpenGL3 (`imgui_impl_opengl3.cpp`)
+  - Built as static library target in `cmake/Dependencies.cmake` (lines 28-50)
 
-**OpenGL:**
-- OpenGL 3.3 Core - Graphics API
-  - GLAD (v2.0.6) - OpenGL loader for core 3.3 profile
-    - Pre-generated loader for efficiency
-    - Repository: https://github.com/Dav1dde/glad
-
-**Math Library:**
-- GLM (1.0.1) - Header-only vector/matrix math
-  - Repository: https://github.com/g-truc/glm
-  - Used for: 3D transformations, matrix operations
-  - Type: Header-only, no compilation needed
-
-**Testing:**
-- GoogleTest (v1.14.0) - C++ unit testing framework
-  - Repository: https://github.com/google/googletest
-  - Configured with: `set(BUILD_GMOCK OFF)`, `set(INSTALL_GTEST OFF)`
-  - Test executable: `dw_tests`
-
-**Build/Dev:**
-- CMake (3.20+) - Cross-platform build system
-  - Export compile_commands.json for clang tools
-  - FetchContent module for automatic dependency downloading
-  - CPack for packaging (NSIS on Windows, TGZ on Linux)
+**Graphics/Rendering:**
+- OpenGL 3.3 Core Profile - Rendering engine for 3D models and toolpaths
+- GLAD 2.0.6 - OpenGL loader (pre-generated for GL 3.3 Core)
+  - Location: `cmake/Dependencies.cmake` (lines 55-64)
+  - Provides `glad_gl33_core` target
 
 ## Key Dependencies
 
-**Critical:**
-- SQLite3 (3.45.0) - Embedded relational database
-  - Repository: https://github.com/azadkuh/sqlite-amalgamation
-  - Static compilation: Entire database engine compiled into executable
-  - Purpose: Project metadata, model library, cost estimates
-  - Location: `src/core/database/`
-  - Features: Transaction support, RAII wrapper, prepared statements
+**Critical (Core Functionality):**
+- **SQLite3 3.45.0** - Embedded SQL database for model library, projects, materials, G-code metadata
+  - Strategy: System fallback, else compile from sqlite-amalgamation source
+  - Location: `cmake/Dependencies.cmake` (lines 75-93)
+  - Usage: `src/core/database/` module with connection pooling and transaction support
+  - Why it matters: Entire library, project, and import system depends on this
 
-- zlib (1.3.1) - Compression library
-  - Repository: https://github.com/madler/zlib
-  - Purpose: Deflate compression for ZIP and 3MF file format support
-  - Used by: `src/core/archive/` and 3MF loader
-  - Build: Static compilation with OpenGL deps
+- **GLM 1.0.1** - Header-only math library for 3D vector/matrix operations
+  - Location: `cmake/Dependencies.cmake` (lines 66-73)
+  - Used throughout: camera, mesh transformations, rendering calculations
 
-**Infrastructure:**
-- OpenGL (native system library) - Graphics rendering
-  - CMake: `find_package(OpenGL REQUIRED)`
-  - Essential for: Viewport rendering, thumbnail generation
+**Compression & Archive:**
+- **zlib 1.3.1** - Compression library for ZIP/3MF file handling
+  - Strategy: System library with GitHub FetchContent fallback
+  - Location: `cmake/Dependencies.cmake` (lines 95-117)
+  - Usage: `src/core/archive/archive.cpp` for 3MF/ZIP decompression
+
+- **miniz 3.0.2** - Single-file ZIP compression library (alternative/supplement to zlib)
+  - Location: `cmake/Dependencies.cmake` (lines 119-136)
+  - Usage: `src/core/archive/` for ZIP/3MF material archive handling
+
+**Image & Media:**
+- **stb (header-only, master branch)** - Single-file libraries for image loading
+  - Location: `cmake/Dependencies.cmake` (lines 138-145)
+  - Provides: Image decoders for thumbnails
+  - Usage: `src/render/thumbnail_generator.cpp`
+
+**Serialization:**
+- **nlohmann/json 3.11.3** - JSON library for configuration, serialization, and metadata
+  - Location: `cmake/Dependencies.cmake` (lines 147-156)
+  - Usage: Config files, cost estimates (stored as JSON in database), tag storage
+
+**Testing:**
+- **GoogleTest 1.14.0** - Unit testing framework (dev dependency only)
+  - Location: `cmake/Dependencies.cmake` (lines 158-170)
+  - Build: Conditional on `DW_BUILD_TESTS=ON` (default ON)
+  - Usage: `tests/` directory with comprehensive tier-based test coverage
 
 ## Configuration
 
 **Build Configuration:**
-- CMAKE_BUILD_TYPE: Release (default), Debug supported
-- CMAKE_CXX_STANDARD: 17 (enforced)
-- CMAKE_EXPORT_COMPILE_COMMANDS: ON (enables clang-tools integration)
-- DW_BUILD_TESTS: ON/OFF (enabled by default in CMakeLists.txt)
+- CMake variables and options:
+  - `DW_BUILD_TESTS` (default: ON) - Enable/disable test suite compilation
+  - `DW_ENABLE_ASAN` (optional) - Enable AddressSanitizer for debug builds
+  - `CMAKE_BUILD_TYPE` (Debug/Release) - Affects warning-as-error behavior
 
-**Compiler Configuration:**
-- File: `cmake/CompilerFlags.cmake`
-- Clang-Format: `.clang-format` (LLVM style, 4-space indents, 100-column limit)
-- Clang-Tidy: `.clang-tidy` (linting rules configuration)
+**Compiler Configuration (`cmake/CompilerFlags.cmake`):**
+- **GCC/Clang common flags:**
+  - `-Wall -Wextra -Wpedantic -Wconversion -Wshadow` and 14+ strict warnings
+  - `-Werror` in Release builds (treat warnings as errors)
+  - Debug: `-g3 -O0 -fno-omit-frame-pointer`
+  - Release: `-O3 -DNDEBUG`
 
-**Build Output:**
-- Main executable location: `${CMAKE_BINARY_DIR}/digital_workshop`
-- Settings app location: `${CMAKE_BINARY_DIR}/dw_settings`
-- Test executable location: `${CMAKE_BINARY_DIR}/tests/dw_tests`
-- Generated code: `${CMAKE_BINARY_DIR}/generated/` (includes version.h)
+- **MSVC flags:**
+  - `/W4 /permissive- /utf-8` (strict conformance)
+  - `/WX` (warnings as errors) in Release builds
+  - `/Zi /Od /RTC1` in Debug, `/O2 /DNDEBUG` in Release
 
-## Platform Requirements
-
-**Development:**
-- CMake 3.20 or later
-- C++17 compatible compiler (tested with GCC/Clang)
-- SDL2 development headers (or automatic build from source)
-- OpenGL 3.3 capable GPU
-- System libraries: libgl-dev (Linux), zlib1g-dev (Linux)
-- Linux CI: Ubuntu 24.04 (with libsdl2-dev, libgl-dev, zlib1g-dev, makeself)
-
-**Production:**
-- Deployment targets:
-  - **Linux**: x86_64 Linux binary packaged as self-extracting .run installer (makeself)
-  - **Windows**: x86_64 Windows EXE with NSIS installer
-  - **macOS**: Not currently supported in CI (would need similar setup)
-
-**Runtime Dependencies:**
-- SDL2 libraries (if system SDL2 used, not statically linked)
-- OpenGL drivers for target GPU
-- Standard C++ runtime
-
-## Dependency Management Strategy
-
-**FetchContent Model:**
-All dependencies use CMake FetchContent with system fallback pattern:
-1. Try to find system-installed package via `find_package()`
-2. If not found, download from GitHub using FetchContent_Declare()
-3. Pin specific git tags for reproducibility (e.g., `GIT_TAG release-2.30.0`)
-4. Use `GIT_SHALLOW TRUE` for faster clones
-
-**Example from Dependencies.cmake:**
-```cmake
-find_package(SQLite3 QUIET)
-if(NOT SQLite3_FOUND)
-    FetchContent_Declare(
-        sqlite3
-        GIT_REPOSITORY https://github.com/azadkuh/sqlite-amalgamation.git
-        GIT_TAG 3.45.0
-        GIT_SHALLOW TRUE
-    )
-    FetchContent_MakeAvailable(sqlite3)
-endif()
-```
-
-Benefits:
-- No external package manager required
-- System libraries used when available
-- Reproducible builds with pinned versions
-- Clean build from clean checkout
+**Platform-Specific:**
+- Windows: NSIS installer generation with file associations for `.dwp` (Digital Workshop Project) files
+- Linux: TGZ archive packaging
+- All platforms: Export `compile_commands.json` for IDE/tooling support
 
 ## Version Management
 
-**Application Version:**
-- Source: `CMakeLists.txt` project version (0.1.0)
-- Runtime identifier: Git commit hash + build date
-- Generated header: `${CMAKE_BINARY_DIR}/generated/version.h`
-- Pattern: 7-char short hash, "-dirty" suffix if uncommitted changes
-- Query method: `cmake/GitVersion.cmake` extracts via `git rev-parse --short=7 HEAD`
+**Version Source:**
+- Git commit hash (short 7 chars) injected at build time via `cmake/GitVersion.cmake`
+- Build date (YYYY-MM-DD format) included
+- Dirty working directory detected and appended (`-dirty` suffix)
+- Fallback: `"nogit"` if Git not available
+
+**Version Header:**
+- Generated at build time: `${CMAKE_BINARY_DIR}/generated/version.h`
+- Template source: `src/version.h.in`
+- Included by: Application startup (`src/app/application.cpp` includes `version.h`)
+
+## Build & Installation
+
+**Build Process:**
+- CMake generates platform-specific build files (Unix Makefiles, MSVC, Xcode, etc.)
+- All C++ compiled to single executable: `digital_workshop` (output to `${CMAKE_BINARY_DIR}/`)
+- Tests compiled to: `dw_tests` (when `DW_BUILD_TESTS=ON`)
+
+**Installation Targets:**
+- Main executable: Installed to `bin/` directory
+- Platform-specific packaging:
+  - Windows: NSIS `.exe` installer with shortcuts and file associations
+  - Linux: TGZ archive
+
+**Dependency Strategy:**
+- FetchContent-based (prefer system libraries with fallback)
+- All dependencies built as static libraries (except SDL2 which can use system dynamic lib)
+- No external package manager required (npm, pip, cargo, etc.)
+
+## Packaging
+
+**CPack Integration:**
+- Enabled in root `CMakeLists.txt` (lines 43-84)
+- Package metadata:
+  - Name: `DigitalWorkshop`
+  - Version: From `PROJECT_VERSION` (defined in root CMakeLists.txt)
+  - License file: `LICENSE`
+  - Description: "3D model management, G-code analysis, and 2D cut optimization"
+
+## Development Environment
+
+**Minimum Requirements:**
+- CMake 3.20+
+- C++17 compiler (GCC, Clang, MSVC)
+- Git (for version information, optional but recommended)
+
+**Optional:**
+- GoogleTest development (auto-fetched if tests enabled)
+- SDL2 development libraries (system or auto-fetched)
+
+## Platform-Specific Notes
+
+**OpenGL Requirement:**
+- Requires OpenGL 3.3 Core profile support
+- Hardware: Any GPU supporting GL 3.3+ (2012+, most modern systems)
+
+**SDL2 Strategy:**
+- Primary: Uses system SDL2 if available
+- Fallback: Clones and compiles from GitHub
+- Windows behavior: Links `SDL2::SDL2main` for proper WinMain entry point
+
+**File Format Support (via dedicated loaders):**
+- STL (binary & ASCII) - `src/core/loaders/stl_loader.cpp`
+- OBJ - `src/core/loaders/obj_loader.cpp`
+- 3MF (ZIP-based with XML) - `src/core/loaders/threemf_loader.cpp`
+- G-code - `src/core/loaders/gcode_loader.cpp`
 
 ---
 
-*Stack analysis: 2026-02-08*
+*Stack analysis: 2026-02-19*

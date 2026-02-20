@@ -1,390 +1,74 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-02-08
+**Analysis Date:** 2026-02-19
 
 ## Test Framework
 
 **Runner:**
-- Google Test (gtest) - CMake integrated
-- Configuration: `tests/CMakeLists.txt`
-- Test discovery: Automatic via `gtest_discover_tests()`
-- C++ standard: C++17
+- GoogleTest (gtest) - version managed via CMake FetchContent
+- Config: `tests/CMakeLists.txt`
+- Test executable: `dw_tests`
 
-**Build Configuration:**
-- Executable: `dw_tests`
-- Linked with: `GTest::gtest`, `GTest::gtest_main`, `glm::glm`, `SQLite::SQLite3`, `ZLIB::ZLIB`
-- Sources directory: `tests/` (co-located with main source in build)
-- CMakeLists: `tests/CMakeLists.txt` (tier-based test organization)
+**Assertion Library:**
+- GoogleTest's built-in assertions: `EXPECT_*`, `ASSERT_*`
 
 **Run Commands:**
 ```bash
-# Build tests
-cmake --build build --target dw_tests
-
-# Run all tests
-ctest                          # Via CTest
-build/dw_tests                 # Direct execution
-
-# Run with verbosity
+# Build and run all tests
+cd build
+cmake --build .
 ctest --verbose
-./build/dw_tests --gtest_filter=StringUtils.*
 
-# Run specific test class
-./build/dw_tests --gtest_filter=DatabaseTest.*
+# Or run directly
+./dw_tests
 
-# List all tests
-./build/dw_tests --gtest_list_tests
+# Run specific test
+ctest -R "DatabaseTest" -V
+
+# With regex filter
+./dw_tests --gtest_filter="*Database*"
 ```
 
 ## Test File Organization
 
 **Location:**
-- Tests in `tests/` directory (separate from source)
-- Not co-located with implementation files
-- Pattern: `test_<module>.cpp` for each major module
+- Co-located in `tests/` directory
+- Each component gets one `test_<component>.cpp` file
+- No nested test subdirectories
 
-**Naming Convention:**
-- File: `test_<module>.cpp` (e.g., `test_string_utils.cpp`, `test_database.cpp`)
-- Test class: `<FunctionName>Test` or `<ModuleName>Test` as fixture
-- Test case: `TEST(TestClass, TestName_Description)`
-- Example: `TEST(StringUtils, Trim_RemovesBothSides)`
+**Naming:**
+- Test files: `test_<component>.cpp` (e.g., `test_database.cpp`, `test_model_repository.cpp`)
+- Test fixtures: `<Component>Test` (e.g., `DatabaseTest`, `ModelRepoTest`, `EventBusTest`)
+- Standalone tests: `<Module>` (e.g., `Database` for non-fixture tests)
 
-**Test Tier Organization (from tests/CMakeLists.txt):**
-
-**Tier 0 — Core utilities and loaders (no dependencies on GL/SDL/complex systems):**
-- `test_stl_loader.cpp` - Mesh file loading
-- `test_obj_loader.cpp` - Mesh file loading
-- `test_hash.cpp` - Content hashing
-- `test_gcode_parser.cpp` - G-code parsing
-- `test_optimizer.cpp` - Cut optimization
-- `test_string_utils.cpp` - String manipulation
-- `test_file_utils.cpp` - File I/O utilities
-- `test_mesh.cpp` - Mesh geometry operations
-- `test_database.cpp` - SQLite wrapper
-- `test_model_repository.cpp` - Database layer
-- `test_project_repository.cpp` - Database layer
-- `test_loader_factory.cpp` - Loader selection
-- `test_project.cpp` - Project model
-- `test_exporter.cpp` - Model export
-
-**Tier 1 — Core logic with type system:**
-- `test_types.cpp` - Type system and math helpers
-- `test_gcode_analyzer.cpp` - G-code analysis
-- `test_schema.cpp` - Database schema
-- `test_camera.cpp` - Camera mathematics (no GL context)
-- `test_archive.cpp` - ZIP archive operations
-- `test_library_manager.cpp` - Library/asset management
-- `test_threemf_loader.cpp` - 3MF format loader
-- `test_import_pipeline.cpp` - Import workflows
-- `test_config_watcher.cpp` - Configuration file monitoring
-- `test_app_paths.cpp` - Application directory resolution
-- `test_cost_repository.cpp` - Cost estimation system
-
-**Tier 2 — Compliance and style checking (no GL/SDL required):**
-- `test_lint_compliance.cpp` - Clang-tidy compliance verification
-
-**Stubs for GL-dependent code:**
-- `stub_thumbnail_generator.cpp` - Placeholder for GL-dependent thumbnail generation
-
-**Compiled dependencies:**
-Test executable automatically compiles source files from `src/` via `DW_TEST_DEPS` in CMakeLists:
-- Core types, utilities, loaders
-- Mesh processing (geometry, hashing)
-- G-code handling (parsing, analysis)
-- Optimization algorithms
-- Database and repositories
-- Project model and export
-- Archive and library management
-- Configuration monitoring
-- Camera and path utilities
+**Structure:**
+```
+tests/
+├── CMakeLists.txt              # Test configuration
+├── test_main.cpp               # Bootstrap (minimal GTest setup)
+├── test_database.cpp           # Database component tests
+├── test_model_repository.cpp   # Repository layer tests
+├── test_event_bus.cpp          # Event system tests
+├── test_library_manager.cpp    # Integration tests with DB
+├── stub_thumbnail_generator.cpp # GL-dependent stubs
+└── data/                       # Test fixtures (commented in CMakeLists)
+```
 
 ## Test Structure
 
-**Suite Organization Pattern:**
-
+**Suite Organization:**
 ```cpp
-// Digital Workshop - StringUtils Tests
+// Digital Workshop - Component Tests
 
 #include <gtest/gtest.h>
+#include "core/database/database.h"
 
-#include "core/utils/string_utils.h"
-
-// --- Grouped by functionality ---
-
-TEST(StringUtils, Trim_RemovesBothSides) {
-    EXPECT_EQ(dw::str::trim("  hello  "), "hello");
-}
-
-TEST(StringUtils, Trim_TabsAndNewlines) {
-    EXPECT_EQ(dw::str::trim("\t\nhello\n\t"), "hello");
-}
-
-// --- Case conversion ---
-
-TEST(StringUtils, ToLower_Basic) {
-    EXPECT_EQ(dw::str::toLower("HELLO"), "hello");
-}
-```
-
-**Fixture Pattern (for setup/teardown):**
-
-```cpp
-// test_database.cpp
 namespace {
 
+// Fixture: provides setup/teardown per test
 class DatabaseTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        ASSERT_TRUE(m_db.open(":memory:"));
-    }
-
-    dw::Database m_db;
-};
-
-}  // namespace
-
-TEST_F(DatabaseTest, Execute_CreateTable) {
-    EXPECT_TRUE(m_db.execute("CREATE TABLE test (...)"));
-}
-```
-
-**Header File Comments:**
-Each test file begins with standardized header:
-```cpp
-// Digital Workshop - <Module> Tests
-
-#include <gtest/gtest.h>
-#include "<path to module>"
-```
-
-## Mocking
-
-**Framework:**
-- Google Mock (gmock) - Included with gtest
-- Not extensively used (project favors real implementations over mocks)
-
-**Pattern for Stubbed Functionality:**
-Actual implementation stubs rather than mocks in some cases:
-- Example: `stub_thumbnail_generator.cpp` - Provides dummy implementation for GL-dependent code
-- Allows tests to compile without OpenGL context
-- Actual implementation file can be swapped in for GUI tests
-
-**What to Mock:**
-- External system dependencies (file system operations where needed)
-- Network services (if any integrations added)
-- Expensive operations with deterministic mocks
-
-**What NOT to Mock:**
-- Core business logic (string utils, mesh operations, database queries)
-- Data structures (use real Mesh, Database, etc.)
-- File I/O for local test data (use real filesystem temporarily)
-
-## Fixtures and Factories
-
-**Test Data Pattern:**
-Minimal fixtures - create data inline in tests for clarity.
-
-**Example - Database test fixture:**
-```cpp
-class DatabaseTest : public ::testing::Test {
-protected:
-    void SetUp() override {
-        ASSERT_TRUE(m_db.open(":memory:"));
-    }
-
-    dw::Database m_db;
-};
-
-TEST_F(DatabaseTest, PrepareAndBind_InsertAndQuery) {
-    ASSERT_TRUE(m_db.execute(
-        "CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT, value REAL)"
-    ));
-
-    auto insert = m_db.prepare("INSERT INTO items (name, value) VALUES (?, ?)");
-    ASSERT_TRUE(insert.bindText(1, "widget"));
-    ASSERT_TRUE(insert.bindDouble(2, 3.14));
-    EXPECT_TRUE(insert.execute());
-}
-```
-
-**Factory Functions (when needed):**
-- Helper functions directly in test files (no shared factory classes needed)
-- Example from `test_archive.cpp`:
-```cpp
-// Helper to create test file
-bool createTestFile(const Path& path, const std::string& content) {
-    // Create temporary file with content
-    return dw::file::writeText(path, content);
-}
-```
-
-**Location:**
-- Fixtures and helpers defined in same file as tests using them
-- No separate fixture directory - keep tests self-contained
-- Temporary files created in system temp directory via test setup
-
-## Coverage
-
-**Requirements:**
-- No enforced coverage target (pragmatic approach)
-- Focus on critical paths: loaders, database, optimization algorithms
-- Entire Tier 0 and Tier 1 module sets have test coverage
-- Excluded from coverage requirements: GL rendering, UI dialogs, platform-specific paths
-
-**View Coverage:**
-```bash
-# Using gcov (if clang/gcc with coverage flags)
-cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage" ..
-cmake --build .
-ctest
-gcov tests/test_*.cpp
-
-# Using lcov for HTML report
-lcov --directory . --capture --output-file coverage.info
-genhtml coverage.info --output-directory coverage_html
-```
-
-**Current Coverage:**
-Test suite organized in tiers covering:
-- String utilities: 100% (all string operations tested)
-- Mesh operations: 100% (geometry, transforms, bounds, validation)
-- Loaders (STL, OBJ, 3MF): 100% (both ASCII and binary variants)
-- Database operations: 100% (CRUD, transactions, queries)
-- G-code handling: 100% (parsing and analysis)
-- Optimization: 100% (bin packing, guillotine algorithm)
-- Archives: 100% (ZIP creation and extraction)
-
-## Test Types
-
-**Unit Tests:**
-- Scope: Individual functions and classes
-- Examples: `test_string_utils.cpp`, `test_hash.cpp`, `test_types.cpp`
-- Approach: Test in isolation with real implementations
-- Database tests use in-memory SQLite (no external DB needed)
-
-**Integration Tests:**
-- Scope: Interactions between modules
-- Examples: `test_import_pipeline.cpp`, `test_library_manager.cpp`
-- Approach: Test full workflows (e.g., load file → parse → store in DB)
-- Real file I/O to temporary directories
-
-**E2E Tests:**
-- Status: Not used in current suite
-- Reason: Lack of deterministic SDL2/OpenGL environment in CI
-- Approach if needed: Separate test binary targeting renderer (requires display)
-- Alternative: Use visual regression via screenshots in integration tests
-
-## Common Patterns
-
-**Assertion Patterns:**
-
-```cpp
-// Expect vs Assert
-EXPECT_EQ(actual, expected);   // Test continues on failure
-ASSERT_EQ(actual, expected);   // Test stops on failure (use when next line depends on this)
-
-// Common assertions
-EXPECT_TRUE(condition);
-EXPECT_FALSE(condition);
-EXPECT_EQ(a, b);
-EXPECT_NE(a, b);
-EXPECT_LT(a, b);
-EXPECT_LE(a, b);
-EXPECT_GT(a, b);
-EXPECT_GE(a, b);
-EXPECT_NEAR(a, b, epsilon);   // For floating-point comparison
-
-// String and container assertions
-EXPECT_EQ(string, "expected");
-EXPECT_EQ(vector.size(), 3u);
-EXPECT_TRUE(vector.empty());
-
-// Output messages on failure
-EXPECT_EQ(a, b) << "Custom failure message";
-ASSERT_TRUE(condition) << "Setup failed: " << errorInfo;
-```
-
-**Async Testing:**
-No async/threading tests currently in suite. If needed:
-```cpp
-// Use std::thread with gtest
-TEST(AsyncTest, WorksWithThreads) {
-    std::vector<int> results;
-    std::mutex mutex;
-
-    std::thread t([&]() {
-        int value = expensiveComputation();
-        std::lock_guard<std::mutex> lock(mutex);
-        results.push_back(value);
-    });
-
-    t.join();
-
-    EXPECT_EQ(results.size(), 1);
-    EXPECT_EQ(results[0], expectedValue);
-}
-```
-
-**Error Testing:**
-
-Test that operations fail correctly:
-```cpp
-TEST(Database, Execute_InvalidSQL) {
-    dw::Database db;
-    ASSERT_TRUE(db.open(":memory:"));
-
-    EXPECT_FALSE(db.execute("NOT VALID SQL"));
-    EXPECT_FALSE(db.lastError().empty());
-}
-
-TEST(Loader, Load_InvalidFile) {
-    dw::STLLoader loader;
-    auto result = loader.load("/nonexistent/file.stl");
-
-    EXPECT_FALSE(result.success());
-    EXPECT_FALSE(result.error.empty());
-}
-```
-
-**File I/O Testing:**
-
-Use temporary filesystem:
-```cpp
-TEST(Archive, Create_AndExtract) {
-    // Create test file
-    auto tempDir = std::filesystem::temp_directory_path() / "dw_test_xyz";
-    std::filesystem::create_directory(tempDir);
-
-    Path testFile = tempDir / "test.txt";
-    ASSERT_TRUE(dw::file::writeText(testFile, "Hello World"));
-
-    // Create archive
-    auto createResult = dw::ProjectArchive::create(
-        (tempDir / "test.dwp").string(),
-        tempDir.string()
-    );
-    ASSERT_TRUE(createResult.success) << createResult.error;
-
-    // Extract and verify
-    auto extractResult = dw::ProjectArchive::extract(
-        (tempDir / "test.dwp").string(),
-        (tempDir / "extracted").string()
-    );
-    ASSERT_TRUE(extractResult.success);
-
-    // Cleanup
-    std::filesystem::remove_all(tempDir);
-}
-```
-
-**Database Testing Pattern:**
-
-In-memory SQLite for fast, isolated tests:
-```cpp
-class DatabaseTest : public ::testing::Test {
-protected:
-    void SetUp() override {
-        // In-memory database - no file I/O
         ASSERT_TRUE(m_db.open(":memory:"));
     }
 
@@ -395,43 +79,278 @@ protected:
     dw::Database m_db;
 };
 
-TEST_F(DatabaseTest, Transaction_RollsBackOnFailure) {
-    ASSERT_TRUE(m_db.execute("CREATE TABLE test (id INTEGER PRIMARY KEY)"));
+}  // namespace
 
-    ASSERT_TRUE(m_db.beginTransaction());
-    ASSERT_TRUE(m_db.execute("INSERT INTO test (id) VALUES (1)"));
-    // Simulate error - rollback instead of commit
-    m_db.rollbackTransaction();
+// --- Test Groups ---
 
-    auto stmt = m_db.prepare("SELECT COUNT(*) FROM test");
-    ASSERT_TRUE(stmt.step());
-    EXPECT_EQ(stmt.getInt(0), 0);  // No row was inserted
+TEST_F(DatabaseTest, Open_InMemory) {
+    EXPECT_FALSE(m_db.isOpen());
+    EXPECT_TRUE(m_db.open(":memory:"));
+    EXPECT_TRUE(m_db.isOpen());
+}
+
+TEST_F(DatabaseTest, Execute_CreateTable) {
+    EXPECT_TRUE(m_db.execute("CREATE TABLE test (id INTEGER PRIMARY KEY)"));
 }
 ```
 
-**LoadResult Testing:**
+**Patterns:**
+- **Setup (SetUp override)**: Initialize resources needed by all tests in fixture
+  - Database open, schema init, temp directory creation
+  - Use `ASSERT_*` for setup failures (stops test if setup fails)
 
-Test both success and failure paths:
+- **Teardown (TearDown override)**: Clean up resources
+  - Database close, temp directory removal, file cleanup
+  - Not required unless resource cleanup needed
+
+- **Assertion pattern**: Use `EXPECT_*` for actual test checks
+  - `EXPECT_EQ(actual, expected)` for equality
+  - `EXPECT_TRUE(condition)` for boolean checks
+  - `EXPECT_FALSE(condition)` for negation
+  - `EXPECT_GT(actual, min)` for comparisons
+  - `EXPECT_NEAR(actual, expected, tolerance)` for floats
+  - Chain assertions: `ASSERT_TRUE(setup); EXPECT_EQ(result, value);`
+
+## Mocking
+
+**Framework:** Not explicitly used; instead, tests use:
+- **In-memory databases**: SQLite `:memory:` for database tests
+- **Real file I/O with temp directories**: `std::filesystem::temp_directory_path()` for file tests
+- **Test data builders**: Helper methods like `makeModel()` to construct test objects
+
+**Patterns:**
 ```cpp
-TEST(STLLoader, Load_ValidFile) {
-    dw::STLLoader loader;
-    auto result = loader.load("test_data/cube.stl");
-
-    ASSERT_TRUE(result.success());
-    ASSERT_NE(result.mesh, nullptr);
-    EXPECT_GT(result.mesh->vertexCount(), 0);
+// Example from test_library_manager.cpp - builder pattern for test data
+dw::ModelRecord makeModel(const std::string& hash, const std::string& name) {
+    dw::ModelRecord rec;
+    rec.hash = hash;
+    rec.name = name;
+    rec.filePath = "/models/" + name + ".stl";
+    rec.fileFormat = "stl";
+    rec.fileSize = 1024;
+    rec.vertexCount = 100;
+    rec.triangleCount = 50;
+    rec.boundsMin = dw::Vec3(0, 0, 0);
+    rec.boundsMax = dw::Vec3(1, 1, 1);
+    return rec;
 }
 
-TEST(STLLoader, Load_InvalidFile) {
-    dw::STLLoader loader;
-    auto result = loader.load("/nonexistent/file.stl");
-
-    EXPECT_FALSE(result.success());
-    EXPECT_EQ(result.mesh, nullptr);
-    EXPECT_FALSE(result.error.empty());
+// Use in test
+TEST_F(ModelRepoTest, Insert_ReturnsId) {
+    auto rec = makeModel("abc123", "cube");
+    auto id = m_repo->insert(rec);
+    ASSERT_TRUE(id.has_value());
+    EXPECT_GT(id.value(), 0);
 }
 ```
+
+**What to Mock:**
+- Nothing; integration tests preferred
+- Use real components with in-memory equivalents (e.g., `:memory:` SQLite database)
+- Dependencies injected via constructor (e.g., `ModelRepository(Database& db)`)
+
+**What NOT to Mock:**
+- Don't mock filesystem operations; use temp directories
+- Don't mock databases; use in-memory SQLite
+- Don't mock internal implementation; test the public interface
+
+## Fixtures and Factories
+
+**Test Data:**
+```cpp
+// From test_library_manager.cpp
+void writeMiniSTL(const std::string& name) {
+    auto path = m_tmpDir / (name + ".stl");
+
+    dw::ByteBuffer buf(80 + 4 + 50, 0);
+    dw::u32 triCount = 1;
+    std::memcpy(buf.data() + 80, &triCount, sizeof(triCount));
+
+    float tri[12] = {
+        0, 0, 1,    // normal
+        0, 0, 0,    // v0
+        1, 0, 0,    // v1
+        0, 1, 0     // v2
+    };
+    std::memcpy(buf.data() + 84, tri, sizeof(tri));
+
+    EXPECT_TRUE(dw::file::writeBinary(path, buf));
+    return path;
+}
+```
+
+**Location:**
+- Test helper methods defined as protected methods in fixture class
+- Reused across multiple tests in same fixture
+- Keep helper logic focused and testable
+
+## Coverage
+
+**Requirements:** No enforced coverage targets
+
+**View Coverage:** Not configured (would require gcov/lcov setup)
+
+**Practice:**
+- Test all public methods of classes
+- Test error conditions and edge cases
+- Focus on behavior, not coverage percentage
+- Integration tests preferred over unit tests for coverage (fewer mocks = fewer gaps)
+
+## Test Types
+
+**Unit Tests:**
+- Test individual components in isolation
+- Examples: `test_string_utils.cpp`, `test_types.cpp`, `test_hash.cpp`
+- Use real dependencies; mock only external systems
+- Fast execution (no I/O, no network)
+
+**Integration Tests:**
+- Test multiple components working together
+- Examples: `test_library_manager.cpp`, `test_model_repository.cpp`, `test_database.cpp`
+- Use in-memory databases instead of mocking
+- Verify data flows correctly through layers
+
+**E2E Tests:**
+- Not implemented
+- Application runs in GUI mode; E2E would require SDL/OpenGL setup
+- Covered by integration tests instead
+
+**Tier Organization (from CMakeLists.txt):**
+```
+Tier 0 — existing tests (stl_loader, obj_loader, hash, gcode_parser)
+Tier 0 — added in first pass (string_utils, file_utils, mesh, database, repositories)
+Tier 1 — EventBus, ConnectionPool, MainThreadQueue, core logic
+Tier 2 — lint compliance (no GL/SDL required)
+```
+
+## Common Patterns
+
+**Async Testing:**
+Not implemented; application architecture doesn't use async I/O testing.
+
+**Error Testing:**
+```cpp
+// Test error condition
+TEST_F(DatabaseTest, Execute_InvalidSQL) {
+    EXPECT_FALSE(m_db.execute("NOT VALID SQL"));
+    EXPECT_FALSE(m_db.lastError().empty());
+}
+
+// Test optional returns
+TEST_F(ModelRepoTest, FindById_NotFound) {
+    auto found = m_repo->findById(999);
+    EXPECT_FALSE(found.has_value());
+}
+
+// Test exception safety (rare in this codebase)
+TEST_F(EventBusTest, ThrowingHandler_DoesNotStopOthers) {
+    // (EventBus itself doesn't throw; handlers are responsible)
+}
+```
+
+**Test Independence:**
+- Each test is independent; no test should depend on another
+- SetUp/TearDown ensures clean state for each test
+- Use anonymous namespace `namespace {}` to avoid test name collisions
+- Temporary files cleaned up in TearDown
+
+**Assertion Order:**
+```cpp
+// ASSERT_* for setup/preconditions (stops test on failure)
+ASSERT_TRUE(m_db.open(":memory:"));
+ASSERT_TRUE(dw::Schema::initialize(m_db));
+
+// EXPECT_* for actual test assertions (continues to show all failures)
+EXPECT_EQ(actual, expected);
+EXPECT_TRUE(condition);
+```
+
+## Test Data Management
+
+**In-Memory Databases:**
+```cpp
+// From fixture
+void SetUp() override {
+    ASSERT_TRUE(m_db.open(":memory:"));  // RAM-based, cleared per test
+    ASSERT_TRUE(dw::Schema::initialize(m_db));
+}
+```
+
+**Temporary Files:**
+```cpp
+// From fixture
+void SetUp() override {
+    m_tmpDir = std::filesystem::temp_directory_path() / "dw_test_component";
+    std::filesystem::create_directories(m_tmpDir);
+}
+
+void TearDown() override {
+    std::filesystem::remove_all(m_tmpDir);  // Clean up after test
+}
+```
+
+**Builder Pattern:**
+```cpp
+// Helper to create valid test objects
+dw::ModelRecord makeModel(const std::string& hash, const std::string& name) {
+    dw::ModelRecord rec;
+    rec.hash = hash;
+    rec.name = name;
+    // ... set required fields
+    return rec;
+}
+```
+
+## Building and Running Tests
+
+**Build configuration (CMakeLists.txt):**
+```cmake
+# Enable testing
+if(DW_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
+# In tests/CMakeLists.txt:
+add_executable(dw_tests ${DW_TEST_SOURCES} ${DW_TEST_DEPS})
+target_link_libraries(dw_tests PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+    imgui
+    glm::glm
+    SQLite::SQLite3
+    ZLIB::ZLIB
+)
+```
+
+**Dependencies included in tests:**
+- GoogleTest (gtest, gtest_main)
+- Core libraries: imgui, glm, SQLite3, ZLIB
+- Main source files compiled together with tests
+
+**Test discovery:**
+```cmake
+include(GoogleTest)
+gtest_discover_tests(dw_tests)  # Automatically registers tests with CTest
+```
+
+## Special Considerations
+
+**Threading Tests:**
+- EventBus requires main thread initialization: `dw::threading::initMainThread()`
+- Use in EventBusTest fixture: `void SetUp() override { dw::threading::initMainThread(); }`
+- No concurrent tests (application is single-threaded for UI)
+
+**GL-Dependent Code:**
+- Classes requiring SDL/OpenGL skipped in test suite
+- Stub implementation provided: `stub_thumbnail_generator.cpp`
+- This allows core logic to be tested without GUI dependencies
+
+**Lint Compliance Tests:**
+- `test_lint_compliance.cpp` verifies code formatting
+- Checks: trailing whitespace, proper newlines, line length (100 chars max)
+- Enforces clang-format compliance at test time
 
 ---
 
-*Testing analysis: 2026-02-08*
+*Testing analysis: 2026-02-19*

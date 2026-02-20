@@ -1,355 +1,228 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-02-08
+**Analysis Date:** 2026-02-19
 
 ## Naming Patterns
 
 **Files:**
-- Headers: `snake_case.h` (e.g., `string_utils.h`, `stl_loader.h`)
-- Implementation: `snake_case.cpp` (e.g., `mesh.cpp`, `database.cpp`)
-- Pattern: lowercase with underscores for multi-word names
+- Headers: `PascalCase.h` (e.g., `database.h`, `event_bus.h`, `model_repository.h`)
+- Source: `snake_case.cpp` corresponding to header names (e.g., `database.cpp` matches `database.h`)
+- Test files: `test_<component>.cpp` (e.g., `test_database.cpp`, `test_event_bus.cpp`)
 
 **Functions:**
-- Member functions: `camelCase` (e.g., `recalculateBounds()`, `bindText()`, `formatFileSize()`)
-- Free functions: `camelCase` (e.g., `trim()`, `toLower()`, `loadSTL()`)
-- Private helper functions: `camelCase` (e.g., `loadBinary()`, `isBinary()`)
-- Getter/setter patterns: `propertyName()` and `setPropertyName()` (e.g., `vertices()`, `setName()`)
+- Public methods: `camelCase` (e.g., `findById()`, `insertModel()`, `isOpen()`)
+- Private helper methods: `camelCase` with `m_` prefix for members (e.g., `m_db`, `m_handlers`)
+- Free functions in utility modules: `camelCase` (e.g., `trim()`, `split()`, `toLower()`)
 
 **Variables:**
-- Local variables: `camelCase` (e.g., `vertexCount`, `currentTime`, `meshPtr`)
-- Parameters: `camelCase` (e.g., `moduleName`, `formatString`, `archivePath`)
-- Function parameters with trailing underscore if conflicts with member: `name_` (e.g., in Color constructor: `r_`, `g_`, `b_`)
+- Member variables: `m_<name>` prefix with camelCase (e.g., `m_db`, `m_handlers`, `m_tmpDir`)
+- Local variables: `camelCase` (e.g., `callCount`, `receivedId`, `triCount`)
+- Constants: `camelCase` (e.g., `kFormatBufSize = 1024`)
+- STL containers/pointers: no special prefix, use type hints in names (e.g., `handlers`, `allModels`, `stmt`)
 
 **Types:**
-- Classes: `PascalCase` (e.g., `Mesh`, `Database`, `STLLoader`, `MeshLoader`)
-- Enums: `PascalCase` (e.g., `Level`, `CostCategory`)
-- Structs: `PascalCase` (e.g., `Color`, `LoadResult`, `ArchiveResult`, `Vertex`)
-- Type aliases: `PascalCase` (e.g., `Vec2`, `Vec3`, `Mat4`, `ByteBuffer`, `Path`)
-- Namespaces: `lower_case` (e.g., `dw`, `dw::log`, `dw::str`)
-
-**Constants and Enumerators:**
-- Global constants: `UPPER_CASE` (e.g., `kFormatBufSize`, `kTruncationSuffix` - with `k` prefix by convention)
-- Enum values: `PascalCase` (e.g., `Level::Debug`, `CostCategory::Material`)
-
-**Member Variables:**
-- Private/protected: `m_camelCase` prefix (e.g., `m_vertices`, `m_bounds`, `m_logFile`, `m_autoOriented`)
-- Public: avoid direct public data; use accessors
-
-**Type Aliases in Core Types:**
-```cpp
-// Integer types
-using i8 = std::int8_t;
-using i16 = std::int16_t;
-using i32 = std::int32_t;
-using i64 = std::int64_t;
-using u8 = std::uint8_t;
-using u16 = std::uint16_t;
-using u32 = std::uint32_t;
-using u64 = std::uint64_t;
-
-// Floating point
-using f32 = float;
-using f64 = double;
-
-// Size type
-using usize = std::size_t;
-
-// 3D math types
-using Vec2 = glm::vec2;
-using Vec3 = glm::vec3;
-using Vec4 = glm::vec4;
-using Mat4 = glm::mat4;
-```
-Defined in `src/core/types.h` - use these consistently throughout codebase.
+- Classes: `PascalCase` (e.g., `Database`, `EventBus`, `ModelRepository`, `LibraryManager`)
+- Structs: `PascalCase` (e.g., `ModelRecord`, `ImportResult`, `Color`)
+- Type aliases: `PascalCase` (e.g., `i64`, `u32`, `Vec3`, `MeshPtr`)
+- Enums: `PascalCase` with values in `PascalCase` (e.g., `Level::Debug`, `MaterialCategory::Wood`)
+- Namespaces: `lowercase` for nested utility namespaces (e.g., `dw::str`, `dw::file`, `dw::threading`, `dw::log`)
 
 ## Code Style
 
 **Formatting:**
-- Tool: `clang-format` (enforced via `.clang-format` config)
-- Indentation: 4 spaces (never tabs)
+- Tool: clang-format (config: `.clang-format`)
+- Indentation: 4 spaces, never tabs
 - Column limit: 100 characters
-- Configuration file: `.clang-format`
+- Line endings: LF (Unix style)
 
 **Linting:**
-- Tool: `clang-tidy` with custom checks
-- Configuration file: `.clang-tidy`
-- Policy: ZERO suppression - fix code rather than add NOLINT suppressions
-- Enforced checks: `bugprone-*`, `cppcoreguidelines-*`, `misc-*`, `modernize-*`, `performance-*`, `readability-*`
-- Specific exclusions: magic numbers, pointer arithmetic (legacy code patterns), reinterpret casts, union access
-- Warnings treated as errors: All checks converted to errors for CI/build
+- Enforced via lint compliance test: `test_lint_compliance.cpp`
+- Checks for trailing whitespace, missing newlines, line length violations
+- Run as part of test suite
 
 **Brace Style:**
-- Attach braces to control structures (no next-line opening braces)
-- Single-statement blocks on separate line (never inline)
-- Empty blocks allowed on single line
-- Constructor initializers: break before comma, one per line
+- Attach braces to same line: `void foo() {`
+- Single-line blocks only if empty: `if (x) {}`
+- Multi-line: each statement on own line
 
-**Spacing:**
-- No space after C-style casts
-- Space after template keyword
-- Space before assignment operators
-- Space before parentheses in control statements (if, while, for, switch)
-- No spaces in empty parentheses `()`
-- No spaces in angle brackets `<>`
-- No spaces in parentheses `()`
-- No spaces in square brackets `[]`
-
-**Pointer and Reference Alignment:**
-- Left-aligned: `const Vertex* v` not `const Vertex *v`
-- Applies to both pointers and references
-
-**Include Organization:**
-Priority order enforced by clang-format:
-1. C++ standard library includes: `<cstdint>`, `<string>`, etc.
-2. Third-party includes: `<glm/glm.hpp>`, `<gtest/gtest.h>`, etc.
-3. Project headers: `"core/types.h"`, `"mesh/mesh.h"`, etc.
-Sort within each category alphabetically.
+**Pointer/Reference Alignment:**
+- Pointers and references left-aligned: `int* ptr`, `int& ref`, not `int *ptr` or `int & ref`
+- This matches pointer ownership being part of the type system
 
 ## Import Organization
 
-**Pattern:** Three categories sorted by priority
+**Order (clang-format enforced):**
+1. C++ standard library (`<algorithm>`, `<functional>`, `<memory>`, `<vector>`)
+2. Third-party headers (`<glm/glm.hpp>`, `<gtest/gtest.h>`, `<sqlite3.h>`)
+3. Project headers in quotes (`"core/database/database.h"`, `"core/types.h"`)
 
-```cpp
-// 1. Standard library (C and C++)
-#include <algorithm>
-#include <cmath>
-#include <memory>
-#include <string>
-#include <vector>
+**Path Aliases:**
+- All includes from project use `"core/..."` prefix (no relative paths)
+- Include directories configured in CMake: `${CMAKE_SOURCE_DIR}/src` and `${CMAKE_BINARY_DIR}/generated`
+- Leaf modules (tests) include from root: `#include "core/utils/log.h"` not `#include "../core/utils/log.h"`
 
-// 2. Third-party libraries
-#include <glm/glm.hpp>
-#include <gtest/gtest.h>
-#include <sqlite3.h>
-
-// 3. Project headers (relative to src/)
-#include "core/types.h"
-#include "core/mesh/mesh.h"
-#include "core/utils/log.h"
-```
+**Namespace Organization:**
+- Main namespace: `dw` (Digital Workshop)
+- Nested namespaces for utility categories: `dw::str`, `dw::file`, `dw::threading`, `dw::log`
+- Anonymous namespace `namespace {}` in `.cpp` files for file-local helpers and test fixtures
+- Each header fully qualified: `namespace dw { ... }` with closing comment `} // namespace dw`
 
 ## Error Handling
 
-**Pattern 1: LoadResult struct with optional mesh**
-Used in loaders and operations returning optional data with error context.
-- Definition: `struct LoadResult { MeshPtr mesh; std::string error; bool success() const; }`
-- Location: `src/core/loaders/loader.h`
-- Example: `src/core/loaders/stl_loader.cpp` - returns `LoadResult` with mesh or error message
-- Usage: Check `if (result.success())` or `if (result.mesh)` before accessing data
+**Patterns:**
+- **Optional returns**: Use `std::optional<T>` for operations that may fail (e.g., `findById(i64 id)` returns `std::optional<ModelRecord>`)
+- **Check with `.has_value()`**: `if (result.has_value()) { auto value = result.value(); }`
+- **Database operations**: Return `bool` for success/failure; use `lastError()` method to get error message
+- **No exceptions for control flow**: C++ exceptions not used for expected failures, only for truly exceptional conditions
+- **Assertions for preconditions**: Use `ASSERT_*` macros in tests to catch setup failures, `EXPECT_*` for actual test assertions
 
+**Example pattern from codebase:**
 ```cpp
-struct LoadResult {
-    MeshPtr mesh;
-    std::string error;
+// Option 1: optional return with value() call
+std::optional<ModelRecord> found = m_repo->findById(42);
+if (found.has_value()) {
+    processModel(found.value());
+}
 
-    bool success() const { return mesh != nullptr; }
-    operator bool() const { return success(); }
-};
+// Option 2: optional return with optional chaining (C++23 style)
+if (auto found = m_repo->findById(42)) {
+    processModel(found.value());
+}
 
-LoadResult load(const Path& path) {
-    auto data = readFile(path);
-    if (!data) {
-        return LoadResult{nullptr, "Failed to read file"};
-    }
-    // ... parse data
-    return LoadResult{std::make_shared<Mesh>(vertices, indices), ""};
+// Option 3: database bool return with error check
+if (!m_db.execute(sql)) {
+    logError("Failed to execute: " + m_db.lastError());
 }
 ```
-
-**Pattern 2: ArchiveResult struct with success flag and error message**
-Used in operations where error messages are critical for user feedback.
-- Definition: `struct ArchiveResult { bool success; std::string error; std::vector<std::string> files; }`
-- Location: `src/core/archive/archive.h`
-- Factory methods: `ArchiveResult::ok()`, `ArchiveResult::fail()`
-- Example: `src/core/archive/archive.cpp`
-
-```cpp
-struct ArchiveResult {
-    bool success = false;
-    std::string error;
-    std::vector<std::string> files;
-
-    static ArchiveResult ok(std::vector<std::string> files = {}) {
-        return {true, "", std::move(files)};
-    }
-
-    static ArchiveResult fail(const std::string& error) {
-        return {false, error, {}};
-    }
-};
-```
-
-**Pattern 3: Database::Statement with bool return codes**
-For database operations - check return value before proceeding.
-- Returns: `true` for success, `false` for failure
-- Error access: `Database::lastError()` for context
-- Location: `src/core/database/database.h`
-- Example: `src/tests/test_database.cpp`
-
-```cpp
-auto stmt = db.prepare("INSERT INTO items (name) VALUES (?)");
-if (!stmt.bindText(1, "value")) {
-    LOG_ERROR("db", "Bind failed: {}", db.lastError());
-    return;
-}
-if (!stmt.execute()) {
-    LOG_ERROR("db", "Execute failed: {}", db.lastError());
-    return;
-}
-```
-
-**Pattern 4: Optional results with std::optional**
-Used in `src/core/types.h` - generic optional result type.
-- Template alias: `template <typename T> using Result = std::optional<T>;`
-- Check with: `if (result.has_value())` or `if (result)`
-- Access with: `*result` or `result.value()`
-
-**Policy on error messages:**
-- Always include context (what operation was attempted)
-- Avoid generic "Error" messages - be specific
-- Include relevant file paths or identifiers
-- Use lowercase for message body, capitalize module names
 
 ## Logging
 
-**Framework:** Custom `dw::log` namespace in `src/core/utils/log.h`
-
-**Levels:**
-- `Level::Debug` - Development-only diagnostics (disabled in release builds)
-- `Level::Info` - General operational information (default minimum)
-- `Level::Warning` - Recoverable issues or suspicious conditions
-- `Level::Error` - Unrecoverable errors or critical failures
-
-**API:**
-```cpp
-dw::log::debug(module, message);    // Simple message
-dw::log::info(module, message);
-dw::log::warning(module, message);
-dw::log::error(module, message);
-
-// Formatted logging (printf-style)
-dw::log::debugf(module, "format", args...);
-dw::log::infof(module, "format", args...);
-dw::log::warningf(module, "format", args...);
-dw::log::errorf(module, "format", args...);
-```
+**Framework:** Custom module-based logging in `core/utils/log.h`
+- Levels: `Debug`, `Info`, `Warning`, `Error`
+- Default: Info in release, Debug in debug builds
 
 **Patterns:**
-- Module name first parameter: typically source filename or subsystem name (e.g., "stl_loader", "database", "renderer")
-- Use formatted variants (`debugf`, `infof`, etc.) for complex messages
-- Set log file with `dw::log::setLogFile(path)` if persistent logging needed
-- Example from `src/core/utils/log.cpp`:
+- Use module string as first parameter: `log::info("LibraryManager", "Imported model");`
+- Formatted logging: `log::infof("Database", "Query returned %d rows", count);`
+- Printf-style with format specifiers: `%d` (int), `%ld` (long), `%f` (float), `%s` (string)
+- Level check optimization: use `if (getLevel() <= Level::Debug)` before expensive logging
 
+**Example from codebase:**
 ```cpp
-std::cerr << color << "[" << timestamp << "] [" << levelStr << "] "
-          << "[" << module << "] " << reset << message << std::endl;
+log::debug("EventBus", "Published event");
+log::warningf("Database", "Connection pool exhausted (%d/%d)", active, max);
+log::error("LibraryManager", "Failed to load mesh: " + filePath.string());
 ```
 
 ## Comments
 
 **When to Comment:**
-- Complex algorithms or non-obvious logic (e.g., auto-orientation math in `src/core/mesh/mesh.cpp`)
-- Why a decision was made, not what the code does
-- Algorithm explanations (e.g., "Compute face normals before smoothing")
-- Non-standard patterns or workarounds
-- Avoid comments for obvious code: `x = x + 1; // increment x` is noise
+- **No obvious comments**: Don't comment what code already says: `i++; // increment i` is noise
+- **Why comments**: Explain non-obvious reasoning: why a workaround exists, why locking is needed, why a specific order matters
+- **Complex logic**: For algorithms or business rules that aren't immediately clear
+- **Public API docs**: Use header comments for class/function purpose
 
-**Format:**
-- Single-line: `// Comment here`
-- Block style: Each line prefixed with `//`
-- Trailing comments for brief clarifications: `const int MAX_SIZE = 256; // per STL spec`
-
-**JSDoc/TSDoc:**
-Not used - this is a C++ codebase, not JavaScript/TypeScript. Use inline comments in headers for API documentation.
-
-**Header Documentation Pattern:**
-Brief comment above declarations:
+**JSDoc/Doxygen style:**
+- Not enforced; optional for public APIs
+- When used, follow standard pattern:
 ```cpp
-// Trim whitespace from both sides
-std::string trim(std::string_view s);
-
-// Create a copy
-Mesh clone() const;
-
-// Validate mesh integrity (checks for NaN, out-of-bounds indices, degenerate triangles)
-// Returns true if mesh passes all checks. Logs warnings for issues found.
-bool validate() const;
+// Load a 3D model mesh from disk
+// Returns nullptr if file not found or format unsupported
+MeshPtr loadMesh(const Path& filePath);
 ```
+
+**Inline comments:**
+- Sparingly; prefer self-documenting code
+- Use `// NOTE:` for important context
+- Use `// THREADING:` to document concurrency contracts
+- Single-line with `//`, no block `/* */` comments for inline
 
 ## Function Design
 
-**Size Guidelines (from clang-tidy config):**
-- Line threshold: 50 lines per function
-- Parameter threshold: 4 parameters maximum
-- Cognitive complexity threshold: 25
-- Functions exceeding these should be refactored
+**Size:** Keep functions focused on single responsibility
+- Small helpers: 5-20 lines typical
+- Complex logic: up to 50-100 lines acceptable if cohesive
+- Decompose larger functions into named helpers
 
 **Parameters:**
-- Pass small types (int, float, enums) by value
-- Pass objects by `const` reference: `const std::string&`, `const Mesh&`
-- Use `std::string_view` for string parameters to avoid temporary copies
-- Output parameters allowed but prefer return values or optional/result structs
-- Example from `src/core/utils/string_utils.h`:
-```cpp
-std::string trim(std::string_view s);
-std::vector<std::string> split(std::string_view s, char delimiter);
-bool parseInt(std::string_view s, int& out);  // Output parameter for parse results
-```
+- Prefer const references for input parameters: `const ModelRecord& model`
+- Use pointers for optional output: `void getStatus(int* outCode)` (rare)
+- Avoid output parameters; prefer return types or std::optional
 
 **Return Values:**
-- Prefer explicit return values over output parameters
-- Use `[[nodiscard]]` attribute for important return values
-- Return structures with context when needed (LoadResult, ArchiveResult)
-- Example with nodiscard:
-```cpp
-[[nodiscard]] bool bindText(int index, const std::string& value);
-[[nodiscard]] bool execute();
-[[nodiscard]] LoadResult load(const Path& path);
-```
+- Use `std::optional<T>` for operations that may not produce a result
+- Return by value for small types (primitives, Vec3, Color)
+- Return const reference for large read-only structures when available
+- Return bool only for yes/no operations
 
-**RAII Pattern (Resource Acquisition Is Initialization):**
-Used extensively for resource management:
-- Statement wrapper auto-cleanup in `src/core/database/database.h`
-- Database connection auto-close in destructor
-- File handles managed through RAII
-- Move semantics for efficient resource transfer
-
+**Example pattern:**
 ```cpp
-class Statement {
-    Statement(const Statement&) = delete;              // No copying
-    Statement& operator=(const Statement&) = delete;
-    Statement(Statement&& other) noexcept;             // Move allowed
-    Statement& operator=(Statement&& other) noexcept;
-};
+// Prefer this:
+std::optional<ModelRecord> findById(i64 id);
+
+// Over this:
+bool findById(i64 id, ModelRecord& outRecord);
 ```
 
 ## Module Design
 
-**Header Structure:**
-- Begin with `#pragma once` (not include guards)
-- Includes in standard/third-party/project order
-- Namespace declaration: `namespace dw { ... }`
-- Closing brace with namespace comment: `} // namespace dw`
-
 **Exports:**
-- Public API in header files
-- Implementation in `.cpp` files
-- Private functions in anonymous namespace in `.cpp`
+- Headers declare public interface; keep implementation in `.cpp`
+- Use `#pragma once` guards (not macro guards)
+- Header must be self-contained: include all dependencies it references
 
 **Barrel Files:**
-Not used in this codebase - import individual headers.
+- Not used; include directly from source modules
+- No single `#include "core/all.h"` pattern
 
-**Const Correctness:**
-- Member functions that don't modify state: `const`
-- Parameters that aren't modified: `const`
-- Return const references when appropriate
-- Example from `src/core/mesh/mesh.h`:
+**Class Design:**
+- Public constructor that sets up dependencies (e.g., `explicit ModelRepository(Database& db)`)
+- Member variables private with `m_` prefix
+- No getters/setters unless needed; expose via methods
+- RAII pattern for resources (constructors acquire, destructors release)
+
+**Example from codebase (ModelRepository):**
 ```cpp
-const std::vector<Vertex>& vertices() const { return m_vertices; }
-std::vector<Vertex>& vertices() { return m_vertices; }
-const AABB& bounds() const { return m_bounds; }
+class ModelRepository {
+  public:
+    explicit ModelRepository(Database& db);
+    std::optional<i64> insert(const ModelRecord& model);
+    std::optional<ModelRecord> findById(i64 id);
+    bool update(const ModelRecord& model);
+
+  private:
+    static ModelRecord rowToMaterial(Statement& stmt);
+    Database& m_db;
+};
 ```
+
+## Type System
+
+**Type Aliases (in `core/types.h`):**
+- Signed integers: `i8`, `i16`, `i32`, `i64` (replacing `int8_t`, `int32_t`, etc.)
+- Unsigned integers: `u8`, `u16`, `u32`, `u64`
+- Floating point: `f32` (float), `f64` (double)
+- Size type: `usize` (std::size_t)
+- 3D math: `Vec2`, `Vec3`, `Vec4`, `Mat4` (GLM aliases)
+- Filesystem: `Path` (std::filesystem::path alias)
+- Result type: `Result<T>` = `std::optional<T>`
+- Buffer type: `ByteBuffer` (std::vector<u8>)
+
+**Use these types consistently across the codebase** - never mix `int32_t` with `i32`, or `float` with `f32`.
+
+## Standard Library Usage
+
+**Preferred patterns:**
+- Containers: `std::vector`, `std::string`, `std::optional`, `std::unordered_map`
+- Memory: `std::unique_ptr`, `std::shared_ptr`, explicit ownership semantics
+- Strings: `std::string_view` for read-only parameters to avoid copies
+- Algorithms: use STL algorithms (`std::find`, `std::any_of`, etc.) sparingly; simple loops are often clearer
+
+**Avoid:**
+- Raw pointers for ownership (use smart pointers)
+- C-style arrays (use `std::vector`)
+- `printf` style logging (use log framework)
 
 ---
 
-*Convention analysis: 2026-02-08*
+*Convention analysis: 2026-02-19*

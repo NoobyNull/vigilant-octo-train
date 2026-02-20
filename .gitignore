@@ -74,3 +74,4 @@ settings.json
 # Claude/Ralph directories (keep in git)
 !.claude/
 !.ralph/
+.planning/

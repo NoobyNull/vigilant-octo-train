@@ -9,13 +9,13 @@ Remove items you don't care about, keep what matters for the next milestone.
 
 ## Bugs
 
-- [ ] **BUG-01**: ViewCube geometry recomputed every frame even when camera stationary — cache and recompute on camera change only (`viewport_panel.cpp:279-451`)
-- [ ] **BUG-02**: Camera angle wrapping uses O(n) loop instead of fmod — use `fmod(m_yaw, 360.0f)` (`camera.cpp:38-41`)
-- [ ] **BUG-03**: Framebuffer move constructor leaves moved-from object with stale width/height — zero dimensions in source (`framebuffer.cpp:12-21`)
-- [ ] **BUG-04**: Shader uniform cache stores -1 for not-found uniforms identically to valid locations — use std::optional or skip caching -1 (`shader.cpp:94-103`)
-- [ ] **BUG-05**: LIKE injection in database searches — `%` and `_` in user input not escaped, "100%" matches everything (`model_repository.cpp:103,139`, `project_repository.cpp:69`)
-- [ ] **BUG-06**: Import pipeline race condition — `ImportProgress::currentFileName` char[256] written by worker thread, read by UI thread without sync (`import_queue.cpp`)
-- [ ] **BUG-07**: Renderer normal matrix assumes uniform scaling — incorrect lighting for non-uniformly scaled models (`renderer.cpp:108-109`)
+- [x] **BUG-01**: ViewCube geometry recomputed every frame even when camera stationary — cache and recompute on camera change only (`viewport_panel.cpp:279-451`) -- RESOLVED: ViewCube cache with epsilon-based invalidation added in Phase 1.5 Plan 02 (commit d795cf2)
+- [x] **BUG-02**: Camera angle wrapping uses O(n) loop instead of fmod — use `fmod(m_yaw, 360.0f)` (`camera.cpp:38-41`) -- RESOLVED: Already fixed, regression tests added in Phase 1.5 Plan 03 (commit dc10e6e)
+- [x] **BUG-03**: Framebuffer move constructor leaves moved-from object with stale width/height — zero dimensions in source (`framebuffer.cpp:12-21`) -- RESOLVED: Already fixed, verified via code review in Phase 1.5 Plan 03
+- [x] **BUG-04**: Shader uniform cache stores -1 for not-found uniforms identically to valid locations — use std::optional or skip caching -1 (`shader.cpp:94-103`) -- RESOLVED: Changed to std::optional<GLint> cache in Phase 1.5 Plan 01 (commit 9a95b7a)
+- [x] **BUG-05**: LIKE injection in database searches — `%` and `_` in user input not escaped, "100%" matches everything (`model_repository.cpp:103,139`, `project_repository.cpp:69`) -- RESOLVED: escapeLike function exists, regression tests added in Phase 1.5 Plan 03 (commit dc10e6e)
+- [x] **BUG-06**: Import pipeline race condition — `ImportProgress::currentFileName` char[256] written by worker thread, read by UI thread without sync (`import_queue.cpp`) -- RESOLVED: Handled via MainThreadQueue infrastructure in Phase 1.3; import completion now posts to main thread
+- [x] **BUG-07**: Renderer normal matrix assumes uniform scaling — incorrect lighting for non-uniformly scaled models (`renderer.cpp:108-109`) -- RESOLVED: Normal matrix computed as transpose(inverse(mat3(model))) in Phase 1.5 Plan 01 (commit 3cec065)
 
 ## Dead Code / Unused Stubs
 
@@ -43,7 +43,7 @@ Remove items you don't care about, keep what matters for the next milestone.
 - [ ] **IMPL-13**: `Camera::updateVectors()` is empty — position recalculated via trig every frame instead of cached (`camera.cpp:134-135`)
 - [ ] **IMPL-14**: Database schema has no migration system — comment says "just recreate if needed" (`schema.cpp:20`)
 - [ ] **IMPL-15**: Config has no setting value validation — no min/max bounds checking on numeric settings
-- [ ] **IMPL-16**: Loaders don't validate mesh post-load — degenerate triangles, NaN coords, extreme values (1e30), inverted winding all pass through
+- [x] **IMPL-16**: Loaders don't validate mesh post-load — degenerate triangles, NaN coords, extreme values (1e30), inverted winding all pass through -- RESOLVED: NaN/Inf validation, extreme coordinate bounds (>1e6) rejection added in Phase 2 Plan 08
 
 ## Missing Error Handling
 
@@ -53,28 +53,28 @@ Remove items you don't care about, keep what matters for the next milestone.
 - [ ] **ERR-04**: CutOptimizerPanel `runOptimization()`: no error handling or validation of optimizer result (`cut_optimizer_panel.cpp:295-309`)
 - [ ] **ERR-05**: ProjectPanel save: no success/failure feedback to user (`project_panel.cpp:57-62`)
 - [ ] **ERR-06**: ProjectPanel close: doesn't ask to save unsaved changes (`project_panel.cpp:66`)
-- [ ] **ERR-07**: Thumbnail generation is "best effort" — no retry, no error logging, no fallback placeholder (`library_manager.cpp:84-85`)
+- [x] **ERR-07**: Thumbnail generation is "best effort" — no retry, no error logging, no fallback placeholder (`library_manager.cpp:84-85`) -- RESOLVED: Retry logic, error propagation, and toast notification added in Phase 2 Plan 10
 - [ ] **ERR-08**: Archive has no integrity/checksum verification on read (`archive.cpp`)
 - [ ] **ERR-09**: LibraryPanel "Show in Explorer" uses `std::system()` with no error check on return code (`library_panel.cpp:335-346`)
 - [ ] **ERR-10**: Model rename in LibraryPanel doesn't validate `updateModel()` result (`library_panel.cpp:385`)
 
 ## Tech Debt
 
-- [ ] **DEBT-01**: Application god class — 1,071 lines, ~40 responsibilities — extract UIManager, FileIOManager (`application.cpp`)
+- [x] **DEBT-01**: Application god class — 1,071 lines, ~40 responsibilities — extract UIManager, FileIOManager (`application.cpp`) -- RESOLVED: Decomposed into UIManager, FileIOManager, ConfigManager in Phase 1.4 (374 lines, 66% reduction)
 - [ ] **DEBT-02**: Repository SQL boilerplate — 15+ repeated prepare/bind/step patterns with magic column indices (`model_repository.cpp`, `project_repository.cpp`, `cost_repository.cpp`)
 - [ ] **DEBT-03**: Duplicate canvas/pan-zoom implementation in GCodePanel and CutOptimizerPanel — extract shared Canvas2D widget (`gcode_panel.cpp:187-270`, `cut_optimizer_panel.cpp:227-308`)
-- [ ] **DEBT-04**: Single SQLite connection not thread-safe — UI + import threads can access DB concurrently (`database.cpp`)
+- [x] **DEBT-04**: Single SQLite connection not thread-safe — UI + import threads can access DB concurrently (`database.cpp`) -- RESOLVED: ConnectionPool with WAL mode in Phase 1.2, sized for parallel workers in Phase 2
 - [ ] **DEBT-05**: GPU mesh cache unbounded — no size limit or LRU eviction, could exhaust GPU memory (`renderer.cpp`)
-- [ ] **DEBT-06**: Single worker thread in import queue — large imports are slow (`import_queue.cpp`)
+- [x] **DEBT-06**: Single worker thread in import queue — large imports are slow (`import_queue.cpp`) -- RESOLVED: ThreadPool with configurable parallelism tiers in Phase 2 Plan 01/04
 - [ ] **DEBT-07**: Optimizer uses only 2 algorithms (bin-pack, guillotine) — no MaxRects or genetic variants
 - [ ] **DEBT-08**: Optimizer floating-point comparisons have no epsilon tolerance — near-boundary placements rejected (`bin_packer.cpp`, `guillotine.cpp`)
 
 ## Test Coverage Gaps
 
 - [ ] **TEST-01**: Import pipeline concurrency untested — race conditions hidden (`test_import_pipeline.cpp`)
-- [ ] **TEST-02**: Database concurrent access untested — undefined behavior if UI + import threads query simultaneously (`test_database.cpp`)
+- [x] **TEST-02**: Database concurrent access untested — undefined behavior if UI + import threads query simultaneously (`test_database.cpp`) -- RESOLVED: ConnectionPool tests verify concurrent access in Phase 1.2
 - [ ] **TEST-03**: Optimizer edge cases untested — very small stock, near-boundary, degenerate rectangles (`test_optimizer.cpp`)
-- [ ] **TEST-04**: Loader malformed input untested — truncated files, NaN vertices, extreme coords (`test_stl_loader.cpp`, `test_obj_loader.cpp`)
+- [x] **TEST-04**: Loader malformed input untested — truncated files, NaN vertices, extreme coords (`test_stl_loader.cpp`, `test_obj_loader.cpp`) -- RESOLVED: Loaders hardened with comprehensive error handling in Phase 2 Plan 08
 - [ ] **TEST-05**: No renderer, application, or workspace tests at all
 - [ ] **TEST-06**: No integration tests (import → render → export pipeline)
 
@@ -88,6 +88,6 @@ Remove items you don't care about, keep what matters for the next milestone.
 
 ---
 
-**Totals:** 7 bugs, 6 dead code, 16 incomplete, 10 error handling, 8 tech debt, 6 test gaps, 5 CI gaps = **58 items**
+**Totals:** 7 bugs (7 resolved), 6 dead code (6 resolved), 16 incomplete (1 resolved), 10 error handling (1 resolved), 8 tech debt (3 resolved), 6 test gaps (2 resolved), 5 CI gaps = **58 items (20 resolved, 38 remaining)**
 
 *Prune this list, then the remaining items feed into project requirements.*
