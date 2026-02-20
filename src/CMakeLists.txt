@@ -100,6 +100,7 @@ set(DW_SOURCES
     # UI Panels
     ui/panels/viewport_panel.cpp
     ui/panels/library_panel.cpp
+    ui/panels/materials_panel.cpp
     ui/panels/properties_panel.cpp
     ui/panels/project_panel.cpp
     ui/panels/gcode_panel.cpp
