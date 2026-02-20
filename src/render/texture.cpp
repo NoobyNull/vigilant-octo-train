@@ -100,7 +100,8 @@ void Texture::unbind() const {
 // ---------------------------------------------------------------------------
 
 void Texture::setWrap(GLenum wrap) {
-    if (m_id == 0) return;
+    if (m_id == 0)
+        return;
     glBindTexture(GL_TEXTURE_2D, m_id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, static_cast<GLint>(wrap));
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, static_cast<GLint>(wrap));
@@ -108,7 +109,8 @@ void Texture::setWrap(GLenum wrap) {
 }
 
 void Texture::setFilter(GLenum minFilter, GLenum magFilter) {
-    if (m_id == 0) return;
+    if (m_id == 0)
+        return;
     glBindTexture(GL_TEXTURE_2D, m_id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, static_cast<GLint>(minFilter));
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(magFilter));
