@@ -80,6 +80,7 @@ class LibraryManager {
 
     // G-code operations
     std::vector<GCodeRecord> getAllGCodeFiles();
+    std::vector<GCodeRecord> searchGCodeFiles(const std::string& query);
     std::optional<GCodeRecord> getGCodeFile(i64 id);
     bool deleteGCodeFile(i64 id);
 

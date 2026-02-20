@@ -14,6 +14,7 @@
 
 #include <imgui.h>
 
+#include "../../core/utils/log.h"
 #include "../icons.h"
 
 namespace dw {
@@ -38,6 +39,7 @@ void LibraryPanel::clearTextureCache() {
 GLuint LibraryPanel::loadTGATexture(const Path& path) {
     std::ifstream file(path, std::ios::binary);
     if (!file) {
+        log::warningf("Library", "Failed to open TGA file: %s", path.string().c_str());
         return 0;
     }
 
@@ -45,17 +47,22 @@ GLuint LibraryPanel::loadTGATexture(const Path& path) {
     uint8_t header[18];
     file.read(reinterpret_cast<char*>(header), 18);
     if (!file) {
+        log::warningf("Library", "Failed to read TGA header: %s", path.string().c_str());
         return 0;
     }
 
     // Validate: uncompressed true-color (type 2), 32bpp
     if (header[2] != 2 || header[16] != 32) {
+        log::warningf("Library", "Unsupported TGA format (type=%d, bpp=%d): %s", header[2],
+                      header[16], path.string().c_str());
         return 0;
     }
 
     int width = header[12] | (header[13] << 8);
     int height = header[14] | (header[15] << 8);
     if (width <= 0 || height <= 0 || width > 4096 || height > 4096) {
+        log::warningf("Library", "Invalid TGA dimensions (%dx%d): %s", width, height,
+                      path.string().c_str());
         return 0;
     }
 
@@ -64,6 +71,7 @@ GLuint LibraryPanel::loadTGATexture(const Path& path) {
     std::vector<uint8_t> bgra(dataSize);
     file.read(reinterpret_cast<char*>(bgra.data()), static_cast<std::streamsize>(dataSize));
     if (!file) {
+        log::warningf("Library", "Failed to read TGA pixel data: %s", path.string().c_str());
         return 0;
     }
 
@@ -76,6 +84,7 @@ GLuint LibraryPanel::loadTGATexture(const Path& path) {
     GLuint texture = 0;
     glGenTextures(1, &texture);
     if (texture == 0) {
+        log::warning("Library", "Failed to create GL texture for thumbnail");
         return 0;
     }
 
@@ -135,6 +144,7 @@ void LibraryPanel::render() {
         }
 
         renderRenameDialog();
+        renderDeleteConfirm();
     }
     ImGui::End();
 }
@@ -146,8 +156,7 @@ void LibraryPanel::refresh() {
             m_gcodeFiles = m_library->getAllGCodeFiles();
         } else {
             m_models = m_library->searchModels(m_searchQuery);
-            // For now, G-code search is not implemented - show all
-            m_gcodeFiles = m_library->getAllGCodeFiles();
+            m_gcodeFiles = m_library->searchGCodeFiles(m_searchQuery);
         }
     }
 }
@@ -157,7 +166,8 @@ void LibraryPanel::renderToolbar() {
     float style = ImGui::GetStyle().ItemSpacing.x;
 
     // Calculate actual button widths dynamically
-    float refreshBtnW = ImGui::CalcTextSize(Icons::Refresh).x + ImGui::GetStyle().FramePadding.x * 2;
+    float refreshBtnW =
+        ImGui::CalcTextSize(Icons::Refresh).x + ImGui::GetStyle().FramePadding.x * 2;
     const char* viewIcon = m_showThumbnails ? Icons::Grid : Icons::List;
     float viewBtnW = ImGui::CalcTextSize(viewIcon).x + ImGui::GetStyle().FramePadding.x * 2;
     float buttonsW = refreshBtnW + viewBtnW + style * 2; // 2 SameLine gaps
@@ -170,7 +180,7 @@ void LibraryPanel::renderToolbar() {
 
     ImGui::SetNextItemWidth(searchWidth);
     if (ImGui::InputTextWithHint(
-            "##Search", "Search models...", m_searchQuery.data(), 256,
+            "##Search", "Search library...", m_searchQuery.data(), 256,
             ImGuiInputTextFlags_CallbackResize,
             [](ImGuiInputTextCallbackData* data) -> int {
                 if (data->EventFlag == ImGuiInputTextFlags_CallbackResize) {
@@ -374,10 +384,10 @@ void LibraryPanel::renderContextMenu(const ModelRecord& model) {
     }
 
     if (ImGui::MenuItem("Delete")) {
-        if (m_library) {
-            m_library->removeModel(model.id);
-            refresh();
-        }
+        m_showDeleteConfirm = true;
+        m_deleteItemId = model.id;
+        m_deleteIsGCode = false;
+        m_deleteItemName = model.name;
     }
 
     ImGui::Separator();
@@ -390,7 +400,10 @@ void LibraryPanel::renderContextMenu(const ModelRecord& model) {
                           SW_SHOWNORMAL);
 #else
             std::string cmd = "xdg-open \"" + parentDir.string() + "\"";
-            std::system(cmd.c_str());
+            int ret = std::system(cmd.c_str());
+            if (ret != 0) {
+                log::warningf("Library", "Failed to open file manager (exit code %d)", ret);
+            }
 #endif
         }
     }
@@ -560,10 +573,10 @@ void LibraryPanel::renderGCodeContextMenu(const GCodeRecord& gcode) {
     ImGui::Separator();
 
     if (ImGui::MenuItem("Delete")) {
-        if (m_library) {
-            m_library->deleteGCodeFile(gcode.id);
-            refresh();
-        }
+        m_showDeleteConfirm = true;
+        m_deleteItemId = gcode.id;
+        m_deleteIsGCode = true;
+        m_deleteItemName = gcode.name;
     }
 
     ImGui::Separator();
@@ -577,9 +590,45 @@ void LibraryPanel::renderGCodeContextMenu(const GCodeRecord& gcode) {
                           nullptr, SW_SHOWNORMAL);
 #else
             std::string cmd = "xdg-open \"" + parentDir.string() + "\"";
-            std::system(cmd.c_str());
+            int ret = std::system(cmd.c_str());
+            if (ret != 0) {
+                log::warningf("Library", "Failed to open file manager (exit code %d)", ret);
+            }
 #endif
         }
+    }
+}
+
+void LibraryPanel::renderDeleteConfirm() {
+    if (m_showDeleteConfirm) {
+        ImGui::OpenPopup("Delete Item?");
+        m_showDeleteConfirm = false;
+    }
+
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+    if (ImGui::BeginPopupModal("Delete Item?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Delete \"%s\"?", m_deleteItemName.c_str());
+        ImGui::TextDisabled("This action cannot be undone.");
+        ImGui::Spacing();
+
+        if (ImGui::Button("Delete", ImVec2(120, 0))) {
+            if (m_library) {
+                if (m_deleteIsGCode) {
+                    m_library->deleteGCodeFile(m_deleteItemId);
+                } else {
+                    m_library->removeModel(m_deleteItemId);
+                }
+                refresh();
+            }
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
     }
 }
 
@@ -618,8 +667,11 @@ void LibraryPanel::renderRenameDialog() {
                 auto record = m_library->getModel(m_renameModelId);
                 if (record) {
                     record->name = newName;
-                    m_library->updateModel(*record);
-                    refresh();
+                    if (m_library->updateModel(*record)) {
+                        refresh();
+                    } else {
+                        log::error("Library", "Failed to rename model");
+                    }
                 }
             }
             ImGui::CloseCurrentPopup();

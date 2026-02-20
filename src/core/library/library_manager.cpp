@@ -210,6 +210,10 @@ std::vector<GCodeRecord> LibraryManager::getAllGCodeFiles() {
     return m_gcodeRepo.findAll();
 }
 
+std::vector<GCodeRecord> LibraryManager::searchGCodeFiles(const std::string& query) {
+    return m_gcodeRepo.findByName(query);
+}
+
 std::optional<GCodeRecord> LibraryManager::getGCodeFile(i64 id) {
     return m_gcodeRepo.findById(id);
 }
