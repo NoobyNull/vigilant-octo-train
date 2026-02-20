@@ -33,7 +33,10 @@ class Camera {
 
     // Properties
     const Vec3& target() const { return m_target; }
-    void setTarget(const Vec3& target) { m_target = target; }
+    void setTarget(const Vec3& target) {
+        m_target = target;
+        updateVectors();
+    }
 
     f32 distance() const { return m_distance; }
     void setDistance(f32 distance);
@@ -87,6 +90,9 @@ class Camera {
     f32 m_maxDistance = 10000.0f;
     f32 m_minPitch = -89.0f;
     f32 m_maxPitch = 89.0f;
+
+    // Cached derived values (updated by updateVectors)
+    Vec3 m_cachedPosition{0.0f, 0.0f, 0.0f};
 
     // Stored bounds for reset
     Vec3 m_lastBoundsCenter{0.0f, 0.0f, 0.0f};
