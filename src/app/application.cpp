@@ -251,6 +251,23 @@ bool Application::init() {
             if (m_uiManager->viewportPanel())
                 m_uiManager->viewportPanel()->renderSettings().objectColor = color;
         });
+        m_uiManager->propertiesPanel()->setOnGrainDirectionChanged([this](float degrees) {
+            auto mesh = m_workspace->getFocusedMesh();
+            if (!mesh)
+                return;
+            mesh->generatePlanarUVs(degrees);
+            if (m_uiManager->viewportPanel())
+                m_uiManager->viewportPanel()->setMesh(mesh);
+        });
+        m_uiManager->propertiesPanel()->setOnMaterialRemoved([this]() {
+            if (m_materialManager && m_focusedModelId > 0)
+                m_materialManager->clearMaterialAssignment(m_focusedModelId);
+            m_activeMaterialTexture.reset();
+            m_activeMaterialId = -1;
+            if (m_uiManager->viewportPanel()) {
+                m_uiManager->viewportPanel()->setMaterialTexture(nullptr);
+            }
+        });
     }
 
     // Wire MaterialsPanel callbacks
