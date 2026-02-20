@@ -65,5 +65,8 @@ std::vector<std::string> listEntries(const Path& directory);
 // Get file size (convenience wrapper)
 u64 fileSize(const Path& path);
 
+// Open a path in the system file manager (no shell injection risk)
+void openInFileManager(const Path& path);
+
 } // namespace file
 } // namespace dw

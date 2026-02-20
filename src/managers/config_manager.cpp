@@ -2,9 +2,12 @@
 
 #include "managers/config_manager.h"
 
-#include <cstdio>
 #include <cstdlib>
 #include <string>
+
+#ifndef _WIN32
+    #include <unistd.h>
+#endif
 
 #include "core/config/config.h"
 #include "core/config/config_watcher.h"
@@ -102,7 +105,8 @@ void ConfigManager::spawnSettingsApp() {
         ShellExecuteW(nullptr, L"open", settingsPath.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
     }
 #elif defined(__linux__)
-    // Resolve path relative to the running executable
+    // Resolve path relative to the running executable, launch via fork/exec
+    // to avoid shell injection from directory names with special characters
     char exePath[1024] = {};
     ssize_t len = readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
     if (len > 0) {
@@ -112,16 +116,18 @@ void ConfigManager::spawnSettingsApp() {
         if (slash != std::string::npos) {
             dir = dir.substr(0, slash);
         }
-        std::string cmd = "\"" + dir + "/dw_settings\" &";
-        int ret = std::system(cmd.c_str());
-        if (ret != 0) {
-            log::warningf("Config", "Failed to launch settings app (exit code %d)", ret);
+        std::string settingsPath = dir + "/dw_settings";
+        pid_t pid = fork();
+        if (pid == 0) {
+            execlp(settingsPath.c_str(), settingsPath.c_str(), nullptr);
+            _exit(127);
         }
         return;
     }
-    int ret = std::system("dw_settings &");
-    if (ret != 0) {
-        log::warning("Config", "Failed to launch settings app");
+    pid_t pid = fork();
+    if (pid == 0) {
+        execlp("dw_settings", "dw_settings", nullptr);
+        _exit(127);
     }
 #endif
 }

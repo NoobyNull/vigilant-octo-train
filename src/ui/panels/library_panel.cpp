@@ -1,19 +1,14 @@
 #include "library_panel.h"
 
 #include <cstdint>
-#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <vector>
 
-#ifdef _WIN32
-    #include <shellapi.h>
-    #include <windows.h>
-#endif
-
 #include <imgui.h>
 
+#include "../../core/utils/file_utils.h"
 #include "../../core/utils/log.h"
 #include "../icons.h"
 
@@ -395,16 +390,7 @@ void LibraryPanel::renderContextMenu(const ModelRecord& model) {
     if (ImGui::MenuItem("Show in Explorer")) {
         auto parentDir = model.filePath.parent_path();
         if (!parentDir.empty()) {
-#ifdef _WIN32
-            ShellExecuteW(nullptr, L"open", parentDir.wstring().c_str(), nullptr, nullptr,
-                          SW_SHOWNORMAL);
-#else
-            std::string cmd = "xdg-open \"" + parentDir.string() + "\"";
-            int ret = std::system(cmd.c_str());
-            if (ret != 0) {
-                log::warningf("Library", "Failed to open file manager (exit code %d)", ret);
-            }
-#endif
+            file::openInFileManager(parentDir);
         }
     }
 
@@ -584,17 +570,7 @@ void LibraryPanel::renderGCodeContextMenu(const GCodeRecord& gcode) {
     if (ImGui::MenuItem("Show in Explorer")) {
         auto parentDir = gcode.filePath.parent_path();
         if (!parentDir.empty()) {
-#ifdef _WIN32
-            ShellExecuteW(nullptr, L"explore",
-                          reinterpret_cast<LPCWSTR>(parentDir.u16string().c_str()), nullptr,
-                          nullptr, SW_SHOWNORMAL);
-#else
-            std::string cmd = "xdg-open \"" + parentDir.string() + "\"";
-            int ret = std::system(cmd.c_str());
-            if (ret != 0) {
-                log::warningf("Library", "Failed to open file manager (exit code %d)", ret);
-            }
-#endif
+            file::openInFileManager(parentDir);
         }
     }
 }

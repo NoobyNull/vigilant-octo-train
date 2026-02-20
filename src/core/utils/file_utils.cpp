@@ -4,6 +4,13 @@
 #include <cstdlib>
 #include <fstream>
 
+#ifdef _WIN32
+    #include <shellapi.h>
+    #include <windows.h>
+#else
+    #include <unistd.h>
+#endif
+
 #include "log.h"
 
 namespace dw {
@@ -263,6 +270,24 @@ std::vector<std::string> listEntries(const Path& directory) {
 u64 fileSize(const Path& path) {
     auto result = getFileSize(path);
     return result.value_or(0);
+}
+
+void openInFileManager(const Path& path) {
+#ifdef _WIN32
+    ShellExecuteW(nullptr, L"open", path.wstring().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+#elif defined(__APPLE__)
+    pid_t pid = fork();
+    if (pid == 0) {
+        execlp("open", "open", path.string().c_str(), nullptr);
+        _exit(127);
+    }
+#else
+    pid_t pid = fork();
+    if (pid == 0) {
+        execlp("xdg-open", "xdg-open", path.string().c_str(), nullptr);
+        _exit(127);
+    }
+#endif
 }
 
 } // namespace file
