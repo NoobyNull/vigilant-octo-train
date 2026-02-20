@@ -37,11 +37,11 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
 
 **Goal:** CNC woodworker can assign wood species materials to 3D objects with texture-mapped visualization, browsable materials database with 23 built-in species, and portable .dwmat archive import/export
 **Depends on:** v1.0
-**Plans:** 6 plans
+**Plans:** 3/6 plans executed
 
 Plans:
-- [ ] 01-01-PLAN.md — Dependencies, material types, database schema, MaterialRepository
-- [ ] 01-02-PLAN.md — MaterialArchive (.dwmat ZIP), TextureLoader, Texture RAII wrapper
+- [x] 01-01-PLAN.md — Dependencies, material types, database schema, MaterialRepository (completed 2026-02-19)
+- [x] 01-02-PLAN.md — MaterialArchive (.dwmat ZIP), TextureLoader, Texture RAII wrapper (completed 2026-02-20)
 - [ ] 01-03-PLAN.md — Default materials list, MaterialManager import/export/seeding
 - [ ] 01-04-PLAN.md — Shader texture support, UV generation, Renderer integration
 - [ ] 01-05-PLAN.md — MaterialsPanel UI with category tabs, thumbnail grid, edit form

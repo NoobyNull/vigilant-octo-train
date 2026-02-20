@@ -1,7 +1,7 @@
 # Project State: Digital Workshop
 
-**Last Updated:** 2026-02-10
-**Current Session:** v1.0 Milestone Complete — Planning next milestone
+**Last Updated:** 2026-02-20
+**Current Session:** Phase 01 in progress — Plan 03 complete (default materials + MaterialManager)
 
 ---
 
@@ -11,7 +11,7 @@ See: `.planning/PROJECT.md` (updated 2026-02-10)
 
 **Core Value:** A single focused workspace where a CNC woodworker can manage their model library, analyze toolpaths, and optimize material usage — without switching between tools.
 
-**Current Focus:** Planning next milestone
+**Current Focus:** Phase 01 - Materials mapping with coordinated materials database (Plan 03/6 complete)
 
 ---
 
@@ -96,7 +96,21 @@ See: `.planning/PROJECT.md` (updated 2026-02-10)
 
 - Phase 1 added: Add materials mapping to object view with coordinated materials database
 
+### Phase 01 Decisions (2026-02-20)
+
+- **01-01:** Schema v4 adds materials table; material_id FK on models; MaterialRepository follows ModelRepository pattern
+- **01-03:** 32 built-in materials seeded via MaterialManager.seedDefaults() using count()==0 guard (idempotent)
+- **01-03:** importMaterial() copies .dwmat to getMaterialsDir() to prevent path invalidation (Pitfall 3)
+- **01-03:** MaterialArchive::create() handles empty texturePath for metadata-only archives (default species export)
+
+### Phase 01 Progress (2026-02-20)
+
+- **01-01 DONE:** Dependencies (miniz/stb/nlohmann-json), MaterialRecord, schema v4, MaterialRepository
+- **01-02 DONE:** MaterialArchive, TextureLoader, Texture RAII wrapper
+- **01-03 DONE:** Default materials (32 species), MaterialManager, getMaterialsDir()
+- **482 tests passing**
+
 ---
 
 *State initialized: 2026-02-08*
-*Last activity: 2026-02-09 — Phase 1 added to roadmap*
+*Last activity: 2026-02-20 — Phase 01 plan 03 complete*
