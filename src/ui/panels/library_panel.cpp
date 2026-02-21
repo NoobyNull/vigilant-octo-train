@@ -19,6 +19,7 @@
 namespace dw {
 
 LibraryPanel::LibraryPanel(LibraryManager* library) : Panel("Library"), m_library(library) {
+    m_thumbnailSize = Config::instance().getLibraryThumbSize();
     refresh();
 }
 
@@ -126,11 +127,8 @@ void LibraryPanel::render() {
         return;
     }
 
-    // Lazy initialization of context menu entries on first render
-    if (!m_contextMenuRegistered && m_contextMenuManager) {
-        registerContextMenuEntries();
-        m_contextMenuRegistered = true;
-    }
+    // Context menu entries are re-registered per-item in renderModelItem/renderGCodeItem
+    // to keep labels in sync with selection count
 
     if (ImGui::Begin(m_title.c_str(), &m_open)) {
         renderToolbar();
@@ -243,6 +241,9 @@ void LibraryPanel::renderToolbar() {
         ImGui::SetNextItemWidth(zoomSliderW);
         ImGui::SliderFloat("##Zoom", &m_thumbnailSize, THUMB_MIN, avail, "",
                            ImGuiSliderFlags_NoRoundToFormat);
+        if (ImGui::IsItemDeactivatedAfterEdit()) {
+            Config::instance().setLibraryThumbSize(m_thumbnailSize);
+        }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Thumbnail size (%.0fpx)", m_thumbnailSize);
         }
@@ -276,6 +277,7 @@ void LibraryPanel::renderModelList() {
         if (wheel != 0.0f) {
             float maxThumb = ImGui::GetContentRegionAvail().x;
             m_thumbnailSize = std::clamp(m_thumbnailSize + wheel * 16.0f, THUMB_MIN, maxThumb);
+            Config::instance().setLibraryThumbSize(m_thumbnailSize);
             ImGui::GetIO().MouseWheel = 0.0f; // consume so child doesn't scroll
         }
     }
@@ -316,7 +318,7 @@ void LibraryPanel::renderModelItem(const ModelRecord& model, [[maybe_unused]] in
                                    float thumbOverride) {
     ImGui::PushID(static_cast<int>(model.id));
 
-    bool isSelected = (model.id == m_selectedModelId);
+    bool isSelected = m_selectedModelIds.count(model.id) > 0;
 
     if (m_showThumbnails) {
         // Grid cell: thumbnail with name below, details on hover
@@ -325,19 +327,52 @@ void LibraryPanel::renderModelItem(const ModelRecord& model, [[maybe_unused]] in
         float nameH = ImGui::GetTextLineHeightWithSpacing();
         float cellH = ts + nameH + pad * 2;
 
-        if (ImGui::Selectable("##item", isSelected, ImGuiSelectableFlags_AllowDoubleClick,
+        if (ImGui::Selectable("##item", isSelected,
+                              ImGuiSelectableFlags_AllowDoubleClick |
+                                  ImGuiSelectableFlags_DontClosePopups,
                               ImVec2(ts + pad * 2, cellH))) {
-            m_selectedModelId = model.id;
             if (ImGui::IsMouseDoubleClicked(0)) {
                 if (m_onModelOpened)
                     m_onModelOpened(model.id);
+            } else if (ImGui::GetIO().KeyCtrl) {
+                // Ctrl+click: toggle this item
+                if (m_selectedModelIds.count(model.id))
+                    m_selectedModelIds.erase(model.id);
+                else
+                    m_selectedModelIds.insert(model.id);
+                m_lastClickedModelId = model.id;
+                m_selectedGCodeIds.clear();
+            } else if (ImGui::GetIO().KeyShift && m_lastClickedModelId != -1) {
+                // Shift+click: range select by visible order
+                m_selectedModelIds.clear();
+                bool inRange = false;
+                for (auto& m : m_models) {
+                    if (m.id == model.id || m.id == m_lastClickedModelId)
+                        inRange = !inRange ? true : false;
+                    if (inRange || m.id == model.id || m.id == m_lastClickedModelId)
+                        m_selectedModelIds.insert(m.id);
+                }
+                m_selectedGCodeIds.clear();
             } else {
-                if (m_onModelSelected)
-                    m_onModelSelected(model.id);
+                m_selectedModelIds = {model.id};
+                m_lastClickedModelId = model.id;
+                m_selectedGCodeIds.clear();
+            }
+            if (m_onModelSelected)
+                m_onModelSelected(model.id);
+        }
+
+        // Right-click: ensure clicked item is in selection
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+            if (!m_selectedModelIds.count(model.id)) {
+                m_selectedModelIds = {model.id};
+                m_lastClickedModelId = model.id;
+                m_selectedGCodeIds.clear();
             }
         }
 
         m_currentContextMenuModel = model;
+        registerContextMenuEntries();
         if (ImGui::BeginPopupContextItem("LibraryPanel_ModelContext")) {
             m_contextMenuManager->render("LibraryPanel_ModelContext");
             ImGui::EndPopup();
@@ -402,19 +437,49 @@ void LibraryPanel::renderModelItem(const ModelRecord& model, [[maybe_unused]] in
                           model.name.c_str(), nullptr, ts, &clipRect);
     } else {
         // List view - compact row
-        if (ImGui::Selectable("##item", isSelected, ImGuiSelectableFlags_AllowDoubleClick,
+        if (ImGui::Selectable("##item", isSelected,
+                              ImGuiSelectableFlags_AllowDoubleClick |
+                                  ImGuiSelectableFlags_DontClosePopups,
                               ImVec2(0, 24.0f))) {
-            m_selectedModelId = model.id;
             if (ImGui::IsMouseDoubleClicked(0)) {
                 if (m_onModelOpened)
                     m_onModelOpened(model.id);
+            } else if (ImGui::GetIO().KeyCtrl) {
+                if (m_selectedModelIds.count(model.id))
+                    m_selectedModelIds.erase(model.id);
+                else
+                    m_selectedModelIds.insert(model.id);
+                m_lastClickedModelId = model.id;
+                m_selectedGCodeIds.clear();
+            } else if (ImGui::GetIO().KeyShift && m_lastClickedModelId != -1) {
+                m_selectedModelIds.clear();
+                bool inRange = false;
+                for (auto& m : m_models) {
+                    if (m.id == model.id || m.id == m_lastClickedModelId)
+                        inRange = !inRange ? true : false;
+                    if (inRange || m.id == model.id || m.id == m_lastClickedModelId)
+                        m_selectedModelIds.insert(m.id);
+                }
+                m_selectedGCodeIds.clear();
             } else {
-                if (m_onModelSelected)
-                    m_onModelSelected(model.id);
+                m_selectedModelIds = {model.id};
+                m_lastClickedModelId = model.id;
+                m_selectedGCodeIds.clear();
+            }
+            if (m_onModelSelected)
+                m_onModelSelected(model.id);
+        }
+
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+            if (!m_selectedModelIds.count(model.id)) {
+                m_selectedModelIds = {model.id};
+                m_lastClickedModelId = model.id;
+                m_selectedGCodeIds.clear();
             }
         }
 
         m_currentContextMenuModel = model;
+        registerContextMenuEntries();
         if (ImGui::BeginPopupContextItem("LibraryPanel_ModelContext")) {
             m_contextMenuManager->render("LibraryPanel_ModelContext");
             ImGui::EndPopup();
@@ -446,10 +511,14 @@ void LibraryPanel::renderModelItem(const ModelRecord& model, [[maybe_unused]] in
 
 void LibraryPanel::registerContextMenuEntries() {
     if (!m_contextMenuManager) {
-        return; // Manager not yet initialized, will try again next frame
+        return;
     }
 
-    // Model context menu
+    // Model context menu — labels reflect current selection count
+    size_t modelCount = m_selectedModelIds.size();
+    bool multi = modelCount > 1;
+    std::string countSuffix = multi ? " (" + std::to_string(modelCount) + ")" : "";
+
     std::vector<ContextMenuEntry> modelEntries = {
         {"Open",
          [this]() {
@@ -457,26 +526,20 @@ void LibraryPanel::registerContextMenuEntries() {
                  m_onModelOpened(m_currentContextMenuModel->id);
              }
          }},
-        {"Regenerate Thumbnail",
+        {"Regenerate Thumbnail" + (multi ? "s" + countSuffix : ""),
          [this]() {
-             log::info("LibraryPanel", "Regenerate Thumbnail action fired");
-             if (!m_currentContextMenuModel) {
-                 log::warning("LibraryPanel", "No context menu model set");
+             if (!m_onRegenerateThumbnail)
                  return;
-             }
-             if (!m_onRegenerateThumbnail) {
-                 log::warning("LibraryPanel", "No regenerate thumbnail callback set");
-                 return;
-             }
-             log::infof("LibraryPanel", "Regenerating thumbnail for model %lld",
-                        static_cast<long long>(m_currentContextMenuModel->id));
-             m_onRegenerateThumbnail(m_currentContextMenuModel->id);
+             std::vector<int64_t> ids(m_selectedModelIds.begin(), m_selectedModelIds.end());
+             m_onRegenerateThumbnail(ids);
          }},
         {
-            "Assign Default Material",
+            "Assign Default Material" + countSuffix,
             [this]() {
-                if (m_onAssignDefaultMaterial && m_currentContextMenuModel) {
-                    m_onAssignDefaultMaterial(m_currentContextMenuModel->id);
+                if (!m_onAssignDefaultMaterial)
+                    return;
+                for (int64_t id : m_selectedModelIds) {
+                    m_onAssignDefaultMaterial(id);
                 }
             },
             "",                                                                // icon
@@ -492,14 +555,18 @@ void LibraryPanel::registerContextMenuEntries() {
                               sizeof(m_renameBuffer) - 1);
                  m_renameBuffer[sizeof(m_renameBuffer) - 1] = '\0';
              }
-         }},
-        {"Delete",
+         },
+         "",                                                   // icon
+         [this]() { return m_selectedModelIds.size() == 1; }}, // only for single selection
+        {"Delete" + countSuffix,
          [this]() {
-             if (m_currentContextMenuModel) {
-                 m_showDeleteConfirm = true;
-                 m_deleteItemId = m_currentContextMenuModel->id;
-                 m_deleteIsGCode = false;
+             m_showDeleteConfirm = true;
+             m_deleteIsGCode = false;
+             m_deleteItemIds.assign(m_selectedModelIds.begin(), m_selectedModelIds.end());
+             if (m_deleteItemIds.size() == 1 && m_currentContextMenuModel) {
                  m_deleteItemName = m_currentContextMenuModel->name;
+             } else {
+                 m_deleteItemName = std::to_string(m_deleteItemIds.size()) + " items";
              }
          }},
         ContextMenuEntry::separator(),
@@ -514,13 +581,31 @@ void LibraryPanel::registerContextMenuEntries() {
          }},
         {"Copy Path",
          [this]() {
-             if (m_currentContextMenuModel) {
+             if (m_selectedModelIds.size() > 1) {
+                 // Copy newline-separated paths for multi-select
+                 std::string paths;
+                 for (int64_t id : m_selectedModelIds) {
+                     for (auto& m : m_models) {
+                         if (m.id == id) {
+                             if (!paths.empty())
+                                 paths += "\n";
+                             paths += m.filePath.string();
+                             break;
+                         }
+                     }
+                 }
+                 ImGui::SetClipboardText(paths.c_str());
+             } else if (m_currentContextMenuModel) {
                  ImGui::SetClipboardText(m_currentContextMenuModel->filePath.string().c_str());
              }
          }},
     };
 
     // GCode context menu
+    size_t gcodeCount = m_selectedGCodeIds.size();
+    bool gcodeMulti = gcodeCount > 1;
+    std::string gcodeCountSuffix = gcodeMulti ? " (" + std::to_string(gcodeCount) + ")" : "";
+
     std::vector<ContextMenuEntry> gcodeEntries = {
         {"Open",
          [this]() {
@@ -529,13 +614,15 @@ void LibraryPanel::registerContextMenuEntries() {
              }
          }},
         ContextMenuEntry::separator(),
-        {"Delete",
+        {"Delete" + gcodeCountSuffix,
          [this]() {
-             if (m_currentContextMenuGCode) {
-                 m_showDeleteConfirm = true;
-                 m_deleteItemId = m_currentContextMenuGCode->id;
-                 m_deleteIsGCode = true;
+             m_showDeleteConfirm = true;
+             m_deleteIsGCode = true;
+             m_deleteItemIds.assign(m_selectedGCodeIds.begin(), m_selectedGCodeIds.end());
+             if (m_deleteItemIds.size() == 1 && m_currentContextMenuGCode) {
                  m_deleteItemName = m_currentContextMenuGCode->name;
+             } else {
+                 m_deleteItemName = std::to_string(m_deleteItemIds.size()) + " items";
              }
          }},
         ContextMenuEntry::separator(),
@@ -550,7 +637,6 @@ void LibraryPanel::registerContextMenuEntries() {
          }},
     };
 
-    // Register entries with the context menu manager
     m_contextMenuManager->registerEntries("LibraryPanel_ModelContext", modelEntries);
     m_contextMenuManager->registerEntries("LibraryPanel_GCodeContext", gcodeEntries);
 }
@@ -564,6 +650,7 @@ void LibraryPanel::renderGCodeList() {
         if (wheel != 0.0f) {
             float maxThumb = ImGui::GetContentRegionAvail().x;
             m_thumbnailSize = std::clamp(m_thumbnailSize + wheel * 16.0f, THUMB_MIN, maxThumb);
+            Config::instance().setLibraryThumbSize(m_thumbnailSize);
             ImGui::GetIO().MouseWheel = 0.0f; // consume so child doesn't scroll
         }
     }
@@ -607,6 +694,7 @@ void LibraryPanel::renderCombinedList() {
         if (wheel != 0.0f) {
             float maxThumb = ImGui::GetContentRegionAvail().x;
             m_thumbnailSize = std::clamp(m_thumbnailSize + wheel * 16.0f, THUMB_MIN, maxThumb);
+            Config::instance().setLibraryThumbSize(m_thumbnailSize);
             ImGui::GetIO().MouseWheel = 0.0f; // consume so child doesn't scroll
         }
     }
@@ -657,7 +745,7 @@ void LibraryPanel::renderGCodeItem(const GCodeRecord& gcode, [[maybe_unused]] in
                                    float thumbOverride) {
     ImGui::PushID(static_cast<int>(gcode.id + 1000000)); // Offset to avoid ID collision with models
 
-    bool isSelected = (gcode.id == m_selectedGCodeId);
+    bool isSelected = m_selectedGCodeIds.count(gcode.id) > 0;
 
     if (m_showThumbnails) {
         // Grid cell: placeholder with name below, details on hover
@@ -666,20 +754,49 @@ void LibraryPanel::renderGCodeItem(const GCodeRecord& gcode, [[maybe_unused]] in
         float nameH = ImGui::GetTextLineHeightWithSpacing();
         float cellH = ts + nameH + pad * 2;
 
-        if (ImGui::Selectable("##gcodeitem", isSelected, ImGuiSelectableFlags_AllowDoubleClick,
+        if (ImGui::Selectable("##gcodeitem", isSelected,
+                              ImGuiSelectableFlags_AllowDoubleClick |
+                                  ImGuiSelectableFlags_DontClosePopups,
                               ImVec2(ts + pad * 2, cellH))) {
-            m_selectedGCodeId = gcode.id;
-            m_selectedModelId = -1; // Deselect models
             if (ImGui::IsMouseDoubleClicked(0)) {
                 if (m_onGCodeOpened)
                     m_onGCodeOpened(gcode.id);
+            } else if (ImGui::GetIO().KeyCtrl) {
+                if (m_selectedGCodeIds.count(gcode.id))
+                    m_selectedGCodeIds.erase(gcode.id);
+                else
+                    m_selectedGCodeIds.insert(gcode.id);
+                m_lastClickedGCodeId = gcode.id;
+                m_selectedModelIds.clear();
+            } else if (ImGui::GetIO().KeyShift && m_lastClickedGCodeId != -1) {
+                m_selectedGCodeIds.clear();
+                bool inRange = false;
+                for (auto& g : m_gcodeFiles) {
+                    if (g.id == gcode.id || g.id == m_lastClickedGCodeId)
+                        inRange = !inRange ? true : false;
+                    if (inRange || g.id == gcode.id || g.id == m_lastClickedGCodeId)
+                        m_selectedGCodeIds.insert(g.id);
+                }
+                m_selectedModelIds.clear();
             } else {
-                if (m_onGCodeSelected)
-                    m_onGCodeSelected(gcode.id);
+                m_selectedGCodeIds = {gcode.id};
+                m_lastClickedGCodeId = gcode.id;
+                m_selectedModelIds.clear();
+            }
+            if (m_onGCodeSelected)
+                m_onGCodeSelected(gcode.id);
+        }
+
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+            if (!m_selectedGCodeIds.count(gcode.id)) {
+                m_selectedGCodeIds = {gcode.id};
+                m_lastClickedGCodeId = gcode.id;
+                m_selectedModelIds.clear();
             }
         }
 
         m_currentContextMenuGCode = gcode;
+        registerContextMenuEntries();
         if (ImGui::BeginPopupContextItem("LibraryPanel_GCodeContext")) {
             m_contextMenuManager->render("LibraryPanel_GCodeContext");
             ImGui::EndPopup();
@@ -729,20 +846,49 @@ void LibraryPanel::renderGCodeItem(const GCodeRecord& gcode, [[maybe_unused]] in
                           gcode.name.c_str(), nullptr, ts, &clipRect);
     } else {
         // List view - compact row
-        if (ImGui::Selectable("##gcodeitem", isSelected, ImGuiSelectableFlags_AllowDoubleClick,
+        if (ImGui::Selectable("##gcodeitem", isSelected,
+                              ImGuiSelectableFlags_AllowDoubleClick |
+                                  ImGuiSelectableFlags_DontClosePopups,
                               ImVec2(0, 24.0f))) {
-            m_selectedGCodeId = gcode.id;
-            m_selectedModelId = -1;
             if (ImGui::IsMouseDoubleClicked(0)) {
                 if (m_onGCodeOpened)
                     m_onGCodeOpened(gcode.id);
+            } else if (ImGui::GetIO().KeyCtrl) {
+                if (m_selectedGCodeIds.count(gcode.id))
+                    m_selectedGCodeIds.erase(gcode.id);
+                else
+                    m_selectedGCodeIds.insert(gcode.id);
+                m_lastClickedGCodeId = gcode.id;
+                m_selectedModelIds.clear();
+            } else if (ImGui::GetIO().KeyShift && m_lastClickedGCodeId != -1) {
+                m_selectedGCodeIds.clear();
+                bool inRange = false;
+                for (auto& g : m_gcodeFiles) {
+                    if (g.id == gcode.id || g.id == m_lastClickedGCodeId)
+                        inRange = !inRange ? true : false;
+                    if (inRange || g.id == gcode.id || g.id == m_lastClickedGCodeId)
+                        m_selectedGCodeIds.insert(g.id);
+                }
+                m_selectedModelIds.clear();
             } else {
-                if (m_onGCodeSelected)
-                    m_onGCodeSelected(gcode.id);
+                m_selectedGCodeIds = {gcode.id};
+                m_lastClickedGCodeId = gcode.id;
+                m_selectedModelIds.clear();
+            }
+            if (m_onGCodeSelected)
+                m_onGCodeSelected(gcode.id);
+        }
+
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+            if (!m_selectedGCodeIds.count(gcode.id)) {
+                m_selectedGCodeIds = {gcode.id};
+                m_lastClickedGCodeId = gcode.id;
+                m_selectedModelIds.clear();
             }
         }
 
         m_currentContextMenuGCode = gcode;
+        registerContextMenuEntries();
         if (ImGui::BeginPopupContextItem("LibraryPanel_GCodeContext")) {
             m_contextMenuManager->render("LibraryPanel_GCodeContext");
             ImGui::EndPopup();
@@ -789,20 +935,39 @@ void LibraryPanel::renderDeleteConfirm() {
 
         if (ImGui::Button("Delete", ImVec2(120, 0))) {
             if (m_library) {
+                for (int64_t id : m_deleteItemIds) {
+                    if (m_deleteIsGCode) {
+                        m_library->deleteGCodeFile(id);
+                    } else {
+                        m_library->removeModel(id);
+                    }
+                }
+                size_t count = m_deleteItemIds.size();
                 if (m_deleteIsGCode) {
-                    m_library->deleteGCodeFile(m_deleteItemId);
                     ToastManager::instance().show(ToastType::Success, "Deleted",
-                                                  "G-code file deleted successfully");
+                                                  count == 1 ? "G-code file deleted successfully"
+                                                             : std::to_string(count) +
+                                                                   " G-code files deleted");
                 } else {
-                    m_library->removeModel(m_deleteItemId);
                     ToastManager::instance().show(ToastType::Success, "Deleted",
-                                                  "Model deleted successfully");
+                                                  count == 1
+                                                      ? "Model deleted successfully"
+                                                      : std::to_string(count) + " models deleted");
+                }
+                // Clear selection for deleted items
+                if (m_deleteIsGCode) {
+                    m_selectedGCodeIds.clear();
+                    m_lastClickedGCodeId = -1;
+                } else {
+                    m_selectedModelIds.clear();
+                    m_lastClickedModelId = -1;
                 }
                 refresh();
             } else {
                 ToastManager::instance().show(ToastType::Error, "Delete Failed",
                                               "Could not delete item");
             }
+            m_deleteItemIds.clear();
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();

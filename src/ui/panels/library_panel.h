@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <optional>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -41,8 +42,8 @@ class LibraryPanel : public Panel {
     // Callback when a G-code file is double-clicked (load into viewport)
     void setOnGCodeOpened(GCodeSelectedCallback callback) { m_onGCodeOpened = std::move(callback); }
 
-    // Callback when thumbnail regeneration is requested
-    using RegenerateThumbnailCallback = std::function<void(int64_t modelId)>;
+    // Callback when thumbnail regeneration is requested (batch: all selected IDs)
+    using RegenerateThumbnailCallback = std::function<void(const std::vector<int64_t>& modelIds)>;
     void setOnRegenerateThumbnail(RegenerateThumbnailCallback callback) {
         m_onRegenerateThumbnail = std::move(callback);
     }
@@ -59,8 +60,16 @@ class LibraryPanel : public Panel {
     void invalidateThumbnail(int64_t modelId);
 
     // Get/set currently selected model ID (-1 if none)
-    int64_t selectedModelId() const { return m_selectedModelId; }
-    void setSelectedModelId(int64_t id) { m_selectedModelId = id; }
+    int64_t selectedModelId() const { return m_lastClickedModelId; }
+    void setSelectedModelId(int64_t id) {
+        m_selectedModelIds = {id};
+        m_lastClickedModelId = id;
+    }
+
+    // Multi-selection accessors
+    const std::set<int64_t>& selectedModelIds() const { return m_selectedModelIds; }
+    const std::set<int64_t>& selectedGCodeIds() const { return m_selectedGCodeIds; }
+    bool isModelSelected(int64_t id) const { return m_selectedModelIds.count(id) > 0; }
 
     // Set context menu manager (must be called before first render)
     void setContextMenuManager(ContextMenuManager* mgr);
@@ -92,8 +101,10 @@ class LibraryPanel : public Panel {
     std::vector<ModelRecord> m_models;
     std::vector<GCodeRecord> m_gcodeFiles;
     std::string m_searchQuery;
-    int64_t m_selectedModelId = -1;
-    int64_t m_selectedGCodeId = -1;
+    std::set<int64_t> m_selectedModelIds;
+    std::set<int64_t> m_selectedGCodeIds;
+    int64_t m_lastClickedModelId = -1;
+    int64_t m_lastClickedGCodeId = -1;
 
     ViewTab m_activeTab = ViewTab::All;
 
@@ -114,9 +125,9 @@ class LibraryPanel : public Panel {
 
     // Delete confirmation state
     bool m_showDeleteConfirm = false;
-    int64_t m_deleteItemId = 0;
+    std::vector<int64_t> m_deleteItemIds;
     bool m_deleteIsGCode = false;
-    std::string m_deleteItemName;
+    std::string m_deleteItemName; // Single item name, or "N items" for batch
 
     // View options
     bool m_showThumbnails = true;
@@ -126,7 +137,6 @@ class LibraryPanel : public Panel {
 
     // Context menu management
     ContextMenuManager* m_contextMenuManager = nullptr;
-    bool m_contextMenuRegistered = false;
     std::optional<ModelRecord> m_currentContextMenuModel;
     std::optional<GCodeRecord> m_currentContextMenuGCode;
 };

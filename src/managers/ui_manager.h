@@ -31,6 +31,7 @@ class StartPage;
 class FileDialog;
 class LightingDialog;
 class ImportSummaryDialog;
+class ProgressDialog;
 
 // Forward declarations - core
 struct LoadingState;
@@ -103,6 +104,7 @@ class UIManager {
     FileDialog* fileDialog() { return m_fileDialog.get(); }
     LightingDialog* lightingDialog() { return m_lightingDialog.get(); }
     ImportSummaryDialog* importSummaryDialog() { return m_importSummaryDialog.get(); }
+    ProgressDialog* progressDialog() { return m_progressDialog.get(); }
     ContextMenuManager* contextMenuManager() { return m_contextMenuManager.get(); }
 
     // --- Visibility state ---
@@ -165,6 +167,7 @@ class UIManager {
     std::unique_ptr<FileDialog> m_fileDialog;
     std::unique_ptr<LightingDialog> m_lightingDialog;
     std::unique_ptr<ImportSummaryDialog> m_importSummaryDialog;
+    std::unique_ptr<ProgressDialog> m_progressDialog;
 
     // Widgets (Plan 02-05)
     std::unique_ptr<StatusBar> m_statusBar;

@@ -158,6 +158,10 @@ bool Config::load() {
                 m_wsShowStartPage = (value == "true" || value == "1");
             } else if (key == "last_selected_model") {
                 str::parseInt64(value, m_wsLastSelectedModelId);
+            } else if (key == "library_thumb_size") {
+                str::parseFloat(value, m_wsLibraryThumbSize);
+            } else if (key == "materials_thumb_size") {
+                str::parseFloat(value, m_wsMaterialsThumbSize);
             }
         } else if (section == "bindings") {
             if (key == "light_dir_drag") {
@@ -285,6 +289,8 @@ bool Config::save() {
     ss << "show_cost_estimator=" << (m_wsShowCostEstimator ? "true" : "false") << "\n";
     ss << "show_start_page=" << (m_wsShowStartPage ? "true" : "false") << "\n";
     ss << "last_selected_model=" << m_wsLastSelectedModelId << "\n";
+    ss << "library_thumb_size=" << m_wsLibraryThumbSize << "\n";
+    ss << "materials_thumb_size=" << m_wsMaterialsThumbSize << "\n";
     ss << "\n";
 
     // Bindings section

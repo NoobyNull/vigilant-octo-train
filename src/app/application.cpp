@@ -39,6 +39,7 @@
 #include "render/texture.h"
 #include "render/thumbnail_generator.h"
 #include "ui/dialogs/import_summary_dialog.h"
+#include "ui/dialogs/progress_dialog.h"
 #include "ui/panels/library_panel.h"
 #include "ui/panels/materials_panel.h"
 #include "ui/panels/project_panel.h"
@@ -280,45 +281,124 @@ bool Application::init() {
         m_uiManager->libraryPanel()->setOnModelOpened(
             [this](int64_t modelId) { onModelSelected(modelId); });
 
-        m_uiManager->libraryPanel()->setOnRegenerateThumbnail([this](int64_t modelId) {
-            if (!m_libraryManager)
-                return;
-            auto record = m_libraryManager->getModel(modelId);
-            if (!record) {
-                ToastManager::instance().show(ToastType::Error, "Thumbnail Failed",
-                                              "Model not found in database");
-                return;
-            }
-            Path filePath = record->filePath;
-            std::string modelName = record->name;
-            ToastManager::instance().show(ToastType::Info, "Regenerating Thumbnail", modelName);
-            std::thread([this, filePath, modelId, modelName]() {
-                auto result = LoaderFactory::load(filePath);
-                if (!result) {
-                    m_mainThreadQueue->enqueue([modelName, error = result.error]() {
-                        ToastManager::instance().show(
-                            ToastType::Error, "Thumbnail Failed",
-                            modelName + ": " + (error.empty() ? "failed to load file" : error));
-                    });
+        m_uiManager->libraryPanel()->setOnRegenerateThumbnail(
+            [this](const std::vector<int64_t>& modelIds) {
+                if (!m_libraryManager || modelIds.empty())
+                    return;
+
+                // Single item: lightweight path (no progress dialog)
+                if (modelIds.size() == 1) {
+                    int64_t modelId = modelIds[0];
+                    auto record = m_libraryManager->getModel(modelId);
+                    if (!record) {
+                        ToastManager::instance().show(ToastType::Error, "Thumbnail Failed",
+                                                      "Model not found in database");
+                        return;
+                    }
+                    Path filePath = record->filePath;
+                    std::string modelName = record->name;
+                    ToastManager::instance().show(ToastType::Info, "Regenerating Thumbnail",
+                                                  modelName);
+                    std::thread([this, filePath, modelId, modelName]() {
+                        auto result = LoaderFactory::load(filePath);
+                        if (!result) {
+                            m_mainThreadQueue->enqueue([modelName, error = result.error]() {
+                                ToastManager::instance().show(
+                                    ToastType::Error, "Thumbnail Failed",
+                                    modelName + ": " +
+                                        (error.empty() ? "failed to load file" : error));
+                            });
+                            return;
+                        }
+                        auto mesh = result.mesh;
+                        m_mainThreadQueue->enqueue([this, mesh, modelId, modelName]() {
+                            bool ok = generateMaterialThumbnail(modelId, *mesh);
+                            if (m_uiManager->libraryPanel()) {
+                                m_uiManager->libraryPanel()->invalidateThumbnail(modelId);
+                                m_uiManager->libraryPanel()->refresh();
+                            }
+                            if (ok) {
+                                ToastManager::instance().show(ToastType::Success,
+                                                              "Thumbnail Updated", modelName);
+                            } else {
+                                ToastManager::instance().show(ToastType::Error, "Thumbnail Failed",
+                                                              modelName + ": generation failed");
+                            }
+                        });
+                    }).detach();
                     return;
                 }
-                auto mesh = result.mesh;
-                m_mainThreadQueue->enqueue([this, mesh, modelId, modelName]() {
-                    bool ok = generateMaterialThumbnail(modelId, *mesh);
-                    if (m_uiManager->libraryPanel()) {
-                        m_uiManager->libraryPanel()->invalidateThumbnail(modelId);
-                        m_uiManager->libraryPanel()->refresh();
+
+                // Batch path: progress dialog + single coordinator thread
+                auto* progressDlg = m_uiManager->progressDialog();
+                if (!progressDlg)
+                    return;
+
+                // Snapshot IDs and resolve file paths on main thread
+                struct BatchItem {
+                    int64_t id;
+                    Path filePath;
+                    std::string name;
+                };
+                auto items = std::make_shared<std::vector<BatchItem>>();
+                items->reserve(modelIds.size());
+                for (int64_t id : modelIds) {
+                    auto record = m_libraryManager->getModel(id);
+                    if (record) {
+                        items->push_back({id, record->filePath, record->name});
                     }
-                    if (ok) {
-                        ToastManager::instance().show(ToastType::Success, "Thumbnail Updated",
-                                                      modelName);
-                    } else {
-                        ToastManager::instance().show(ToastType::Error, "Thumbnail Failed",
-                                                      modelName + ": generation failed");
+                }
+                if (items->empty())
+                    return;
+
+                progressDlg->start("Regenerating Thumbnails", static_cast<int>(items->size()));
+
+                // Single coordinator thread processes items sequentially
+                std::thread([this, items, progressDlg]() {
+                    for (const auto& item : *items) {
+                        if (progressDlg->isCancelled())
+                            break;
+
+                        auto result = LoaderFactory::load(item.filePath);
+                        if (!result) {
+                            m_mainThreadQueue->enqueue([name = item.name, error = result.error]() {
+                                ToastManager::instance().show(
+                                    ToastType::Error, "Thumbnail Failed",
+                                    name + ": " + (error.empty() ? "failed to load file" : error));
+                            });
+                            progressDlg->advance(item.name);
+                            continue;
+                        }
+
+                        auto mesh = result.mesh;
+                        auto modelId = item.id;
+                        auto modelName = item.name;
+
+                        // GL work must happen on the main thread
+                        m_mainThreadQueue->enqueue([this, mesh, modelId, modelName]() {
+                            bool ok = generateMaterialThumbnail(modelId, *mesh);
+                            if (m_uiManager->libraryPanel()) {
+                                m_uiManager->libraryPanel()->invalidateThumbnail(modelId);
+                            }
+                            if (!ok) {
+                                ToastManager::instance().show(ToastType::Error, "Thumbnail Failed",
+                                                              modelName + ": generation failed");
+                            }
+                        });
+                        progressDlg->advance(item.name);
                     }
-                });
-            }).detach();
-        });
+
+                    // Finish on main thread
+                    m_mainThreadQueue->enqueue([this, progressDlg]() {
+                        progressDlg->finish();
+                        if (m_uiManager->libraryPanel()) {
+                            m_uiManager->libraryPanel()->refresh();
+                        }
+                        ToastManager::instance().show(ToastType::Success, "Thumbnails Updated",
+                                                      "Batch regeneration complete");
+                    });
+                }).detach();
+            });
 
         m_uiManager->libraryPanel()->setOnAssignDefaultMaterial([this](int64_t modelId) {
             i64 defaultMatId = Config::instance().getDefaultMaterialId();

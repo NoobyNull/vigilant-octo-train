@@ -148,6 +148,12 @@ class Config {
     i64 getLastSelectedModelId() const { return m_wsLastSelectedModelId; }
     void setLastSelectedModelId(i64 id) { m_wsLastSelectedModelId = id; }
 
+    f32 getLibraryThumbSize() const { return m_wsLibraryThumbSize; }
+    void setLibraryThumbSize(f32 size) { m_wsLibraryThumbSize = size; }
+
+    f32 getMaterialsThumbSize() const { return m_wsMaterialsThumbSize; }
+    void setMaterialsThumbSize(f32 size) { m_wsMaterialsThumbSize = size; }
+
     // Import pipeline settings
     ParallelismTier getParallelismTier() const { return m_parallelismTier; }
     void setParallelismTier(ParallelismTier tier) { m_parallelismTier = tier; }
@@ -226,6 +232,8 @@ class Config {
     bool m_wsShowCostEstimator = false;
     bool m_wsShowStartPage = true;
     i64 m_wsLastSelectedModelId = -1;
+    f32 m_wsLibraryThumbSize = 96.0f;
+    f32 m_wsMaterialsThumbSize = 96.0f;
 
     // Input bindings
     std::array<InputBinding, static_cast<int>(BindAction::COUNT)> m_bindings;

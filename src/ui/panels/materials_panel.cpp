@@ -23,6 +23,7 @@ namespace dw {
 
 MaterialsPanel::MaterialsPanel(MaterialManager* materialManager)
     : Panel("Materials"), m_materialManager(materialManager) {
+    m_thumbnailSize = Config::instance().getMaterialsThumbSize();
     refresh();
 }
 
@@ -179,6 +180,9 @@ void MaterialsPanel::renderToolbar() {
     // Thumbnail size slider
     ImGui::SetNextItemWidth(60.0f);
     ImGui::SliderFloat("##ThumbSize", &m_thumbnailSize, THUMB_MIN, 256.0f, "%.0f");
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+        Config::instance().setMaterialsThumbSize(m_thumbnailSize);
+    }
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Thumbnail size (Ctrl+scroll in grid)");
     }
@@ -367,6 +371,7 @@ void MaterialsPanel::renderMaterialGrid(const std::vector<MaterialRecord>& mater
         m_thumbnailSize += ImGui::GetIO().MouseWheel * 16.0f;
         float maxSize = ImGui::GetContentRegionAvail().x;
         m_thumbnailSize = std::clamp(m_thumbnailSize, THUMB_MIN, std::max(THUMB_MIN, maxSize));
+        Config::instance().setMaterialsThumbSize(m_thumbnailSize);
     }
 
     if (materials.empty()) {

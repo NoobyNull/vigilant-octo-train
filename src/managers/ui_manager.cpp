@@ -20,6 +20,7 @@
 #include "ui/dialogs/import_summary_dialog.h"
 #include "ui/dialogs/lighting_dialog.h"
 #include "ui/dialogs/message_dialog.h"
+#include "ui/dialogs/progress_dialog.h"
 #include "ui/panels/cost_panel.h"
 #include "ui/panels/cut_optimizer_panel.h"
 #include "ui/panels/gcode_panel.h"
@@ -60,6 +61,7 @@ void UIManager::init(LibraryManager* libraryManager, ProjectManager* projectMana
     m_fileDialog = std::make_unique<FileDialog>();
     m_lightingDialog = std::make_unique<LightingDialog>();
     m_importSummaryDialog = std::make_unique<ImportSummaryDialog>();
+    m_progressDialog = std::make_unique<ProgressDialog>();
 
     // Create widgets
     m_statusBar = std::make_unique<StatusBar>();
@@ -99,6 +101,7 @@ void UIManager::shutdown() {
     m_fileDialog.reset();
     m_lightingDialog.reset();
     m_importSummaryDialog.reset();
+    m_progressDialog.reset();
 
     // Destroy widgets
     m_statusBar.reset();
@@ -438,6 +441,11 @@ void UIManager::renderBackgroundUI(float deltaTime, const LoadingState* loadingS
     // Render status bar (replaces old renderStatusBar and renderImportProgress)
     if (m_statusBar) {
         m_statusBar->render(loadingState);
+    }
+
+    // Render progress dialog (batch operations)
+    if (m_progressDialog) {
+        m_progressDialog->render();
     }
 
     // Render global message dialog (singleton)
