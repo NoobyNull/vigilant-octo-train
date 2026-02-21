@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -11,6 +12,8 @@
 #include "panel.h"
 
 namespace dw {
+
+class ContextMenuManager;
 
 // Library panel for browsing and managing imported models
 class LibraryPanel : public Panel {
@@ -66,10 +69,9 @@ class LibraryPanel : public Panel {
     void renderCombinedList();
     void renderModelItem(const ModelRecord& model, int index, float thumbOverride = 0.0f);
     void renderGCodeItem(const GCodeRecord& gcode, int index, float thumbOverride = 0.0f);
-    void renderContextMenu(const ModelRecord& model);
-    void renderGCodeContextMenu(const GCodeRecord& gcode);
     void renderRenameDialog();
     void renderDeleteConfirm();
+    void registerContextMenuEntries();
 
     // Load a TGA file into an OpenGL texture, returns 0 on failure
     GLuint loadTGATexture(const Path& path);
@@ -115,6 +117,11 @@ class LibraryPanel : public Panel {
     float m_thumbnailSize = 96.0f;
     static constexpr float THUMB_MIN = 48.0f;
     // THUMB_MAX is computed per-frame as the available content width
+
+    // Context menu management
+    ContextMenuManager* m_contextMenuManager = nullptr;
+    std::optional<ModelRecord> m_currentContextMenuModel;
+    std::optional<GCodeRecord> m_currentContextMenuGCode;
 };
 
 } // namespace dw
