@@ -471,6 +471,21 @@ void ViewportPanel::renderViewport() {
     }
 
     renderViewCube();
+
+    // Camera orientation overlay (bottom-right)
+    {
+        ImVec2 rectMax = ImGui::GetItemRectMax();
+        char buf[64];
+        std::snprintf(buf, sizeof(buf), "P:%.1f Y:%.1f D:%.1f", m_camera.pitch(), m_camera.yaw(),
+                      m_camera.distance());
+        ImVec2 textSize = ImGui::CalcTextSize(buf);
+        ImVec2 pos(rectMax.x - textSize.x - 8.0f, rectMax.y - textSize.y - 8.0f);
+        ImDrawList* dl = ImGui::GetWindowDrawList();
+        dl->AddRectFilled(ImVec2(pos.x - 4, pos.y - 2),
+                          ImVec2(pos.x + textSize.x + 4, pos.y + textSize.y + 2),
+                          IM_COL32(0, 0, 0, 160), 3.0f);
+        dl->AddText(pos, IM_COL32(200, 200, 200, 255), buf);
+    }
 }
 
 void ViewportPanel::renderToolbar() {
