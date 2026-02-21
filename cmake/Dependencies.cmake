@@ -138,9 +138,13 @@ if(NOT miniz_POPULATED)
         ${miniz_SOURCE_DIR}/miniz_tinfl.c
         ${miniz_SOURCE_DIR}/miniz_zip.c
     )
-    target_include_directories(miniz_static PUBLIC ${miniz_SOURCE_DIR})
-    # Define MINIZ_EXPORT to avoid export header dependency
+    target_include_directories(miniz_static PUBLIC ${miniz_SOURCE_DIR} ${miniz_BINARY_DIR})
+    # Define MINIZ_EXPORT as empty to avoid export header dependency
+    # Also generate minimal miniz_export.h if it doesn't exist
     target_compile_definitions(miniz_static PUBLIC MINIZ_EXPORT=)
+    if(NOT EXISTS "${miniz_BINARY_DIR}/miniz_export.h")
+        file(WRITE "${miniz_BINARY_DIR}/miniz_export.h" "#ifndef MINIZ_EXPORT_H\n#define MINIZ_EXPORT_H\n#endif\n")
+    endif()
 endif()
 
 # stb - Single-file header libraries (image loading, etc.)
