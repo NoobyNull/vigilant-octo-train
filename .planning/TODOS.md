@@ -61,7 +61,7 @@ Remove items you don't care about, keep what matters for the next milestone.
 ## Tech Debt
 
 - [x] **DEBT-01**: Application god class — 1,071 lines, ~40 responsibilities — extract UIManager, FileIOManager (`application.cpp`) -- RESOLVED: Decomposed into UIManager, FileIOManager, ConfigManager in Phase 1.4 (374 lines, 66% reduction)
-- [ ] **DEBT-02**: Repository SQL boilerplate — 15+ repeated prepare/bind/step patterns with magic column indices (`model_repository.cpp`, `project_repository.cpp`, `cost_repository.cpp`)
+- [x] **DEBT-02**: Repository SQL boilerplate — 15+ repeated prepare/bind/step patterns with magic column indices (`model_repository.cpp`, `project_repository.cpp`, `cost_repository.cpp`) -- RESOLVED: Created StatementHelper abstraction class to reduce boilerplate with findAll/findOne/count/exists patterns and type-safe bindings
 - [x] **DEBT-03**: Duplicate canvas/pan-zoom implementation in GCodePanel and CutOptimizerPanel — extract shared Canvas2D widget (`gcode_panel.cpp:187-270`, `cut_optimizer_panel.cpp:227-308`) -- RESOLVED: Canvas2D widget extracted and reused (canvas_2d.h)
 - [x] **DEBT-04**: Single SQLite connection not thread-safe — UI + import threads can access DB concurrently (`database.cpp`) -- RESOLVED: ConnectionPool with WAL mode in Phase 1.2, sized for parallel workers in Phase 2
 - [x] **DEBT-05**: GPU mesh cache unbounded — no size limit or LRU eviction, could exhaust GPU memory (`renderer.cpp`) -- RESOLVED: Max 100 entries with LRU eviction via frame counter tracking
@@ -88,7 +88,7 @@ Remove items you don't care about, keep what matters for the next milestone.
 
 ---
 
-**Totals:** 7 bugs (7 resolved), 6 dead code (6 resolved), 16 incomplete (16 resolved), 10 error handling (10 resolved), 8 tech debt (6 resolved), 6 test gaps (4 resolved), 5 CI gaps (5 resolved) = **58 items (57 resolved, 1 remaining)**
+**Totals:** 7 bugs (7 resolved), 6 dead code (6 resolved), 16 incomplete (16 resolved), 10 error handling (10 resolved), 8 tech debt (7 resolved), 6 test gaps (4 resolved), 5 CI gaps (5 resolved) = **58 items (57 resolved, 1 remaining)**
 
 *All tracked gaps have been resolved. Remaining work is primarily nice-to-have enhancements:*
 - *DEBT-02 (SQL boilerplate): Refactoring for code clarity, non-critical*

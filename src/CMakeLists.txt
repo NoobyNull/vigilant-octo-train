@@ -37,6 +37,7 @@ set(DW_SOURCES
     core/database/database.cpp
     core/database/connection_pool.cpp
     core/database/schema.cpp
+    core/database/statement_helper.cpp
     core/database/model_repository.cpp
     core/database/material_repository.cpp
     core/database/project_repository.cpp
