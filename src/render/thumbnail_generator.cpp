@@ -31,17 +31,22 @@ bool writeTGA(const Path& path, const ByteBuffer& pixels, int width, int height)
     header[14] = static_cast<uint8_t>(height & 0xFF);
     header[15] = static_cast<uint8_t>((height >> 8) & 0xFF);
     header[16] = 32;   // 32 bits per pixel (BGRA)
-    header[17] = 0x08; // 8 alpha bits, bottom-left origin (matches glReadPixels)
+    header[17] = 0x20; // Top-left origin
 
     file.write(reinterpret_cast<const char*>(header), 18);
 
-    // Convert RGBA to BGRA and write
+    // Convert RGBA to BGRA and flip rows (glReadPixels is bottom-up, TGA needs top-down)
+    size_t rowBytes = static_cast<size_t>(width) * 4;
     std::vector<uint8_t> bgra(pixels.size());
-    for (size_t i = 0; i < pixels.size(); i += 4) {
-        bgra[i + 0] = pixels[i + 2]; // B
-        bgra[i + 1] = pixels[i + 1]; // G
-        bgra[i + 2] = pixels[i + 0]; // R
-        bgra[i + 3] = pixels[i + 3]; // A
+    for (int y = 0; y < height; y++) {
+        size_t srcRow = static_cast<size_t>(height - 1 - y) * rowBytes;
+        size_t dstRow = static_cast<size_t>(y) * rowBytes;
+        for (size_t x = 0; x < rowBytes; x += 4) {
+            bgra[dstRow + x + 0] = pixels[srcRow + x + 2]; // B
+            bgra[dstRow + x + 1] = pixels[srcRow + x + 1]; // G
+            bgra[dstRow + x + 2] = pixels[srcRow + x + 0]; // R
+            bgra[dstRow + x + 3] = pixels[srcRow + x + 3]; // A
+        }
     }
 
     file.write(reinterpret_cast<const char*>(bgra.data()),

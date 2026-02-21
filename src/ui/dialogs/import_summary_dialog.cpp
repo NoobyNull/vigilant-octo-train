@@ -2,6 +2,7 @@
 
 #include "ui/dialogs/import_summary_dialog.h"
 
+#include <algorithm>
 #include <imgui.h>
 
 #include "core/utils/file_utils.h"
@@ -66,11 +67,11 @@ void ImportSummaryDialog::render() {
 
                 // Select All / Deselect All helpers
                 if (ImGui::SmallButton("Select All")) {
-                    m_checked.assign(m_checked.size(), true);
+                    std::fill(m_checked.begin(), m_checked.end(), true);
                 }
                 ImGui::SameLine();
                 if (ImGui::SmallButton("Deselect All")) {
-                    m_checked.assign(m_checked.size(), false);
+                    std::fill(m_checked.begin(), m_checked.end(), false);
                 }
 
                 ImGui::Spacing();

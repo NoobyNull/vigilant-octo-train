@@ -775,8 +775,8 @@ bool Application::generateMaterialThumbnail(int64_t modelId, Mesh& mesh) {
             mesh.generatePlanarUVs(mat->grainDirectionDeg);
     }
 
-    // Match viewport camera: pitch=0, yaw=orientYaw (same as setPreOrientedMesh)
-    return m_libraryManager->generateThumbnail(modelId, mesh, tex.get(), 0.0f, orientYaw);
+    // Camera from front: pitch=0, yaw=0
+    return m_libraryManager->generateThumbnail(modelId, mesh, tex.get(), 0.0f, 0.0f);
 }
 
 void Application::shutdown() {
