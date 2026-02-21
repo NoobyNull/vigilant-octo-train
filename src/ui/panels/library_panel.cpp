@@ -12,6 +12,7 @@
 #include "../../core/config/config.h"
 #include "../../core/utils/file_utils.h"
 #include "../../core/utils/log.h"
+#include "../context_menu_manager.h"
 #include "../icons.h"
 
 namespace dw {
@@ -118,6 +119,11 @@ GLuint LibraryPanel::getThumbnailTexture(const ModelRecord& model) {
 void LibraryPanel::render() {
     if (!m_open) {
         return;
+    }
+
+    // Lazy initialization of context menu manager on first render
+    if (!m_contextMenuManager) {
+        registerContextMenuEntries();
     }
 
     if (ImGui::Begin(m_title.c_str(), &m_open)) {
@@ -315,10 +321,12 @@ void LibraryPanel::renderModelItem(const ModelRecord& model, int index, float th
             }
         }
 
-        if (ImGui::BeginPopupContextItem("ModelContext")) {
-            renderContextMenu(model);
+        m_currentContextMenuModel = model;
+        if (ImGui::BeginPopupContextItem("LibraryPanel_ModelContext")) {
+            m_contextMenuManager->render("LibraryPanel_ModelContext");
             ImGui::EndPopup();
         }
+        m_currentContextMenuModel = std::nullopt;
 
         // Delayed hover tooltip with details
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
@@ -390,10 +398,12 @@ void LibraryPanel::renderModelItem(const ModelRecord& model, int index, float th
             }
         }
 
-        if (ImGui::BeginPopupContextItem("ModelContext")) {
-            renderContextMenu(model);
+        m_currentContextMenuModel = model;
+        if (ImGui::BeginPopupContextItem("LibraryPanel_ModelContext")) {
+            m_contextMenuManager->render("LibraryPanel_ModelContext");
             ImGui::EndPopup();
         }
+        m_currentContextMenuModel = std::nullopt;
 
         // Draw text over the selectable
         ImVec2 itemMin = ImGui::GetItemRectMin();
@@ -418,61 +428,119 @@ void LibraryPanel::renderModelItem(const ModelRecord& model, int index, float th
     ImGui::PopID();
 }
 
-void LibraryPanel::renderContextMenu(const ModelRecord& model) {
-    if (ImGui::MenuItem("Open")) {
-        if (m_onModelOpened) {
-            m_onModelOpened(model.id);
-        }
+void LibraryPanel::registerContextMenuEntries() {
+    if (!m_contextMenuManager) {
+        return; // Manager not yet initialized, will try again next frame
     }
 
-    if (ImGui::MenuItem("Regenerate Thumbnail")) {
-        if (m_onRegenerateThumbnail)
-            m_onRegenerateThumbnail(model.id);
-        // Invalidate cached texture so it reloads after regeneration
-        auto it = m_textureCache.find(model.id);
-        if (it != m_textureCache.end()) {
-            if (it->second != 0)
-                glDeleteTextures(1, &it->second);
-            m_textureCache.erase(it);
-        }
-    }
+    // Model context menu
+    std::vector<ContextMenuEntry> modelEntries = {
+        {.label = "Open",
+         .action =
+             [this]() {
+                 if (m_onModelOpened && m_currentContextMenuModel) {
+                     m_onModelOpened(m_currentContextMenuModel->id);
+                 }
+             }},
+        {.label = "Regenerate Thumbnail",
+         .action =
+             [this]() {
+                 if (m_onRegenerateThumbnail && m_currentContextMenuModel) {
+                     m_onRegenerateThumbnail(m_currentContextMenuModel->id);
+                     auto it = m_textureCache.find(m_currentContextMenuModel->id);
+                     if (it != m_textureCache.end()) {
+                         if (it->second != 0)
+                             glDeleteTextures(1, &it->second);
+                         m_textureCache.erase(it);
+                     }
+                 }
+             }},
+        {.label = "Assign Default Material",
+         .action =
+             [this]() {
+                 if (m_onAssignDefaultMaterial && m_currentContextMenuModel) {
+                     m_onAssignDefaultMaterial(m_currentContextMenuModel->id);
+                 }
+             },
+         .enabled = [this]() { return Config::instance().getDefaultMaterialId() > 0; }},
+        ContextMenuEntry::separator(),
+        {.label = "Rename",
+         .action =
+             [this]() {
+                 if (m_currentContextMenuModel) {
+                     m_showRenameDialog = true;
+                     m_renameModelId = m_currentContextMenuModel->id;
+                     std::strncpy(m_renameBuffer, m_currentContextMenuModel->name.c_str(),
+                                  sizeof(m_renameBuffer) - 1);
+                     m_renameBuffer[sizeof(m_renameBuffer) - 1] = '\0';
+                 }
+             }},
+        {.label = "Delete",
+         .action =
+             [this]() {
+                 if (m_currentContextMenuModel) {
+                     m_showDeleteConfirm = true;
+                     m_deleteItemId = m_currentContextMenuModel->id;
+                     m_deleteIsGCode = false;
+                     m_deleteItemName = m_currentContextMenuModel->name;
+                 }
+             }},
+        ContextMenuEntry::separator(),
+        {.label = "Show in Explorer",
+         .action =
+             [this]() {
+                 if (m_currentContextMenuModel) {
+                     auto parentDir = m_currentContextMenuModel->filePath.parent_path();
+                     if (!parentDir.empty()) {
+                         file::openInFileManager(parentDir);
+                     }
+                 }
+             }},
+        {.label = "Copy Path",
+         .action =
+             [this]() {
+                 if (m_currentContextMenuModel) {
+                     ImGui::SetClipboardText(m_currentContextMenuModel->filePath.string().c_str());
+                 }
+             }},
+    };
 
-    i64 defaultMatId = Config::instance().getDefaultMaterialId();
-    if (defaultMatId > 0) {
-        if (ImGui::MenuItem("Assign Default Material")) {
-            if (m_onAssignDefaultMaterial)
-                m_onAssignDefaultMaterial(model.id);
-        }
-    }
+    // GCode context menu
+    std::vector<ContextMenuEntry> gcodeEntries = {
+        {.label = "Open",
+         .action =
+             [this]() {
+                 if (m_onGCodeOpened && m_currentContextMenuGCode) {
+                     m_onGCodeOpened(m_currentContextMenuGCode->id);
+                 }
+             }},
+        ContextMenuEntry::separator(),
+        {.label = "Delete",
+         .action =
+             [this]() {
+                 if (m_currentContextMenuGCode) {
+                     m_showDeleteConfirm = true;
+                     m_deleteItemId = m_currentContextMenuGCode->id;
+                     m_deleteIsGCode = true;
+                     m_deleteItemName = m_currentContextMenuGCode->name;
+                 }
+             }},
+        ContextMenuEntry::separator(),
+        {.label = "Show in Explorer",
+         .action =
+             [this]() {
+                 if (m_currentContextMenuGCode) {
+                     auto parentDir = m_currentContextMenuGCode->filePath.parent_path();
+                     if (!parentDir.empty()) {
+                         file::openInFileManager(parentDir);
+                     }
+                 }
+             }},
+    };
 
-    ImGui::Separator();
-
-    if (ImGui::MenuItem("Rename")) {
-        m_showRenameDialog = true;
-        m_renameModelId = model.id;
-        std::strncpy(m_renameBuffer, model.name.c_str(), sizeof(m_renameBuffer) - 1);
-        m_renameBuffer[sizeof(m_renameBuffer) - 1] = '\0';
-    }
-
-    if (ImGui::MenuItem("Delete")) {
-        m_showDeleteConfirm = true;
-        m_deleteItemId = model.id;
-        m_deleteIsGCode = false;
-        m_deleteItemName = model.name;
-    }
-
-    ImGui::Separator();
-
-    if (ImGui::MenuItem("Show in Explorer")) {
-        auto parentDir = model.filePath.parent_path();
-        if (!parentDir.empty()) {
-            file::openInFileManager(parentDir);
-        }
-    }
-
-    if (ImGui::MenuItem("Copy Path")) {
-        ImGui::SetClipboardText(model.filePath.string().c_str());
-    }
+    // Register entries with the context menu manager
+    m_contextMenuManager->registerEntries("LibraryPanel_ModelContext", modelEntries);
+    m_contextMenuManager->registerEntries("LibraryPanel_GCodeContext", gcodeEntries);
 }
 
 void LibraryPanel::renderGCodeList() {
@@ -598,10 +666,12 @@ void LibraryPanel::renderGCodeItem(const GCodeRecord& gcode, int index, float th
             }
         }
 
-        if (ImGui::BeginPopupContextItem("GCodeContext")) {
-            renderGCodeContextMenu(gcode);
+        m_currentContextMenuGCode = gcode;
+        if (ImGui::BeginPopupContextItem("LibraryPanel_GCodeContext")) {
+            m_contextMenuManager->render("LibraryPanel_GCodeContext");
             ImGui::EndPopup();
         }
+        m_currentContextMenuGCode = std::nullopt;
 
         // Delayed hover tooltip with details
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
@@ -659,10 +729,12 @@ void LibraryPanel::renderGCodeItem(const GCodeRecord& gcode, int index, float th
             }
         }
 
-        if (ImGui::BeginPopupContextItem("GCodeContext")) {
-            renderGCodeContextMenu(gcode);
+        m_currentContextMenuGCode = gcode;
+        if (ImGui::BeginPopupContextItem("LibraryPanel_GCodeContext")) {
+            m_contextMenuManager->render("LibraryPanel_GCodeContext");
             ImGui::EndPopup();
         }
+        m_currentContextMenuGCode = std::nullopt;
 
         // Draw text
         ImVec2 itemMin = ImGui::GetItemRectMin();
@@ -686,32 +758,6 @@ void LibraryPanel::renderGCodeItem(const GCodeRecord& gcode, int index, float th
     }
 
     ImGui::PopID();
-}
-
-void LibraryPanel::renderGCodeContextMenu(const GCodeRecord& gcode) {
-    if (ImGui::MenuItem("Open")) {
-        if (m_onGCodeOpened) {
-            m_onGCodeOpened(gcode.id);
-        }
-    }
-
-    ImGui::Separator();
-
-    if (ImGui::MenuItem("Delete")) {
-        m_showDeleteConfirm = true;
-        m_deleteItemId = gcode.id;
-        m_deleteIsGCode = true;
-        m_deleteItemName = gcode.name;
-    }
-
-    ImGui::Separator();
-
-    if (ImGui::MenuItem("Show in Explorer")) {
-        auto parentDir = gcode.filePath.parent_path();
-        if (!parentDir.empty()) {
-            file::openInFileManager(parentDir);
-        }
-    }
 }
 
 void LibraryPanel::renderDeleteConfirm() {
