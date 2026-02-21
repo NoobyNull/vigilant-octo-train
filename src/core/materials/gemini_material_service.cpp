@@ -180,8 +180,7 @@ std::vector<uint8_t> GeminiMaterialService::fetchTexture(const std::string& prom
                            "Lighting: Uniform flat lighting, no shadows, no 3D depth. "
                            "Subject: A raw material surface grain only."}}}}}}},
         {"generationConfig",
-         {{"responseModalities", nlohmann::json::array({"IMAGE"})},
-          {"imageSizeOptions", {{"aspectRatio", "1:1"}}}}}};
+         {{"responseModalities", nlohmann::json::array({"IMAGE"})}}}};
 
     std::string response = curlPost(url, requestBody.dump());
     if (response.empty()) {
@@ -191,15 +190,12 @@ std::vector<uint8_t> GeminiMaterialService::fetchTexture(const std::string& prom
     // Extract base64 image data from Gemini response
     try {
         auto json = nlohmann::json::parse(response);
-        auto& candidates = json["candidates"];
-        if (candidates.empty()) {
-            if (json.contains("promptFeedback")) {
-                log::error("GeminiService", "Texture request blocked by safety filter");
-            } else {
-                log::error("GeminiService", "No candidates in texture response");
-            }
+        if (!json.contains("candidates") || json["candidates"].empty()) {
+            std::string detail = response.substr(0, 500);
+            log::errorf("GeminiService", "Texture response has no candidates: %s", detail.c_str());
             return {};
         }
+        auto& candidates = json["candidates"];
 
         auto& parts = candidates[0]["content"]["parts"];
         for (auto& part : parts) {
