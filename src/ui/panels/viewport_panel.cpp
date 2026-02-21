@@ -412,8 +412,8 @@ void ViewportPanel::renderViewCube() {
     };
 
     const std::array<Face, 6> faces = {{
-        {{0, 1, 2, 3}, "F", 0.0f, 0.0f},    // Front (-Z)
-        {{5, 4, 7, 6}, "Bk", 180.0f, 0.0f}, // Back (+Z)
+        {{0, 1, 2, 3}, "Bk", 0.0f, 0.0f},   // Back (-Z)
+        {{5, 4, 7, 6}, "F", 180.0f, 0.0f},  // Front (+Z)
         {{1, 5, 6, 2}, "R", 90.0f, 0.0f},   // Right (+X)
         {{4, 0, 3, 7}, "L", 270.0f, 0.0f},  // Left (-X)
         {{3, 2, 6, 7}, "T", 0.0f, 89.0f},   // Top (+Y)
