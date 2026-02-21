@@ -41,14 +41,14 @@ int main(int argc, char* argv[]) {
     }
 
     auto materials = getDefaultMaterials();
-    const int total = static_cast<int>(materials.size());
+    const size_t total = materials.size();
     int generated = 0;
     int skipped = 0;
     int failed = 0;
 
     GeminiMaterialService service;
 
-    for (int i = 0; i < total; ++i) {
+    for (size_t i = 0; i < materials.size(); ++i) {
         const auto& mat = materials[i];
         Path outPath = outputDir / (mat.name + ".dwmat");
 
@@ -67,7 +67,9 @@ int main(int argc, char* argv[]) {
         auto result = service.generate(mat.name, apiKey);
         auto elapsed = std::chrono::steady_clock::now() - start;
         double secs =
-            std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count() / 1000.0;
+            static_cast<double>(
+                std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count()) /
+            1000.0;
 
         if (!result.success) {
             std::cout << "FAILED (" << result.error << ")\n";
