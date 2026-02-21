@@ -38,6 +38,7 @@ add_subdirectory(settings)
 # Developer tools (material generator, etc.)
 if(DW_BUILD_TOOLS)
     add_subdirectory(tools/matgen)
+    add_subdirectory(tools/texgen)
 endif()
 
 # Tests
