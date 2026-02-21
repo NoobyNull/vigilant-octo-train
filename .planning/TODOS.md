@@ -90,9 +90,9 @@ Remove items you don't care about, keep what matters for the next milestone.
 
 **Totals:** 7 bugs (7 resolved), 6 dead code (6 resolved), 16 incomplete (16 resolved), 10 error handling (10 resolved), 8 tech debt (7 resolved), 6 test gaps (4 resolved), 5 CI gaps (5 resolved) = **58 items (57 resolved, 1 remaining)**
 
-*All tracked gaps have been resolved. Remaining work is primarily nice-to-have enhancements:*
-- *DEBT-02 (SQL boilerplate): Refactoring for code clarity, non-critical*
+*DEBT-02 has been resolved. Remaining work is primarily nice-to-have enhancements:*
 - *DEBT-07 (more optimizer algorithms): Feature enhancement, non-critical*
 - *TEST-05/TEST-06 (renderer/workspace/integration tests): Nice-to-have coverage*
+- *Repositories could be gradually refactored to use StatementHelper (optional future work)*
 
 *The material system is fully implemented and ready for generation with API key.*
