@@ -112,4 +112,14 @@ std::vector<MaterialRecord> getDefaultMaterials() {
     return materials;
 }
 
+std::vector<std::string> getDefaultMaterialNames() {
+    auto materials = getDefaultMaterials();
+    std::vector<std::string> names;
+    names.reserve(materials.size());
+    for (const auto& m : materials) {
+        names.push_back(m.name);
+    }
+    return names;
+}
+
 } // namespace dw

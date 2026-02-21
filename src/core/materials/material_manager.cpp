@@ -1,5 +1,7 @@
 #include "material_manager.h"
 
+#include <set>
+
 #include "../paths/app_paths.h"
 #include "../utils/file_utils.h"
 #include "../utils/log.h"
@@ -22,26 +24,50 @@ void MaterialManager::seedDefaults() {
         return;
     }
 
+    // Build a set of default material names for fallback tracking
     auto defaults = getDefaultMaterials();
-    int seeded = 0;
+    std::set<std::string> seededNames;
 
-    Transaction txn(m_db);
-    for (const auto& mat : defaults) {
-        auto id = m_repo.insert(mat);
-        if (id) {
-            ++seeded;
-        } else {
-            log::warningf("MaterialManager", "seedDefaults: failed to insert '%s'",
-                          mat.name.c_str());
+    int seededWithTexture = 0;
+    int seededBare = 0;
+
+    // Phase 1: Try to import bundled .dwmat files (have textures)
+    Path bundledDir = paths::getBundledMaterialsDir();
+    if (file::isDirectory(bundledDir)) {
+        auto dwmatFiles = file::listFiles(bundledDir, "dwmat");
+        for (const auto& dwmatPath : dwmatFiles) {
+            auto id = importMaterial(dwmatPath);
+            if (id) {
+                std::string name = file::getStem(dwmatPath);
+                seededNames.insert(name);
+                ++seededWithTexture;
+            }
         }
     }
 
-    if (!txn.commit()) {
-        log::error("MaterialManager", "seedDefaults: transaction commit failed");
-        return;
+    // Phase 2: Fallback — insert bare records for any defaults not found as .dwmat
+    if (seededNames.size() < defaults.size()) {
+        Transaction txn(m_db);
+        for (const auto& mat : defaults) {
+            if (seededNames.count(mat.name) > 0) {
+                continue; // Already imported from .dwmat
+            }
+            auto id = m_repo.insert(mat);
+            if (id) {
+                ++seededBare;
+            } else {
+                log::warningf("MaterialManager", "seedDefaults: failed to insert '%s'",
+                              mat.name.c_str());
+            }
+        }
+        if (!txn.commit()) {
+            log::error("MaterialManager", "seedDefaults: transaction commit failed");
+            return;
+        }
     }
 
-    log::infof("MaterialManager", "Seeded %d default materials", seeded);
+    log::infof("MaterialManager", "Seeded %d materials (%d with textures)",
+               seededWithTexture + seededBare, seededWithTexture);
 }
 
 // ---------------------------------------------------------------------------

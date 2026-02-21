@@ -159,5 +159,36 @@ set_target_properties(digital_workshop PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )
 
+# --- Bundle resources (materials) ---
+# Copy .dwmat files from resources/materials/ to the build output directory
+file(GLOB DW_BUNDLED_MATERIALS "${CMAKE_SOURCE_DIR}/resources/materials/*.dwmat")
+if(DW_BUNDLED_MATERIALS)
+    set(DW_MATERIALS_OUTPUT_DIR "${CMAKE_BINARY_DIR}/resources/materials")
+    file(MAKE_DIRECTORY ${DW_MATERIALS_OUTPUT_DIR})
+
+    foreach(DWMAT_FILE ${DW_BUNDLED_MATERIALS})
+        get_filename_component(DWMAT_NAME "${DWMAT_FILE}" NAME)
+        add_custom_command(
+            OUTPUT "${DW_MATERIALS_OUTPUT_DIR}/${DWMAT_NAME}"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${DWMAT_FILE}" "${DW_MATERIALS_OUTPUT_DIR}/${DWMAT_NAME}"
+            DEPENDS "${DWMAT_FILE}"
+            COMMENT "Copying ${DWMAT_NAME} to build dir"
+        )
+        list(APPEND DW_MATERIAL_OUTPUTS "${DW_MATERIALS_OUTPUT_DIR}/${DWMAT_NAME}")
+    endforeach()
+
+    add_custom_target(dw_bundle_materials ALL DEPENDS ${DW_MATERIAL_OUTPUTS})
+    add_dependencies(digital_workshop dw_bundle_materials)
+endif()
+
 # Install target
 install(TARGETS digital_workshop RUNTIME DESTINATION bin)
+
+# Install bundled materials if directory exists
+if(EXISTS "${CMAKE_SOURCE_DIR}/resources/materials/")
+    install(DIRECTORY "${CMAKE_SOURCE_DIR}/resources/materials/"
+        DESTINATION share/digitalworkshop/resources/materials
+        FILES_MATCHING PATTERN "*.dwmat"
+    )
+endif()

@@ -148,6 +148,33 @@ Path getMaterialsDir() {
     return getDataDir() / "materials";
 }
 
+Path getBundledMaterialsDir() {
+    // Locate directory relative to the running executable
+#ifdef _WIN32
+    char buf[MAX_PATH];
+    DWORD len = GetModuleFileNameA(nullptr, buf, MAX_PATH);
+    if (len > 0 && len < MAX_PATH) {
+        return Path(std::string(buf, len)).parent_path() / "resources" / "materials";
+    }
+#elif defined(__APPLE__)
+    // macOS: use _NSGetExecutablePath or /proc/self/exe fallback
+    char buf[1024];
+    uint32_t size = sizeof(buf);
+    if (_NSGetExecutablePath(buf, &size) == 0) {
+        return fs::canonical(Path(buf)).parent_path() / "resources" / "materials";
+    }
+#else
+    // Linux: /proc/self/exe
+    std::error_code ec;
+    Path exePath = fs::read_symlink("/proc/self/exe", ec);
+    if (!ec) {
+        return exePath.parent_path() / "resources" / "materials";
+    }
+#endif
+    // Fallback: relative to CWD
+    return Path("resources") / "materials";
+}
+
 bool ensureDirectoriesExist() {
     bool success = true;
 
