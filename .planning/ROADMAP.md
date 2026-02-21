@@ -32,20 +32,22 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
 | 1.5 Bug Fixes | v1.0 | 3/3 | Complete | 2026-02-09 |
 | 1.6 Dead Code Cleanup | v1.0 | 1/1 | Complete | 2026-02-09 |
 | 2 Import Pipeline | v1.0 | 10/10 | Complete | 2026-02-09 |
+| 1 Materials System | Post-v1.0 | 6/6 | Complete | 2026-02-20 |
 
 ### Phase 1: Add materials mapping to object view with coordinated materials database
 
 **Goal:** CNC woodworker can assign wood species materials to 3D objects with texture-mapped visualization, browsable materials database with 23 built-in species, and portable .dwmat archive import/export
 **Depends on:** v1.0
-**Plans:** 4/6 plans executed
+**Status:** COMPLETE
+**Plans:** 6/6 plans executed
 
 Plans:
 - [x] 01-01-PLAN.md — Dependencies, material types, database schema, MaterialRepository (completed 2026-02-19)
 - [x] 01-02-PLAN.md — MaterialArchive (.dwmat ZIP), TextureLoader, Texture RAII wrapper (completed 2026-02-20)
 - [x] 01-03-PLAN.md — Default materials list, MaterialManager import/export/seeding (completed 2026-02-20)
 - [x] 01-04-PLAN.md — Shader texture support, UV generation, Renderer integration (completed 2026-02-20)
-- [ ] 01-05-PLAN.md — MaterialsPanel UI with category tabs, thumbnail grid, edit form
-- [ ] 01-06-PLAN.md — Application wiring, PropertiesPanel integration, human verification
+- [x] 01-05-PLAN.md — MaterialsPanel UI with category tabs, thumbnail grid, edit form (completed 2026-02-20)
+- [x] 01-06-PLAN.md — Application wiring, PropertiesPanel integration, human verification (completed 2026-02-20)
 
 ---
 

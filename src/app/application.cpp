@@ -129,6 +129,19 @@ bool Application::init() {
     static std::string imguiIniPath = (paths::getConfigDir() / "imgui.ini").string();
     io.IniFilename = imguiIniPath.c_str();
 
+    // Load default font, then merge FontAwesome 6 Solid icons into it
+    io.Fonts->AddFontDefault();
+    {
+        #include "ui/fonts/fa_solid_900.h"
+        static const ImWchar iconRanges[] = { 0xf000, 0xf8ff, 0 };
+        ImFontConfig iconCfg;
+        iconCfg.MergeMode = true;
+        iconCfg.PixelSnapH = true;
+        iconCfg.GlyphMinAdvanceX = 16.0f;
+        io.Fonts->AddFontFromMemoryCompressedBase85TTF(
+            fa_solid_900_compressed_data_base85, 16.0f, &iconCfg, iconRanges);
+    }
+
     ImGui_ImplSDL2_InitForOpenGL(m_window, m_glContext);
     ImGui_ImplOpenGL3_Init("#version 330");
 

@@ -7,6 +7,7 @@
 
 #include "../core/utils/log.h"
 #include "theme.h"
+#include "fonts/fa_solid_900.h"
 
 namespace dw {
 
@@ -36,6 +37,24 @@ bool UIManager::initialize(SDL_Window* window, void* glContext) {
     // Setup Platform/Renderer backends
     ImGui_ImplSDL2_InitForOpenGL(window, glContext);
     ImGui_ImplOpenGL3_Init("#version 330 core");
+
+    // Load FontAwesome font merged with default font
+    ImFontConfig config;
+    config.MergeMode = true;
+    config.PixelSnapH = true;
+
+    // Define the range for FontAwesome solid glyphs (only what we use)
+    static const ImWchar fa_ranges[] = {0xf00a, 0xf010, 0xf013, 0xf02c, 0xf03e, 0xf06c, 0xf06e, 0xf071, 0xf05a, 0xf059, 0xf057, 0xf00b, 0xf002, 0xf021, 0xf0b0, 0xf067, 0xf068, 0xf0c7, 0xf07c, 0xf0d0, 0xf1b2, 0xf1c7, 0xf1fc, 0xf1f8, 0xf15b, 0xf065, 0xf56c, 0xf56e, 0x0, 0x0};
+
+    io.Fonts->AddFontFromMemoryCompressedBase85TTF(
+        fa_solid_900_compressed_data_base85,
+        16.0f,
+        &config,
+        fa_ranges
+    );
+
+    // Build font atlas
+    io.Fonts->Build();
 
     // Apply default style
     initializeStyle();

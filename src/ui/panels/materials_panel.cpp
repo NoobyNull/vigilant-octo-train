@@ -136,7 +136,7 @@ void MaterialsPanel::renderToolbar() {
     if (!canAssign) {
         ImGui::BeginDisabled();
     }
-    if (ImGui::Button("Assign")) {
+    if (ImGui::Button(Icons::Assign)) {
         if (canAssign && m_onMaterialAssigned) {
             m_onMaterialAssigned(m_selectedMaterialId);
         }
@@ -165,22 +165,22 @@ void MaterialsPanel::renderToolbar() {
     }
 
     ImGui::SameLine();
-    ImGui::Text("|");
+    ImGui::TextDisabled("|");
     ImGui::SameLine();
 
     // Generate material section
     if (m_isGenerating) {
         ImGui::BeginDisabled();
     }
-    ImGui::SetNextItemWidth(150.0f);
-    ImGui::InputTextWithHint("##GenPrompt", "Material name...", m_generatePrompt,
+    ImGui::SetNextItemWidth(120.0f);
+    ImGui::InputTextWithHint("##GenPrompt", "Material...", m_generatePrompt,
                              sizeof(m_generatePrompt));
     ImGui::SameLine();
     bool promptEmpty = (m_generatePrompt[0] == '\0');
     if (promptEmpty && !m_isGenerating) {
         ImGui::BeginDisabled();
     }
-    if (ImGui::Button(m_isGenerating ? "Generating..." : "Generate")) {
+    if (ImGui::Button(m_isGenerating ? "..." : Icons::Wand)) {
         if (m_onGenerate && !promptEmpty) {
             m_isGenerating = true;
             m_onGenerate(std::string(m_generatePrompt));
@@ -208,7 +208,7 @@ void MaterialsPanel::renderToolbar() {
     float availW = ImGui::GetContentRegionAvail().x;
     ImGui::SetNextItemWidth(availW > 50.0f ? availW : 50.0f);
     if (ImGui::InputTextWithHint(
-            "##MatSearch", "Search materials...", m_searchQuery.data(), 256,
+            "##MatSearch", "Search...", m_searchQuery.data(), 256,
             ImGuiInputTextFlags_CallbackResize,
             [](ImGuiInputTextCallbackData* data) -> int {
                 if (data->EventFlag == ImGuiInputTextFlags_CallbackResize) {
@@ -229,11 +229,11 @@ void MaterialsPanel::renderToolbar() {
 
 void MaterialsPanel::renderCategoryTabs() {
     if (ImGui::BeginTabBar("MaterialCategories")) {
-        auto makeTab = [&](const char* label, CategoryTab tab,
+        auto makeTab = [&](const char* label, const char* tooltip, CategoryTab tab,
                            std::vector<MaterialRecord> materials) {
             bool selected = ImGui::BeginTabItem(label);
             if (ImGui::IsItemHovered()) {
-                // Update active category on hover for correct filtering next frame
+                ImGui::SetTooltip("%s", tooltip);
             }
             if (selected) {
                 m_activeCategory = tab;
@@ -275,11 +275,12 @@ void MaterialsPanel::renderCategoryTabs() {
             return result;
         };
 
-        makeTab("All", CategoryTab::All, filtered);
-        makeTab("Hardwood", CategoryTab::Hardwood, byCategory(MaterialCategory::Hardwood));
-        makeTab("Softwood", CategoryTab::Softwood, byCategory(MaterialCategory::Softwood));
-        makeTab("Domestic", CategoryTab::Domestic, byCategory(MaterialCategory::Domestic));
-        makeTab("Composite", CategoryTab::Composite, byCategory(MaterialCategory::Composite));
+        makeTab("All", "All materials", CategoryTab::All, filtered);
+        makeTab("HW", "Hardwood", CategoryTab::Hardwood, byCategory(MaterialCategory::Hardwood));
+        makeTab("SW", "Softwood", CategoryTab::Softwood, byCategory(MaterialCategory::Softwood));
+        makeTab("Dom", "Domestic", CategoryTab::Domestic, byCategory(MaterialCategory::Domestic));
+        makeTab("Cmp", "Composite", CategoryTab::Composite,
+                byCategory(MaterialCategory::Composite));
 
         ImGui::EndTabBar();
     }

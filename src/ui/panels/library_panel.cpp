@@ -1,5 +1,6 @@
 #include "library_panel.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
@@ -164,7 +165,13 @@ void LibraryPanel::renderToolbar() {
         ImGui::CalcTextSize(Icons::Refresh).x + ImGui::GetStyle().FramePadding.x * 2;
     const char* viewIcon = m_showThumbnails ? Icons::Grid : Icons::List;
     float viewBtnW = ImGui::CalcTextSize(viewIcon).x + ImGui::GetStyle().FramePadding.x * 2;
+
+    // Zoom slider width (only in grid view)
+    float zoomSliderW = m_showThumbnails ? 60.0f : 0.0f;
+
     float buttonsW = refreshBtnW + viewBtnW + style * 2; // 2 SameLine gaps
+    if (m_showThumbnails)
+        buttonsW += zoomSliderW + style;
 
     // Search input takes remaining space after buttons
     float searchWidth = avail - buttonsW;
@@ -207,6 +214,17 @@ void LibraryPanel::renderToolbar() {
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip(m_showThumbnails ? "List view" : "Grid view");
     }
+
+    // Zoom slider (grid view only)
+    if (m_showThumbnails) {
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(zoomSliderW);
+        ImGui::SliderFloat("##Zoom", &m_thumbnailSize, THUMB_MIN, avail, "",
+                           ImGuiSliderFlags_NoRoundToFormat);
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Thumbnail size (%.0fpx)", m_thumbnailSize);
+        }
+    }
 }
 
 void LibraryPanel::renderTabs() {
@@ -230,9 +248,39 @@ void LibraryPanel::renderTabs() {
 void LibraryPanel::renderModelList() {
     ImGui::BeginChild("ModelList", ImVec2(0, 0), false);
 
+    // Ctrl+scroll to zoom thumbnails in grid view
+    if (m_showThumbnails && ImGui::IsWindowHovered() && ImGui::GetIO().KeyCtrl) {
+        float wheel = ImGui::GetIO().MouseWheel;
+        if (wheel != 0.0f) {
+            float maxThumb = ImGui::GetContentRegionAvail().x;
+            m_thumbnailSize = std::clamp(m_thumbnailSize + wheel * 16.0f, THUMB_MIN, maxThumb);
+            ImGui::GetIO().MouseWheel = 0.0f; // consume so child doesn't scroll
+        }
+    }
+
     if (m_models.empty()) {
         ImGui::TextDisabled("No models in library");
         ImGui::TextDisabled("Import models using File > Import");
+    } else if (m_showThumbnails) {
+        // True grid layout with spill
+        float availW = ImGui::GetContentRegionAvail().x;
+        float pad = 4.0f;
+        float cellBase = m_thumbnailSize + pad;
+        int columns = std::max(1, static_cast<int>(availW / cellBase));
+        // Spill: distribute leftover space evenly into each cell
+        float cellW = availW / columns;
+        float thumbSize = cellW - pad;
+
+        int col = 0;
+        for (size_t i = 0; i < m_models.size(); ++i) {
+            renderModelItem(m_models[i], static_cast<int>(i), thumbSize);
+            ++col;
+            if (col < columns) {
+                ImGui::SameLine(0.0f, 0.0f);
+            } else {
+                col = 0;
+            }
+        }
     } else {
         for (size_t i = 0; i < m_models.size(); ++i) {
             renderModelItem(m_models[i], static_cast<int>(i));
@@ -242,17 +290,20 @@ void LibraryPanel::renderModelList() {
     ImGui::EndChild();
 }
 
-void LibraryPanel::renderModelItem(const ModelRecord& model, int index) {
+void LibraryPanel::renderModelItem(const ModelRecord& model, int index, float thumbOverride) {
     ImGui::PushID(static_cast<int>(model.id));
 
     bool isSelected = (model.id == m_selectedModelId);
 
     if (m_showThumbnails) {
-        // Thumbnail view: selectable with embedded thumbnail + text
-        float itemHeight = m_thumbnailSize + 8.0f;
+        // Grid cell: thumbnail with name below, details on hover
+        float ts = thumbOverride > 0.0f ? thumbOverride : m_thumbnailSize;
+        float pad = 2.0f;
+        float nameH = ImGui::GetTextLineHeightWithSpacing();
+        float cellH = ts + nameH + pad * 2;
 
         if (ImGui::Selectable("##item", isSelected, ImGuiSelectableFlags_AllowDoubleClick,
-                              ImVec2(0, itemHeight))) {
+                              ImVec2(ts + pad * 2, cellH))) {
             m_selectedModelId = model.id;
             if (ImGui::IsMouseDoubleClicked(0)) {
                 if (m_onModelOpened)
@@ -268,20 +319,39 @@ void LibraryPanel::renderModelItem(const ModelRecord& model, int index) {
             ImGui::EndPopup();
         }
 
-        // Draw thumbnail and text over the selectable using draw list
+        // Delayed hover tooltip with details
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
+            std::string tip = model.name + "\n" + model.fileFormat;
+            if (model.triangleCount > 0) {
+                if (model.triangleCount >= 1000000)
+                    tip += " | " + std::to_string(model.triangleCount / 1000000) + "M tris";
+                else if (model.triangleCount >= 1000)
+                    tip += " | " + std::to_string(model.triangleCount / 1000) + "K tris";
+                else
+                    tip += " | " + std::to_string(model.triangleCount) + " tris";
+            }
+            if (model.vertexCount > 0) {
+                if (model.vertexCount >= 1000000)
+                    tip += "\n" + std::to_string(model.vertexCount / 1000000) + "M verts";
+                else if (model.vertexCount >= 1000)
+                    tip += "\n" + std::to_string(model.vertexCount / 1000) + "K verts";
+                else
+                    tip += "\n" + std::to_string(model.vertexCount) + " verts";
+            }
+            ImGui::SetTooltip("%s", tip.c_str());
+        }
+
+        // Draw thumbnail over selectable
         ImVec2 itemMin = ImGui::GetItemRectMin();
-        ImVec2 itemMax = ImGui::GetItemRectMax();
         ImDrawList* drawList = ImGui::GetWindowDrawList();
 
-        float pad = 4.0f;
         ImVec2 thumbMin = ImVec2(itemMin.x + pad, itemMin.y + pad);
-        ImVec2 thumbMax = ImVec2(thumbMin.x + m_thumbnailSize, thumbMin.y + m_thumbnailSize);
+        ImVec2 thumbMax = ImVec2(thumbMin.x + ts, thumbMin.y + ts);
 
         GLuint tex = getThumbnailTexture(model);
         if (tex != 0) {
             drawList->AddImageRounded((ImTextureID)(intptr_t)tex, thumbMin, thumbMax, ImVec2(0, 0),
                                       ImVec2(1, 1), IM_COL32(255, 255, 255, 255), 4.0f);
-            drawList->AddRect(thumbMin, thumbMax, IM_COL32(80, 80, 80, 255), 4.0f);
         } else {
             drawList->AddRectFilled(thumbMin, thumbMax, IM_COL32(60, 60, 60, 255), 4.0f);
             drawList->AddRect(thumbMin, thumbMax, IM_COL32(80, 80, 80, 255), 4.0f);
@@ -289,36 +359,22 @@ void LibraryPanel::renderModelItem(const ModelRecord& model, int index) {
             // Center icon in placeholder
             const char* icon = Icons::Model;
             ImVec2 iconSize = ImGui::CalcTextSize(icon);
-            ImVec2 iconPos = ImVec2(thumbMin.x + (m_thumbnailSize - iconSize.x) * 0.5f,
-                                    thumbMin.y + (m_thumbnailSize - iconSize.y) * 0.5f);
+            ImVec2 iconPos = ImVec2(thumbMin.x + (ts - iconSize.x) * 0.5f,
+                                    thumbMin.y + (ts - iconSize.y) * 0.5f);
             drawList->AddText(iconPos, IM_COL32(128, 128, 128, 255), icon);
         }
 
-        // Text to the right of thumbnail, clipped to item bounds
-        float textX = thumbMax.x + 8.0f;
-        float textMaxX = itemMax.x - pad;
-
-        // Model name
-        ImVec4 clipRect(textX, itemMin.y, textMaxX, itemMax.y);
-        drawList->AddText(nullptr, 0.0f, ImVec2(textX, thumbMin.y),
-                          ImGui::GetColorU32(ImGuiCol_Text), model.name.c_str(), nullptr, 0.0f,
-                          &clipRect);
-
-        // Format info line
-        std::string info = model.fileFormat;
-        if (model.triangleCount > 0) {
-            if (model.triangleCount >= 1000000) {
-                info += " | " + std::to_string(model.triangleCount / 1000000) + "M tris";
-            } else if (model.triangleCount >= 1000) {
-                info += " | " + std::to_string(model.triangleCount / 1000) + "K tris";
-            } else {
-                info += " | " + std::to_string(model.triangleCount) + " tris";
-            }
+        // Selection highlight
+        if (isSelected) {
+            drawList->AddRect(thumbMin, thumbMax, ImGui::GetColorU32(ImGuiCol_ButtonActive), 4.0f,
+                              0, 2.0f);
         }
-        float lineHeight = ImGui::GetTextLineHeightWithSpacing();
-        drawList->AddText(nullptr, 0.0f, ImVec2(textX, thumbMin.y + lineHeight),
-                          ImGui::GetColorU32(ImGuiCol_TextDisabled), info.c_str(), nullptr, 0.0f,
-                          &clipRect);
+
+        // Name below thumbnail (clipped to cell width)
+        ImVec2 namePos = ImVec2(itemMin.x + pad, thumbMax.y + 1.0f);
+        ImVec4 clipRect(namePos.x, namePos.y, namePos.x + ts, namePos.y + nameH);
+        drawList->AddText(nullptr, 0.0f, namePos, ImGui::GetColorU32(ImGuiCol_Text),
+                          model.name.c_str(), nullptr, ts, &clipRect);
     } else {
         // List view - compact row
         if (ImGui::Selectable("##item", isSelected, ImGuiSelectableFlags_AllowDoubleClick,
@@ -401,9 +457,37 @@ void LibraryPanel::renderContextMenu(const ModelRecord& model) {
 void LibraryPanel::renderGCodeList() {
     ImGui::BeginChild("GCodeList", ImVec2(0, 0), false);
 
+    // Ctrl+scroll to zoom thumbnails in grid view
+    if (m_showThumbnails && ImGui::IsWindowHovered() && ImGui::GetIO().KeyCtrl) {
+        float wheel = ImGui::GetIO().MouseWheel;
+        if (wheel != 0.0f) {
+            float maxThumb = ImGui::GetContentRegionAvail().x;
+            m_thumbnailSize = std::clamp(m_thumbnailSize + wheel * 16.0f, THUMB_MIN, maxThumb);
+            ImGui::GetIO().MouseWheel = 0.0f; // consume so child doesn't scroll
+        }
+    }
+
     if (m_gcodeFiles.empty()) {
         ImGui::TextDisabled("No G-code files in library");
         ImGui::TextDisabled("Import G-code using File > Import");
+    } else if (m_showThumbnails) {
+        float availW = ImGui::GetContentRegionAvail().x;
+        float pad = 4.0f;
+        float cellBase = m_thumbnailSize + pad;
+        int columns = std::max(1, static_cast<int>(availW / cellBase));
+        float cellW = availW / columns;
+        float thumbSize = cellW - pad;
+
+        int col = 0;
+        for (size_t i = 0; i < m_gcodeFiles.size(); ++i) {
+            renderGCodeItem(m_gcodeFiles[i], static_cast<int>(i), thumbSize);
+            ++col;
+            if (col < columns) {
+                ImGui::SameLine(0.0f, 0.0f);
+            } else {
+                col = 0;
+            }
+        }
     } else {
         for (size_t i = 0; i < m_gcodeFiles.size(); ++i) {
             renderGCodeItem(m_gcodeFiles[i], static_cast<int>(i));
@@ -416,16 +500,50 @@ void LibraryPanel::renderGCodeList() {
 void LibraryPanel::renderCombinedList() {
     ImGui::BeginChild("CombinedList", ImVec2(0, 0), false);
 
+    // Ctrl+scroll to zoom thumbnails in grid view
+    if (m_showThumbnails && ImGui::IsWindowHovered() && ImGui::GetIO().KeyCtrl) {
+        float wheel = ImGui::GetIO().MouseWheel;
+        if (wheel != 0.0f) {
+            float maxThumb = ImGui::GetContentRegionAvail().x;
+            m_thumbnailSize = std::clamp(m_thumbnailSize + wheel * 16.0f, THUMB_MIN, maxThumb);
+            ImGui::GetIO().MouseWheel = 0.0f; // consume so child doesn't scroll
+        }
+    }
+
     if (m_models.empty() && m_gcodeFiles.empty()) {
         ImGui::TextDisabled("Library is empty");
         ImGui::TextDisabled("Import files using File > Import");
+    } else if (m_showThumbnails) {
+        float availW = ImGui::GetContentRegionAvail().x;
+        float pad = 4.0f;
+        float cellBase = m_thumbnailSize + pad;
+        int columns = std::max(1, static_cast<int>(availW / cellBase));
+        float cellW = availW / columns;
+        float thumbSize = cellW - pad;
+
+        int col = 0;
+        for (size_t i = 0; i < m_models.size(); ++i) {
+            renderModelItem(m_models[i], static_cast<int>(i), thumbSize);
+            ++col;
+            if (col < columns) {
+                ImGui::SameLine(0.0f, 0.0f);
+            } else {
+                col = 0;
+            }
+        }
+        for (size_t i = 0; i < m_gcodeFiles.size(); ++i) {
+            renderGCodeItem(m_gcodeFiles[i], static_cast<int>(i + m_models.size()), thumbSize);
+            ++col;
+            if (col < columns) {
+                ImGui::SameLine(0.0f, 0.0f);
+            } else {
+                col = 0;
+            }
+        }
     } else {
-        // Render models first
         for (size_t i = 0; i < m_models.size(); ++i) {
             renderModelItem(m_models[i], static_cast<int>(i));
         }
-
-        // Then G-code files
         for (size_t i = 0; i < m_gcodeFiles.size(); ++i) {
             renderGCodeItem(m_gcodeFiles[i], static_cast<int>(i + m_models.size()));
         }
@@ -434,17 +552,20 @@ void LibraryPanel::renderCombinedList() {
     ImGui::EndChild();
 }
 
-void LibraryPanel::renderGCodeItem(const GCodeRecord& gcode, int index) {
+void LibraryPanel::renderGCodeItem(const GCodeRecord& gcode, int index, float thumbOverride) {
     ImGui::PushID(static_cast<int>(gcode.id + 1000000)); // Offset to avoid ID collision with models
 
     bool isSelected = (gcode.id == m_selectedGCodeId);
 
     if (m_showThumbnails) {
-        // Thumbnail view
-        float itemHeight = m_thumbnailSize + 8.0f;
+        // Grid cell: placeholder with name below, details on hover
+        float ts = thumbOverride > 0.0f ? thumbOverride : m_thumbnailSize;
+        float pad = 2.0f;
+        float nameH = ImGui::GetTextLineHeightWithSpacing();
+        float cellH = ts + nameH + pad * 2;
 
         if (ImGui::Selectable("##gcodeitem", isSelected, ImGuiSelectableFlags_AllowDoubleClick,
-                              ImVec2(0, itemHeight))) {
+                              ImVec2(ts + pad * 2, cellH))) {
             m_selectedGCodeId = gcode.id;
             m_selectedModelId = -1; // Deselect models
             if (ImGui::IsMouseDoubleClicked(0)) {
@@ -461,49 +582,47 @@ void LibraryPanel::renderGCodeItem(const GCodeRecord& gcode, int index) {
             ImGui::EndPopup();
         }
 
-        // Draw placeholder and text
+        // Delayed hover tooltip with details
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
+            std::string tip = gcode.name + "\nG-code";
+            if (gcode.estimatedTime > 0) {
+                int minutes = static_cast<int>(gcode.estimatedTime);
+                tip += " | " + std::to_string(minutes) + "min";
+            }
+            if (gcode.totalDistance > 0) {
+                tip += " | " + std::to_string(static_cast<int>(gcode.totalDistance)) + "mm";
+            }
+            ImGui::SetTooltip("%s", tip.c_str());
+        }
+
+        // Draw placeholder
         ImVec2 itemMin = ImGui::GetItemRectMin();
-        ImVec2 itemMax = ImGui::GetItemRectMax();
         ImDrawList* drawList = ImGui::GetWindowDrawList();
 
-        float pad = 4.0f;
         ImVec2 thumbMin = ImVec2(itemMin.x + pad, itemMin.y + pad);
-        ImVec2 thumbMax = ImVec2(thumbMin.x + m_thumbnailSize, thumbMin.y + m_thumbnailSize);
+        ImVec2 thumbMax = ImVec2(thumbMin.x + ts, thumbMin.y + ts);
 
-        // Draw placeholder with "GC" text
         drawList->AddRectFilled(thumbMin, thumbMax, IM_COL32(50, 70, 90, 255), 4.0f);
         drawList->AddRect(thumbMin, thumbMax, IM_COL32(70, 100, 130, 255), 4.0f);
 
         // Center "GC" text in placeholder
         const char* icon = "GC";
         ImVec2 iconSize = ImGui::CalcTextSize(icon);
-        ImVec2 iconPos = ImVec2(thumbMin.x + (m_thumbnailSize - iconSize.x) * 0.5f,
-                                thumbMin.y + (m_thumbnailSize - iconSize.y) * 0.5f);
+        ImVec2 iconPos = ImVec2(thumbMin.x + (ts - iconSize.x) * 0.5f,
+                                thumbMin.y + (ts - iconSize.y) * 0.5f);
         drawList->AddText(iconPos, IM_COL32(150, 180, 220, 255), icon);
 
-        // Text to the right of thumbnail
-        float textX = thumbMax.x + 8.0f;
-        float textMaxX = itemMax.x - pad;
-
-        // G-code name
-        ImVec4 clipRect(textX, itemMin.y, textMaxX, itemMax.y);
-        drawList->AddText(nullptr, 0.0f, ImVec2(textX, thumbMin.y),
-                          ImGui::GetColorU32(ImGuiCol_Text), gcode.name.c_str(), nullptr, 0.0f,
-                          &clipRect);
-
-        // Format info line with time and distance
-        std::string info = "G-code";
-        if (gcode.estimatedTime > 0) {
-            int minutes = static_cast<int>(gcode.estimatedTime);
-            info += " | " + std::to_string(minutes) + "min";
+        // Selection highlight
+        if (isSelected) {
+            drawList->AddRect(thumbMin, thumbMax, ImGui::GetColorU32(ImGuiCol_ButtonActive), 4.0f,
+                              0, 2.0f);
         }
-        if (gcode.totalDistance > 0) {
-            info += " | " + std::to_string(static_cast<int>(gcode.totalDistance)) + "mm";
-        }
-        float lineHeight = ImGui::GetTextLineHeightWithSpacing();
-        drawList->AddText(nullptr, 0.0f, ImVec2(textX, thumbMin.y + lineHeight),
-                          ImGui::GetColorU32(ImGuiCol_TextDisabled), info.c_str(), nullptr, 0.0f,
-                          &clipRect);
+
+        // Name below placeholder (clipped)
+        ImVec2 namePos = ImVec2(itemMin.x + pad, thumbMax.y + 1.0f);
+        ImVec4 clipRect(namePos.x, namePos.y, namePos.x + ts, namePos.y + nameH);
+        drawList->AddText(nullptr, 0.0f, namePos, ImGui::GetColorU32(ImGuiCol_Text),
+                          gcode.name.c_str(), nullptr, ts, &clipRect);
     } else {
         // List view - compact row
         if (ImGui::Selectable("##gcodeitem", isSelected, ImGuiSelectableFlags_AllowDoubleClick,

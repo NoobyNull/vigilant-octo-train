@@ -1,47 +1,52 @@
 #pragma once
 
-// Icon definitions using text labels
-// FontAwesome font is not loaded, so we use readable text labels instead
+// Icon definitions using FontAwesome 6 Free Solid glyphs
+// These are UTF-8 encoded Unicode codepoints merged into the default ImGui font
 
 namespace dw {
 namespace icons {
 
 // File operations
-constexpr const char* ICON_NEW = "[New]";
-constexpr const char* ICON_OPEN = "[Open]";
-constexpr const char* ICON_SAVE = "[Save]";
-constexpr const char* ICON_IMPORT = "[Import]";
-constexpr const char* ICON_EXPORT = "[Export]";
+constexpr const char* ICON_NEW = "\xef\x85\x9b";          // f15b file
+constexpr const char* ICON_OPEN = "\xef\x81\xbc";         // f07c folder-open
+constexpr const char* ICON_SAVE = "\xef\x83\x87";         // f0c7 floppy-disk
+constexpr const char* ICON_IMPORT = "\xef\x95\x9e";       // f56e file-import
+constexpr const char* ICON_EXPORT = "\xef\x95\x9c";       // f56c file-export
 
 // View controls
-constexpr const char* ICON_ZOOM_IN = "[+]";
-constexpr const char* ICON_ZOOM_OUT = "[-]";
-constexpr const char* ICON_FIT = "[Fit]";
-constexpr const char* ICON_GRID = "[Grid]";
+constexpr const char* ICON_ZOOM_IN = "\xef\x80\x8e";      // f00e magnifying-glass-plus
+constexpr const char* ICON_ZOOM_OUT = "\xef\x80\x90";     // f010 magnifying-glass-minus
+constexpr const char* ICON_FIT = "\xef\x81\xa5";          // f065 expand
+constexpr const char* ICON_GRID = "\xef\x80\x8a";         // f00a table-cells
 
 // Actions
-constexpr const char* ICON_ADD = "[+]";
-constexpr const char* ICON_REMOVE = "[-]";
-constexpr const char* ICON_DELETE = "[X]";
-constexpr const char* ICON_SEARCH = "[Search]";
-constexpr const char* ICON_FILTER = "[Filter]";
-constexpr const char* ICON_REFRESH = "[Refresh]";
+constexpr const char* ICON_ADD = "\xef\x81\xa7";          // f067 plus
+constexpr const char* ICON_REMOVE = "\xef\x81\xa8";       // f068 minus
+constexpr const char* ICON_DELETE = "\xef\x87\xb8";       // f1f8 trash
+constexpr const char* ICON_SEARCH = "\xef\x80\x82";       // f002 magnifying-glass
+constexpr const char* ICON_FILTER = "\xef\x82\xb0";       // f0b0 filter
+constexpr const char* ICON_REFRESH = "\xef\x80\xa1";      // f021 arrows-rotate
 
 // Object types
-constexpr const char* ICON_MODEL = "[M]";
-constexpr const char* ICON_PROJECT = "[P]";
-constexpr const char* ICON_FOLDER = "[D]";
-constexpr const char* ICON_FILE = "[F]";
+constexpr const char* ICON_MODEL = "\xef\x86\xb2";        // f1b2 cube
+constexpr const char* ICON_PROJECT = "\xef\x81\xac";      // f06c folder
+constexpr const char* ICON_FOLDER = "\xef\x81\xac";       // f06c folder
+constexpr const char* ICON_FILE = "\xef\x85\x9b";         // f15b file
 
 // Settings and status
-constexpr const char* ICON_SETTINGS = "[Settings]";
-constexpr const char* ICON_INFO = "[i]";
-constexpr const char* ICON_WARNING = "[!]";
-constexpr const char* ICON_ERROR = "[X]";
-constexpr const char* ICON_QUESTION = "[?]";
+constexpr const char* ICON_SETTINGS = "\xef\x80\x93";     // f013 gear
+constexpr const char* ICON_INFO = "\xef\x81\x9a";         // f05a circle-info
+constexpr const char* ICON_WARNING = "\xef\x81\xb1";      // f071 triangle-exclamation
+constexpr const char* ICON_ERROR = "\xef\x81\x97";        // f057 circle-xmark
+constexpr const char* ICON_QUESTION = "\xef\x81\x99";     // f059 circle-question
 
 // View modes
-constexpr const char* ICON_LIST = "[List]";
+constexpr const char* ICON_LIST = "\xef\x80\x8b";         // f00b list
+
+// Materials-specific
+constexpr const char* ICON_ASSIGN = "\xef\x87\x87";       // f1c7 link (chain)
+constexpr const char* ICON_WAND = "\xef\x83\x90";         // f0d0 wand-magic-sparkles
+constexpr const char* ICON_PAINTBRUSH = "\xef\x87\xbc";   // f1fc paintbrush
 
 } // namespace icons
 
@@ -72,6 +77,9 @@ struct Icons {
     static constexpr const char* Error = icons::ICON_ERROR;
     static constexpr const char* Question = icons::ICON_QUESTION;
     static constexpr const char* List = icons::ICON_LIST;
+    static constexpr const char* Assign = icons::ICON_ASSIGN;
+    static constexpr const char* Wand = icons::ICON_WAND;
+    static constexpr const char* Paintbrush = icons::ICON_PAINTBRUSH;
 };
 
 } // namespace dw

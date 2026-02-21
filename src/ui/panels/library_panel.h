@@ -53,8 +53,8 @@ class LibraryPanel : public Panel {
     void renderModelList();
     void renderGCodeList();
     void renderCombinedList();
-    void renderModelItem(const ModelRecord& model, int index);
-    void renderGCodeItem(const GCodeRecord& gcode, int index);
+    void renderModelItem(const ModelRecord& model, int index, float thumbOverride = 0.0f);
+    void renderGCodeItem(const GCodeRecord& gcode, int index, float thumbOverride = 0.0f);
     void renderContextMenu(const ModelRecord& model);
     void renderGCodeContextMenu(const GCodeRecord& gcode);
     void renderRenameDialog();
@@ -99,7 +99,9 @@ class LibraryPanel : public Panel {
 
     // View options
     bool m_showThumbnails = true;
-    float m_thumbnailSize = 64.0f;
+    float m_thumbnailSize = 96.0f;
+    static constexpr float THUMB_MIN = 48.0f;
+    // THUMB_MAX is computed per-frame as the available content width
 };
 
 } // namespace dw
