@@ -75,6 +75,11 @@ class Mesh {
     // Returns true if mesh passes all checks. Logs warnings for issues found.
     bool validate() const;
 
+    // Validate only fatal geometry issues (NaN/Inf positions, out-of-bounds indices).
+    // Degenerate triangles are tolerated (common in real-world meshes).
+    // Returns true if mesh can be safely rendered.
+    bool validateGeometry() const;
+
     // Reserve memory
     void reserve(u32 vertexCount, u32 indexCount);
 

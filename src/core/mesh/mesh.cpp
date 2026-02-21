@@ -51,9 +51,14 @@ void Mesh::recalculateNormals() {
         m_vertices[i2].normal = m_vertices[i2].normal + normal;
     }
 
-    // Normalize all normals
+    // Normalize all normals (guard against zero-length from degenerate triangles)
     for (auto& vertex : m_vertices) {
-        vertex.normal = glm::normalize(vertex.normal);
+        f32 len = glm::length(vertex.normal);
+        if (len > 1e-7f) {
+            vertex.normal = vertex.normal / len;
+        } else {
+            vertex.normal = Vec3{0.0f, 1.0f, 0.0f}; // Default up normal
+        }
     }
 }
 
@@ -66,7 +71,9 @@ void Mesh::transform(const Mat4& matrix) {
 
         // Transform normal (assuming no non-uniform scaling)
         Vec4 norm = matrix * Vec4(vertex.normal, 0.0f);
-        vertex.normal = glm::normalize(Vec3{norm.x, norm.y, norm.z});
+        Vec3 n{norm.x, norm.y, norm.z};
+        f32 len = glm::length(n);
+        vertex.normal = (len > 1e-7f) ? (n / len) : Vec3{0.0f, 1.0f, 0.0f};
     }
 
     recalculateBounds();
@@ -394,6 +401,42 @@ bool Mesh::validate() const {
         log::warningf("Mesh", "%u degenerate triangles (zero area)", degenerates);
         valid = false;
     }
+
+    return valid;
+}
+
+bool Mesh::validateGeometry() const {
+    bool valid = true;
+    u32 vertCount = vertexCount();
+
+    // Check for NaN/Inf in vertex positions (fatal - makes mesh unrenderable)
+    u32 nanVerts = 0;
+    for (const auto& v : m_vertices) {
+        if (std::isnan(v.position.x) || std::isnan(v.position.y) || std::isnan(v.position.z) ||
+            std::isinf(v.position.x) || std::isinf(v.position.y) || std::isinf(v.position.z)) {
+            nanVerts++;
+        }
+    }
+    if (nanVerts > 0) {
+        log::warningf("Mesh", "%u vertices have NaN/Inf positions", nanVerts);
+        valid = false;
+    }
+
+    // Check for out-of-bounds indices (fatal - causes crashes)
+    u32 oobIndices = 0;
+    for (u32 idx : m_indices) {
+        if (idx >= vertCount) {
+            oobIndices++;
+        }
+    }
+    if (oobIndices > 0) {
+        log::warningf("Mesh", "%u indices out of bounds (vertex count: %u)", oobIndices, vertCount);
+        valid = false;
+    }
+
+    // Note: Degenerate triangles are NOT checked here.
+    // They are common in real-world meshes and don't prevent rendering.
+    // Use validate() for a full check including degenerates.
 
     return valid;
 }
