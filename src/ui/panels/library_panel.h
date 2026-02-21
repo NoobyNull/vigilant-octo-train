@@ -36,9 +36,7 @@ class LibraryPanel : public Panel {
     }
 
     // Callback when a G-code file is double-clicked (load into viewport)
-    void setOnGCodeOpened(GCodeSelectedCallback callback) {
-        m_onGCodeOpened = std::move(callback);
-    }
+    void setOnGCodeOpened(GCodeSelectedCallback callback) { m_onGCodeOpened = std::move(callback); }
 
     // Refresh the model and G-code lists
     void refresh();

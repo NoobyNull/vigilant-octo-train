@@ -8,8 +8,10 @@
 
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
+#include "../core/threading/loading_state.h"
 #include "../core/types.h"
 
 struct SDL_Window;
@@ -97,6 +99,10 @@ class Application {
 
     // Config Manager - config watching, applying, workspace state, settings, relaunch
     std::unique_ptr<ConfigManager> m_configManager;
+
+    // Model loading state and thread (for async mesh loading)
+    LoadingState m_loadingState;
+    std::thread m_loadThread;
 
     static constexpr int DEFAULT_WIDTH = 1280;
     static constexpr int DEFAULT_HEIGHT = 720;

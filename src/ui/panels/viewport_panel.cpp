@@ -303,7 +303,6 @@ void ViewportPanel::renderViewport() {
     ImGui::Image(static_cast<ImTextureID>(m_framebuffer.colorTexture()), contentSize, ImVec2(0, 1),
                  ImVec2(1, 0));
 
-
     renderViewCube();
 }
 

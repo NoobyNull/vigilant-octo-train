@@ -11,10 +11,10 @@ namespace dw {
 struct ContextMenuEntry {
     std::string label;
     std::function<void()> action;
-    std::string icon;  // Empty if no icon
-    std::function<bool()> enabled = []() { return true; };  // Default: always enabled
+    std::string icon;                                      // Empty if no icon
+    std::function<bool()> enabled = []() { return true; }; // Default: always enabled
     bool isSeparator = false;
-    std::vector<ContextMenuEntry> submenu;  // Empty if not a submenu parent
+    std::vector<ContextMenuEntry> submenu; // Empty if not a submenu parent
 
     // Constructor for separator
     static ContextMenuEntry separator() {
@@ -33,8 +33,7 @@ class ContextMenuManager {
 
     // Register context menu entries for a popup ID
     // Entries are stored and reused across frames
-    void registerEntries(const std::string& popupId,
-                         const std::vector<ContextMenuEntry>& entries);
+    void registerEntries(const std::string& popupId, const std::vector<ContextMenuEntry>& entries);
 
     // Render a registered context menu popup (call inside BeginPopup/EndPopup block)
     // Returns true if the popup is currently open

@@ -53,7 +53,8 @@ void StatusBar::render(const LoadingState* loadingState) {
 
             // Align to right side
             float progressBarWidth = 200.0f;
-            float cancelButtonWidth = ImGui::CalcTextSize("X").x + ImGui::GetStyle().FramePadding.x * 2;
+            float cancelButtonWidth =
+                ImGui::CalcTextSize("X").x + ImGui::GetStyle().FramePadding.x * 2;
             float totalWidth = progressBarWidth + cancelButtonWidth + 16; // spacing
             float windowWidth = ImGui::GetWindowWidth();
             if (windowWidth > totalWidth + 100) { // Ensure enough space

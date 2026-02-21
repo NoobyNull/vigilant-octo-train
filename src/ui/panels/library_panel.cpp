@@ -156,7 +156,8 @@ void LibraryPanel::renderToolbar() {
     float style = ImGui::GetStyle().ItemSpacing.x;
 
     // Calculate actual button widths dynamically
-    float refreshBtnW = ImGui::CalcTextSize(Icons::Refresh).x + ImGui::GetStyle().FramePadding.x * 2;
+    float refreshBtnW =
+        ImGui::CalcTextSize(Icons::Refresh).x + ImGui::GetStyle().FramePadding.x * 2;
     const char* viewIcon = m_showThumbnails ? Icons::Grid : Icons::List;
     float viewBtnW = ImGui::CalcTextSize(viewIcon).x + ImGui::GetStyle().FramePadding.x * 2;
     float buttonsW = refreshBtnW + viewBtnW + style * 2; // 2 SameLine gaps

@@ -57,7 +57,7 @@ class ThreadPool {
 
     std::vector<std::thread> m_workers;
     std::queue<std::function<void()>> m_taskQueue;
-    std::mutex m_mutex;
+    mutable std::mutex m_mutex;
     std::condition_variable m_condition;
 
     std::atomic<size_t> m_activeCount{0};
