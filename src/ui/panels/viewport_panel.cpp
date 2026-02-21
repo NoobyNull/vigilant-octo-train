@@ -9,6 +9,7 @@
 #include "../../core/config/config.h"
 #include "../../core/config/input_binding.h"
 #include "../../core/mesh/mesh.h"
+#include "../context_menu_manager.h"
 
 namespace dw {
 
@@ -20,6 +21,15 @@ ViewportPanel::ViewportPanel() : Panel("Viewport") {
 void ViewportPanel::render() {
     if (!m_open) {
         return;
+    }
+
+    // Lazy initialize context menu entries on first render
+    if (m_contextMenuManager != nullptr) {
+        static bool entriesRegistered = false;
+        if (!entriesRegistered) {
+            registerContextMenuEntries();
+            entriesRegistered = true;
+        }
     }
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
@@ -142,6 +152,135 @@ void ViewportPanel::fitToModel() {
 
     // Invalidate ViewCube cache (camera may have changed)
     m_viewCubeCache.valid = false;
+}
+
+void ViewportPanel::registerContextMenuEntries() {
+    if (m_contextMenuManager == nullptr) {
+        return;
+    }
+
+    std::vector<ContextMenuEntry> entries;
+
+    // Camera Controls
+    ContextMenuEntry resetViewEntry;
+    resetViewEntry.label = "Reset View";
+    resetViewEntry.action = [this]() { resetView(); };
+    entries.push_back(resetViewEntry);
+
+    ContextMenuEntry fitEntry;
+    fitEntry.label = "Fit to Model";
+    fitEntry.action = [this]() { fitToModel(); };
+    entries.push_back(fitEntry);
+
+    entries.push_back(ContextMenuEntry::separator());
+
+    // Standard View Directions
+    ContextMenuEntry frontEntry;
+    frontEntry.label = "Front";
+    frontEntry.action = [this]() {
+        m_camera.setYaw(0.0f);
+        m_camera.setPitch(0.0f);
+        m_viewCubeCache.valid = false;
+    };
+    entries.push_back(frontEntry);
+
+    ContextMenuEntry backEntry;
+    backEntry.label = "Back";
+    backEntry.action = [this]() {
+        m_camera.setYaw(180.0f);
+        m_camera.setPitch(0.0f);
+        m_viewCubeCache.valid = false;
+    };
+    entries.push_back(backEntry);
+
+    ContextMenuEntry leftEntry;
+    leftEntry.label = "Left";
+    leftEntry.action = [this]() {
+        m_camera.setYaw(90.0f);
+        m_camera.setPitch(0.0f);
+        m_viewCubeCache.valid = false;
+    };
+    entries.push_back(leftEntry);
+
+    ContextMenuEntry rightEntry;
+    rightEntry.label = "Right";
+    rightEntry.action = [this]() {
+        m_camera.setYaw(-90.0f);
+        m_camera.setPitch(0.0f);
+        m_viewCubeCache.valid = false;
+    };
+    entries.push_back(rightEntry);
+
+    ContextMenuEntry topEntry;
+    topEntry.label = "Top";
+    topEntry.action = [this]() {
+        m_camera.setYaw(0.0f);
+        m_camera.setPitch(90.0f);
+        m_viewCubeCache.valid = false;
+    };
+    entries.push_back(topEntry);
+
+    ContextMenuEntry bottomEntry;
+    bottomEntry.label = "Bottom";
+    bottomEntry.action = [this]() {
+        m_camera.setYaw(0.0f);
+        m_camera.setPitch(-90.0f);
+        m_viewCubeCache.valid = false;
+    };
+    entries.push_back(bottomEntry);
+
+    ContextMenuEntry isoEntry;
+    isoEntry.label = "Isometric";
+    isoEntry.action = [this]() {
+        m_camera.setYaw(45.0f);
+        m_camera.setPitch(35.0f);
+        m_viewCubeCache.valid = false;
+    };
+    entries.push_back(isoEntry);
+
+    entries.push_back(ContextMenuEntry::separator());
+
+    // Display Controls
+    ContextMenuEntry wireframeEntry;
+    wireframeEntry.label = "Wireframe";
+    wireframeEntry.action = [this]() {
+        m_renderer.settings().wireframe = !m_renderer.settings().wireframe;
+    };
+    entries.push_back(wireframeEntry);
+
+    ContextMenuEntry gridEntry;
+    gridEntry.label = "Show Grid";
+    gridEntry.action = [this]() {
+        m_renderer.settings().showGrid = !m_renderer.settings().showGrid;
+    };
+    entries.push_back(gridEntry);
+
+    ContextMenuEntry axisEntry;
+    axisEntry.label = "Show Axes";
+    axisEntry.action = [this]() {
+        m_renderer.settings().showAxis = !m_renderer.settings().showAxis;
+    };
+    entries.push_back(axisEntry);
+
+    entries.push_back(ContextMenuEntry::separator());
+
+    // Lighting
+    ContextMenuEntry lightingEntry;
+    lightingEntry.label = "Reset Lighting";
+    lightingEntry.action = [this]() {
+        auto& rs = m_renderer.settings();
+        rs.lightDir = Vec3{-0.5f, -1.0f, -0.3f};
+        rs.lightColor = Vec3{1.0f, 1.0f, 1.0f};
+
+        // Persist reset light settings
+        auto& cfg = Config::instance();
+        cfg.setRenderLightDir(rs.lightDir);
+        cfg.setRenderLightColor(rs.lightColor);
+        cfg.save();
+    };
+    entries.push_back(lightingEntry);
+
+    m_contextMenuManager->registerEntries("ViewportPanel_Context", entries);
 }
 
 void ViewportPanel::handleInput() {
@@ -322,6 +461,14 @@ void ViewportPanel::renderViewport() {
     // Display framebuffer texture
     ImGui::Image(static_cast<ImTextureID>(m_framebuffer.colorTexture()), contentSize, ImVec2(0, 1),
                  ImVec2(1, 0));
+
+    // Context menu for viewport interactions
+    if (m_contextMenuManager != nullptr) {
+        if (ImGui::BeginPopupContextItem("ViewportPanel_Context")) {
+            m_contextMenuManager->render("ViewportPanel_Context");
+            ImGui::EndPopup();
+        }
+    }
 
     renderViewCube();
 }

@@ -2,6 +2,7 @@
 
 #include <array>
 #include <memory>
+#include <optional>
 
 #include <imgui.h>
 
@@ -16,6 +17,7 @@ namespace dw {
 // Forward declarations
 class Mesh;
 using MeshPtr = std::shared_ptr<Mesh>;
+class ContextMenuManager;
 
 // 3D viewport panel
 class ViewportPanel : public Panel {
@@ -49,7 +51,11 @@ class ViewportPanel : public Panel {
     void resetView();
     void fitToModel();
 
+    // Context menu manager integration
+    void setContextMenuManager(ContextMenuManager* manager) { m_contextMenuManager = manager; }
+
   private:
+    void registerContextMenuEntries();
     void handleInput();
     void renderViewport();
     void renderToolbar();
@@ -92,6 +98,9 @@ class ViewportPanel : public Panel {
 
     // ViewCube cache
     ViewCubeCache m_viewCubeCache;
+
+    // Context menu manager (not owned — managed by UIManager)
+    ContextMenuManager* m_contextMenuManager = nullptr;
 };
 
 } // namespace dw

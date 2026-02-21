@@ -459,9 +459,18 @@ void LibraryPanel::registerContextMenuEntries() {
         {.label = "Regenerate Thumbnail",
          .action =
              [this]() {
-                 if (m_onRegenerateThumbnail && m_currentContextMenuModel) {
-                     m_onRegenerateThumbnail(m_currentContextMenuModel->id);
+                 log::info("LibraryPanel", "Regenerate Thumbnail action fired");
+                 if (!m_currentContextMenuModel) {
+                     log::warning("LibraryPanel", "No context menu model set");
+                     return;
                  }
+                 if (!m_onRegenerateThumbnail) {
+                     log::warning("LibraryPanel", "No regenerate thumbnail callback set");
+                     return;
+                 }
+                 log::infof("LibraryPanel", "Regenerating thumbnail for model %lld",
+                            static_cast<long long>(m_currentContextMenuModel->id));
+                 m_onRegenerateThumbnail(m_currentContextMenuModel->id);
              }},
         {.label = "Assign Default Material",
          .action =

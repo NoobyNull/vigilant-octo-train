@@ -75,6 +75,11 @@ void UIManager::init(LibraryManager* libraryManager, ProjectManager* projectMana
         m_materialsPanel->setContextMenuManager(m_contextMenuManager.get());
     }
 
+    // Connect context menu manager to viewport panel
+    if (m_viewportPanel) {
+        m_viewportPanel->setContextMenuManager(m_contextMenuManager.get());
+    }
+
     // Connect viewport render settings to lighting dialog
     if (m_viewportPanel) {
         m_lightingDialog->setSettings(&m_viewportPanel->renderSettings());
