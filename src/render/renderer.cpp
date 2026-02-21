@@ -208,7 +208,7 @@ void Renderer::renderToolpath(const Mesh& toolpathMesh, const Mat4& modelMatrix)
     glEnable(GL_CULL_FACE);
 }
 
-void Renderer::renderGrid(f32 size, f32 spacing) {
+void Renderer::renderGrid(f32 size, [[maybe_unused]] f32 spacing) {
     if (!m_settings.showGrid || m_gridMesh.vao == 0) {
         return;
     }
@@ -228,7 +228,7 @@ void Renderer::renderGrid(f32 size, f32 spacing) {
     glEnable(GL_CULL_FACE);
 }
 
-void Renderer::renderAxis(f32 length) {
+void Renderer::renderAxis([[maybe_unused]] f32 length) {
     if (!m_settings.showAxis || m_axisMesh.vao == 0) {
         return;
     }

@@ -364,14 +364,14 @@ void CutOptimizerPanel::renderVisualization() {
 void CutOptimizerPanel::runOptimization() {
     if (m_parts.empty()) {
         ToastManager::instance().show(ToastType::Warning, "No Parts",
-                                     "Add parts before running optimization");
+                                      "Add parts before running optimization");
         return;
     }
 
     auto optimizer = optimizer::CutOptimizer::create(m_algorithm);
     if (!optimizer) {
         ToastManager::instance().show(ToastType::Error, "Optimizer Error",
-                                     "Failed to create optimizer");
+                                      "Failed to create optimizer");
         return;
     }
 
@@ -385,19 +385,14 @@ void CutOptimizerPanel::runOptimization() {
     m_selectedSheet = 0;
 
     // Check for unplaced parts
-    int unplacedCount = 0;
-    for (const auto& part : m_parts) {
-        if (m_result.placements.find(part.id) == m_result.placements.end()) {
-            unplacedCount++;
-        }
-    }
+    int unplacedCount = static_cast<int>(m_result.unplacedParts.size());
 
     if (unplacedCount > 0) {
         ToastManager::instance().show(ToastType::Warning, "Incomplete Layout",
-                                     std::to_string(unplacedCount) + " parts could not be placed");
+                                      std::to_string(unplacedCount) + " parts could not be placed");
     } else {
         ToastManager::instance().show(ToastType::Success, "Optimization Complete",
-                                     "All parts placed successfully");
+                                      "All parts placed successfully");
     }
 }
 

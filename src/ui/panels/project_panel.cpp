@@ -72,10 +72,10 @@ void ProjectPanel::renderProjectInfo() {
 
             if (success) {
                 ToastManager::instance().show(ToastType::Success, "Saved",
-                                             "Project saved successfully");
+                                              "Project saved successfully");
             } else {
                 ToastManager::instance().show(ToastType::Error, "Save Failed",
-                                             "Could not save project");
+                                              "Could not save project");
             }
         }
 

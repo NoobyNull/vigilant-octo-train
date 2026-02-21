@@ -34,6 +34,7 @@ void formatAndLog(Level level, const char* module, const char* format, Args... a
     char buffer[kFormatBufSize];
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#pragma GCC diagnostic ignored "-Wformat-security"
     int written = std::snprintf(buffer, kFormatBufSize, format, args...);
 #pragma GCC diagnostic pop
 

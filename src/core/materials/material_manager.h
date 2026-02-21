@@ -44,6 +44,9 @@ class MaterialManager {
 
     // --- Write operations ---
 
+    // Insert a new material record and return the new ID
+    std::optional<i64> addMaterial(const MaterialRecord& record);
+
     // Update all editable fields of a material record
     bool updateMaterial(const MaterialRecord& record);
 

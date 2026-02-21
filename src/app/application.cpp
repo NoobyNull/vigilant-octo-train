@@ -737,15 +737,13 @@ void Application::loadMaterialTextureForModel(int64_t modelId) {
 }
 
 bool Application::generateMaterialThumbnail(int64_t modelId, Mesh& mesh) {
-    // Auto-orient mesh and capture orientYaw to match viewport camera
-    f32 orientYaw = 0.0f;
+    // Auto-orient mesh
     if (Config::instance().getAutoOrient()) {
         auto record = m_libraryManager->getModel(modelId);
         if (record && record->orientYaw && record->orientMatrix) {
             mesh.applyStoredOrient(*record->orientMatrix);
-            orientYaw = *record->orientYaw;
         } else {
-            orientYaw = mesh.autoOrient();
+            static_cast<void>(mesh.autoOrient());
         }
     }
 

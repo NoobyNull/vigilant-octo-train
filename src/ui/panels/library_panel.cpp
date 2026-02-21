@@ -312,7 +312,8 @@ void LibraryPanel::renderModelList() {
     ImGui::EndChild();
 }
 
-void LibraryPanel::renderModelItem(const ModelRecord& model, int index, float thumbOverride) {
+void LibraryPanel::renderModelItem(const ModelRecord& model, [[maybe_unused]] int index,
+                                   float thumbOverride) {
     ImGui::PushID(static_cast<int>(model.id));
 
     bool isSelected = (model.id == m_selectedModelId);
@@ -450,110 +451,103 @@ void LibraryPanel::registerContextMenuEntries() {
 
     // Model context menu
     std::vector<ContextMenuEntry> modelEntries = {
-        {.label = "Open",
-         .action =
-             [this]() {
-                 if (m_onModelOpened && m_currentContextMenuModel) {
-                     m_onModelOpened(m_currentContextMenuModel->id);
-                 }
-             }},
-        {.label = "Regenerate Thumbnail",
-         .action =
-             [this]() {
-                 log::info("LibraryPanel", "Regenerate Thumbnail action fired");
-                 if (!m_currentContextMenuModel) {
-                     log::warning("LibraryPanel", "No context menu model set");
-                     return;
-                 }
-                 if (!m_onRegenerateThumbnail) {
-                     log::warning("LibraryPanel", "No regenerate thumbnail callback set");
-                     return;
-                 }
-                 log::infof("LibraryPanel", "Regenerating thumbnail for model %lld",
-                            static_cast<long long>(m_currentContextMenuModel->id));
-                 m_onRegenerateThumbnail(m_currentContextMenuModel->id);
-             }},
-        {.label = "Assign Default Material",
-         .action =
-             [this]() {
-                 if (m_onAssignDefaultMaterial && m_currentContextMenuModel) {
-                     m_onAssignDefaultMaterial(m_currentContextMenuModel->id);
-                 }
-             },
-         .enabled = [this]() { return Config::instance().getDefaultMaterialId() > 0; }},
+        {"Open",
+         [this]() {
+             if (m_onModelOpened && m_currentContextMenuModel) {
+                 m_onModelOpened(m_currentContextMenuModel->id);
+             }
+         }},
+        {"Regenerate Thumbnail",
+         [this]() {
+             log::info("LibraryPanel", "Regenerate Thumbnail action fired");
+             if (!m_currentContextMenuModel) {
+                 log::warning("LibraryPanel", "No context menu model set");
+                 return;
+             }
+             if (!m_onRegenerateThumbnail) {
+                 log::warning("LibraryPanel", "No regenerate thumbnail callback set");
+                 return;
+             }
+             log::infof("LibraryPanel", "Regenerating thumbnail for model %lld",
+                        static_cast<long long>(m_currentContextMenuModel->id));
+             m_onRegenerateThumbnail(m_currentContextMenuModel->id);
+         }},
+        {
+            "Assign Default Material",
+            [this]() {
+                if (m_onAssignDefaultMaterial && m_currentContextMenuModel) {
+                    m_onAssignDefaultMaterial(m_currentContextMenuModel->id);
+                }
+            },
+            "",                                                                // icon
+            [this]() { return Config::instance().getDefaultMaterialId() > 0; } // enabled
+        },
         ContextMenuEntry::separator(),
-        {.label = "Rename",
-         .action =
-             [this]() {
-                 if (m_currentContextMenuModel) {
-                     m_showRenameDialog = true;
-                     m_renameModelId = m_currentContextMenuModel->id;
-                     std::strncpy(m_renameBuffer, m_currentContextMenuModel->name.c_str(),
-                                  sizeof(m_renameBuffer) - 1);
-                     m_renameBuffer[sizeof(m_renameBuffer) - 1] = '\0';
-                 }
-             }},
-        {.label = "Delete",
-         .action =
-             [this]() {
-                 if (m_currentContextMenuModel) {
-                     m_showDeleteConfirm = true;
-                     m_deleteItemId = m_currentContextMenuModel->id;
-                     m_deleteIsGCode = false;
-                     m_deleteItemName = m_currentContextMenuModel->name;
-                 }
-             }},
+        {"Rename",
+         [this]() {
+             if (m_currentContextMenuModel) {
+                 m_showRenameDialog = true;
+                 m_renameModelId = m_currentContextMenuModel->id;
+                 std::strncpy(m_renameBuffer, m_currentContextMenuModel->name.c_str(),
+                              sizeof(m_renameBuffer) - 1);
+                 m_renameBuffer[sizeof(m_renameBuffer) - 1] = '\0';
+             }
+         }},
+        {"Delete",
+         [this]() {
+             if (m_currentContextMenuModel) {
+                 m_showDeleteConfirm = true;
+                 m_deleteItemId = m_currentContextMenuModel->id;
+                 m_deleteIsGCode = false;
+                 m_deleteItemName = m_currentContextMenuModel->name;
+             }
+         }},
         ContextMenuEntry::separator(),
-        {.label = "Show in Explorer",
-         .action =
-             [this]() {
-                 if (m_currentContextMenuModel) {
-                     auto parentDir = m_currentContextMenuModel->filePath.parent_path();
-                     if (!parentDir.empty()) {
-                         file::openInFileManager(parentDir);
-                     }
+        {"Show in Explorer",
+         [this]() {
+             if (m_currentContextMenuModel) {
+                 auto parentDir = m_currentContextMenuModel->filePath.parent_path();
+                 if (!parentDir.empty()) {
+                     file::openInFileManager(parentDir);
                  }
-             }},
-        {.label = "Copy Path",
-         .action =
-             [this]() {
-                 if (m_currentContextMenuModel) {
-                     ImGui::SetClipboardText(m_currentContextMenuModel->filePath.string().c_str());
-                 }
-             }},
+             }
+         }},
+        {"Copy Path",
+         [this]() {
+             if (m_currentContextMenuModel) {
+                 ImGui::SetClipboardText(m_currentContextMenuModel->filePath.string().c_str());
+             }
+         }},
     };
 
     // GCode context menu
     std::vector<ContextMenuEntry> gcodeEntries = {
-        {.label = "Open",
-         .action =
-             [this]() {
-                 if (m_onGCodeOpened && m_currentContextMenuGCode) {
-                     m_onGCodeOpened(m_currentContextMenuGCode->id);
-                 }
-             }},
+        {"Open",
+         [this]() {
+             if (m_onGCodeOpened && m_currentContextMenuGCode) {
+                 m_onGCodeOpened(m_currentContextMenuGCode->id);
+             }
+         }},
         ContextMenuEntry::separator(),
-        {.label = "Delete",
-         .action =
-             [this]() {
-                 if (m_currentContextMenuGCode) {
-                     m_showDeleteConfirm = true;
-                     m_deleteItemId = m_currentContextMenuGCode->id;
-                     m_deleteIsGCode = true;
-                     m_deleteItemName = m_currentContextMenuGCode->name;
-                 }
-             }},
+        {"Delete",
+         [this]() {
+             if (m_currentContextMenuGCode) {
+                 m_showDeleteConfirm = true;
+                 m_deleteItemId = m_currentContextMenuGCode->id;
+                 m_deleteIsGCode = true;
+                 m_deleteItemName = m_currentContextMenuGCode->name;
+             }
+         }},
         ContextMenuEntry::separator(),
-        {.label = "Show in Explorer",
-         .action =
-             [this]() {
-                 if (m_currentContextMenuGCode) {
-                     auto parentDir = m_currentContextMenuGCode->filePath.parent_path();
-                     if (!parentDir.empty()) {
-                         file::openInFileManager(parentDir);
-                     }
+        {"Show in Explorer",
+         [this]() {
+             if (m_currentContextMenuGCode) {
+                 auto parentDir = m_currentContextMenuGCode->filePath.parent_path();
+                 if (!parentDir.empty()) {
+                     file::openInFileManager(parentDir);
                  }
-             }},
+             }
+         }},
     };
 
     // Register entries with the context menu manager
@@ -659,7 +653,8 @@ void LibraryPanel::renderCombinedList() {
     ImGui::EndChild();
 }
 
-void LibraryPanel::renderGCodeItem(const GCodeRecord& gcode, int index, float thumbOverride) {
+void LibraryPanel::renderGCodeItem(const GCodeRecord& gcode, [[maybe_unused]] int index,
+                                   float thumbOverride) {
     ImGui::PushID(static_cast<int>(gcode.id + 1000000)); // Offset to avoid ID collision with models
 
     bool isSelected = (gcode.id == m_selectedGCodeId);
@@ -797,16 +792,16 @@ void LibraryPanel::renderDeleteConfirm() {
                 if (m_deleteIsGCode) {
                     m_library->deleteGCodeFile(m_deleteItemId);
                     ToastManager::instance().show(ToastType::Success, "Deleted",
-                                                 "G-code file deleted successfully");
+                                                  "G-code file deleted successfully");
                 } else {
                     m_library->removeModel(m_deleteItemId);
                     ToastManager::instance().show(ToastType::Success, "Deleted",
-                                                 "Model deleted successfully");
+                                                  "Model deleted successfully");
                 }
                 refresh();
             } else {
                 ToastManager::instance().show(ToastType::Error, "Delete Failed",
-                                             "Could not delete item");
+                                              "Could not delete item");
             }
             ImGui::CloseCurrentPopup();
         }
@@ -855,7 +850,7 @@ void LibraryPanel::renderRenameDialog() {
 
             if (newName.empty()) {
                 ToastManager::instance().show(ToastType::Warning, "Invalid Name",
-                                             "Name cannot be empty");
+                                              "Name cannot be empty");
             } else if (m_library) {
                 auto record = m_library->getModel(m_renameModelId);
                 if (record) {
@@ -863,10 +858,10 @@ void LibraryPanel::renderRenameDialog() {
                     if (m_library->updateModel(*record)) {
                         refresh();
                         ToastManager::instance().show(ToastType::Success, "Renamed",
-                                                     "Model renamed successfully");
+                                                      "Model renamed successfully");
                     } else {
                         ToastManager::instance().show(ToastType::Error, "Rename Failed",
-                                                     "Could not rename model");
+                                                      "Could not rename model");
                         log::error("Library", "Failed to rename model");
                     }
                 }

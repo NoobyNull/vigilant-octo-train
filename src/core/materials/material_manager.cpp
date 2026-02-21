@@ -104,7 +104,7 @@ std::optional<i64> MaterialManager::importMaterial(const Path& dwmatPath) {
         log::errorf("MaterialManager", "importMaterial: failed to load metadata from: %s",
                     destPath.string().c_str());
         // Clean up the copy on failure
-        file::remove(destPath);
+        static_cast<void>(file::remove(destPath));
         return std::nullopt;
     }
 
@@ -117,7 +117,7 @@ std::optional<i64> MaterialManager::importMaterial(const Path& dwmatPath) {
     if (!id) {
         log::errorf("MaterialManager", "importMaterial: database insert failed for: %s",
                     record.name.c_str());
-        file::remove(destPath);
+        static_cast<void>(file::remove(destPath));
         return std::nullopt;
     }
 
@@ -185,6 +185,10 @@ std::optional<MaterialRecord> MaterialManager::getMaterial(i64 id) {
 // ---------------------------------------------------------------------------
 // Write operations
 // ---------------------------------------------------------------------------
+
+std::optional<i64> MaterialManager::addMaterial(const MaterialRecord& record) {
+    return m_repo.insert(record);
+}
 
 bool MaterialManager::updateMaterial(const MaterialRecord& record) {
     return m_repo.update(record);
@@ -275,7 +279,7 @@ Path MaterialManager::uniqueArchivePath(const std::string& originalFilename) con
     Path materialsDir = paths::getMaterialsDir();
 
     // Ensure directory exists
-    file::createDirectories(materialsDir);
+    static_cast<void>(file::createDirectories(materialsDir));
 
     Path candidate = materialsDir / originalFilename;
     if (!file::exists(candidate)) {

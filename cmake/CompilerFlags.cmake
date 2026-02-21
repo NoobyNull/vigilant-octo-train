@@ -31,8 +31,18 @@ function(dw_set_warning_flags target)
         endif()
 
         # Treat warnings as errors in Debug builds only (Release may have dependency warnings)
+        # But suppress conversion/cast-qual/double-promotion errors from external libraries (GLM, ImGui, STB)
         if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-            target_compile_options(${target} PRIVATE -Werror)
+            target_compile_options(${target} PRIVATE
+                -Werror
+                -Wno-error=conversion
+                -Wno-error=sign-conversion
+                -Wno-error=duplicated-branches
+                -Wno-error=cast-qual
+                -Wno-error=double-promotion
+                -Wno-error=missing-field-initializers
+                -Wno-c++20-extensions
+            )
         endif()
 
     elseif(MSVC)
@@ -88,12 +98,18 @@ endfunction()
 
 # Mark dependency include directories as SYSTEM to suppress their warnings
 function(dw_suppress_dependency_warnings target)
-    if(TARGET glm::glm)
-        get_target_property(GLM_INCLUDES glm::glm INTERFACE_INCLUDE_DIRECTORIES)
-        if(GLM_INCLUDES)
-            target_include_directories(${target} SYSTEM PRIVATE ${GLM_INCLUDES})
+    foreach(dep glm::glm imgui)
+        if(TARGET ${dep})
+            get_target_property(_INCLUDES ${dep} INTERFACE_INCLUDE_DIRECTORIES)
+            if(_INCLUDES)
+                target_include_directories(${target} SYSTEM PRIVATE ${_INCLUDES})
+            endif()
+            get_target_property(_SRC_DIR ${dep} SOURCE_DIR)
+            if(_SRC_DIR)
+                target_include_directories(${target} SYSTEM PRIVATE ${_SRC_DIR})
+            endif()
         endif()
-    endif()
+    endforeach()
 endfunction()
 
 # Apply all flags to a target

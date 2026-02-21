@@ -1,7 +1,7 @@
-#include <gtest/gtest.h>
-
 #include <thread>
 #include <vector>
+
+#include <gtest/gtest.h>
 
 #include "core/database/connection_pool.h"
 #include "core/database/database.h"
@@ -15,9 +15,7 @@ class ConnectionPoolTest : public ::testing::Test {
         std::filesystem::remove(m_testDbPath);
     }
 
-    void TearDown() override {
-        std::filesystem::remove(m_testDbPath);
-    }
+    void TearDown() override { std::filesystem::remove(m_testDbPath); }
 
     Path m_testDbPath;
 };
@@ -127,7 +125,7 @@ TEST_F(ConnectionPoolTest, ScopedConnectionMoveAssignment) {
     Database* conn1 = scoped1.get();
 
     ScopedConnection scoped2(pool);
-    Database* conn2 = scoped2.get();
+    [[maybe_unused]] Database* conn2 = scoped2.get();
     EXPECT_EQ(pool.availableCount(), 0);
 
     scoped2 = std::move(scoped1);

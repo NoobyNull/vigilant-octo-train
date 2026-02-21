@@ -577,10 +577,12 @@ void MaterialsPanel::renderEditForm() {
         if (ImGui::Button("Save", ImVec2(120, 0))) {
             if (m_materialManager && !m_editBuffer.name.empty()) {
                 if (m_isNewMaterial) {
-                    // For new materials we use updateMaterial after inserting.
-                    // Since MaterialManager has no standalone insert, we log a placeholder.
-                    // TODO(01-05): wire to insertMaterial when available.
-                    log::info("MaterialsPanel", "New material creation not yet wired to DB insert");
+                    auto newId = m_materialManager->addMaterial(m_editBuffer);
+                    if (newId) {
+                        refresh();
+                    } else {
+                        log::error("MaterialsPanel", "Failed to add new material");
+                    }
                 } else {
                     if (m_materialManager->updateMaterial(m_editBuffer)) {
                         refresh();

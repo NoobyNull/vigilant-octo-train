@@ -66,10 +66,9 @@ int main(int argc, char* argv[]) {
         auto start = std::chrono::steady_clock::now();
         auto result = service.generate(mat.name, apiKey);
         auto elapsed = std::chrono::steady_clock::now() - start;
-        double secs =
-            static_cast<double>(
-                std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count()) /
-            1000.0;
+        double secs = static_cast<double>(
+                          std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count()) /
+                      1000.0;
 
         if (!result.success) {
             std::cout << "FAILED (" << result.error << ")\n";
@@ -84,7 +83,7 @@ int main(int argc, char* argv[]) {
                 ++failed;
                 continue;
             }
-            file::remove(result.dwmatPath);
+            static_cast<void>(file::remove(result.dwmatPath));
         }
 
         std::cout << "OK (" << secs << "s)\n";
