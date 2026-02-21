@@ -298,8 +298,7 @@ bool Application::init() {
             [this](int64_t materialId) { assignMaterialToCurrentModel(materialId); });
 
         m_uiManager->materialsPanel()->setOnGenerate([this](const std::string& prompt) {
-            auto& cfg = Config::instance();
-            std::string apiKey = cfg.getGeminiApiKey();
+            std::string apiKey = Config::instance().getGeminiApiKey();
             if (apiKey.empty()) {
                 log::warning("Application",
                              "Gemini API key not set. Configure it in Settings > General.");
