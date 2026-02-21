@@ -75,8 +75,8 @@ Remove items you don't care about, keep what matters for the next milestone.
 - [x] **TEST-02**: Database concurrent access untested — undefined behavior if UI + import threads query simultaneously (`test_database.cpp`) -- RESOLVED: ConnectionPool tests verify concurrent access in Phase 1.2
 - [x] **TEST-03**: Optimizer edge cases untested — very small stock, near-boundary, degenerate rectangles (`test_optimizer.cpp`) -- RESOLVED: VerySmallParts, ExactFit, StressTest, RotationAllowsFit + full GuillotineOptimizer test suite added
 - [x] **TEST-04**: Loader malformed input untested — truncated files, NaN vertices, extreme coords (`test_stl_loader.cpp`, `test_obj_loader.cpp`) -- RESOLVED: Loaders hardened with comprehensive error handling in Phase 2 Plan 08
-- [ ] **TEST-05**: No renderer, application, or workspace tests at all
-- [ ] **TEST-06**: No integration tests (import → render → export pipeline)
+- [x] **TEST-05**: No renderer, application, or workspace tests at all -- RESOLVED: Added comprehensive tests for Workspace (test_workspace.cpp), Renderer (test_renderer.cpp), and Application state management (test_application_state.cpp)
+- [x] **TEST-06**: No integration tests (import → render → export pipeline) -- RESOLVED: Added full integration pipeline tests covering mesh load/validate/export and G-code parse/analyze cycles (test_integration_pipeline.cpp)
 
 ## CI/CD Gaps
 
@@ -88,11 +88,12 @@ Remove items you don't care about, keep what matters for the next milestone.
 
 ---
 
-**Totals:** 7 bugs (7 resolved), 6 dead code (6 resolved), 16 incomplete (16 resolved), 10 error handling (10 resolved), 8 tech debt (7 resolved), 6 test gaps (4 resolved), 5 CI gaps (5 resolved) = **58 items (57 resolved, 1 remaining)**
+**Totals:** 7 bugs (7 resolved), 6 dead code (6 resolved), 16 incomplete (16 resolved), 10 error handling (10 resolved), 8 tech debt (7 resolved), 6 test gaps (6 resolved), 5 CI gaps (5 resolved) = **58 items (57 resolved, 1 remaining)**
 
-*DEBT-02 has been resolved. Remaining work is primarily nice-to-have enhancements:*
+*Phase 0-1 Complete: All critical gaps resolved. Remaining work is a nice-to-have enhancement:*
 - *DEBT-07 (more optimizer algorithms): Feature enhancement, non-critical*
-- *TEST-05/TEST-06 (renderer/workspace/integration tests): Nice-to-have coverage*
 - *Repositories could be gradually refactored to use StatementHelper (optional future work)*
+
+*Test Coverage: Comprehensive test suites added for Workspace, Renderer, Application state, and integration pipelines.*
 
 *The material system is fully implemented and ready for generation with API key.*
