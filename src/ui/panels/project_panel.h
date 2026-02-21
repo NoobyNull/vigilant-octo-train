@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "../../core/project/project.h"
+#include "../../core/types.h"
 #include "panel.h"
 
 namespace dw {
@@ -34,6 +35,12 @@ class ProjectPanel : public Panel {
         m_saveProjectCallback = std::move(callback);
     }
 
+    // Callback when a recent project is clicked
+    using RecentProjectCallback = std::function<void(const Path&)>;
+    void setOnOpenRecentProject(RecentProjectCallback cb) {
+        m_onOpenRecentProject = std::move(cb);
+    }
+
   private:
     void renderProjectInfo();
     void renderModelList();
@@ -44,6 +51,7 @@ class ProjectPanel : public Panel {
     ModelSelectedCallback m_onModelSelected;
     OpenProjectCallback m_openProjectCallback;
     SaveProjectCallback m_saveProjectCallback;
+    RecentProjectCallback m_onOpenRecentProject;
 };
 
 } // namespace dw

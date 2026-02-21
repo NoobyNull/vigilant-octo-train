@@ -2,6 +2,7 @@
 
 #include <imgui.h>
 
+#include "../../core/config/config.h"
 #include "../icons.h"
 
 namespace dw {
@@ -149,7 +150,39 @@ void ProjectPanel::renderNoProject() {
 
     // Recent projects
     ImGui::Text("Recent Projects");
-    ImGui::TextDisabled("No recent projects");
+    ImGui::Spacing();
+
+    const auto& recentProjects = Config::instance().getRecentProjects();
+
+    if (recentProjects.empty()) {
+        ImGui::TextDisabled("No recent projects.");
+    } else {
+        for (size_t i = 0; i < recentProjects.size(); ++i) {
+            const auto& projectPath = recentProjects[i];
+            ImGui::PushID(static_cast<int>(i));
+
+            std::string name = projectPath.stem().string();
+            if (name.empty()) {
+                name = projectPath.filename().string();
+            }
+
+            if (ImGui::Selectable(name.c_str(), false, ImGuiSelectableFlags_None,
+                                  ImVec2(0, 24))) {
+                if (m_onOpenRecentProject) {
+                    m_onOpenRecentProject(projectPath);
+                }
+            }
+
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("%s", projectPath.string().c_str());
+            }
+
+            ImGui::SameLine();
+            ImGui::TextDisabled("%s", projectPath.parent_path().string().c_str());
+
+            ImGui::PopID();
+        }
+    }
 }
 
 } // namespace dw

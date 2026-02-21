@@ -317,6 +317,10 @@ bool Application::init() {
             [this, hideStart]() { m_fileIOManager->openProject(hideStart); });
         m_uiManager->projectPanel()->setSaveProjectCallback(
             [this]() { m_fileIOManager->saveProject(); });
+        m_uiManager->projectPanel()->setOnOpenRecentProject(
+            [this, hideStart](const Path& path) {
+                m_fileIOManager->openRecentProject(path, hideStart);
+            });
     }
 
     if (m_uiManager->propertiesPanel()) {
