@@ -7,6 +7,7 @@
 
 #include <imgui.h>
 
+#include "../../core/config/config.h"
 #include "../../core/loaders/texture_loader.h"
 #include "../../core/materials/material_archive.h"
 #include "../../core/utils/log.h"
@@ -348,6 +349,15 @@ void MaterialsPanel::renderMaterialGrid(const std::vector<MaterialRecord>& mater
                 log::info("MaterialsPanel",
                           "Export material requested (file dialog not yet wired)");
             }
+
+            bool isDefault = (mat.id == Config::instance().getDefaultMaterialId());
+            if (ImGui::MenuItem("Set as Default", nullptr, isDefault)) {
+                if (!isDefault) {
+                    Config::instance().setDefaultMaterialId(mat.id);
+                    Config::instance().save();
+                }
+            }
+
             ImGui::Separator();
             if (ImGui::MenuItem("Delete")) {
                 m_deleteId = mat.id;

@@ -37,13 +37,22 @@ enum class ImportStage {
     Failed
 };
 
+// Info about a duplicate detected during import (lightweight, no file data)
+struct DuplicateRecord {
+    Path sourcePath;
+    std::string extension;
+    ImportType importType = ImportType::Mesh;
+    std::string fileHash;
+    std::string existingName; // name of the file it duplicates
+};
+
 // Batch summary for import operations
 struct ImportBatchSummary {
     int totalFiles = 0;
     int successCount = 0;
     int failedCount = 0;
     int duplicateCount = 0;
-    std::vector<std::string> duplicateNames;                 // Names of skipped duplicates
+    std::vector<DuplicateRecord> duplicates;                 // Duplicates pending user review
     std::vector<std::pair<std::string, std::string>> errors; // (filename, error message)
 
     bool hasIssues() const { return failedCount > 0 || duplicateCount > 0; }
@@ -71,6 +80,7 @@ struct ImportTask {
     ImportStage stage = ImportStage::Pending;
     std::string error;
     bool isDuplicate = false;
+    bool skipDuplicateCheck = false;
 };
 
 // Thread-safe progress readable from UI thread

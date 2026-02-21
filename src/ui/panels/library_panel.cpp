@@ -9,6 +9,7 @@
 
 #include <imgui.h>
 
+#include "../../core/config/config.h"
 #include "../../core/utils/file_utils.h"
 #include "../../core/utils/log.h"
 #include "../icons.h"
@@ -421,6 +422,26 @@ void LibraryPanel::renderContextMenu(const ModelRecord& model) {
     if (ImGui::MenuItem("Open")) {
         if (m_onModelOpened) {
             m_onModelOpened(model.id);
+        }
+    }
+
+    if (ImGui::MenuItem("Regenerate Thumbnail")) {
+        if (m_onRegenerateThumbnail)
+            m_onRegenerateThumbnail(model.id);
+        // Invalidate cached texture so it reloads after regeneration
+        auto it = m_textureCache.find(model.id);
+        if (it != m_textureCache.end()) {
+            if (it->second != 0)
+                glDeleteTextures(1, &it->second);
+            m_textureCache.erase(it);
+        }
+    }
+
+    i64 defaultMatId = Config::instance().getDefaultMaterialId();
+    if (defaultMatId > 0) {
+        if (ImGui::MenuItem("Assign Default Material")) {
+            if (m_onAssignDefaultMaterial)
+                m_onAssignDefaultMaterial(model.id);
         }
     }
 

@@ -43,6 +43,7 @@
 #include "ui/panels/properties_panel.h"
 #include "ui/panels/start_page.h"
 #include "ui/panels/viewport_panel.h"
+#include "ui/dialogs/import_summary_dialog.h"
 #include "ui/widgets/toast.h"
 #include "version.h"
 
@@ -218,25 +219,33 @@ bool Application::init() {
         m_mainThreadQueue->enqueue([this, summary]() {
             // Show error toasts if config allows and there are failures
             if (Config::instance().getShowImportErrorToasts()) {
-                if (summary.hasIssues()) {
-                    if (summary.failedCount > 0) {
-                        std::string msg =
-                            std::to_string(summary.failedCount) + " file(s) failed to import";
-                        ToastManager::instance().show(ToastType::Error, "Import Errors", msg);
-                    }
-                    if (summary.duplicateCount > 0) {
-                        std::string msg =
-                            std::to_string(summary.duplicateCount) + " duplicate(s) skipped";
-                        ToastManager::instance().show(ToastType::Warning, "Duplicates", msg);
-                    }
-                } else if (summary.successCount > 0) {
+                if (summary.failedCount > 0) {
+                    std::string msg =
+                        std::to_string(summary.failedCount) + " file(s) failed to import";
+                    ToastManager::instance().show(ToastType::Error, "Import Errors", msg);
+                }
+                if (summary.successCount > 0) {
                     std::string msg =
                         std::to_string(summary.successCount) + " file(s) imported successfully";
                     ToastManager::instance().show(ToastType::Success, "Import Complete", msg);
                 }
             }
+
+            // Show interactive summary dialog when duplicates were found
+            if (summary.duplicateCount > 0) {
+                m_uiManager->showImportSummary(summary);
+            }
         });
     });
+
+    // Wire re-import callback for duplicate review dialog
+    if (m_uiManager->importSummaryDialog()) {
+        m_uiManager->importSummaryDialog()->setOnReimport(
+            [this](std::vector<DuplicateRecord> selected) {
+                if (m_importQueue && !selected.empty())
+                    m_importQueue->enqueueForReimport(selected);
+            });
+    }
 
     // Wire StartPage callbacks
     if (m_uiManager->startPage()) {
@@ -264,6 +273,40 @@ bool Application::init() {
         });
         m_uiManager->libraryPanel()->setOnModelOpened(
             [this](int64_t modelId) { onModelSelected(modelId); });
+
+        m_uiManager->libraryPanel()->setOnRegenerateThumbnail([this](int64_t modelId) {
+            if (!m_libraryManager)
+                return;
+            auto record = m_libraryManager->getModel(modelId);
+            if (!record)
+                return;
+            Path filePath = record->filePath;
+            std::thread([this, filePath, modelId]() {
+                auto result = LoaderFactory::load(filePath);
+                if (!result)
+                    return;
+                if (Config::instance().getAutoOrient())
+                    result.mesh->autoOrient();
+                auto mesh = result.mesh;
+                m_mainThreadQueue->enqueue([this, mesh, modelId]() {
+                    m_libraryManager->generateThumbnail(modelId, *mesh);
+                    if (m_uiManager->libraryPanel())
+                        m_uiManager->libraryPanel()->refresh();
+                });
+            }).detach();
+        });
+
+        m_uiManager->libraryPanel()->setOnAssignDefaultMaterial([this](int64_t modelId) {
+            i64 defaultMatId = Config::instance().getDefaultMaterialId();
+            if (defaultMatId <= 0 || !m_materialManager)
+                return;
+            auto mat = m_materialManager->getMaterial(defaultMatId);
+            if (!mat)
+                return;
+            // Open the model (which will trigger material assignment via onModelSelected)
+            // then assign the default material
+            m_materialManager->assignMaterialToModel(defaultMatId, modelId);
+        });
     }
 
     if (m_uiManager->projectPanel()) {
@@ -489,15 +532,20 @@ void Application::onModelSelected(int64_t modelId) {
             if (m_uiManager->propertiesPanel())
                 m_uiManager->propertiesPanel()->setMaterial(*assignedMaterial);
         } else {
-            // No material assigned — assign the first available material as default
-            auto allMaterials = m_materialManager->getAllMaterials();
-            if (!allMaterials.empty()) {
-                assignMaterialToCurrentModel(allMaterials.front().id);
+            // No material assigned — prefer configured default, then first available
+            i64 defaultId = Config::instance().getDefaultMaterialId();
+            if (defaultId > 0 && m_materialManager->getMaterial(defaultId)) {
+                assignMaterialToCurrentModel(defaultId);
             } else {
-                m_activeMaterialTexture.reset();
-                m_activeMaterialId = -1;
-                if (m_uiManager->propertiesPanel())
-                    m_uiManager->propertiesPanel()->clearMaterial();
+                auto allMaterials = m_materialManager->getAllMaterials();
+                if (!allMaterials.empty()) {
+                    assignMaterialToCurrentModel(allMaterials.front().id);
+                } else {
+                    m_activeMaterialTexture.reset();
+                    m_activeMaterialId = -1;
+                    if (m_uiManager->propertiesPanel())
+                        m_uiManager->propertiesPanel()->clearMaterial();
+                }
             }
         }
     }

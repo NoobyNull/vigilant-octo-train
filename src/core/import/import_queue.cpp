@@ -202,51 +202,57 @@ void ImportQueue::processTask(ImportTask task) {
     task.stage = ImportStage::CheckingDuplicate;
     m_progress.currentStage.store(ImportStage::CheckingDuplicate);
 
-    bool isDuplicate = false;
-    std::string duplicateName;
+    if (!task.skipDuplicateCheck) {
+        bool isDuplicate = false;
+        std::string duplicateName;
 
-    if (task.importType == ImportType::GCode) {
-        auto existing = gcodeRepo.findByHash(task.fileHash);
-        if (existing) {
-            isDuplicate = true;
-            duplicateName = existing->name;
-        }
-    } else {
-        auto existing = modelRepo.findByHash(task.fileHash);
-        if (existing) {
-            isDuplicate = true;
-            duplicateName = existing->name;
-        }
-    }
-
-    if (isDuplicate) {
-        task.isDuplicate = true;
-        task.stage = ImportStage::Failed;
-        task.error = "Duplicate of existing file: " + duplicateName;
-
-        // Update summary
-        {
-            std::lock_guard<std::mutex> lock(m_summaryMutex);
-            m_batchSummary.duplicateCount++;
-            m_batchSummary.duplicateNames.push_back(file::getStem(task.sourcePath));
-        }
-
-        log::warningf("Import", "Skipping duplicate '%s'",
-                      task.sourcePath.filename().string().c_str());
-
-        // Count duplicates as both completed and failed (for backward compatibility with tests)
-        m_progress.failedFiles.fetch_add(1);
-        m_progress.completedFiles.fetch_add(1);
-
-        // Check if this was the last task
-        if (m_remainingTasks.fetch_sub(1) == 1) {
-            m_progress.active.store(false);
-            if (m_onBatchComplete) {
-                std::lock_guard<std::mutex> lock(m_summaryMutex);
-                m_onBatchComplete(m_batchSummary);
+        if (task.importType == ImportType::GCode) {
+            auto existing = gcodeRepo.findByHash(task.fileHash);
+            if (existing) {
+                isDuplicate = true;
+                duplicateName = existing->name;
+            }
+        } else {
+            auto existing = modelRepo.findByHash(task.fileHash);
+            if (existing) {
+                isDuplicate = true;
+                duplicateName = existing->name;
             }
         }
-        return;
+
+        if (isDuplicate) {
+            task.isDuplicate = true;
+
+            // Store duplicate record for user review
+            DuplicateRecord dup;
+            dup.sourcePath = task.sourcePath;
+            dup.extension = task.extension;
+            dup.importType = task.importType;
+            dup.fileHash = task.fileHash;
+            dup.existingName = duplicateName;
+
+            {
+                std::lock_guard<std::mutex> lock(m_summaryMutex);
+                m_batchSummary.duplicateCount++;
+                m_batchSummary.duplicates.push_back(std::move(dup));
+            }
+
+            log::warningf("Import", "Duplicate found: '%s' (of '%s')",
+                          task.sourcePath.filename().string().c_str(), duplicateName.c_str());
+
+            // Duplicates are pending user decision, not failures — just mark completed
+            m_progress.completedFiles.fetch_add(1);
+
+            // Check if this was the last task
+            if (m_remainingTasks.fetch_sub(1) == 1) {
+                m_progress.active.store(false);
+                if (m_onBatchComplete) {
+                    std::lock_guard<std::mutex> lock(m_summaryMutex);
+                    m_onBatchComplete(m_batchSummary);
+                }
+            }
+            return;
+        }
     }
 
     // Stage 4: Parsing (type-specific)
@@ -557,6 +563,44 @@ void ImportQueue::processTask(ImportTask task) {
             std::lock_guard<std::mutex> lock(m_summaryMutex);
             m_onBatchComplete(m_batchSummary);
         }
+    }
+}
+
+void ImportQueue::enqueueForReimport(const std::vector<DuplicateRecord>& duplicates) {
+    if (duplicates.empty())
+        return;
+
+    // Reset batch summary and progress for this re-import batch
+    {
+        std::lock_guard<std::mutex> lock(m_summaryMutex);
+        m_batchSummary = ImportBatchSummary{};
+        m_batchSummary.totalFiles = static_cast<int>(duplicates.size());
+    }
+
+    auto tier = Config::instance().getParallelismTier();
+    size_t threadCount = calculateThreadCount(tier);
+
+    if (!m_threadPool || m_threadPool->isIdle()) {
+        m_threadPool = std::make_unique<ThreadPool>(threadCount);
+    }
+
+    log::infof("Import", "Re-importing %zu selected duplicate(s)", duplicates.size());
+
+    m_progress.reset();
+    m_progress.totalFiles.store(static_cast<int>(duplicates.size()));
+    m_progress.active.store(true);
+    m_cancelRequested.store(false);
+    m_remainingTasks.store(static_cast<int>(duplicates.size()));
+
+    for (const auto& dup : duplicates) {
+        ImportTask task;
+        task.sourcePath = dup.sourcePath;
+        task.extension = dup.extension;
+        task.importType = dup.importType;
+        task.skipDuplicateCheck = true;
+
+        m_threadPool->enqueue(
+            [this, task = std::move(task)]() mutable { processTask(std::move(task)); });
     }
 }
 

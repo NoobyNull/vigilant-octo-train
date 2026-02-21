@@ -1,7 +1,10 @@
 #pragma once
 
 // Digital Workshop - Import Summary Dialog
-// Modal dialog displaying batch import results with duplicate and error details.
+// Modal dialog displaying batch import results with interactive duplicate review.
+
+#include <functional>
+#include <vector>
 
 #include "core/import/import_task.h"
 #include "ui/dialogs/dialog.h"
@@ -19,8 +22,14 @@ class ImportSummaryDialog : public Dialog {
     // Render the dialog (called each frame by UIManager)
     void render() override;
 
+    // Set callback for re-importing selected duplicates
+    using ReimportCallback = std::function<void(std::vector<DuplicateRecord>)>;
+    void setOnReimport(ReimportCallback callback);
+
   private:
     ImportBatchSummary m_summary;
+    std::vector<bool> m_checked; // per-duplicate checkbox state
+    ReimportCallback m_onReimport;
 };
 
 } // namespace dw

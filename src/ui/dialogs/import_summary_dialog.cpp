@@ -4,14 +4,21 @@
 
 #include <imgui.h>
 
+#include "core/utils/file_utils.h"
+
 namespace dw {
 
 ImportSummaryDialog::ImportSummaryDialog() : Dialog("Import Complete") {}
 
 void ImportSummaryDialog::open(const ImportBatchSummary& summary) {
     m_summary = summary;
+    m_checked.assign(m_summary.duplicates.size(), true); // default: all checked
     m_open = true;
     ImGui::OpenPopup(m_title.c_str());
+}
+
+void ImportSummaryDialog::setOnReimport(ReimportCallback callback) {
+    m_onReimport = std::move(callback);
 }
 
 void ImportSummaryDialog::render() {
@@ -40,26 +47,83 @@ void ImportSummaryDialog::render() {
         ImGui::Text("Successfully imported: %d", m_summary.successCount);
 
         if (m_summary.duplicateCount > 0) {
-            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Duplicates skipped: %d",
+            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Duplicates found: %d",
                                m_summary.duplicateCount);
         }
 
         if (m_summary.failedCount > 0) {
-            ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Errors: %d", m_summary.failedCount);
+            ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Errors: %d",
+                               m_summary.failedCount);
         }
 
         ImGui::Spacing();
 
-        // Duplicates section (collapsible)
-        if (m_summary.duplicateCount > 0 && !m_summary.duplicateNames.empty()) {
-            if (ImGui::CollapsingHeader("Skipped Duplicates", ImGuiTreeNodeFlags_DefaultOpen)) {
+        // Interactive duplicates section
+        if (m_summary.duplicateCount > 0 && !m_summary.duplicates.empty()) {
+            if (ImGui::CollapsingHeader("Duplicates — Select to Re-import",
+                                        ImGuiTreeNodeFlags_DefaultOpen)) {
                 ImGui::Indent();
-                for (const auto& name : m_summary.duplicateNames) {
-                    ImGui::BulletText("%s", name.c_str());
+
+                // Select All / Deselect All helpers
+                if (ImGui::SmallButton("Select All")) {
+                    m_checked.assign(m_checked.size(), true);
                 }
+                ImGui::SameLine();
+                if (ImGui::SmallButton("Deselect All")) {
+                    m_checked.assign(m_checked.size(), false);
+                }
+
+                ImGui::Spacing();
+
+                // Per-duplicate checkboxes
+                for (size_t i = 0; i < m_summary.duplicates.size(); ++i) {
+                    const auto& dup = m_summary.duplicates[i];
+                    std::string label = file::getStem(dup.sourcePath) + "  ->  duplicate of: " +
+                                        dup.existingName + "##dup" + std::to_string(i);
+                    bool checked = m_checked[i];
+                    if (ImGui::Checkbox(label.c_str(), &checked)) {
+                        m_checked[i] = checked;
+                    }
+                }
+
                 ImGui::Unindent();
             }
+
             ImGui::Spacing();
+
+            // Count selected
+            int selectedCount = 0;
+            for (bool c : m_checked)
+                if (c)
+                    selectedCount++;
+
+            // Re-import / Skip buttons
+            std::string reimportLabel =
+                "Re-import Selected (" + std::to_string(selectedCount) + ")";
+            bool hasSelection = selectedCount > 0;
+
+            if (!hasSelection)
+                ImGui::BeginDisabled();
+            if (ImGui::Button(reimportLabel.c_str(), ImVec2(200, 0))) {
+                // Collect checked duplicates and invoke callback
+                std::vector<DuplicateRecord> selected;
+                for (size_t i = 0; i < m_summary.duplicates.size(); ++i) {
+                    if (m_checked[i])
+                        selected.push_back(m_summary.duplicates[i]);
+                }
+                if (m_onReimport && !selected.empty())
+                    m_onReimport(std::move(selected));
+                m_open = false;
+                ImGui::CloseCurrentPopup();
+            }
+            if (!hasSelection)
+                ImGui::EndDisabled();
+
+            ImGui::SameLine();
+            if (ImGui::Button("Skip All", ImVec2(120, 0))) {
+                m_open = false;
+                ImGui::CloseCurrentPopup();
+            }
         }
 
         // Errors section (collapsible)
@@ -79,13 +143,14 @@ void ImportSummaryDialog::render() {
             }
         }
 
-        ImGui::Separator();
-        ImGui::Spacing();
-
-        // OK button
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
-            m_open = false;
-            ImGui::CloseCurrentPopup();
+        // If no duplicates, show simple OK button
+        if (m_summary.duplicateCount == 0) {
+            ImGui::Separator();
+            ImGui::Spacing();
+            if (ImGui::Button("OK", ImVec2(120, 0))) {
+                m_open = false;
+                ImGui::CloseCurrentPopup();
+            }
         }
 
         ImGui::EndPopup();

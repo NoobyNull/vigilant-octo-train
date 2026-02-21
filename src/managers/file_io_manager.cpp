@@ -48,12 +48,16 @@ void FileIOManager::importModel() {
                                             return;
 
                                         std::vector<Path> importPaths;
-                                        importPaths.reserve(paths.size());
                                         for (const auto& p : paths) {
-                                            importPaths.emplace_back(p);
+                                            Path path{p};
+                                            if (fs::is_directory(path)) {
+                                                collectSupportedFiles(path, importPaths);
+                                            } else {
+                                                importPaths.push_back(path);
+                                            }
                                         }
 
-                                        if (m_importQueue) {
+                                        if (!importPaths.empty() && m_importQueue) {
                                             m_importQueue->enqueue(importPaths);
                                         }
                                     });

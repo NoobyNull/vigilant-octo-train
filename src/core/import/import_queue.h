@@ -24,6 +24,9 @@ class ImportQueue {
     void enqueue(const std::vector<Path>& paths);
     void enqueue(const Path& path);
 
+    // Re-enqueue selected duplicates (skips duplicate check)
+    void enqueueForReimport(const std::vector<DuplicateRecord>& duplicates);
+
     // Cancel all pending imports
     void cancel();
 

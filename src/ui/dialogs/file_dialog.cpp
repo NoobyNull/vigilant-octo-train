@@ -59,15 +59,18 @@ void FileDialog::render() {
 
             if (ImGui::Selectable(label.c_str(), isSelected,
                                   ImGuiSelectableFlags_AllowDoubleClick)) {
-                if (m_multiSelect && !entry.isDirectory) {
-                    // Ctrl+click toggles selection
+                if (m_multiSelect) {
+                    // Ctrl+click toggles selection for both files and directories
                     if (ImGui::GetIO().KeyCtrl) {
                         if (m_selectedFiles.count(entry.name) > 0) {
                             m_selectedFiles.erase(entry.name);
                         } else {
                             m_selectedFiles.insert(entry.name);
                         }
-                    } else {
+                    } else if (!entry.isDirectory || !ImGui::IsMouseDoubleClicked(0)) {
+                        // Single-click on anything: select it
+                        // (but don't clear selection on directory double-click,
+                        //  since that navigates into the folder)
                         m_selectedFiles.clear();
                         m_selectedFiles.insert(entry.name);
                     }
@@ -128,7 +131,7 @@ void FileDialog::render() {
         float buttonWidth = 100.0f;
 
         if (m_multiSelect && !m_selectedFiles.empty()) {
-            ImGui::Text("%d file(s) selected", static_cast<int>(m_selectedFiles.size()));
+            ImGui::Text("%d item(s) selected", static_cast<int>(m_selectedFiles.size()));
             ImGui::SameLine();
         }
 

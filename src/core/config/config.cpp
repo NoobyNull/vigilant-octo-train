@@ -181,6 +181,10 @@ bool Config::load() {
             } else if (key == "show_error_toasts") {
                 m_showImportErrorToasts = (value == "true" || value == "1");
             }
+        } else if (section == "materials") {
+            if (key == "default_material_id") {
+                str::parseInt64(value, m_defaultMaterialId);
+            }
         } else if (section == "api") {
             if (key == "gemini_key") {
                 m_geminiApiKey = value;
@@ -296,6 +300,11 @@ bool Config::save() {
         ss << "library_dir=" << m_libraryDir.string() << "\n";
     }
     ss << "show_error_toasts=" << (m_showImportErrorToasts ? "true" : "false") << "\n";
+    ss << "\n";
+
+    // Materials section
+    ss << "[materials]\n";
+    ss << "default_material_id=" << m_defaultMaterialId << "\n";
     ss << "\n";
 
     // API section

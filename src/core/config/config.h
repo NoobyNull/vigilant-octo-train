@@ -161,6 +161,10 @@ class Config {
     bool getEnableFloatingWindows() const { return m_enableFloatingWindows; }
     void setEnableFloatingWindows(bool enable) { m_enableFloatingWindows = enable; }
 
+    // Default material
+    i64 getDefaultMaterialId() const { return m_defaultMaterialId; }
+    void setDefaultMaterialId(i64 id) { m_defaultMaterialId = id; }
+
     // API keys
     const std::string& getGeminiApiKey() const { return m_geminiApiKey; }
     void setGeminiApiKey(const std::string& key) { m_geminiApiKey = key; }
@@ -228,6 +232,9 @@ class Config {
     Path m_libraryDir; // Empty means default (app data dir / "library")
     bool m_showImportErrorToasts = true;
     bool m_enableFloatingWindows = false;
+
+    // Default material
+    i64 m_defaultMaterialId = -1;
 
     // API keys
     std::string m_geminiApiKey;

@@ -38,6 +38,17 @@ class LibraryPanel : public Panel {
     // Callback when a G-code file is double-clicked (load into viewport)
     void setOnGCodeOpened(GCodeSelectedCallback callback) { m_onGCodeOpened = std::move(callback); }
 
+    // Callback when thumbnail regeneration is requested
+    using RegenerateThumbnailCallback = std::function<void(int64_t modelId)>;
+    void setOnRegenerateThumbnail(RegenerateThumbnailCallback callback) {
+        m_onRegenerateThumbnail = std::move(callback);
+    }
+
+    // Callback when "Assign Default Material" is chosen
+    void setOnAssignDefaultMaterial(ModelSelectedCallback callback) {
+        m_onAssignDefaultMaterial = std::move(callback);
+    }
+
     // Refresh the model and G-code lists
     void refresh();
 
@@ -80,6 +91,8 @@ class LibraryPanel : public Panel {
 
     ModelSelectedCallback m_onModelSelected;
     ModelSelectedCallback m_onModelOpened;
+    RegenerateThumbnailCallback m_onRegenerateThumbnail;
+    ModelSelectedCallback m_onAssignDefaultMaterial;
     GCodeSelectedCallback m_onGCodeSelected;
     GCodeSelectedCallback m_onGCodeOpened;
 
