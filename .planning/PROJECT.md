@@ -12,7 +12,8 @@ A single focused workspace where a CNC woodworker can manage their model library
 
 ### Validated
 
-<!-- Shipped and working in v1.0 -->
+<!-- Shipped and working in v1.0 + Post-v1.0 -->
+
 
 - ✓ Import STL, OBJ, 3MF models with background processing — v1.0
 - ✓ Content-based hash deduplication on import — v1.0
@@ -48,29 +49,48 @@ A single focused workspace where a CNC woodworker can manage their model library
 - ✓ Hardened mesh loaders (NaN/Inf validation, corrupt file handling) — v1.0
 - ✓ 7 bugs fixed (ViewCube cache, shader uniforms, normal matrix, etc.) — v1.0
 - ✓ 6 dead code items resolved — v1.0
+- ✓ Materials system with 32 built-in wood species — Post-v1.0
+- ✓ Material texture mapping with planar UV projection — Post-v1.0
+- ✓ Gemini AI material generation (optional, API key required) — Post-v1.0
+- ✓ MaterialsPanel with category tabs, thumbnail grid, edit modal — Post-v1.0
+- ✓ .dwmat archive import/export for material sharing — Post-v1.0
+- ✓ Multi-select in library panel with batch operations — Post-v1.0
+- ✓ Context menu system (ContextMenuManager) — Post-v1.0
+- ✓ Batch thumbnail regeneration with progress dialog — Post-v1.0
+
+## Current Milestone: v1.1 Library Storage & Organization
+
+**Goal:** Content-addressable model storage with category-based organization, full-text search, Kuzu graph database for relationship queries, and project export as portable archives.
+
+**Target features:**
+- Content-addressable storage (iTunes-style hash foldering)
+- Smart file handling (auto-detect local vs NAS, copy/move accordingly)
+- Category/genus hierarchy for model organization
+- FTS5 full-text search across library metadata
+- Kuzu graph database alongside SQLite for relationship queries
+- Project links as graph edges, exportable as .dwproj zip
 
 ### Active
-
-<!-- To be defined for next milestone -->
-
-(To be defined — run `/gsd:new-milestone` to start next milestone)
 
 ### Out of Scope
 
 - STEP/IGES CAD format support — not a CAD tool
-- AI/ML features — keep it deterministic
+- AI genus classification — deferred to future milestone (Gemini Vision on thumbnails)
 - Cloud-based operation — fully offline desktop app
 - CAD editing — view/import only
 - Scientific precision analysis — workshop-grade accuracy
 - Mobile platforms — desktop only
 - Real-time chat/collaboration — single-user
 - Database migration system — no user base, delete and recreate per rulebook
+- Multi-project cross-optimization — deferred until project system matures
 
 ## Context
 
-**Current state:** Shipped v1.0 with 19,511 LOC C++ across ~116 source files. 422 tests passing. Architecture is clean — Application is a thin coordinator (374 lines) delegating to UIManager, FileIOManager, ConfigManager. Thread-safe infrastructure in place (EventBus, ConnectionPool with WAL, MainThreadQueue). Complete import pipeline with parallel workers, G-code support, and non-blocking UX.
+**Current state:** v1.0 shipped (19,511 LOC, 422 tests). Post-v1.0 added materials system (32 built-in species, Gemini AI generation, .dwmat archives), multi-select with batch operations, context menus, and progress dialog. 491 tests passing. Architecture remains clean — Application as thin coordinator, 3 focused managers.
 
-**Tech stack:** C++17, SDL2, Dear ImGui (docking), OpenGL 3.3, SQLite3, CMake 3.20+
+**Tech stack:** C++17, SDL2, Dear ImGui (docking), OpenGL 3.3, SQLite3, Kuzu (v1.1+), CMake 3.20+
+
+**v1.1 storage context:** User has 3000+ models on NAS (10G connection), heavily disorganized with duplicates and meaningless filenames. Current import stores original file paths — fragile for network storage. Content-addressable storage decouples physical location from logical organization. Kuzu added for graph relationships (projects, categories) alongside SQLite for relational data and FTS5.
 
 **Feature gap reference:** `OBSERVATION_REPORT.md` documents 17 categories of gaps between old and new versions. Major missing subsystems include CNC machine control, cost/quoting workflow, tool database, wood species database, undo/redo, and advanced search.
 
@@ -83,7 +103,7 @@ A single focused workspace where a CNC woodworker can manage their model library
 
 ## Constraints
 
-- **Tech stack**: C++17, SDL2, Dear ImGui (docking), OpenGL 3.3, SQLite3, CMake 3.20+ — per rulebook
+- **Tech stack**: C++17, SDL2, Dear ImGui (docking), OpenGL 3.3, SQLite3, Kuzu, CMake 3.20+ — per rulebook
 - **Licensing**: Permissive only (MIT, zlib, BSD, Public Domain)
 - **File limits**: .cpp max 800 lines, .h max 400 lines, one class per header
 - **Deployment**: 8-25 MB binary, cross-platform (Linux, Windows, macOS)
@@ -110,6 +130,9 @@ A single focused workspace where a CNC woodworker can manage their model library
 | ThreadPool with lazy init | Zero overhead when imports unused, parallel workers on demand | ✓ Good |
 | Per-frame import completion throttling | Prevents UI blocking during large batch imports | ✓ Good |
 | G-code toolpath as extruded quads | Reuses existing mesh renderer, color-coded cutting vs rapid | ✓ Good |
+| Content-addressable storage | Hash-based file store decouples physical location from logical org | — Pending |
+| SQLite + Kuzu hybrid | SQLite for relational/FTS5, Kuzu for graph relationships | — Pending |
+| Auto-detect copy vs move on import | Copy from NAS, move if local same filesystem — user picks strategy not mechanics | — Pending |
 
 ---
-*Last updated: 2026-02-10 after v1.0 milestone*
+*Last updated: 2026-02-21 after v1.1 milestone start*

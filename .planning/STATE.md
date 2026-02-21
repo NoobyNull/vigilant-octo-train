@@ -1,35 +1,28 @@
 # Project State: Digital Workshop
 
-**Last Updated:** 2026-02-20 (Session update: Phase 01 Complete)
-**Current Session:** Phase 01 COMPLETE — Materials system with Gemini AI integration, 491/492 tests passing
+**Last Updated:** 2026-02-21 (Milestone v1.1 started)
+**Current Session:** Defining requirements for v1.1 Library Storage & Organization
 
 ---
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-02-10)
+See: `.planning/PROJECT.md` (updated 2026-02-21)
 
 **Core Value:** A single focused workspace where a CNC woodworker can manage their model library, analyze toolpaths, and optimize material usage — without switching between tools.
 
-**Current Focus:** Phase 01 Complete - Materials mapping with coordinated materials database + Gemini AI material generation
+**Current Focus:** v1.1 Library Storage & Organization — content-addressable storage, categories, FTS5, Kuzu graph, project export
 
 ---
 
 ## Current Position
 
-**Status:** v1.0 Foundation & Import Pipeline shipped 2026-02-10
+**Status:** Defining requirements
 
-**Milestone v1.0 Summary:**
-- 7 sub-phases, 23 plans, 422 tests passing
-- Application.cpp: 1,108 → 374 lines (66% reduction)
-- 84 files changed (9,698 insertions, 1,420 deletions)
-- 19,511 LOC C++ in src/
-
-**Archives:**
-- `.planning/milestones/v1.0-ROADMAP.md`
-- `.planning/milestones/v1.0-REQUIREMENTS.md`
-- `.planning/milestones/v1.0-MILESTONE-AUDIT.md`
-- `.planning/MILESTONES.md`
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-21 — Milestone v1.1 started
 
 ---
 
@@ -50,16 +43,10 @@ See: `.planning/PROJECT.md` (updated 2026-02-10)
 - 491 tests passing (1 pre-existing failure in STLLoader)
 - Infrastructure: EventBus (10), ConnectionPool (10), MainThreadQueue (10)
 - Bug regression tests: 12
-- Phase 01 Materials tests: Comprehensive coverage of materials system, Gemini API, UV generation, texture mapping
+- Phase 01 Materials tests: Comprehensive coverage
 
-**Tech Debt (from v1.0 audit):**
+**Tech Debt:**
 - EventBus wired but unused (6 event types, zero pub/sub calls in production)
-- Phase 01.2 missing formal VERIFICATION.md
-- 7 human verification items for import UX
-
-**Remaining Gaps:**
-- See `.planning/TODOS.md` for ~44 remaining items
-- See `OBSERVATION_REPORT.md` for feature gaps vs old Qt version
 
 ---
 
@@ -78,54 +65,26 @@ See: `.planning/PROJECT.md` (updated 2026-02-10)
 - FileIOManager: `src/managers/file_io_manager.h/.cpp`
 - ConfigManager: `src/managers/config_manager.h/.cpp`
 
-**Resources:**
-- Architecture doc: `.planning/codebase/ARCHITECTURE.md`
-- Code conventions: `.planning/codebase/CONVENTIONS.md`
-- Threading contracts: `docs/THREADING.md`
-
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 2 | Fix panel UI clipping when docks are resized smaller than content | 2026-02-10 | dc897b7 | [2-fix-panel-ui-clipping-when-docks-are-res](./quick/2-fix-panel-ui-clipping-when-docks-are-res/) |
-
 ---
 
 ## Accumulated Context
 
 ### Roadmap Evolution
 
-- Phase 1 added: Add materials mapping to object view with coordinated materials database
+- v1.0: Foundation & Import Pipeline (shipped 2026-02-10)
+- Post-v1.0 Phase 01: Materials system (completed 2026-02-20)
+- v1.1: Library Storage & Organization (started 2026-02-21)
 
-### Phase 01 Decisions (2026-02-20)
+### v1.1 Design Decisions (2026-02-21)
 
-- **01-01:** Schema v4 adds materials table; material_id FK on models; MaterialRepository follows ModelRepository pattern
-- **01-03:** 32 built-in materials seeded via MaterialManager.seedDefaults() using count()==0 guard (idempotent)
-- **01-03:** importMaterial() copies .dwmat to getMaterialsDir() to prevent path invalidation (Pitfall 3)
-- **01-03:** MaterialArchive::create() handles empty texturePath for metadata-only archives (default species export)
-- **01-04:** Planar UV projection selects largest-area face (XY/XZ/YZ) from mesh bounds
-- **01-04:** uUseTexture shader toggle — toolpath overrides texture, texture overrides solid color
-- **01-04:** Vertex(pos) and Vertex(pos,norm) constructors zero-initialize texCoord (bug fix)
-- **01-05:** MaterialsPanel edit form uses modal popup (not inline) to avoid grid layout height complexity
-- **01-05:** Category placeholders use distinct hues: brown (Hardwood), green (Softwood), purple (Domestic), slate (Composite)
-- **01-05:** File dialog and insertMaterial() deferred to plan 06 (application wiring)
-- **01-06:** ViewportPanel stores const Texture* (non-owning) — Application owns GPU texture lifetime via unique_ptr
-- **01-06:** m_focusedModelId tracked in Application (not Workspace) for material assignment scope
-- **01-06:** PropertiesPanel gates on optional<MaterialRecord>: material display or color picker fallback
-
-### Phase 01 Progress (2026-02-20)
-
-- **01-01 DONE:** Dependencies (miniz/stb/nlohmann-json), MaterialRecord, schema v4, MaterialRepository
-- **01-02 DONE:** MaterialArchive, TextureLoader, Texture RAII wrapper
-- **01-03 DONE:** Default materials (32 species), MaterialManager, getMaterialsDir()
-- **01-04 DONE:** Texture mapping pipeline — planar UV generation on Mesh, MESH_FRAGMENT shader with uUseTexture/uMaterialTexture, Renderer textured renderMesh overloads
-- **01-05 DONE:** MaterialsPanel — category tabs, thumbnail grid, edit modal, import/export/add/delete toolbar
-- **01-06 DONE:** MaterialManager+MaterialsPanel wired into Application; PropertiesPanel shows material info; ViewportPanel renders with material texture; grain direction slider regenerates UVs; material assignment persists to DB
-- **Gemini AI Integration DONE:** Full GeminiMaterialService implementation with libcurl HTTP client; API key configuration in settings; bundled materials generation pipeline; PNG texture extraction from archives
-- **491 tests passing** (1 pre-existing STLLoader vertex deduplication test failure)
+- **Storage:** Content-addressable with iTunes-style 2-byte hash prefix directories (e.g., `library/models/a7/3b/a73b4f...c821.stl`)
+- **Database:** SQLite remains primary (relational + FTS5). Kuzu added alongside for graph relationships (categories, projects)
+- **File handling:** Auto-detect source filesystem — copy from NAS/remote, move if same local drive. User picks organizational strategy (keep in place / organize locally / custom location)
+- **Categories:** Manual genus assignment by default. AI-assisted classification (Gemini Vision) deferred — not required for customers
+- **Projects:** Lightweight graph links in DB, exportable as .dwproj zip (manifest + model blobs + materials + thumbnails)
+- **Rejected alternatives:** DuckDB (wrong workload — columnar/analytical, weak OLTP, no graph), MySQL (server-based), SurrealDB (no C++ SDK)
 
 ---
 
 *State initialized: 2026-02-08*
-*Phase 01 completion: 2026-02-20 — All 6 plans executed; Gemini AI material generation integrated; materials system fully functional*
-*Session update: Verified build status, test suite, and documented Gemini AI integration completion*
+*v1.1 milestone started: 2026-02-21*
