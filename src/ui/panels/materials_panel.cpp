@@ -430,8 +430,9 @@ void MaterialsPanel::renderEditForm() {
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     ImGui::SetNextWindowSize(ImVec2(420, 0), ImGuiCond_Appearing);
+    ImGui::SetNextWindowSizeConstraints(ImVec2(320, 0), ImVec2(500, FLT_MAX));
 
-    if (ImGui::BeginPopupModal("Edit Material", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal("Edit Material", nullptr, 0)) {
         ImGui::Text(m_isNewMaterial ? "New Material" : "Edit Material");
         ImGui::Separator();
         ImGui::Spacing();
@@ -440,7 +441,7 @@ void MaterialsPanel::renderEditForm() {
         char nameBuf[256];
         std::strncpy(nameBuf, m_editBuffer.name.c_str(), sizeof(nameBuf) - 1);
         nameBuf[sizeof(nameBuf) - 1] = '\0';
-        ImGui::SetNextItemWidth(-1);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         if (ImGui::InputText("##MatName", nameBuf, sizeof(nameBuf))) {
             m_editBuffer.name = nameBuf;
         }
@@ -496,7 +497,7 @@ void MaterialsPanel::renderEditForm() {
         ImGui::Spacing();
 
         // Grain Direction
-        ImGui::SetNextItemWidth(-1);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         ImGui::SliderFloat("Grain Direction (deg)", &m_editBuffer.grainDirectionDeg, 0.0f, 360.0f,
                            "%.1f deg");
 
