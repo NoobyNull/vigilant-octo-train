@@ -6,6 +6,7 @@
 #include <imgui.h>
 
 #include "../icons.h"
+#include "../widgets/toast.h"
 
 namespace dw {
 
@@ -362,10 +363,18 @@ void CutOptimizerPanel::renderVisualization() {
 
 void CutOptimizerPanel::runOptimization() {
     if (m_parts.empty()) {
+        ToastManager::instance().show(ToastType::Warning, "No Parts",
+                                     "Add parts before running optimization");
         return;
     }
 
     auto optimizer = optimizer::CutOptimizer::create(m_algorithm);
+    if (!optimizer) {
+        ToastManager::instance().show(ToastType::Error, "Optimizer Error",
+                                     "Failed to create optimizer");
+        return;
+    }
+
     optimizer->setAllowRotation(m_allowRotation);
     optimizer->setKerf(m_kerf);
     optimizer->setMargin(m_margin);
@@ -374,6 +383,22 @@ void CutOptimizerPanel::runOptimization() {
     m_result = optimizer->optimize(m_parts, sheets);
     m_hasResults = true;
     m_selectedSheet = 0;
+
+    // Check for unplaced parts
+    int unplacedCount = 0;
+    for (const auto& part : m_parts) {
+        if (m_result.placements.find(part.id) == m_result.placements.end()) {
+            unplacedCount++;
+        }
+    }
+
+    if (unplacedCount > 0) {
+        ToastManager::instance().show(ToastType::Warning, "Incomplete Layout",
+                                     std::to_string(unplacedCount) + " parts could not be placed");
+    } else {
+        ToastManager::instance().show(ToastType::Success, "Optimization Complete",
+                                     "All parts placed successfully");
+    }
 }
 
 } // namespace dw

@@ -6,6 +6,7 @@
 
 #include <imgui.h>
 
+#include "../../core/database/model_repository.h"
 #include "../../render/camera.h"
 #include "../../render/framebuffer.h"
 #include "../../render/renderer.h"
@@ -30,7 +31,8 @@ class ViewportPanel : public Panel {
     // Set mesh to display
     void setMesh(MeshPtr mesh);
     // Set mesh that was already auto-oriented on worker thread
-    void setPreOrientedMesh(MeshPtr mesh, f32 orientYaw);
+    void setPreOrientedMesh(MeshPtr mesh, f32 orientYaw,
+                            std::optional<CameraState> savedCamera = std::nullopt);
     void clearMesh();
 
     // Set toolpath mesh to display
@@ -43,6 +45,10 @@ class ViewportPanel : public Panel {
     // Camera access
     Camera& camera() { return m_camera; }
     const Camera& camera() const { return m_camera; }
+
+    // Camera state persistence
+    CameraState getCameraState() const;
+    void restoreCameraState(const CameraState& state);
 
     // Render settings
     RenderSettings& renderSettings() { return m_renderer.settings(); }

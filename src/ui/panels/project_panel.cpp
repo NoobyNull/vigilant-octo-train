@@ -4,6 +4,7 @@
 
 #include "../../core/config/config.h"
 #include "../icons.h"
+#include "../widgets/toast.h"
 
 namespace dw {
 
@@ -56,10 +57,25 @@ void ProjectPanel::renderProjectInfo() {
 
         // Quick actions
         if (ImGui::Button("Save")) {
+            bool success = false;
             if (m_saveProjectCallback) {
                 m_saveProjectCallback();
+                success = true;
             } else {
-                m_projectManager->save(*project);
+                try {
+                    m_projectManager->save(*project);
+                    success = true;
+                } catch (...) {
+                    success = false;
+                }
+            }
+
+            if (success) {
+                ToastManager::instance().show(ToastType::Success, "Saved",
+                                             "Project saved successfully");
+            } else {
+                ToastManager::instance().show(ToastType::Error, "Save Failed",
+                                             "Could not save project");
             }
         }
 
@@ -69,8 +85,37 @@ void ProjectPanel::renderProjectInfo() {
         }
 
         if (ImGui::Button("Close")) {
-            m_projectManager->close(*project);
-            m_projectManager->setCurrentProject(nullptr);
+            if (project->isModified()) {
+                ImGui::OpenPopup("Unsaved Changes");
+            } else {
+                m_projectManager->close(*project);
+                m_projectManager->setCurrentProject(nullptr);
+            }
+        }
+
+        // Unsaved changes confirmation dialog
+        if (ImGui::BeginPopupModal("Unsaved Changes", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("Save changes before closing?");
+            ImGui::TextDisabled("You have unsaved changes in this project.");
+            ImGui::Spacing();
+
+            if (ImGui::Button("Save & Close", ImVec2(150, 0))) {
+                m_projectManager->save(*project);
+                m_projectManager->close(*project);
+                m_projectManager->setCurrentProject(nullptr);
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Discard", ImVec2(150, 0))) {
+                m_projectManager->close(*project);
+                m_projectManager->setCurrentProject(nullptr);
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2(150, 0))) {
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
         }
 
         ImGui::Unindent();

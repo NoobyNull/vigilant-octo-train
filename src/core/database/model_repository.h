@@ -10,6 +10,14 @@
 
 namespace dw {
 
+// Per-model camera state for persistence across sessions
+struct CameraState {
+    f32 distance = 5.0f;
+    f32 pitch = 30.0f;
+    f32 yaw = 45.0f;
+    Vec3 target{0.0f, 0.0f, 0.0f};
+};
+
 // Model data structure
 struct ModelRecord {
     i64 id = 0;
@@ -29,6 +37,9 @@ struct ModelRecord {
     // Orientation data (NULL = not yet computed)
     std::optional<f32> orientYaw;
     std::optional<Mat4> orientMatrix;
+
+    // Camera state (NULL = never saved, use fit-to-bounds default)
+    std::optional<CameraState> cameraState;
 };
 
 // Repository for model CRUD operations
@@ -52,6 +63,7 @@ class ModelRepository {
     bool updateThumbnail(i64 id, const Path& thumbnailPath);
     bool updateTags(i64 id, const std::vector<std::string>& tags);
     bool updateOrient(i64 id, f32 yaw, const Mat4& matrix);
+    bool updateCameraState(i64 id, const CameraState& state);
 
     // Delete
     bool remove(i64 id);

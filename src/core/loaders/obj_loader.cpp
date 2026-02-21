@@ -220,6 +220,11 @@ LoadResult OBJLoader::parseContent(const std::string& content) {
     log::infof("OBJ", "Loaded: %u vertices, %u triangles", mesh->vertexCount(),
                mesh->triangleCount());
 
+    // Validate mesh integrity
+    if (!mesh->validate()) {
+        return LoadResult{nullptr, "Mesh validation failed: invalid NaN/Inf values or degenerate triangles"};
+    }
+
     return LoadResult{mesh, ""};
 }
 

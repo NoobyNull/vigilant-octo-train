@@ -14,6 +14,7 @@
 #include "../../core/utils/log.h"
 #include "../context_menu_manager.h"
 #include "../icons.h"
+#include "../widgets/toast.h"
 
 namespace dw {
 
@@ -795,10 +796,17 @@ void LibraryPanel::renderDeleteConfirm() {
             if (m_library) {
                 if (m_deleteIsGCode) {
                     m_library->deleteGCodeFile(m_deleteItemId);
+                    ToastManager::instance().show(ToastType::Success, "Deleted",
+                                                 "G-code file deleted successfully");
                 } else {
                     m_library->removeModel(m_deleteItemId);
+                    ToastManager::instance().show(ToastType::Success, "Deleted",
+                                                 "Model deleted successfully");
                 }
                 refresh();
+            } else {
+                ToastManager::instance().show(ToastType::Error, "Delete Failed",
+                                             "Could not delete item");
             }
             ImGui::CloseCurrentPopup();
         }
@@ -841,13 +849,24 @@ void LibraryPanel::renderRenameDialog() {
 
         if (okPressed || enterPressed) {
             std::string newName(m_renameBuffer);
-            if (!newName.empty() && m_library) {
+            // Trim whitespace
+            newName.erase(0, newName.find_first_not_of(" \t\n\r"));
+            newName.erase(newName.find_last_not_of(" \t\n\r") + 1);
+
+            if (newName.empty()) {
+                ToastManager::instance().show(ToastType::Warning, "Invalid Name",
+                                             "Name cannot be empty");
+            } else if (m_library) {
                 auto record = m_library->getModel(m_renameModelId);
                 if (record) {
                     record->name = newName;
                     if (m_library->updateModel(*record)) {
                         refresh();
+                        ToastManager::instance().show(ToastType::Success, "Renamed",
+                                                     "Model renamed successfully");
                     } else {
+                        ToastManager::instance().show(ToastType::Error, "Rename Failed",
+                                                     "Could not rename model");
                         log::error("Library", "Failed to rename model");
                     }
                 }

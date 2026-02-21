@@ -1,5 +1,6 @@
 #include "materials_panel.h"
 
+#include <algorithm>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -171,6 +172,15 @@ void MaterialsPanel::renderToolbar() {
     }
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Refresh materials list");
+    }
+
+    ImGui::SameLine();
+
+    // Thumbnail size slider
+    ImGui::SetNextItemWidth(60.0f);
+    ImGui::SliderFloat("##ThumbSize", &m_thumbnailSize, THUMB_MIN, 256.0f, "%.0f");
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Thumbnail size (Ctrl+scroll in grid)");
     }
 
     ImGui::SameLine();
@@ -351,6 +361,13 @@ void MaterialsPanel::renderCategoryTabs() {
 
 void MaterialsPanel::renderMaterialGrid(const std::vector<MaterialRecord>& materials) {
     ImGui::BeginChild("MatGrid", ImVec2(0, 0), false);
+
+    // Ctrl+scroll to resize thumbnails
+    if (ImGui::IsWindowHovered() && ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0.0f) {
+        m_thumbnailSize += ImGui::GetIO().MouseWheel * 16.0f;
+        float maxSize = ImGui::GetContentRegionAvail().x;
+        m_thumbnailSize = std::clamp(m_thumbnailSize, THUMB_MIN, std::max(THUMB_MIN, maxSize));
+    }
 
     if (materials.empty()) {
         ImGui::Spacing();

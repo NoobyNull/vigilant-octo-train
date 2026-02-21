@@ -541,6 +541,13 @@ void Application::onModelSelected(int64_t modelId) {
     if (!m_libraryManager)
         return;
 
+    // Save current camera state before switching models
+    if (m_focusedModelId > 0 && m_uiManager->viewportPanel()) {
+        auto camState = m_uiManager->viewportPanel()->getCameraState();
+        ModelRepository repo(*m_database);
+        repo.updateCameraState(m_focusedModelId, camState);
+    }
+
     // Get model record on main thread (fast DB read)
     auto record = m_libraryManager->getModel(modelId);
     if (!record)
@@ -590,9 +597,10 @@ void Application::onModelSelected(int64_t modelId) {
     std::string name = record->name;
     auto storedOrientYaw = record->orientYaw;
     auto storedOrientMatrix = record->orientMatrix;
+    auto storedCamera = record->cameraState;
 
-    m_loadThread =
-        std::thread([this, filePath, name, gen, modelId, storedOrientYaw, storedOrientMatrix]() {
+    m_loadThread = std::thread(
+        [this, filePath, name, gen, modelId, storedOrientYaw, storedOrientMatrix, storedCamera]() {
             auto loadResult = LoaderFactory::load(filePath);
             if (!loadResult) {
                 m_loadingState.reset();
@@ -621,7 +629,7 @@ void Application::onModelSelected(int64_t modelId) {
             auto mesh = loadResult.mesh;
 
             // Post result to main thread via MainThreadQueue
-            m_mainThreadQueue->enqueue([this, mesh, name, gen, orientYaw]() {
+            m_mainThreadQueue->enqueue([this, mesh, name, gen, orientYaw, storedCamera]() {
                 // Check generation — if user clicked another model, discard
                 if (gen != m_loadingState.generation.load())
                     return;
@@ -629,7 +637,7 @@ void Application::onModelSelected(int64_t modelId) {
 
                 m_workspace->setFocusedMesh(mesh);
                 if (m_uiManager->viewportPanel())
-                    m_uiManager->viewportPanel()->setPreOrientedMesh(mesh, orientYaw);
+                    m_uiManager->viewportPanel()->setPreOrientedMesh(mesh, orientYaw, storedCamera);
                 if (m_uiManager->propertiesPanel())
                     m_uiManager->propertiesPanel()->setMesh(mesh, name);
                 if (m_uiManager->materialsPanel())
@@ -786,6 +794,13 @@ void Application::shutdown() {
     // Join load thread before destroying anything it references
     if (m_loadThread.joinable())
         m_loadThread.join();
+
+    // Save current camera state before shutdown
+    if (m_focusedModelId > 0 && m_uiManager && m_uiManager->viewportPanel() && m_database) {
+        auto camState = m_uiManager->viewportPanel()->getCameraState();
+        ModelRepository repo(*m_database);
+        repo.updateCameraState(m_focusedModelId, camState);
+    }
 
     m_configManager->saveWorkspaceState();
 

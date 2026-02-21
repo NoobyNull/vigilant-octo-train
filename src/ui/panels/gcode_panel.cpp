@@ -5,6 +5,7 @@
 #include "../../core/utils/file_utils.h"
 #include "../dialogs/file_dialog.h"
 #include "../icons.h"
+#include "../widgets/toast.h"
 
 namespace dw {
 
@@ -61,6 +62,8 @@ void GCodePanel::render() {
 bool GCodePanel::loadFile(const std::string& path) {
     auto content = file::readText(path);
     if (!content) {
+        ToastManager::instance().show(ToastType::Error, "File Read Error",
+                                     "Could not read G-code file: " + path);
         return false;
     }
 
@@ -82,6 +85,8 @@ bool GCodePanel::loadFile(const std::string& path) {
         return true;
     }
 
+    ToastManager::instance().show(ToastType::Warning, "Empty G-code",
+                                 "File contains no valid G-code commands");
     return false;
 }
 

@@ -320,6 +320,13 @@ LoadResult ThreeMFLoader::parseModelXML(const std::string& xmlContent) {
     log::infof("3MF", "Loaded: %u vertices, %u triangles", result.mesh->vertexCount(),
                result.mesh->triangleCount());
 
+    // Validate mesh integrity
+    if (!result.mesh->validate()) {
+        result.error = "Mesh validation failed: invalid NaN/Inf values or degenerate triangles";
+        result.mesh.reset();
+        return result;
+    }
+
     return result;
 }
 

@@ -145,6 +145,11 @@ LoadResult STLLoader::loadBinary(const ByteBuffer& data) {
     log::infof("STL", "Loaded binary: %u vertices, %u triangles", mesh->vertexCount(),
                mesh->triangleCount());
 
+    // Validate mesh integrity
+    if (!mesh->validate()) {
+        return LoadResult{nullptr, "Mesh validation failed: invalid NaN/Inf values or degenerate triangles"};
+    }
+
     return LoadResult{mesh, ""};
 }
 
@@ -242,6 +247,11 @@ LoadResult STLLoader::loadAscii(const std::string& content) {
 
     log::infof("STL", "Loaded ASCII: %u vertices, %u triangles", mesh->vertexCount(),
                mesh->triangleCount());
+
+    // Validate mesh integrity
+    if (!mesh->validate()) {
+        return LoadResult{nullptr, "Mesh validation failed: invalid NaN/Inf values or degenerate triangles"};
+    }
 
     return LoadResult{mesh, ""};
 }

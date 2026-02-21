@@ -438,7 +438,8 @@ void ImportQueue::processTask(ImportTask task) {
     } else {
         // Precompute autoOrient on the worker thread (pure CPU, no GL)
         // Results are stored in DB so model loads skip recomputation
-        if (Config::instance().getAutoOrient() && task.mesh && task.mesh->isValid()) {
+        if (Config::instance().getAutoOrient() && task.mesh && task.mesh->isValid() &&
+            task.mesh->validate()) {
             f32 orientYaw = task.mesh->autoOrient();
             task.record.orientYaw = orientYaw;
             task.record.orientMatrix = task.mesh->getOrientMatrix();

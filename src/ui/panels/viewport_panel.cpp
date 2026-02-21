@@ -70,7 +70,8 @@ void ViewportPanel::setMesh(MeshPtr mesh) {
     m_viewCubeCache.valid = false;
 }
 
-void ViewportPanel::setPreOrientedMesh(MeshPtr mesh, f32 orientYaw) {
+void ViewportPanel::setPreOrientedMesh(MeshPtr mesh, f32 orientYaw,
+                                       std::optional<CameraState> savedCamera) {
     m_mesh = mesh;
 
     if (m_gpuMesh.vao != 0) {
@@ -79,14 +80,35 @@ void ViewportPanel::setPreOrientedMesh(MeshPtr mesh, f32 orientYaw) {
 
     if (m_mesh && m_mesh->isValid()) {
         m_gpuMesh = m_renderer.uploadMesh(*m_mesh);
-        fitToModel();
 
-        if (m_mesh->wasAutoOriented()) {
-            m_camera.setYaw(orientYaw);
-            m_camera.setPitch(0.0f);
+        if (savedCamera) {
+            restoreCameraState(*savedCamera);
+        } else {
+            fitToModel();
+            if (m_mesh->wasAutoOriented()) {
+                m_camera.setYaw(orientYaw);
+                m_camera.setPitch(0.0f);
+            }
         }
     }
 
+    m_viewCubeCache.valid = false;
+}
+
+CameraState ViewportPanel::getCameraState() const {
+    CameraState state;
+    state.distance = m_camera.distance();
+    state.pitch = m_camera.pitch();
+    state.yaw = m_camera.yaw();
+    state.target = m_camera.target();
+    return state;
+}
+
+void ViewportPanel::restoreCameraState(const CameraState& state) {
+    m_camera.setTarget(state.target);
+    m_camera.setDistance(state.distance);
+    m_camera.setYaw(state.yaw);
+    m_camera.setPitch(state.pitch);
     m_viewCubeCache.valid = false;
 }
 

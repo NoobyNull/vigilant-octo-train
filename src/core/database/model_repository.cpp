@@ -323,6 +323,17 @@ ModelRecord ModelRepository::rowToModel(Statement& stmt) {
     if (!stmt.isNull(19)) {
         model.orientMatrix = jsonToMat4(stmt.getText(19));
     }
+    // Columns 20-25: camera state (distance, pitch, yaw, target xyz)
+    if (!stmt.isNull(20)) {
+        CameraState cam;
+        cam.distance = static_cast<f32>(stmt.getDouble(20));
+        cam.pitch = static_cast<f32>(stmt.getDouble(21));
+        cam.yaw = static_cast<f32>(stmt.getDouble(22));
+        cam.target.x = static_cast<f32>(stmt.getDouble(23));
+        cam.target.y = static_cast<f32>(stmt.getDouble(24));
+        cam.target.z = static_cast<f32>(stmt.getDouble(25));
+        model.cameraState = cam;
+    }
     return model;
 }
 
@@ -334,6 +345,33 @@ bool ModelRepository::updateOrient(i64 id, f32 yaw, const Mat4& matrix) {
 
     if (!stmt.bindDouble(1, static_cast<f64>(yaw)) || !stmt.bindText(2, mat4ToJson(matrix)) ||
         !stmt.bindInt(3, id)) {
+        return false;
+    }
+
+    return stmt.execute();
+}
+
+bool ModelRepository::updateCameraState(i64 id, const CameraState& state) {
+    auto stmt = m_db.prepare(R"(
+        UPDATE models SET
+            camera_distance = ?,
+            camera_pitch = ?,
+            camera_yaw = ?,
+            camera_target_x = ?,
+            camera_target_y = ?,
+            camera_target_z = ?
+        WHERE id = ?
+    )");
+    if (!stmt.isValid()) {
+        return false;
+    }
+
+    if (!stmt.bindDouble(1, static_cast<f64>(state.distance)) ||
+        !stmt.bindDouble(2, static_cast<f64>(state.pitch)) ||
+        !stmt.bindDouble(3, static_cast<f64>(state.yaw)) ||
+        !stmt.bindDouble(4, static_cast<f64>(state.target.x)) ||
+        !stmt.bindDouble(5, static_cast<f64>(state.target.y)) ||
+        !stmt.bindDouble(6, static_cast<f64>(state.target.z)) || !stmt.bindInt(7, id)) {
         return false;
     }
 

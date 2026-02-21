@@ -62,6 +62,8 @@ class MaterialsPanel : public Panel {
     }
 
   private:
+    static constexpr float THUMB_MIN = 48.0f;
+
     enum class CategoryTab { All, Hardwood, Softwood, Domestic, Composite };
 
     void renderToolbar();

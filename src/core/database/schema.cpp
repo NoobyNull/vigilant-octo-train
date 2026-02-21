@@ -111,7 +111,13 @@ bool Schema::createTables(Database& db) {
             tags TEXT DEFAULT '[]',
             material_id INTEGER DEFAULT NULL,
             orient_yaw REAL DEFAULT NULL,
-            orient_matrix TEXT DEFAULT NULL
+            orient_matrix TEXT DEFAULT NULL,
+            camera_distance REAL DEFAULT NULL,
+            camera_pitch REAL DEFAULT NULL,
+            camera_yaw REAL DEFAULT NULL,
+            camera_target_x REAL DEFAULT NULL,
+            camera_target_y REAL DEFAULT NULL,
+            camera_target_z REAL DEFAULT NULL
         )
     )")) {
         return false;
@@ -281,6 +287,17 @@ bool Schema::migrate(Database& db, int fromVersion) {
         (void)db.execute("ALTER TABLE models ADD COLUMN orient_yaw REAL DEFAULT NULL");
         (void)db.execute("ALTER TABLE models ADD COLUMN orient_matrix TEXT DEFAULT NULL");
         log::info("Schema", "Added orient_yaw and orient_matrix columns to models");
+    }
+
+    if (fromVersion < 6) {
+        // v6: Add camera state columns to models table
+        (void)db.execute("ALTER TABLE models ADD COLUMN camera_distance REAL DEFAULT NULL");
+        (void)db.execute("ALTER TABLE models ADD COLUMN camera_pitch REAL DEFAULT NULL");
+        (void)db.execute("ALTER TABLE models ADD COLUMN camera_yaw REAL DEFAULT NULL");
+        (void)db.execute("ALTER TABLE models ADD COLUMN camera_target_x REAL DEFAULT NULL");
+        (void)db.execute("ALTER TABLE models ADD COLUMN camera_target_y REAL DEFAULT NULL");
+        (void)db.execute("ALTER TABLE models ADD COLUMN camera_target_z REAL DEFAULT NULL");
+        log::info("Schema", "Added camera state columns to models");
     }
 
     if (!setVersion(db, CURRENT_VERSION)) {
