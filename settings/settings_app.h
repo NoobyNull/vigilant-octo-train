@@ -77,6 +77,9 @@ class SettingsApp {
     bool m_showImportErrorToasts = true;
     bool m_libraryDirValid = true; // Validation state for library directory
 
+    // API keys
+    char m_geminiApiKey[256]{};
+
     static constexpr int WINDOW_WIDTH = 520;
     static constexpr int WINDOW_HEIGHT = 480;
 };

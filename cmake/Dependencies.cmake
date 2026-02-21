@@ -152,6 +152,9 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(stb)
 
+# libcurl - HTTP client (needed for Gemini API)
+find_package(CURL REQUIRED)
+
 # nlohmann/json - JSON library
 FetchContent_Declare(
     json
@@ -187,4 +190,5 @@ message(STATUS "  SQLite3:  3.45.0")
 message(STATUS "  zlib:     ${ZLIB_VERSION_STRING}${zlib_VERSION}")
 message(STATUS "  miniz:    3.0.2")
 message(STATUS "  stb:      master (header-only)")
+message(STATUS "  libcurl:  ${CURL_VERSION_STRING}")
 message(STATUS "  nlohmann/json: 3.11.3")

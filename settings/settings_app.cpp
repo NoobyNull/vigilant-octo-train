@@ -76,6 +76,10 @@ bool SettingsApp::init() {
     std::strncpy(m_libraryDir, libraryPath.string().c_str(), sizeof(m_libraryDir) - 1);
     m_libraryDir[sizeof(m_libraryDir) - 1] = '\0';
 
+    // API keys
+    std::strncpy(m_geminiApiKey, cfg.getGeminiApiKey().c_str(), sizeof(m_geminiApiKey) - 1);
+    m_geminiApiKey[sizeof(m_geminiApiKey) - 1] = '\0';
+
     // Initialize SDL2
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         std::fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
@@ -293,6 +297,19 @@ void SettingsApp::renderGeneralTab() {
     const char* logLevels[] = {"Debug", "Info", "Warning", "Error"};
     if (ImGui::Combo("Log Level", &m_logLevel, logLevels, 4))
         m_dirty = true;
+    ImGui::Unindent();
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    ImGui::Text("API Keys");
+    ImGui::Indent();
+    ImGui::SetNextItemWidth(-1);
+    if (ImGui::InputText("Gemini API Key", m_geminiApiKey, sizeof(m_geminiApiKey),
+                         ImGuiInputTextFlags_Password))
+        m_dirty = true;
+    ImGui::TextDisabled("Used for AI material generation (Gemini API).");
     ImGui::Unindent();
 
     ImGui::Spacing();
@@ -676,6 +693,9 @@ void SettingsApp::applySettings() {
     cfg.setLibraryDir(Path(m_libraryDir));
     cfg.setShowImportErrorToasts(m_showImportErrorToasts);
     cfg.setEnableFloatingWindows(m_enableFloatingWindows);
+
+    // API keys
+    cfg.setGeminiApiKey(m_geminiApiKey);
 
     cfg.save();
     m_dirty = false;

@@ -179,6 +179,10 @@ bool Config::load() {
             } else if (key == "show_error_toasts") {
                 m_showImportErrorToasts = (value == "true" || value == "1");
             }
+        } else if (section == "api") {
+            if (key == "gemini_key") {
+                m_geminiApiKey = value;
+            }
         } else if (section == "recent") {
             if (str::startsWith(key, "project")) {
                 if (!value.empty() && file::exists(value)) {
@@ -289,6 +293,13 @@ bool Config::save() {
         ss << "library_dir=" << m_libraryDir.string() << "\n";
     }
     ss << "show_error_toasts=" << (m_showImportErrorToasts ? "true" : "false") << "\n";
+    ss << "\n";
+
+    // API section
+    ss << "[api]\n";
+    if (!m_geminiApiKey.empty()) {
+        ss << "gemini_key=" << m_geminiApiKey << "\n";
+    }
     ss << "\n";
 
     // Recent projects section

@@ -33,6 +33,13 @@ class MaterialsPanel : public Panel {
         m_onMaterialAssigned = std::move(callback);
     }
 
+    // Callback when user requests material generation from prompt
+    using GenerateCallback = std::function<void(const std::string& prompt)>;
+    void setOnGenerate(GenerateCallback callback) { m_onGenerate = std::move(callback); }
+
+    // Set generating state (called from main thread after async generation completes/fails)
+    void setGenerating(bool generating) { m_isGenerating = generating; }
+
     // Reload materials from database
     void refresh();
 
@@ -88,6 +95,11 @@ class MaterialsPanel : public Panel {
 
     MaterialSelectedCallback m_onMaterialSelected;
     MaterialAssignedCallback m_onMaterialAssigned;
+    GenerateCallback m_onGenerate;
+
+    // Generate state
+    char m_generatePrompt[256]{};
+    bool m_isGenerating = false;
 
     bool m_modelLoaded = false;
     float m_thumbnailSize = 96.0f;

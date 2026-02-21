@@ -29,6 +29,7 @@ class ThumbnailGenerator;
 class ImportQueue;
 class MainThreadQueue;
 class MaterialManager;
+class GeminiMaterialService;
 class Texture;
 
 // Managers (extracted from Application)
@@ -106,6 +107,9 @@ class Application {
 
     // Materials Manager - coordinates material archives, defaults, and database
     std::unique_ptr<MaterialManager> m_materialManager;
+
+    // Gemini AI material generation service
+    std::unique_ptr<GeminiMaterialService> m_geminiService;
 
     // Currently focused model ID (for material assignment)
     int64_t m_focusedModelId = -1;

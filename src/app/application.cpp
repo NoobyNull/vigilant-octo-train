@@ -24,6 +24,7 @@
 #include "core/library/library_manager.h"
 #include "core/loaders/loader_factory.h"
 #include "core/loaders/texture_loader.h"
+#include "core/materials/gemini_material_service.h"
 #include "core/materials/material_archive.h"
 #include "core/materials/material_manager.h"
 #include "core/paths/app_paths.h"
@@ -168,6 +169,7 @@ bool Application::init() {
     m_projectManager = std::make_unique<ProjectManager>(*m_database);
     m_materialManager = std::make_unique<MaterialManager>(*m_database);
     m_materialManager->seedDefaults();
+    m_geminiService = std::make_unique<GeminiMaterialService>();
     m_workspace = std::make_unique<Workspace>();
 
     m_thumbnailGenerator = std::make_unique<ThumbnailGenerator>();
@@ -294,6 +296,46 @@ bool Application::init() {
     if (m_uiManager->materialsPanel()) {
         m_uiManager->materialsPanel()->setOnMaterialAssigned(
             [this](int64_t materialId) { assignMaterialToCurrentModel(materialId); });
+
+        m_uiManager->materialsPanel()->setOnGenerate([this](const std::string& prompt) {
+            auto& cfg = Config::instance();
+            std::string apiKey = cfg.getGeminiApiKey();
+            if (apiKey.empty()) {
+                log::warning("Application",
+                             "Gemini API key not set. Configure it in Settings > General.");
+                ToastManager::instance().show(ToastType::Warning, "API Key Missing",
+                                              "Set your Gemini API key in Settings.");
+                if (m_uiManager->materialsPanel())
+                    m_uiManager->materialsPanel()->setGenerating(false);
+                return;
+            }
+
+            std::thread([this, prompt, apiKey]() {
+                auto result = m_geminiService->generate(prompt, apiKey);
+                m_mainThreadQueue->enqueue([this, result]() {
+                    if (result.success) {
+                        auto importedId = m_materialManager->importMaterial(result.dwmatPath);
+                        if (importedId) {
+                            log::infof("Application", "Generated and imported material: %s",
+                                       result.record.name.c_str());
+                            ToastManager::instance().show(ToastType::Success, "Material Generated",
+                                                          result.record.name);
+                        }
+                        if (m_uiManager->materialsPanel()) {
+                            m_uiManager->materialsPanel()->refresh();
+                            m_uiManager->materialsPanel()->setGenerating(false);
+                        }
+                    } else {
+                        log::errorf("Application", "Material generation failed: %s",
+                                    result.error.c_str());
+                        ToastManager::instance().show(ToastType::Error, "Generation Failed",
+                                                      result.error);
+                        if (m_uiManager->materialsPanel())
+                            m_uiManager->materialsPanel()->setGenerating(false);
+                    }
+                });
+            }).detach();
+        });
     }
 
     // Wire UIManager action callbacks (menu bar and keyboard shortcuts)
@@ -610,6 +652,7 @@ void Application::shutdown() {
     m_uiManager.reset();
 
     // Destroy core systems
+    m_geminiService.reset();
     m_importQueue.reset();
     m_mainThreadQueue->shutdown();
     m_mainThreadQueue.reset();

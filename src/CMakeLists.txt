@@ -81,6 +81,7 @@ set(DW_SOURCES
 
     # Materials
     core/materials/default_materials.cpp
+    core/materials/gemini_material_service.cpp
     core/materials/material_archive.cpp
     core/materials/material_manager.cpp
 
@@ -135,6 +136,7 @@ target_link_libraries(digital_workshop PRIVATE
     ZLIB::ZLIB
     miniz_static
     nlohmann_json::nlohmann_json
+    CURL::libcurl
 )
 
 # Include directories

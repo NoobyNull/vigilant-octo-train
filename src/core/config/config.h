@@ -158,6 +158,10 @@ class Config {
     bool getEnableFloatingWindows() const { return m_enableFloatingWindows; }
     void setEnableFloatingWindows(bool enable) { m_enableFloatingWindows = enable; }
 
+    // API keys
+    const std::string& getGeminiApiKey() const { return m_geminiApiKey; }
+    void setGeminiApiKey(const std::string& key) { m_geminiApiKey = key; }
+
   private:
     Config();
     void initDefaultBindings();
@@ -220,6 +224,9 @@ class Config {
     Path m_libraryDir; // Empty means default (app data dir / "library")
     bool m_showImportErrorToasts = true;
     bool m_enableFloatingWindows = false;
+
+    // API keys
+    std::string m_geminiApiKey;
 };
 
 } // namespace dw

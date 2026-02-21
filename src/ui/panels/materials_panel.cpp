@@ -163,6 +163,44 @@ void MaterialsPanel::renderToolbar() {
     }
 
     ImGui::SameLine();
+    ImGui::Text("|");
+    ImGui::SameLine();
+
+    // Generate material section
+    if (m_isGenerating) {
+        ImGui::BeginDisabled();
+    }
+    ImGui::SetNextItemWidth(150.0f);
+    ImGui::InputTextWithHint("##GenPrompt", "Material name...", m_generatePrompt,
+                             sizeof(m_generatePrompt));
+    ImGui::SameLine();
+    bool promptEmpty = (m_generatePrompt[0] == '\0');
+    if (promptEmpty && !m_isGenerating) {
+        ImGui::BeginDisabled();
+    }
+    if (ImGui::Button(m_isGenerating ? "Generating..." : "Generate")) {
+        if (m_onGenerate && !promptEmpty) {
+            m_isGenerating = true;
+            m_onGenerate(std::string(m_generatePrompt));
+        }
+    }
+    if (promptEmpty && !m_isGenerating) {
+        ImGui::EndDisabled();
+    }
+    if (m_isGenerating) {
+        ImGui::EndDisabled();
+    }
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+        if (m_isGenerating) {
+            ImGui::SetTooltip("Generating material via Gemini AI...");
+        } else if (promptEmpty) {
+            ImGui::SetTooltip("Enter a material name to generate");
+        } else {
+            ImGui::SetTooltip("Generate material texture and properties via AI");
+        }
+    }
+
+    ImGui::SameLine();
 
     // Search filter — takes remaining width
     float availW = ImGui::GetContentRegionAvail().x;
