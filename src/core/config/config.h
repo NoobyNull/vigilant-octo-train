@@ -133,6 +133,9 @@ class Config {
     bool getShowGCode() const { return m_wsShowGCode; }
     void setShowGCode(bool v) { m_wsShowGCode = v; }
 
+    bool getShowMaterials() const { return m_wsShowMaterials; }
+    void setShowMaterials(bool v) { m_wsShowMaterials = v; }
+
     bool getShowCutOptimizer() const { return m_wsShowCutOptimizer; }
     void setShowCutOptimizer(bool v) { m_wsShowCutOptimizer = v; }
 
@@ -210,6 +213,7 @@ class Config {
     bool m_wsShowLibrary = true;
     bool m_wsShowProperties = true;
     bool m_wsShowProject = true;
+    bool m_wsShowMaterials = false;
     bool m_wsShowGCode = false;
     bool m_wsShowCutOptimizer = false;
     bool m_wsShowStartPage = true;

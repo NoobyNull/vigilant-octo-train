@@ -359,6 +359,7 @@ void UIManager::restoreVisibilityFromConfig() {
     m_showLibrary = cfg.getShowLibrary();
     m_showProperties = cfg.getShowProperties();
     m_showProject = cfg.getShowProject();
+    m_showMaterials = cfg.getShowMaterials();
     m_showGCode = cfg.getShowGCode();
     m_showCutOptimizer = cfg.getShowCutOptimizer();
     m_showStartPage = cfg.getShowStartPage();
@@ -370,6 +371,7 @@ void UIManager::saveVisibilityToConfig() {
     cfg.setShowLibrary(m_showLibrary);
     cfg.setShowProperties(m_showProperties);
     cfg.setShowProject(m_showProject);
+    cfg.setShowMaterials(m_showMaterials);
     cfg.setShowGCode(m_showGCode);
     cfg.setShowCutOptimizer(m_showCutOptimizer);
     cfg.setShowStartPage(m_showStartPage);

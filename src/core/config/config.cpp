@@ -146,6 +146,8 @@ bool Config::load() {
                 m_wsShowProperties = (value == "true" || value == "1");
             } else if (key == "show_project") {
                 m_wsShowProject = (value == "true" || value == "1");
+            } else if (key == "show_materials") {
+                m_wsShowMaterials = (value == "true" || value == "1");
             } else if (key == "show_gcode") {
                 m_wsShowGCode = (value == "true" || value == "1");
             } else if (key == "show_cut_optimizer") {
@@ -271,6 +273,7 @@ bool Config::save() {
     ss << "show_library=" << (m_wsShowLibrary ? "true" : "false") << "\n";
     ss << "show_properties=" << (m_wsShowProperties ? "true" : "false") << "\n";
     ss << "show_project=" << (m_wsShowProject ? "true" : "false") << "\n";
+    ss << "show_materials=" << (m_wsShowMaterials ? "true" : "false") << "\n";
     ss << "show_gcode=" << (m_wsShowGCode ? "true" : "false") << "\n";
     ss << "show_cut_optimizer=" << (m_wsShowCutOptimizer ? "true" : "false") << "\n";
     ss << "show_start_page=" << (m_wsShowStartPage ? "true" : "false") << "\n";
