@@ -77,13 +77,14 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
-        // The service writes to getMaterialsDir() by default — move to our output dir
+        // The service writes to getMaterialsDir() by default — copy to our output dir
         if (result.dwmatPath != outPath && file::exists(result.dwmatPath)) {
-            if (!file::move(result.dwmatPath, outPath)) {
-                std::cout << "FAILED (could not move to output dir)\n";
+            if (!file::copy(result.dwmatPath, outPath)) {
+                std::cout << "FAILED (could not copy to output dir)\n";
                 ++failed;
                 continue;
             }
+            file::remove(result.dwmatPath);
         }
 
         std::cout << "OK (" << secs << "s)\n";
