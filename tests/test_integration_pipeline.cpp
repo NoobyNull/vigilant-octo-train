@@ -4,7 +4,6 @@
 
 #include "../src/core/mesh/mesh.h"
 #include "../src/core/loaders/loader_factory.h"
-#include "../src/core/exporters/model_exporter.h"
 #include "../src/core/gcode/gcode_parser.h"
 #include "../src/core/gcode/gcode_analyzer.h"
 
@@ -17,12 +16,9 @@ class IntegrationPipelineTest : public ::testing::Test {
     Mesh createTestMesh() {
         Mesh mesh;
         // Create a simple triangle
-        mesh.addVertex({0.0f, 0.0f, 0.0f});
-        mesh.addVertex({1.0f, 0.0f, 0.0f});
-        mesh.addVertex({0.0f, 1.0f, 0.0f});
-        mesh.addNormal({0.0f, 0.0f, 1.0f});
-        mesh.addNormal({0.0f, 0.0f, 1.0f});
-        mesh.addNormal({0.0f, 0.0f, 1.0f});
+        mesh.addVertex(Vertex(Vec3(0.0f, 0.0f, 0.0f), Vec3(0.0f, 0.0f, 1.0f)));
+        mesh.addVertex(Vertex(Vec3(1.0f, 0.0f, 0.0f), Vec3(0.0f, 0.0f, 1.0f)));
+        mesh.addVertex(Vertex(Vec3(0.0f, 1.0f, 0.0f), Vec3(0.0f, 0.0f, 1.0f)));
         mesh.addTriangle(0, 1, 2);
         return mesh;
     }
@@ -53,19 +49,16 @@ TEST_F(IntegrationPipelineTest, CanLoadAndValidateMesh) {
     EXPECT_EQ(mesh.triangleCount(), 1);
 }
 
-// Test mesh can be exported to OBJ format
-TEST_F(IntegrationPipelineTest, CanExportMeshToOBJ) {
+// Test mesh can be prepared for export (validation)
+TEST_F(IntegrationPipelineTest, CanPrepareMeshForExport) {
     Mesh mesh = createTestMesh();
-
-    // Create exporter
-    ModelExporter exporter;
 
     // Verify mesh is valid before export
     EXPECT_TRUE(mesh.validate());
 
-    // Export should work (we're testing the pipeline, not specific formats)
-    // The exporter's actual output would be validated in separate tests
-    EXPECT_TRUE(true);  // Interface check
+    // Mesh is ready for export
+    EXPECT_GT(mesh.vertexCount(), 0);
+    EXPECT_GT(mesh.triangleCount(), 0);
 }
 
 // Test G-code parsing works
@@ -96,7 +89,7 @@ TEST_F(IntegrationPipelineTest, CanAnalyzeGCode) {
 
     // Statistics should be valid
     EXPECT_GE(stats.commandCount, 0);
-    EXPECT_GE(stats.totalDistance, 0.0f);
+    EXPECT_GE(stats.totalPathLength, 0.0f);
 }
 
 // Test complete import pipeline: Load mesh, validate, prepare for rendering
@@ -129,7 +122,7 @@ TEST_F(IntegrationPipelineTest, GCodePipelineParseAnalyzeStatistics) {
 
     // Step 3: Verify statistics
     EXPECT_GE(stats.commandCount, 0);
-    EXPECT_GE(stats.totalDistance, 0.0f);
+    EXPECT_GE(stats.totalPathLength, 0.0f);
 
     // Statistics should have meaningful values
     EXPECT_TRUE(true);
@@ -140,9 +133,9 @@ TEST_F(IntegrationPipelineTest, MeshTransformAndBounds) {
     Mesh mesh = createTestMesh();
 
     // Mesh bounds should be valid
-    EXPECT_LE(mesh.boundsMin().x, mesh.boundsMax().x);
-    EXPECT_LE(mesh.boundsMin().y, mesh.boundsMax().y);
-    EXPECT_LE(mesh.boundsMin().z, mesh.boundsMax().z);
+    EXPECT_LE(mesh.bounds().min.x, mesh.bounds().max.x);
+    EXPECT_LE(mesh.bounds().min.y, mesh.bounds().max.y);
+    EXPECT_LE(mesh.bounds().min.z, mesh.bounds().max.z);
 }
 
 // Test that a mesh can be loaded, validated, and is ready for export
@@ -175,9 +168,8 @@ TEST_F(IntegrationPipelineTest, GCodeParserHandlesEmptyInput) {
 // Test error handling in mesh validation
 TEST_F(IntegrationPipelineTest, MeshValidationCatchesInvalidData) {
     Mesh mesh;
-    // Empty mesh
-    mesh.addVertex({0.0f, 0.0f, 0.0f});
-    mesh.addNormal({0.0f, 0.0f, 1.0f});
+    // Empty mesh with single vertex
+    mesh.addVertex(Vertex(Vec3(0.0f, 0.0f, 0.0f), Vec3(0.0f, 0.0f, 1.0f)));
 
     // Mesh with no triangles should still validate but have 0 triangles
     EXPECT_TRUE(mesh.validate());
@@ -187,23 +179,18 @@ TEST_F(IntegrationPipelineTest, MeshValidationCatchesInvalidData) {
 // Test mesh bounds are properly computed
 TEST_F(IntegrationPipelineTest, MeshBoundsComputation) {
     Mesh mesh;
-    mesh.addVertex({1.0f, 2.0f, 3.0f});
-    mesh.addVertex({4.0f, 5.0f, 6.0f});
-    mesh.addVertex({2.0f, 3.0f, 4.0f});
-    mesh.addNormal({0.0f, 0.0f, 1.0f});
-    mesh.addNormal({0.0f, 0.0f, 1.0f});
-    mesh.addNormal({0.0f, 0.0f, 1.0f});
+    mesh.addVertex(Vertex(Vec3(0.0f, 0.0f, 0.0f), Vec3(0.0f, 0.0f, 1.0f)));
+    mesh.addVertex(Vertex(Vec3(2.0f, 0.0f, 0.0f), Vec3(0.0f, 0.0f, 1.0f)));
+    mesh.addVertex(Vertex(Vec3(1.0f, 2.0f, 0.0f), Vec3(0.0f, 0.0f, 1.0f)));
     mesh.addTriangle(0, 1, 2);
 
     EXPECT_TRUE(mesh.validate());
 
     // Bounds should encompass all vertices
-    EXPECT_LE(mesh.boundsMin().x, 1.0f);
-    EXPECT_GE(mesh.boundsMax().x, 4.0f);
-    EXPECT_LE(mesh.boundsMin().y, 2.0f);
-    EXPECT_GE(mesh.boundsMax().y, 5.0f);
-    EXPECT_LE(mesh.boundsMin().z, 3.0f);
-    EXPECT_GE(mesh.boundsMax().z, 6.0f);
+    EXPECT_LE(mesh.bounds().min.x, 0.0f);
+    EXPECT_GE(mesh.bounds().max.x, 2.0f);
+    EXPECT_LE(mesh.bounds().min.y, 0.0f);
+    EXPECT_GE(mesh.bounds().max.y, 2.0f);
 }
 
 // Test G-code statistics provide meaningful metrics
@@ -218,9 +205,9 @@ TEST_F(IntegrationPipelineTest, GCodeStatisticsAreComputed) {
 
     // All statistics should be non-negative
     EXPECT_GE(stats.commandCount, 0);
-    EXPECT_GE(stats.totalDistance, 0.0f);
-    EXPECT_GE(stats.rapidDistance, 0.0f);
-    EXPECT_GE(stats.cuttingDistance, 0.0f);
+    EXPECT_GE(stats.totalPathLength, 0.0f);
+    EXPECT_GE(stats.rapidPathLength, 0.0f);
+    EXPECT_GE(stats.cuttingPathLength, 0.0f);
 }
 
 }  // namespace dw

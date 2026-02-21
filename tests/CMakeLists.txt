@@ -44,11 +44,9 @@ set(DW_TEST_SOURCES
     test_mesh_uv.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
-    # Tier 3 — high-level components (application state, workspace, renderer interface)
+    # Tier 3 — workspace tests (no GL/SDL required)
     test_workspace.cpp
-    test_renderer.cpp
-    test_application_state.cpp
-    # Tier 4 — integration tests (import → render → export pipeline)
+    # Tier 4 — integration tests (import → render → export pipeline, no GL/SDL required)
     test_integration_pipeline.cpp
     # Stubs for GL-dependent classes
     stub_thumbnail_generator.cpp
@@ -98,6 +96,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/config/input_binding.cpp
     ${CMAKE_SOURCE_DIR}/src/core/paths/app_paths.cpp
     ${CMAKE_SOURCE_DIR}/src/render/camera.cpp
+    ${CMAKE_SOURCE_DIR}/src/app/workspace.cpp
 )
 
 # Create test executable

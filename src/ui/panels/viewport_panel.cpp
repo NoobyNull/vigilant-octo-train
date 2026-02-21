@@ -461,8 +461,6 @@ void ViewportPanel::renderViewport() {
     // Display framebuffer texture
     ImGui::Image(static_cast<ImTextureID>(m_framebuffer.colorTexture()), contentSize, ImVec2(0, 1),
                  ImVec2(1, 0));
-    ImVec2 imageRectMax = ImGui::GetItemRectMax();
-
     // Context menu for viewport interactions
     if (m_contextMenuManager != nullptr) {
         if (ImGui::BeginPopupContextItem("ViewportPanel_Context")) {
@@ -472,19 +470,6 @@ void ViewportPanel::renderViewport() {
     }
 
     renderViewCube();
-
-    // Camera orientation overlay (bottom-right of viewport image)
-    {
-        char buf[64];
-        std::snprintf(buf, sizeof(buf), "P:%.1f  Y:%.1f", m_camera.pitch(), m_camera.yaw());
-        ImVec2 textSize = ImGui::CalcTextSize(buf);
-        ImVec2 pos(imageRectMax.x - textSize.x - 12.0f, imageRectMax.y - textSize.y - 12.0f);
-        ImDrawList* dl = ImGui::GetForegroundDrawList();
-        dl->AddRectFilled(ImVec2(pos.x - 4, pos.y - 2),
-                          ImVec2(pos.x + textSize.x + 4, pos.y + textSize.y + 2),
-                          IM_COL32(0, 0, 0, 180), 4.0f);
-        dl->AddText(pos, IM_COL32(220, 220, 220, 255), buf);
-    }
 }
 
 void ViewportPanel::renderToolbar() {

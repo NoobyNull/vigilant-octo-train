@@ -13,8 +13,8 @@ class WorkspaceTest : public ::testing::Test {
     std::shared_ptr<Mesh> createTestMesh(size_t vertexCount = 3) {
         auto mesh = std::make_shared<Mesh>();
         for (size_t i = 0; i < vertexCount; ++i) {
-            mesh->addVertex({static_cast<float>(i), 0.0f, 0.0f});
-            mesh->addNormal({0.0f, 1.0f, 0.0f});
+            mesh->addVertex(Vertex(Vec3(static_cast<float>(i), 0.0f, 0.0f),
+                                   Vec3(0.0f, 1.0f, 0.0f)));
         }
         if (vertexCount >= 3) {
             mesh->addTriangle(0, 1, 2);

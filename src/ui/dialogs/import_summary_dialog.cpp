@@ -3,6 +3,7 @@
 #include "ui/dialogs/import_summary_dialog.h"
 
 #include <algorithm>
+
 #include <imgui.h>
 
 #include "core/utils/file_utils.h"

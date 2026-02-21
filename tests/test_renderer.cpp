@@ -16,12 +16,9 @@ class RendererTest : public ::testing::Test {
     // Helper to create a simple test mesh
     Mesh createTestMesh() {
         Mesh mesh;
-        mesh.addVertex({0.0f, 0.0f, 0.0f});
-        mesh.addVertex({1.0f, 0.0f, 0.0f});
-        mesh.addVertex({0.0f, 1.0f, 0.0f});
-        mesh.addNormal({0.0f, 0.0f, 1.0f});
-        mesh.addNormal({0.0f, 0.0f, 1.0f});
-        mesh.addNormal({0.0f, 0.0f, 1.0f});
+        mesh.addVertex(Vertex(Vec3(0.0f, 0.0f, 0.0f), Vec3(0.0f, 0.0f, 1.0f)));
+        mesh.addVertex(Vertex(Vec3(1.0f, 0.0f, 0.0f), Vec3(0.0f, 0.0f, 1.0f)));
+        mesh.addVertex(Vertex(Vec3(0.0f, 1.0f, 0.0f), Vec3(0.0f, 0.0f, 1.0f)));
         mesh.addTriangle(0, 1, 2);
         return mesh;
     }
