@@ -21,6 +21,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Options
 option(DW_BUILD_TESTS "Build test suite" ON)
+option(DW_BUILD_TOOLS "Build developer tools (matgen, etc.)" OFF)
 
 # Include CMake modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -33,6 +34,11 @@ add_subdirectory(src)
 
 # Settings application (separate process)
 add_subdirectory(settings)
+
+# Developer tools (material generator, etc.)
+if(DW_BUILD_TOOLS)
+    add_subdirectory(tools/matgen)
+endif()
 
 # Tests
 if(DW_BUILD_TESTS)
@@ -91,4 +97,5 @@ message(STATUS "  Git Hash:     ${DW_GIT_HASH}")
 message(STATUS "  Build Type:   ${CMAKE_BUILD_TYPE}")
 message(STATUS "  C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "  Tests:        ${DW_BUILD_TESTS}")
+message(STATUS "  Tools:        ${DW_BUILD_TOOLS}")
 message(STATUS "")

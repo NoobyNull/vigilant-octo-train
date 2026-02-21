@@ -17,8 +17,8 @@ struct GCodeMetadata {
     Vec3 boundsMax;
     f32 totalDistance = 0.0f;
     f32 estimatedTime = 0.0f;
-    std::vector<f32> feedRates;    // Unique feed rates found
-    std::vector<int> toolNumbers;  // Unique tool numbers found
+    std::vector<f32> feedRates;   // Unique feed rates found
+    std::vector<int> toolNumbers; // Unique tool numbers found
 };
 
 // G-code loader - converts toolpath to mesh geometry

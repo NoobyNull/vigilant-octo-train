@@ -1,235 +1,403 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-02-08
+**Analysis Date:** 2026-02-19
 
 ## Tech Debt
 
-### Application God Class
-- **Issue**: `src/app/application.cpp` is 1,071 lines with ~40 distinct responsibilities. Orchestrates 7 UI panels, 2+ dialogs, 6 core systems (Database, LibraryManager, ProjectManager, Workspace, ImportQueue, ThumbnailGenerator), 15+ event callback methods, menu setup, config watching, and layout management in single class.
-- **Files**: `src/app/application.h`, `src/app/application.cpp`
-- **Impact**: Difficult to test individual concerns, high coupling, makes adding features risky. Every UI event flows through Application, increasing complexity.
-- **Fix approach**: Extract UIManager for panel/dialog lifecycle, FileIOManager for import/export/project operations, keep Application as thin orchestrator. Requires careful dependency injection redesign.
+### WP-05: Custom Math Types Duplicate GLM
 
-### SQL Boilerplate Repetition
-- **Issue**: Repository classes (`src/core/database/model_repository.cpp`, `project_repository.cpp`, `cost_repository.cpp`) repeat 15+ SELECT/UPDATE patterns: prepare statement, call isValid(), bind parameters, step(), extract row, construct object. Column indices are magic numbers that break silently on schema changes (no constants/enums).
-- **Files**: `src/core/database/model_repository.cpp:52-67`, `project_repository.cpp:41-67`, `cost_repository.cpp:78-95`
-- **Impact**: Schema changes require hunting through multiple files. Easy to miss column index updates. Low maintainability.
-- **Fix approach**: Create base repository helper with templated rowToObject<T>(), or use column enum/constants for index consistency.
+- **Files:** `src/core/types.h:34-102`, `src/core/types.cpp`
+- **Impact:** Unmaintained vector/matrix code (Vec2, Vec3, Vec4, Mat4) when GLM is already linked in `src/CMakeLists.txt:108`. GLM includes SIMD optimizations. Custom code is ~140 lines of hand-rolled matrix operations (perspective, lookAt, ortho, rotations).
+- **Fix approach:** Replace custom types with GLM type aliases. Keep Color type and application-specific aliases.
 
-### Duplicate Canvas/Pan-Zoom Implementation
-- **Issue**: Both `GCodePanel` and `CutOptimizerPanel` independently implement invisible button capture, mouse wheel zoom, drag pan, and double-click reset for 2D canvas. Code is identical in logic but separate.
-- **Files**: `src/ui/panels/gcode_panel.cpp:187-270` (GCode visualization canvas), `src/ui/panels/cut_optimizer_panel.cpp:227-308` (Cut list canvas)
-- **Impact**: Bug fixes or UX improvements to one canvas don't apply to the other. Risk of divergence.
-- **Fix approach**: Extract shared `Canvas2D` widget class with configurable draw callback.
+### WP-06: Duplicate Theme Code
 
-### Duplicate Theme System
-- **Issue**: Two nearly identical theme code paths exist: `src/ui/theme.cpp:56-150` vs `src/ui/ui_manager.cpp:159-213` with slightly different values (hardcoded colors differ: 0.910f vs 0.92f). One is dead code.
-- **Files**: `src/ui/theme.cpp`, `src/ui/ui_manager.cpp`
-- **Impact**: Theme changes must be made in two places or risk inconsistency. Dead code adds cognitive load.
-- **Fix approach**: Remove dead theme code path, consolidate to single source of truth in theme.cpp.
+- **Files:** `src/ui/theme.cpp:56-150` vs `src/ui/ui_manager.cpp:159-213`
+- **Impact:** Two nearly identical theme systems with slightly different values (0.910f vs 0.92f). One path is dead code, making theme changes unpredictable.
+- **Fix approach:** Identify which theme is actually used, remove dead path entirely. Consolidate to single source of truth.
 
-### Unused UI State and Stubs
-- **Issue**: Multiple unused fields and dead methods across UI:
-  - `ViewportPanel` class has `m_isDragging`, `m_isPanning`, `m_lastMouseX`, `m_lastMouseY` fields never set or read
-  - `LibraryPanel` has unused `m_contextMenuModelIndex` field
-  - `ProjectPanel::refresh()` is empty method, never called
-  - `UIManager` file dialog stubs `openFileDialog()` and `saveFileDialog()` always return false
-  - `icons.h` has 93 lines of icon constants but no icon font is loaded
-- **Files**: `src/ui/panels/viewport_panel.h:53-56`, `src/ui/panels/library_panel.h:59`, `src/ui/panels/project_panel.cpp:29-31`, `src/ui/ui_manager.cpp:258-268`, `src/ui/icons.h`
-- **Impact**: Code clutter increases maintenance burden and confusion. Dead stubs suggest incomplete features.
-- **Fix approach**: Remove unused fields and methods. Implement icon font or remove icon system stubs.
+### WP-07: Duplicate Canvas/Pan-Zoom Logic
 
-## Known Bugs
+- **Files:** `src/ui/panels/gcode_panel.cpp:187-270` vs `src/ui/panels/cut_optimizer_panel.cpp:227-308`
+- **Impact:** Both panels independently implement invisible button capture, mouse wheel zoom, drag pan, double-click reset. Maintenance burden when fixing pan/zoom bugs.
+- **Fix approach:** Extract to shared `Canvas2D` widget class with pan/zoom/reset as composable methods.
 
-### ViewCube Recomputed Every Frame
-- **Symptoms**: Viewport ViewCube is recomputed every frame (8 vertices, 6 faces, rotation matrix, depth sort, hit test detection) even when camera is stationary.
-- **Files**: `src/ui/panels/viewport_panel.cpp:279-451`
-- **Cause**: No cache layer; logic executes every render cycle unconditionally.
-- **Workaround**: Performance impact is minor for modern GPUs but adds unnecessary CPU work.
-- **Fix approach**: Cache ViewCube geometry and recompute only on camera change detection.
+### WP-08: Duplicate Optimizer Expansion/Sorting
 
-### Angle Wrapping O(n) in Camera
-- **Symptoms**: Camera yaw/pitch wrapping uses loop instead of modulo: `while (m_yaw > 360) m_yaw -= 360;`
-- **Files**: `src/render/camera.cpp:38-41`
-- **Cause**: Inefficient pattern when angles become very large (edge case).
-- **Workaround**: Works correctly, just slower than necessary.
-- **Fix approach**: Use `fmod(m_yaw, 360.0f)` for O(1) wrapping.
+- **Files:** `src/core/optimizer/bin_packer.cpp:16-34` and `src/core/optimizer/guillotine.cpp:16-34`
+- **Impact:** Identical `ExpandedPart` struct, expansion loop, and area-descending sort duplicated across algorithms.
+- **Fix approach:** Extract to `optimizer_utils.h` with shared helper functions.
 
-### Framebuffer Move Constructor Incomplete
-- **Symptoms**: Moved-from framebuffer object retains width/height values while GL handles are zeroed, leaving dimensions inconsistent with resource state.
-- **Files**: `src/render/framebuffer.cpp:12-21`
-- **Cause**: Move constructor didn't zero width/height in source object.
-- **Workaround**: None — code works but moved-from object is in undefined state.
-- **Fix approach**: Zero width/height in moved-from object for consistency.
+### WP-09: Duplicate Spherical Coordinate Math
 
-### Shader Uniform Cache Stores -1
-- **Symptoms**: `glGetUniformLocation` failures (returns -1 for not found) are cached identically to valid locations. Subsequent lookups never re-attempt.
-- **Files**: `src/render/shader.cpp:94-103`
-- **Cause**: Cache doesn't distinguish between "uniform not found" (-1) and "cached valid location".
-- **Workaround**: Only affects unused uniforms; existing code doesn't try to update invalid uniforms.
-- **Fix approach**: Don't cache -1, use `std::optional<GLint>` or similar.
+- **Files:** `src/ui/panels/viewport_panel.cpp:96-123` and `src/ui/dialogs/lighting_dialog.cpp:18-40`
+- **Impact:** Same azimuth/elevation to/from direction vector conversion in two places. Affects both viewport camera and lighting direction.
+- **Fix approach:** Move to core math utility (`src/core/math/spherical.h` or add to `Vec3` methods).
 
-## Security Considerations
+### WP-10: Repeated SQL Boilerplate
 
-### LIKE Injection in Database Searches
-- **Risk**: User search terms concatenated with `%` wildcards without escaping. Characters `%` and `_` in input not escaped, allowing LIKE metacharacters to pass through. Searching "100%" matches everything (% is wildcard).
-- **Files**: `src/core/database/model_repository.cpp:103,139` (findByName), `project_repository.cpp:69` (findByName)
-- **Current mitigation**: Parameterized queries are used for the search term itself, but `%` wildcards added in C++ string concatenation before binding.
-- **Recommendations**: Implement LIKE escape function: replace `%` with `\%`, `_` with `\_`, use `ESCAPE '\'` in SQL. Example: `... LIKE ? ESCAPE '\'` where ? is escaped input.
+- **Files:** `src/core/database/model_repository.cpp`, `project_repository.cpp`, `cost_repository.cpp`
+- **Impact:** 6+ SELECT methods with identical prepare/isValid/bind/step/extract boilerplate. Column indices are magic numbers that silently break on schema changes.
+- **Fix approach:** Create base repository helper with template methods or column index enums to centralize schema awareness.
 
-### Integer Overflow in STL Binary Parsing
-- **Risk**: Triangle count from untrusted file data multiplied by 50 without prior bounds check. Crafted STL file with `triangleCount=0xFFFFFFFF` could wrap the size validation, enabling out-of-bounds read.
-- **Files**: `src/core/loaders/stl_loader.cpp:88-99`
-- **Current mitigation**: Overflow guard is now in place: `if (triangleCount > (SIZE_MAX - 84) / 50)` before multiplication.
-- **Recommendations**: Guard is good. Keep in place. Apply same pattern to all binary loaders (OBJ, 3MF).
+### WP-11: Repeated Error_Code Pattern in File Utils
 
-### Path Traversal in File Operations
-- **Risk**: No validation that loaded file paths don't escape library root. Untrusted metadata containing `../../etc/passwd` could be written/read outside intended directory.
-- **Files**: `src/core/archive/archive.cpp`, `src/core/export/exporter.cpp`
-- **Current mitigation**: File path sanitization added.
-- **Recommendations**: Maintain path canonicalization (use `std::filesystem::canonical()`) before all file I/O with user-influenced paths.
+- **File:** `src/core/utils/file_utils.cpp:68-191`
+- **Impact:** 15+ repetitions of `std::error_code ec; auto result = fs::op(..., ec); if (ec) log::errorf(...);`
+- **Fix approach:** Extract to `fsOp()` helper that takes operation lambda and logging context.
 
-## Performance Bottlenecks
+### WP-31: Duplicate Number Formatting
 
-### GPU Mesh Cache Improves Frame Rate
-- **Problem**: Previously uploaded mesh per frame with no caching. Fixed in recent refactoring.
-- **Files**: `src/render/renderer.cpp:82-89`
-- **Current state**: Hash-keyed mesh cache now caches GPUMesh uploads by mesh content hash.
-- **Status**: RESOLVED — Cache layer eliminates redundant uploads.
-
-### Vector Reserve for Large Loaders
-- **Problem**: STL loader reserves capacity via `mesh->reserve()` to prevent reallocations. OBJ and 3MF loaders did not, causing repeated vector reallocations on large files.
-- **Files**: `src/core/loaders/obj_loader.cpp:29-35`, `src/core/loaders/threemf_loader.cpp`
-- **Current state**: Reserve calls added to OBJ and 3MF loaders with size-based estimates.
-- **Status**: RESOLVED — Pre-allocation prevents reallocation thrashing.
-
-### Bounds Recalculation Efficiency
-- **Problem**: `centerOnOrigin()` and `normalizeSize()` each iterated all vertices to recalculate bounds, then applied transform.
-- **Files**: `src/core/mesh/mesh.cpp:72-89`
-- **Current state**: Mathematical bounds transformation added, avoiding full vertex iteration.
-- **Status**: RESOLVED — Bounds updated via matrix transformation, O(1) instead of O(n).
-
-### No GL Error Checking on Buffer Uploads
-- **Problem**: `uploadMesh()` calls `glGen*`, `glBufferData`, `glVertexAttribPointer` with zero error checks. Failures silently pass.
-- **Files**: `src/render/renderer.cpp:173-217`
-- **Current state**: GL_CHECK macro added for critical calls.
-- **Status**: RESOLVED — GL_CHECK validates error state post-operation.
-
-## Fragile Areas
-
-### Mesh Validation Post-Load
-- **Files**: `src/core/loaders/stl_loader.cpp`, `src/core/loaders/obj_loader.cpp`, `src/core/loaders/threemf_loader.cpp`
-- **Why fragile**: Loaders accept any parsed data without validation. Degenerate triangles (zero area), NaN coordinates, extreme values (1e30), inverted winding are not caught.
-- **Safe modification**: Add `Mesh::validate()` method that checks: triangle area > epsilon, vertices in reasonable range (-1e6 to 1e6), normals not NaN. Call post-load.
-- **Test coverage**: Test suite includes mesh validation tests but not all loaders tested against malformed input.
-
-### Floating-Point Comparisons in Optimizers
-- **Files**: `src/core/optimizer/bin_packer.cpp` (placement checks), `src/core/optimizer/guillotine.cpp` (placement checks)
-- **Why fragile**: Rectangle dimensions compared with `>` and `<` without tolerance. Rounding errors accumulate near boundaries, causing valid placements to be rejected.
-- **Safe modification**: Add epsilon tolerance (1e-5f) to all dimension comparisons. Example: `rect.x + rect.width + epsilon < stock.width`.
-- **Test coverage**: Optimizer tests pass but edge cases with very small stock or near-boundary placements untested.
-
-### Import Pipeline Thread Safety
-- **Files**: `src/core/import/import_queue.cpp`
-- **Why fragile**: `ImportProgress::currentFileName` is a `char[256]` written by worker thread, read by UI thread without synchronization. Comment claims "benign race" but undefined behavior.
-- **Safe modification**: Protect with mutex or use atomic flag + locked string. Simplest: `std::atomic<bool>` dirty flag, UI only reads when flag stable.
-- **Test coverage**: Import tests don't include concurrent access tests.
-
-### Database Connection Single-Threaded
-- **Files**: `src/core/database/database.cpp`, `src/core/database/database.h`
-- **Why fragile**: Single SQLite connection object. If multiple threads execute queries simultaneously, undefined behavior (SQLite is thread-hostile with single connection).
-- **Safe modification**: Add mutex guard on all `prepare()` calls, or implement connection pool.
-- **Test coverage**: Database tests single-threaded. No concurrent access tests exist.
-
-## Scaling Limits
-
-### Single Worker Thread in Import Queue
-- **Current capacity**: Single worker thread processes files sequentially. Large import (1000 files × 10 seconds each) = ~3 hours.
-- **Limit**: Hits CPU-bound bottleneck on large multi-file imports.
-- **Scaling path**: Implement configurable worker pool (default 2-4 threads) with thread-safe task distribution.
-- **Effort**: Moderate — requires thread pool abstraction and proper synchronization.
-
-### SQLite Single Connection
-- **Current capacity**: Single database connection. Simultaneous queries block or error.
-- **Limit**: Under high concurrency (multiple import workers + UI queries) will bottleneck.
-- **Scaling path**: Implement connection pool (3-5 connections) with checkout/checkin semantics.
-- **Effort**: High — requires connection pool abstraction and careful transaction handling.
-
-### Mesh Cache Unbounded
-- **Current capacity**: GPU mesh cache has no size limit. Cache key is mesh content hash.
-- **Limit**: If user loads thousands of unique models, GPU memory exhausted without warning.
-- **Scaling path**: Add LRU eviction policy with configurable max cache size (default 512MB).
-- **Effort**: Moderate — requires LRU data structure and memory tracking.
-
-## Missing Critical Features
-
-### No Undo/Redo System
-- **Problem**: No undo/redo for any operation. User can't recover from destructive operations (delete model, clear project).
-- **Blocks**: Multi-step workflows are risky. Users hesitant to modify projects.
-- **Approach**: Implement Command pattern with undo stack (max 50 commands). Start with ModelSelected, ProjectClear, ModelDelete.
-
-### No Advanced Search
-- **Problem**: Only basic `findByName` with SQL LIKE. No query language, filters, or pagination.
-- **Blocks**: Large libraries (1000+ models) unsearchable by category, format, rating, date, or combinations.
-- **Approach**: Add search engine with token-based query parsing (tag=wood, format=stl, rating>=4).
-
-### No Watch Folder / Auto-Import
-- **Problem**: No folder monitoring. User must manually drag/drop or import files.
-- **Blocks**: Workflow integration; can't auto-ingest new designs.
-- **Approach**: Add WatchFolderManager with file system notifications, size stability detection, auto-import.
-
-### No CNC Control System
-- **Problem**: No machine control. G-code can be analyzed but not sent to machine or monitored during run.
-- **Blocks**: Machine feedback loop unavailable; real-time override/estop not possible.
-- **Approach**: Implement NcSender REST client with WebSocket for machine state tracking (see OBSERVATION_REPORT.md for full spec).
-
-### No Costing/Quoting System
-- **Problem**: No cost calculation, quote generation, or customer management.
-- **Blocks**: Business workflow (quoting, invoicing) requires external tools.
-- **Approach**: Implement CostCalculator with material/tool/labor breakdown, CostEstimate persistence, PDF export (see OBSERVATION_REPORT.md).
-
-### No Tool Database
-- **Problem**: No CNC tool library. Feed/speed calculations manual.
-- **Blocks**: Optimization requires manual tool input; no material/tool recommendations.
-- **Approach**: Implement ToolRepository with geometry, feeds/speeds, Vectric tool import.
-
-### No Advanced G-Code Analysis
-- **Problem**: Basic path visualization only. No simulation, 3D view, or live machine tracking.
-- **Blocks**: Can't verify tool path before run; post-run diagnostics limited.
-- **Approach**: Add GCodeSimulator with playback speed control, 3D rotation, block-by-block inspection.
-
-## Test Coverage Gaps
-
-### Import Pipeline Concurrency Untested
-- **What's not tested**: Concurrent import + database query, concurrent imports from multiple sources.
-- **Files**: `src/core/import/import_queue.h/cpp`, `tests/test_import_pipeline.cpp`
-- **Risk**: Race conditions hidden. Data corruption possible under concurrent load.
-- **Priority**: HIGH — affects production robustness.
-
-### Database Concurrent Access Untested
-- **What's not tested**: Multiple threads executing queries simultaneously, transaction isolation.
-- **Files**: `src/core/database/database.h/cpp`, `tests/test_database.cpp`
-- **Risk**: Undefined behavior if UI + import threads access DB concurrently.
-- **Priority**: HIGH — fundamental correctness.
-
-### Optimizer Edge Cases Untested
-- **What's not tested**: Very small stock (< 1mm), near-boundary placements, rounding edge cases, degenerate rectangles (zero width/height).
-- **Files**: `src/core/optimizer/bin_packer.cpp`, `src/core/optimizer/guillotine.cpp`, `tests/test_optimizer.cpp`
-- **Risk**: Silent placement failures on edge cases.
-- **Priority**: MEDIUM — affects correctness for extreme inputs.
-
-### Loader Malformed Input Untested
-- **What's not tested**: Truncated files, corrupted vertices (NaN, infinity), invalid normals, extreme coordinate ranges (>1e10).
-- **Files**: All loaders in `src/core/loaders/`, test suite exists but only tests valid inputs.
-- **Risk**: Crashes or undefined behavior on malformed files.
-- **Priority**: MEDIUM — robustness against user files.
-
-### UI Theme and Rendering Untested
-- **What's not tested**: Theme switching, multi-monitor rendering, window resize corner cases.
-- **Files**: `src/ui/panels/`, `src/ui/theme.cpp`
-- **Risk**: UI glitches on user systems.
-- **Priority**: LOW — visual issues only.
+- **Files:** `src/ui/panels/properties_panel.cpp:63-87`, `library_panel.cpp:250-257`, `gcode_panel.cpp:134-140`
+- **Impact:** File size, triangle count, and time formatting logic repeated in 5+ places.
+- **Fix approach:** Create utility functions: `formatBytes()`, `formatNumber()`, `formatTime()`.
 
 ---
 
-*Concerns audit: 2026-02-08*
+## Known Bugs
+
+### WP-01: Integer Overflow in STL Binary Parsing
+
+- **File:** `src/core/loaders/stl_loader.cpp:88`
+- **Symptoms:** Malformed STL files with crafted triangle count could cause out-of-bounds reads or memory corruption.
+- **Trigger:** Load STL with `triangleCount = 0xFFFFFFFF`. Multiplication by 50 bytes per triangle wraps size validation.
+- **Root cause:** `triangleCount * 50` overflows before bounds check.
+- **Workaround:** Only load STL files from trusted sources.
+- **Fix approach:** Add overflow guard: `if (triangleCount > (SIZE_MAX - 84) / 50) { return error; }`
+
+### WP-27: Framebuffer Move Constructor Incomplete
+
+- **File:** `src/render/framebuffer.cpp:12-21`
+- **Symptoms:** Moved-from framebuffer object has zeroed GL handles but retains `m_width` and `m_height` values. Double-delete or reuse if accidentally accessed.
+- **Root cause:** Move constructor only clears GL handles, not dimensions.
+- **Fix approach:** In moved-from object, also zero `m_width = 0; m_height = 0;`
+
+### WP-15: Transaction Error Handling Gap
+
+- **File:** `src/core/database/schema.cpp:148-155` (in `createTables()`)
+- **Symptoms:** If `setVersion()` fails during schema initialization, transaction commits partially instead of rolling back.
+- **Trigger:** Database write permission lost mid-initialization.
+- **Root cause:** Missing rollback on `setVersion()` failure.
+- **Fix approach:** Add explicit `txn.rollback()` before `return false` on `setVersion()` failure.
+
+---
+
+## Security Considerations
+
+### WP-12: SQL LIKE Injection
+
+- **Files:** `src/core/database/model_repository.cpp:103,139`, `project_repository.cpp:69`
+- **Risk:** User search terms concatenated with `%` wildcards without escaping. Input like "100%" matches all content. Potential information disclosure.
+- **Current mitigation:** Database is local file, not network-exposed. Low practical risk but incorrect pattern.
+- **Recommendations:** Implement LIKE escape function: replace `%` → `\%`, `_` → `\_`, append `ESCAPE '\'` to query.
+
+### WP-02: Strict Aliasing Violation in Mesh Hashing
+
+- **File:** `src/core/mesh/hash.cpp:58`
+- **Risk:** `reinterpret_cast<const u32*>(&pos[i])` violates C++ strict aliasing rules. Compiler optimizations could produce incorrect hash values or memory corruption.
+- **Current mitigation:** In practice, most compilers treat this as benign, but it is undefined behavior.
+- **Recommendations:** Use `std::memcpy` to copy into `u32` local, or C++20 `std::bit_cast`.
+
+### WP-13: JSON Serialization Has No Escaping
+
+- **Files:** `src/core/database/model_repository.cpp:291`, `cost_repository.cpp:216`
+- **Risk:** Tags containing quote characters produce invalid JSON. Could cause parsing errors or data corruption.
+- **Current mitigation:** Tags are user-supplied but stored locally. Low risk of exploitation but causes data loss.
+- **Recommendations:** Use `nlohmann/json` library or implement proper JSON string escaping (escape `"`, `\`, `/`, control characters).
+
+### WP-30: Fallback to /tmp on Missing HOME
+
+- **File:** `src/core/paths/app_paths.cpp:45`
+- **Risk:** If `$HOME` environment variable unset on Linux, config and data paths default to `/tmp`. /tmp is world-readable/writable and not persistent across reboots.
+- **Current mitigation:** On most systems, `$HOME` is set. Development risk only.
+- **Recommendations:** Fail explicitly with helpful error message, or use `getpwuid(getuid())` to retrieve user home directory as fallback.
+
+---
+
+## Performance Bottlenecks
+
+### WP-04: GPU Mesh Uploaded and Destroyed Every Frame
+
+- **File:** `src/render/renderer.cpp:80-85`
+- **Problem:** `renderMesh(const Mesh&)` calls `uploadMesh()` then `destroy()` per frame. No caching. Each mesh re-uploaded every frame from CPU to GPU.
+- **Impact:** For a 100k-triangle mesh at 60 FPS: ~30 MB/s sustained VRAM bandwidth per mesh. Multiple meshes compound the waste. Frame time increases with mesh complexity.
+- **Cause:** No GPU mesh cache (hash → GPUMesh mapping).
+- **Improvement path:**
+  1. Add `std::unordered_map<std::string, GPUMesh>` cache keyed by mesh hash
+  2. Create RAII `GPUMesh` wrapper with constructor/destructor for proper cleanup
+  3. Invalidate cache entry on mesh modification
+
+### WP-24: ViewCube Recomputed Every Frame
+
+- **File:** `src/ui/panels/viewport_panel.cpp:279-451`
+- **Problem:** 8 vertices, 6 faces, rotation matrix, depth sort, and hit testing recalculated every frame, even when camera unchanged.
+- **Impact:** ~400 extra matrix multiplications per frame unnecessary.
+- **Cause:** No caching logic.
+- **Improvement path:** Cache vertex positions and faces; recompute only when camera orientation changes.
+
+### WP-25: Angle Wrapping Uses Loops
+
+- **File:** `src/render/camera.cpp:38-41`
+- **Problem:** `while (m_yaw > 360) m_yaw -= 360;` is O(n) in angle magnitude.
+- **Impact:** If yaw exceeds 360 by many rotations (rare but possible), scales linearly.
+- **Fix:** Use `fmod()` for O(1) wrap: `m_yaw = fmod(m_yaw, 360.0f);`
+
+### WP-33: OBJ/3MF Loaders Don't Reserve Vector Capacity
+
+- **Files:** `src/core/loaders/obj_loader.cpp:29-35`, `src/core/loaders/threemf_loader.cpp`
+- **Problem:** Unlike STL loader, no `reserve()` call. Causes repeated reallocations on large files as vertices/triangles are appended.
+- **Impact:** For 1M-triangle model: ~20 reallocations + memcopies during parsing.
+- **Fix approach:** First-pass count (e.g., scan OBJ for vertex count) or size-based estimate for `reserve()`.
+
+### WP-41: Bounds Recalculation Inefficiency
+
+- **File:** `src/core/mesh/mesh.cpp:72-89`
+- **Problem:** `centerOnOrigin()` and `normalizeSize()` each call `recalculateBounds()`, iterating all vertices twice for same operation.
+- **Impact:** For 500k-vertex mesh: 1M vertex iterations instead of 500k.
+- **Fix approach:** Add dirty flag; only recalculate when modified. Or compute bounds mathematically during transform.
+
+---
+
+## Fragile Areas
+
+### WP-03: Data Race on Import Progress
+
+- **File:** `src/core/import/import_queue.cpp:110` (in progress tracking)
+- **Files involved:** `src/core/import/import_task.h:85` (ImportProgress::setCurrentFileName)
+- **Why fragile:** Worker threads write `m_progress.currentFileName` (char[256]) while UI thread reads simultaneously without synchronization. Code comment calls this "benign" but it is undefined behavior.
+- **Safe modification:** Replace manual char buffer with `std::atomic<std::string>` under a dedicated mutex, or use `std::atomic_flag` + double-buffering.
+- **Test coverage:** No thread safety tests for ImportProgress.
+
+### WP-14: Config Watcher Not Thread-Safe
+
+- **File:** `src/core/config/config_watcher.cpp:44-46`
+- **Why fragile:** `m_lastMtime` read/written without atomics or locks in both file watch callback and main thread config reload.
+- **Safe modification:** Use `std::atomic<int64_t>` for `m_lastMtime`.
+
+### WP-28: No GL Error Checking on Buffer Uploads
+
+- **File:** `src/render/renderer.cpp:173-217` (in uploadMesh)
+- **Why fragile:** `glGenBuffers`, `glBufferData`, `glBindTexture` called with zero error checks. GPU out-of-memory or driver errors silently fail.
+- **Safe modification:** Add GL_CHECK macro or validation after critical calls; propagate error status to caller.
+
+### WP-42: Shader Uniform Cache Stores -1 Without Distinction
+
+- **File:** `src/render/shader.cpp:94-103`
+- **Why fragile:** Caches `glGetUniformLocation` result of -1 (uniform not found) identically to valid locations. Invalid location reused without re-lookup attempt.
+- **Safe modification:** Don't cache -1, or use `std::optional<GLint>` to distinguish "not found" from "valid location 0".
+
+---
+
+## Scaling Limits
+
+### Database Connection Pool Exhaustion
+
+- **File:** `src/core/database/connection_pool.h`, `connection_pool.cpp:41-46`
+- **Current capacity:** Fixed pool size at application startup (default 5 connections, configurable).
+- **Limit:** If import thread count exceeds pool size, threads block in `ScopedConnection::acquire()` waiting for connection. With 8 import workers and 5 connections, 3 workers stall until connections release.
+- **Note:** `ImportQueue::enqueue()` line 50 warns about this but cannot resize pool dynamically. Pool size must match worst-case thread count.
+- **Scaling path:**
+  1. Either increase pool size before creating ImportQueue
+  2. Or implement dynamic pool expansion (complex; requires thread-safe resizing)
+  3. Or reduce import thread count via config to ≤ pool size
+
+### Mesh Vertex Count Limits
+
+- **Files:** All loaders store vertex count as `u32` (4 billion max)
+- **Practical limit:** ~500M vertices in memory at 32 bytes/vertex = 16 GB. Most machines have 16-32 GB RAM.
+- **Beyond scaling:** Requires streaming/out-of-core geometry system.
+
+### Library Size Limits
+
+- **Issue:** All models loaded into memory (`getAllModels()` in `library_manager.h:23`). With 10k models (typical large shop), ~100 MB metadata in memory.
+- **Scaling path:** Implement lazy loading with pagination or database query filters.
+
+---
+
+## Test Coverage Gaps
+
+### WP-40: Cost System Untested
+
+- **What's not tested:** `src/core/database/cost_repository.cpp/h`
+- **Files:** Not in test dependencies, no test file exists.
+- **Risk:** Cost calculations and persistence untested; regressions silently introduced.
+- **Priority:** Medium — cost system used in phase plans but not yet exercised in live code.
+- **Fix approach:** Add `cost_repository.cpp` to test deps in `tests/CMakeLists.txt`, create `tests/test_cost_repository.cpp`.
+
+### WP-32: No Mesh Validation Post-Loading
+
+- **What's not tested:** All loaders (`stl_loader.cpp`, `obj_loader.cpp`, `threemf_loader.cpp`, `gcode_loader.cpp`)
+- **Risk:** Degenerate triangles (zero area), NaN normals, extreme coordinates, or invalid topology silently accepted.
+- **Impact:** Can cause renderer crashes (division by zero in normal calculation) or optimization failures.
+- **Fix approach:** Add optional validation pass (or mandatory in debug builds): check for degenerate triangles, NaN/Inf coordinates, isolated vertices.
+
+### Thread Safety Tests
+
+- **Current:** No concurrent import tests. ImportProgress data race (WP-03) untested.
+- **Fix approach:** Add tests with ThreadSanitizer (asan/tsan) running multiple import workers while reading progress.
+
+---
+
+## Dependency Issues
+
+### Missing Version Constraints
+
+- **File:** `src/CMakeLists.txt`
+- **Issue:** Third-party dependencies (SDL2, glad, zlib, etc.) have no version constraints in FetchContent/find_package calls.
+- **Impact:** Breaking changes in future versions could silently break builds.
+- **Fix:** Add `VERSION_RANGE` or `REQUIRE_VERSION` to dependency declarations.
+
+### Custom Math Types Create Maintenance Burden
+
+- **Issue:** (Related to WP-05) Custom matrix operations diverge from GLM. If GLM is updated or features added, custom code remains stale.
+- **Fix:** Replace with GLM to leverage community-maintained SIMD implementations.
+
+---
+
+## Missing Critical Features (Blocking Future Phases)
+
+### Schema Versioning Not Implemented
+
+- **File:** `src/core/database/schema.cpp:20` (TODO comment)
+- **Problem:** Comment reads: "TODO(v2.0): Implement version-aware ALTER TABLE migrations."
+- **Current behavior:** On schema version mismatch, logs warning but continues. Tables use `IF NOT EXISTS`, so missing columns silently stay missing.
+- **Blocks:** Adding new database columns in future versions risks data loss or corruption.
+- **Priority:** High — needed before any database schema change.
+- **Fix approach:**
+  1. Implement `migrate(oldVersion, newVersion)` function with per-version ALTER TABLE statements
+  2. Call within `Schema::initialize()` before returning success
+  3. Test migration path in unit tests
+
+### Import Queue Hard Stops on Pool Exhaustion
+
+- **File:** `src/core/database/connection_pool.cpp:45`
+- **Issue:** `throw std::runtime_error("ConnectionPool exhausted")` with no graceful degradation or queuing.
+- **Blocks:** Scaling import to many workers without pre-calculating required pool size.
+- **Fix:** Either size pool dynamically or implement work-stealing between workers.
+
+### UIManager StartPage Callback Wiring Incomplete
+
+- **File:** `src/managers/ui_manager.cpp:69` (NOTE comment)
+- **Issue:** "StartPage callbacks are NOT wired here. Application wires those after both UIManager and FileIOManager exist."
+- **Impact:** Risk of callbacks firing before managers initialized.
+- **Fix approach:** Formalize this coupling with explicit initialization order documentation or dependency injection.
+
+---
+
+## Code Quality Issues
+
+### WP-22: Application God Class
+
+- **File:** `src/app/application.h`
+- **Issue:** Owns 7 panels, 2+ dialogs, 6 core systems, 15+ callback methods (~40 distinct concerns).
+- **Impact:** Hard to test, understand, or modify. Single point of failure.
+- **Already partially addressed:** UIManager and FileIOManager extracted, but Application still coordinates them.
+- **Recommendation:** Continue extraction pattern; keep Application as thin orchestrator only.
+
+### WP-23: PropertiesPanel Static Locals as Hidden State
+
+- **File:** `src/ui/panels/properties_panel.cpp:237,260,273,293`
+- **Issue:** `static float targetSize`, `translate[3]`, `rotateDeg[3]`, `scaleVal[3]` inside render method. Hidden state not visible in class definition.
+- **Impact:** Difficult to reason about state lifetime and persistence.
+- **Fix:** Move to class member variables with clear initialization.
+
+### WP-29: Fixed 1024-Byte Log Buffer
+
+- **File:** `src/core/utils/log.h:23-51`
+- **Issue:** `snprintf` into `char[1024]` silently truncates. Four near-identical template functions (error, warning, info, debug).
+- **Impact:** Long error messages or format strings truncated silently.
+- **Fix:** Use dynamic allocation (`std::string`) or single parameterized helper function.
+
+---
+
+## Design Inconsistencies
+
+### WP-16: Unused UIManager File Dialog Stubs
+
+- **File:** `src/ui/ui_manager.cpp:258-268`
+- **Issue:** `openFileDialog()` and `saveFileDialog()` return `false`. Dead code.
+- **Fix:** Remove or implement.
+
+### WP-17: Unused ViewportPanel Input State
+
+- **File:** `src/ui/panels/viewport_panel.h:53-56`
+- **Issue:** `m_isDragging`, `m_isPanning`, `m_lastMouseX`, `m_lastMouseY` never set or read.
+- **Fix:** Remove fields.
+
+### WP-18: Unused LibraryPanel Field
+
+- **File:** `src/ui/panels/library_panel.h:59`
+- **Issue:** `m_contextMenuModelIndex` never used.
+- **Fix:** Remove field.
+
+### WP-19: Empty ProjectPanel::refresh()
+
+- **File:** `src/ui/panels/project_panel.cpp:29-31`
+- **Issue:** Empty method, never called.
+- **Fix:** Remove method and declaration.
+
+### WP-20: Icons System Unused
+
+- **File:** `src/ui/icons.h`
+- **Issue:** 93 lines of icon constants with no icon font loaded.
+- **Fix:** Remove until icon font integration is implemented.
+
+### WP-21: Database::handle() Exposes Raw Pointer
+
+- **File:** `src/core/database/database.h:89-90`
+- **Issue:** Breaks encapsulation, no callers found.
+- **Fix:** Remove or make private.
+
+---
+
+## Minor Issues
+
+### WP-26: Archive Uses Manual Path Operations
+
+- **File:** `src/core/archive/archive.cpp:45-72`
+- **Issue:** Hand-rolled `makeRelativePath()` and recursive traversal instead of `std::filesystem::relative()` and `recursive_directory_iterator`.
+- **Impact:** More code to maintain; potential edge cases in path handling.
+- **Fix:** Use std::filesystem utilities directly.
+
+### WP-34: Floating-Point Comparisons Without Epsilon
+
+- **Files:** `src/core/optimizer/bin_packer.cpp`, `guillotine.cpp` (placement checks)
+- **Issue:** Rectangle dimensions compared with `>` and `<` without tolerance. Rounding errors near boundaries cause placement failures.
+- **Impact:** Packing sometimes fails near tight fits due to floating-point imprecision.
+- **Fix:** Define epsilon constant; use `fabs(a - b) < epsilon` for equality checks.
+
+---
+
+## Summary by Priority
+
+**CRITICAL (Fix immediately for safety/correctness):**
+- WP-01: Integer overflow in STL parsing
+- WP-02: Strict aliasing violation
+- WP-03: Data race on import progress
+- WP-12: SQL LIKE injection (low risk but incorrect pattern)
+- WP-13: JSON escaping missing
+
+**HIGH (Fix soon for maintainability and performance):**
+- WP-04: GPU mesh upload every frame (50% perf win possible)
+- WP-05: Custom math types duplicate GLM
+- WP-06: Duplicate theme code
+- WP-15: Transaction rollback missing
+- WP-24: ViewCube recomputed every frame
+- Schema versioning (blocks future DB changes)
+
+**MEDIUM (Fix when touching related code):**
+- WP-07 through WP-11: DRY violations
+- WP-14: Config watcher thread safety
+- WP-22: Application god class
+- WP-28: GL error checking
+- WP-33: Vector reserve for loaders
+
+**LOW (Track for later):**
+- WP-16 through WP-20: Dead code cleanup
+- WP-25, WP-31: Style improvements
+- WP-26: Archive path operations
+- WP-34: Floating-point tolerance
+
+---
+
+*Concerns audit: 2026-02-19*

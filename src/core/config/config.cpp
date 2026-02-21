@@ -87,6 +87,8 @@ bool Config::load() {
                 str::parseInt(value, style);
                 if (style >= 0 && style <= 2)
                     m_navStyle = static_cast<NavStyle>(style);
+            } else if (key == "floating_windows") {
+                m_enableFloatingWindows = (value == "true" || value == "1");
             }
         } else if (section == "render") {
             if (key == "light_dir_x")
@@ -144,6 +146,8 @@ bool Config::load() {
                 m_wsShowProperties = (value == "true" || value == "1");
             } else if (key == "show_project") {
                 m_wsShowProject = (value == "true" || value == "1");
+            } else if (key == "show_materials") {
+                m_wsShowMaterials = (value == "true" || value == "1");
             } else if (key == "show_gcode") {
                 m_wsShowGCode = (value == "true" || value == "1");
             } else if (key == "show_cut_optimizer") {
@@ -176,6 +180,10 @@ bool Config::load() {
                 m_libraryDir = value;
             } else if (key == "show_error_toasts") {
                 m_showImportErrorToasts = (value == "true" || value == "1");
+            }
+        } else if (section == "api") {
+            if (key == "gemini_key") {
+                m_geminiApiKey = value;
             }
         } else if (section == "recent") {
             if (str::startsWith(key, "project")) {
@@ -214,6 +222,7 @@ bool Config::save() {
     ss << "invert_orbit_x=" << (m_invertOrbitX ? "true" : "false") << "\n";
     ss << "invert_orbit_y=" << (m_invertOrbitY ? "true" : "false") << "\n";
     ss << "nav_style=" << static_cast<int>(m_navStyle) << "\n";
+    ss << "floating_windows=" << (m_enableFloatingWindows ? "true" : "false") << "\n";
     ss << "\n";
 
     // Render section
@@ -264,6 +273,7 @@ bool Config::save() {
     ss << "show_library=" << (m_wsShowLibrary ? "true" : "false") << "\n";
     ss << "show_properties=" << (m_wsShowProperties ? "true" : "false") << "\n";
     ss << "show_project=" << (m_wsShowProject ? "true" : "false") << "\n";
+    ss << "show_materials=" << (m_wsShowMaterials ? "true" : "false") << "\n";
     ss << "show_gcode=" << (m_wsShowGCode ? "true" : "false") << "\n";
     ss << "show_cut_optimizer=" << (m_wsShowCutOptimizer ? "true" : "false") << "\n";
     ss << "show_start_page=" << (m_wsShowStartPage ? "true" : "false") << "\n";
@@ -286,6 +296,13 @@ bool Config::save() {
         ss << "library_dir=" << m_libraryDir.string() << "\n";
     }
     ss << "show_error_toasts=" << (m_showImportErrorToasts ? "true" : "false") << "\n";
+    ss << "\n";
+
+    // API section
+    ss << "[api]\n";
+    if (!m_geminiApiKey.empty()) {
+        ss << "gemini_key=" << m_geminiApiKey << "\n";
+    }
     ss << "\n";
 
     // Recent projects section

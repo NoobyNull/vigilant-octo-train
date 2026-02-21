@@ -16,8 +16,8 @@ std::optional<i64> ModelRepository::insert(const ModelRecord& model) {
             vertex_count, triangle_count,
             bounds_min_x, bounds_min_y, bounds_min_z,
             bounds_max_x, bounds_max_y, bounds_max_z,
-            thumbnail_path, tags
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            thumbnail_path, tags, orient_yaw, orient_matrix
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     if (!stmt.isValid()) {
@@ -39,6 +39,26 @@ std::optional<i64> ModelRepository::insert(const ModelRecord& model) {
         !stmt.bindText(15, tagsToJson(model.tags))) {
         log::error("ModelRepo", "Failed to bind insert parameters");
         return std::nullopt;
+    }
+
+    // Bind orient columns (NULL if not computed)
+    if (model.orientYaw) {
+        if (!stmt.bindDouble(16, static_cast<f64>(*model.orientYaw))) {
+            return std::nullopt;
+        }
+    } else {
+        if (!stmt.bindNull(16)) {
+            return std::nullopt;
+        }
+    }
+    if (model.orientMatrix) {
+        if (!stmt.bindText(17, mat4ToJson(*model.orientMatrix))) {
+            return std::nullopt;
+        }
+    } else {
+        if (!stmt.bindNull(17)) {
+            return std::nullopt;
+        }
     }
 
     if (!stmt.execute()) {
@@ -295,7 +315,64 @@ ModelRecord ModelRepository::rowToModel(Statement& stmt) {
     model.thumbnailPath = stmt.getText(14);
     model.importedAt = stmt.getText(15);
     model.tags = jsonToTags(stmt.getText(16));
+    // Column 17 = material_id (read elsewhere)
+    // Column 18 = orient_yaw, Column 19 = orient_matrix
+    if (!stmt.isNull(18)) {
+        model.orientYaw = static_cast<f32>(stmt.getDouble(18));
+    }
+    if (!stmt.isNull(19)) {
+        model.orientMatrix = jsonToMat4(stmt.getText(19));
+    }
     return model;
+}
+
+bool ModelRepository::updateOrient(i64 id, f32 yaw, const Mat4& matrix) {
+    auto stmt = m_db.prepare("UPDATE models SET orient_yaw = ?, orient_matrix = ? WHERE id = ?");
+    if (!stmt.isValid()) {
+        return false;
+    }
+
+    if (!stmt.bindDouble(1, static_cast<f64>(yaw)) || !stmt.bindText(2, mat4ToJson(matrix)) ||
+        !stmt.bindInt(3, id)) {
+        return false;
+    }
+
+    return stmt.execute();
+}
+
+std::string ModelRepository::mat4ToJson(const Mat4& m) {
+    std::ostringstream ss;
+    ss << "[";
+    const f32* data = glm::value_ptr(m);
+    for (int i = 0; i < 16; ++i) {
+        if (i > 0) {
+            ss << ",";
+        }
+        ss << data[i];
+    }
+    ss << "]";
+    return ss.str();
+}
+
+std::optional<Mat4> ModelRepository::jsonToMat4(const std::string& json) {
+    if (json.size() < 2 || json[0] != '[') {
+        return std::nullopt;
+    }
+
+    Mat4 result(1.0f);
+    f32* data = glm::value_ptr(result);
+    int index = 0;
+
+    std::istringstream ss(json.substr(1, json.size() - 2));
+    std::string token;
+    while (std::getline(ss, token, ',') && index < 16) {
+        data[index++] = std::stof(token);
+    }
+
+    if (index != 16) {
+        return std::nullopt;
+    }
+    return result;
 }
 
 std::string ModelRepository::tagsToJson(const std::vector<std::string>& tags) {

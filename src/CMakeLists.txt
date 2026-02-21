@@ -38,6 +38,7 @@ set(DW_SOURCES
     core/database/connection_pool.cpp
     core/database/schema.cpp
     core/database/model_repository.cpp
+    core/database/material_repository.cpp
     core/database/project_repository.cpp
     core/database/gcode_repository.cpp
 
@@ -51,6 +52,7 @@ set(DW_SOURCES
     core/loaders/obj_loader.cpp
     core/loaders/threemf_loader.cpp
     core/loaders/gcode_loader.cpp
+    core/loaders/texture_loader.cpp
 
     # Project
     core/project/project.cpp
@@ -77,6 +79,12 @@ set(DW_SOURCES
     # Archive
     core/archive/archive.cpp
 
+    # Materials
+    core/materials/default_materials.cpp
+    core/materials/gemini_material_service.cpp
+    core/materials/material_archive.cpp
+    core/materials/material_manager.cpp
+
     # Render
     render/gl_utils.cpp
     render/shader.cpp
@@ -84,6 +92,7 @@ set(DW_SOURCES
     render/framebuffer.cpp
     render/renderer.cpp
     render/thumbnail_generator.cpp
+    render/texture.cpp
 
     # UI
     # ui/ui_manager.cpp  -- dead code, replaced by managers/ui_manager.cpp (Phase 1.6 cleanup)
@@ -93,6 +102,7 @@ set(DW_SOURCES
     # UI Panels
     ui/panels/viewport_panel.cpp
     ui/panels/library_panel.cpp
+    ui/panels/materials_panel.cpp
     ui/panels/properties_panel.cpp
     ui/panels/project_panel.cpp
     ui/panels/gcode_panel.cpp
@@ -125,12 +135,16 @@ target_link_libraries(digital_workshop PRIVATE
     glm::glm
     SQLite::SQLite3
     ZLIB::ZLIB
+    miniz_static
+    nlohmann_json::nlohmann_json
+    CURL::libcurl
 )
 
 # Include directories
 target_include_directories(digital_workshop PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}/generated
+    ${stb_SOURCE_DIR}
 )
 
 # Platform-specific linking
@@ -146,5 +160,35 @@ set_target_properties(digital_workshop PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )
 
+# --- Bundle resources (materials) ---
+# Copy .dwmat files from resources/materials/ to the build output directory.
+# Uses a stamp file to avoid issues with special characters in filenames.
+file(GLOB DW_BUNDLED_MATERIALS "${CMAKE_SOURCE_DIR}/resources/materials/*.dwmat")
+if(DW_BUNDLED_MATERIALS)
+    set(DW_MATERIALS_OUTPUT_DIR "${CMAKE_BINARY_DIR}/resources/materials")
+    set(DW_MATERIALS_STAMP "${CMAKE_BINARY_DIR}/materials_copied.stamp")
+
+    add_custom_command(
+        OUTPUT "${DW_MATERIALS_STAMP}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${DW_MATERIALS_OUTPUT_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/resources/materials" "${DW_MATERIALS_OUTPUT_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E touch "${DW_MATERIALS_STAMP}"
+        DEPENDS ${DW_BUNDLED_MATERIALS}
+        COMMENT "Copying bundled materials to build dir"
+    )
+
+    add_custom_target(dw_bundle_materials ALL DEPENDS "${DW_MATERIALS_STAMP}")
+    add_dependencies(digital_workshop dw_bundle_materials)
+endif()
+
 # Install target
 install(TARGETS digital_workshop RUNTIME DESTINATION bin)
+
+# Install bundled materials if directory exists
+if(EXISTS "${CMAKE_SOURCE_DIR}/resources/materials/")
+    install(DIRECTORY "${CMAKE_SOURCE_DIR}/resources/materials/"
+        DESTINATION share/digitalworkshop/resources/materials
+        FILES_MATCHING PATTERN "*.dwmat"
+    )
+endif()

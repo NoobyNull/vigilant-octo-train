@@ -116,6 +116,56 @@ if(NOT ZLIB_FOUND)
     )
 endif()
 
+# miniz - Compression library for ZIP/3MF files
+FetchContent_Declare(
+    miniz
+    GIT_REPOSITORY https://github.com/richgel999/miniz.git
+    GIT_TAG 3.0.2
+    GIT_SHALLOW TRUE
+)
+FetchContent_GetProperties(miniz)
+if(NOT miniz_POPULATED)
+    FetchContent_Populate(miniz)
+    # miniz 3.0.2 splits the library into multiple .c files:
+    #   miniz.c         - zlib API (deflate/inflate)
+    #   miniz_tdef.c    - deflate compressor
+    #   miniz_tinfl.c   - inflate decompressor
+    #   miniz_zip.c     - ZIP reader/writer
+    # All four are required for ZIP operations (mz_zip_*).
+    add_library(miniz_static STATIC
+        ${miniz_SOURCE_DIR}/miniz.c
+        ${miniz_SOURCE_DIR}/miniz_tdef.c
+        ${miniz_SOURCE_DIR}/miniz_tinfl.c
+        ${miniz_SOURCE_DIR}/miniz_zip.c
+    )
+    target_include_directories(miniz_static PUBLIC ${miniz_SOURCE_DIR})
+    # Define MINIZ_EXPORT to avoid export header dependency
+    target_compile_definitions(miniz_static PUBLIC MINIZ_EXPORT=)
+endif()
+
+# stb - Single-file header libraries (image loading, etc.)
+FetchContent_Declare(
+    stb
+    GIT_REPOSITORY https://github.com/nothings/stb.git
+    GIT_TAG master
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(stb)
+
+# libcurl - HTTP client (needed for Gemini API)
+find_package(CURL REQUIRED)
+
+# nlohmann/json - JSON library
+FetchContent_Declare(
+    json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG v3.11.3
+    GIT_SHALLOW TRUE
+)
+set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
+set(JSON_Install OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(json)
+
 # GoogleTest (for testing only)
 if(DW_BUILD_TESTS)
     FetchContent_Declare(
@@ -138,3 +188,7 @@ message(STATUS "  OpenGL:   ${OPENGL_gl_LIBRARY}")
 message(STATUS "  GLM:      1.0.1")
 message(STATUS "  SQLite3:  3.45.0")
 message(STATUS "  zlib:     ${ZLIB_VERSION_STRING}${zlib_VERSION}")
+message(STATUS "  miniz:    3.0.2")
+message(STATUS "  stb:      master (header-only)")
+message(STATUS "  libcurl:  ${CURL_VERSION_STRING}")
+message(STATUS "  nlohmann/json: 3.11.3")

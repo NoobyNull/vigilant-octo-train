@@ -113,6 +113,15 @@ void MessageDialog::error(const std::string& title, const std::string& message) 
     instance().show(title, message, MessageType::Error);
 }
 
+void MessageDialog::question(const std::string& title, const std::string& message,
+                             std::function<void(DialogResult)> callback) {
+    instance().show(title, message, MessageType::Question, std::move(callback));
+}
+
+void MessageDialog::renderGlobal() {
+    instance().render();
+}
+
 // ConfirmDialog
 
 ConfirmDialog::ConfirmDialog() : Dialog("Confirm") {}

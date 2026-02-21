@@ -102,8 +102,8 @@ void FileIOManager::collectSupportedFiles(const Path& directory, std::vector<Pat
         }
     } catch (const fs::filesystem_error& e) {
         // Log warning but continue - don't crash on permission denied or broken symlinks
-        log::warningf("FileIO", "Failed to scan directory %s: %s",
-                      directory.string().c_str(), e.what());
+        log::warningf("FileIO", "Failed to scan directory %s: %s", directory.string().c_str(),
+                      e.what());
     }
 }
 
@@ -149,8 +149,8 @@ void FileIOManager::processCompletedImports(ViewportPanel* viewport, PropertiesP
     if (!newlyCompleted.empty()) {
         setShowStartPage(false);
         m_pendingCompletions.insert(m_pendingCompletions.end(),
-            std::make_move_iterator(newlyCompleted.begin()),
-            std::make_move_iterator(newlyCompleted.end()));
+                                    std::make_move_iterator(newlyCompleted.begin()),
+                                    std::make_move_iterator(newlyCompleted.end()));
     }
 
     // Process at most ONE task per frame to avoid blocking the UI
@@ -170,11 +170,8 @@ void FileIOManager::processCompletedImports(ViewportPanel* viewport, PropertiesP
             thumbnailOk = m_libraryManager->generateThumbnail(task.modelId, *task.mesh);
         }
         if (!thumbnailOk) {
-            ToastManager::instance().show(
-                ToastType::Warning,
-                "Thumbnail Failed",
-                "Could not generate thumbnail for: " + task.record.name
-            );
+            ToastManager::instance().show(ToastType::Warning, "Thumbnail Failed",
+                                          "Could not generate thumbnail for: " + task.record.name);
         }
     }
 
@@ -193,6 +190,24 @@ void FileIOManager::processCompletedImports(ViewportPanel* viewport, PropertiesP
 }
 
 void FileIOManager::newProject(std::function<void(bool)> setShowStartPage) {
+    auto current = m_projectManager->currentProject();
+    if (current && current->isModified()) {
+        MessageDialog::question(
+            "Unsaved Changes",
+            "Current project has unsaved changes. Save before creating a new project?",
+            [this, setShowStartPage](DialogResult result) {
+                if (result == DialogResult::Yes) {
+                    saveProject();
+                }
+                if (result != DialogResult::No && result != DialogResult::Yes) {
+                    return; // Dialog closed without answering
+                }
+                auto project = m_projectManager->create("New Project");
+                m_projectManager->setCurrentProject(project);
+                setShowStartPage(false);
+            });
+        return;
+    }
     auto project = m_projectManager->create("New Project");
     m_projectManager->setCurrentProject(project);
     setShowStartPage(false);
@@ -201,6 +216,23 @@ void FileIOManager::newProject(std::function<void(bool)> setShowStartPage) {
 void FileIOManager::openProject(std::function<void(bool)> setShowStartPage) {
     if (!m_fileDialog)
         return;
+
+    auto current = m_projectManager->currentProject();
+    if (current && current->isModified()) {
+        MessageDialog::question(
+            "Unsaved Changes",
+            "Current project has unsaved changes. Save before opening another project?",
+            [this, setShowStartPage](DialogResult result) {
+                if (result == DialogResult::Yes) {
+                    saveProject();
+                }
+                if (result != DialogResult::No && result != DialogResult::Yes) {
+                    return;
+                }
+                openProject(setShowStartPage);
+            });
+        return;
+    }
 
     m_fileDialog->showOpen("Open Project", FileDialog::projectFilters(),
                            [this, setShowStartPage](const std::string& path) {

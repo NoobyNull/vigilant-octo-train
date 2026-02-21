@@ -2,9 +2,12 @@
 
 #include "managers/config_manager.h"
 
-#include <cstdio>
 #include <cstdlib>
 #include <string>
+
+#ifndef _WIN32
+    #include <unistd.h>
+#endif
 
 #include "core/config/config.h"
 #include "core/config/config_watcher.h"
@@ -34,6 +37,11 @@ ConfigManager::~ConfigManager() {
 void ConfigManager::init(SDL_Window* window) {
     m_window = window;
 
+    // Snapshot restart-sensitive settings before applying, so applyConfig()
+    // doesn't immediately detect a mismatch on first launch.
+    m_lastAppliedUiScale = Config::instance().getUiScale();
+    m_lastAppliedFloatingWindows = Config::instance().getEnableFloatingWindows();
+
     // Apply initial config (theme, render settings, log level)
     applyConfig();
 
@@ -41,7 +49,6 @@ void ConfigManager::init(SDL_Window* window) {
     m_configWatcher = std::make_unique<ConfigWatcher>();
     m_configWatcher->setOnChanged([this]() { onConfigFileChanged(); });
     m_configWatcher->watch(Config::instance().configFilePath());
-    m_lastAppliedUiScale = Config::instance().getUiScale();
 }
 
 void ConfigManager::poll(uint64_t ticksMs) {
@@ -82,8 +89,9 @@ void ConfigManager::applyConfig() {
     // Log level (live)
     log::setLevel(static_cast<log::Level>(cfg.getLogLevel()));
 
-    // UI scale requires restart
-    if (cfg.getUiScale() != m_lastAppliedUiScale) {
+    // UI scale and floating windows require restart
+    if (cfg.getUiScale() != m_lastAppliedUiScale ||
+        cfg.getEnableFloatingWindows() != m_lastAppliedFloatingWindows) {
         m_uiManager->showRestartPopup() = true;
     }
 }
@@ -102,7 +110,8 @@ void ConfigManager::spawnSettingsApp() {
         ShellExecuteW(nullptr, L"open", settingsPath.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
     }
 #elif defined(__linux__)
-    // Resolve path relative to the running executable
+    // Resolve path relative to the running executable, launch via fork/exec
+    // to avoid shell injection from directory names with special characters
     char exePath[1024] = {};
     ssize_t len = readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
     if (len > 0) {
@@ -112,11 +121,19 @@ void ConfigManager::spawnSettingsApp() {
         if (slash != std::string::npos) {
             dir = dir.substr(0, slash);
         }
-        std::string cmd = dir + "/dw_settings &";
-        std::system(cmd.c_str());
+        std::string settingsPath = dir + "/dw_settings";
+        pid_t pid = fork();
+        if (pid == 0) {
+            execlp(settingsPath.c_str(), settingsPath.c_str(), nullptr);
+            _exit(127);
+        }
         return;
     }
-    std::system("dw_settings &");
+    pid_t pid = fork();
+    if (pid == 0) {
+        execlp("dw_settings", "dw_settings", nullptr);
+        _exit(127);
+    }
 #endif
 }
 

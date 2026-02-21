@@ -17,8 +17,16 @@ bool Schema::initialize(Database& db) {
             log::debug("Schema", "Already up to date");
             return true;
         }
-        // Note: We don't do migrations, just recreate if needed
-        log::warningf("Schema", "Version mismatch: %d vs %d", version, CURRENT_VERSION);
+        if (version < CURRENT_VERSION) {
+            log::infof("Schema", "Migrating from version %d to %d", version, CURRENT_VERSION);
+            if (!migrate(db, version)) {
+                log::error("Schema", "Migration failed");
+                return false;
+            }
+            return true;
+        }
+        log::warningf("Schema", "Version mismatch (have %d, want %d) - attempting table creation",
+                      version, CURRENT_VERSION);
     }
 
     return createTables(db);
@@ -61,6 +69,26 @@ bool Schema::createTables(Database& db) {
         return false;
     }
 
+    // Materials table - wood species and material properties
+    if (!db.execute(R"(
+        CREATE TABLE IF NOT EXISTS materials (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            category TEXT NOT NULL DEFAULT 'hardwood',
+            archive_path TEXT,
+            janka_hardness REAL DEFAULT 0,
+            feed_rate REAL DEFAULT 0,
+            spindle_speed REAL DEFAULT 0,
+            depth_of_cut REAL DEFAULT 0,
+            cost_per_board_foot REAL DEFAULT 0,
+            grain_direction_deg REAL DEFAULT 0,
+            thumbnail_path TEXT,
+            imported_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    )")) {
+        return false;
+    }
+
     // Models table - the library backbone
     if (!db.execute(R"(
         CREATE TABLE IF NOT EXISTS models (
@@ -80,7 +108,10 @@ bool Schema::createTables(Database& db) {
             bounds_max_z REAL DEFAULT 0,
             thumbnail_path TEXT,
             imported_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            tags TEXT DEFAULT '[]'
+            tags TEXT DEFAULT '[]',
+            material_id INTEGER DEFAULT NULL,
+            orient_yaw REAL DEFAULT NULL,
+            orient_matrix TEXT DEFAULT NULL
         )
     )")) {
         return false;
@@ -209,6 +240,8 @@ bool Schema::createTables(Database& db) {
     }
 
     // Create indexes for common queries (best-effort)
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_materials_name ON materials(name)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_materials_category ON materials(category)");
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_models_hash ON models(hash)");
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_models_name ON models(name)");
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_models_format ON models(file_format)");
@@ -237,6 +270,30 @@ bool Schema::createTables(Database& db) {
     }
 
     log::info("Schema", "Database schema initialized successfully");
+    return true;
+}
+
+bool Schema::migrate(Database& db, int fromVersion) {
+    Transaction txn(db);
+
+    if (fromVersion < 5) {
+        // v5: Add orient columns to models table
+        (void)db.execute("ALTER TABLE models ADD COLUMN orient_yaw REAL DEFAULT NULL");
+        (void)db.execute("ALTER TABLE models ADD COLUMN orient_matrix TEXT DEFAULT NULL");
+        log::info("Schema", "Added orient_yaw and orient_matrix columns to models");
+    }
+
+    if (!setVersion(db, CURRENT_VERSION)) {
+        txn.rollback();
+        return false;
+    }
+
+    if (!txn.commit()) {
+        log::error("Schema", "Failed to commit migration");
+        return false;
+    }
+
+    log::infof("Schema", "Migrated to version %d", CURRENT_VERSION);
     return true;
 }
 

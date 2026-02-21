@@ -57,6 +57,7 @@ class SettingsApp {
     int m_navStyle = 0;
     int m_logLevel = 1;
     bool m_showStartPage = true;
+    bool m_enableFloatingWindows = false;
 
     // Render settings
     Vec3 m_lightDir{-0.5f, -1.0f, -0.3f};
@@ -75,6 +76,9 @@ class SettingsApp {
     char m_libraryDir[512]{};
     bool m_showImportErrorToasts = true;
     bool m_libraryDirValid = true; // Validation state for library directory
+
+    // API keys
+    char m_geminiApiKey[256]{};
 
     static constexpr int WINDOW_WIDTH = 520;
     static constexpr int WINDOW_HEIGHT = 480;

@@ -43,6 +43,8 @@ uniform vec3 uObjectColor;
 uniform vec3 uViewPos;
 uniform float uShininess;
 uniform bool uIsToolpath;
+uniform sampler2D uMaterialTexture;
+uniform bool uUseTexture;
 
 out vec4 FragColor;
 
@@ -50,13 +52,19 @@ void main() {
     vec3 normal = normalize(vNormal);
     vec3 lightDir = normalize(-uLightDir);
 
-    vec3 objectColor = uObjectColor;
+    vec3 objectColor;
 
-    // Toolpath mode: blend between cutting (blue-green) and rapid (orange-red) based on texCoord.x
+    // Toolpath mode overrides everything: blend cutting (blue-green) and rapid (orange-red)
     if (uIsToolpath) {
         vec3 cuttingColor = vec3(0.2, 0.6, 1.0);  // Blue for cutting moves (G1)
         vec3 rapidColor = vec3(1.0, 0.4, 0.1);     // Orange-red for rapid moves (G0)
         objectColor = mix(cuttingColor, rapidColor, vTexCoord.x);
+    } else if (uUseTexture) {
+        // Texture mode: sample wood grain texture
+        objectColor = texture(uMaterialTexture, vTexCoord).rgb;
+    } else {
+        // Solid color fallback
+        objectColor = uObjectColor;
     }
 
     // Ambient

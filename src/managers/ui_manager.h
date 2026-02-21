@@ -12,7 +12,7 @@
 
 #include "../core/types.h"
 
-typedef unsigned int ImGuiID;
+using ImGuiID = unsigned int;
 
 namespace dw {
 
@@ -23,6 +23,7 @@ class PropertiesPanel;
 class ProjectPanel;
 class GCodePanel;
 class CutOptimizerPanel;
+class MaterialsPanel;
 class StartPage;
 
 // Forward declarations - dialogs
@@ -36,6 +37,7 @@ struct ImportBatchSummary;
 struct ImportProgress;
 class LibraryManager;
 class ProjectManager;
+class MaterialManager;
 class ImportQueue;
 class Workspace;
 
@@ -63,7 +65,8 @@ class UIManager {
     // Initialize all panels and dialogs.
     // Does NOT wire StartPage callbacks (Application does that after
     // both UIManager and FileIOManager exist).
-    void init(LibraryManager* libraryManager, ProjectManager* projectManager);
+    void init(LibraryManager* libraryManager, ProjectManager* projectManager,
+              MaterialManager* materialManager);
 
     // Shutdown and destroy all UI resources
     void shutdown();
@@ -71,18 +74,18 @@ class UIManager {
     // --- Per-frame rendering ---
     void renderMenuBar();
     void renderPanels();
-    void renderImportProgress(ImportQueue* importQueue);  // DEPRECATED: Use renderBackgroundUI instead
-    void renderStatusBar(const LoadingState& loadingState, ImportQueue* importQueue);  // DEPRECATED: Use renderBackgroundUI instead
     void renderAboutDialog();
-    void renderRestartPopup(ActionCallback onRelaunch);
+    void renderRestartPopup(const ActionCallback& onRelaunch);
     void setupDefaultDockLayout(ImGuiID dockspaceId);
     void handleKeyboardShortcuts();
 
     // --- New background UI methods (Plan 02-05) ---
-    void renderBackgroundUI(float deltaTime, const LoadingState* loadingState);  // Renders StatusBar, ToastManager, ImportSummaryDialog
+    void renderBackgroundUI(
+        float deltaTime,
+        const LoadingState* loadingState); // Renders StatusBar, ToastManager, ImportSummaryDialog
 
     // --- Dock layout first-frame logic ---
-    bool isFirstFrame() const { return m_firstFrame; }
+    [[nodiscard]] bool isFirstFrame() const { return m_firstFrame; }
     void clearFirstFrame() { m_firstFrame = false; }
 
     // --- Panel accessors (Application needs these for wiring callbacks) ---
@@ -92,6 +95,7 @@ class UIManager {
     ProjectPanel* projectPanel() { return m_projectPanel.get(); }
     GCodePanel* gcodePanel() { return m_gcodePanel.get(); }
     CutOptimizerPanel* cutOptimizerPanel() { return m_cutOptimizerPanel.get(); }
+    MaterialsPanel* materialsPanel() { return m_materialsPanel.get(); }
     StartPage* startPage() { return m_startPage.get(); }
     FileDialog* fileDialog() { return m_fileDialog.get(); }
     LightingDialog* lightingDialog() { return m_lightingDialog.get(); }
@@ -105,6 +109,7 @@ class UIManager {
     bool& showProject() { return m_showProject; }
     bool& showGCode() { return m_showGCode; }
     bool& showCutOptimizer() { return m_showCutOptimizer; }
+    bool& showMaterials() { return m_showMaterials; }
     bool& showStartPage() { return m_showStartPage; }
     bool& showRestartPopup() { return m_showRestartPopup; }
 
@@ -121,12 +126,13 @@ class UIManager {
     // --- Import progress callbacks (Plan 02-05) ---
     void setImportProgress(const ImportProgress* progress);
     void showImportSummary(const ImportBatchSummary& summary);
+    void setImportCancelCallback(std::function<void()> callback);
 
     // --- Workspace state save/restore helpers ---
     void restoreVisibilityFromConfig();
     void saveVisibilityToConfig();
     void applyRenderSettingsFromConfig();
-    int64_t getSelectedModelId() const;
+    [[nodiscard]] int64_t getSelectedModelId() const;
 
   private:
     // UI Panels
@@ -136,6 +142,7 @@ class UIManager {
     std::unique_ptr<ProjectPanel> m_projectPanel;
     std::unique_ptr<GCodePanel> m_gcodePanel;
     std::unique_ptr<CutOptimizerPanel> m_cutOptimizerPanel;
+    std::unique_ptr<MaterialsPanel> m_materialsPanel;
     std::unique_ptr<StartPage> m_startPage;
 
     // Panel visibility
@@ -145,6 +152,7 @@ class UIManager {
     bool m_showProject = true;
     bool m_showGCode = false;
     bool m_showCutOptimizer = false;
+    bool m_showMaterials = false;
     bool m_showStartPage = true;
 
     // Dialogs
@@ -163,6 +171,12 @@ class UIManager {
 
     // First frame flag for dock layout
     bool m_firstFrame = true;
+
+    // Menu rendering helpers (extracted from renderMenuBar for complexity)
+    void renderFileMenu();
+    void renderViewMenu();
+    void renderEditMenu();
+    void renderHelpMenu();
 
     // Action callbacks (delegated to Application)
     ActionCallback m_onNewProject;

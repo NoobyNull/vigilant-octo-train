@@ -47,6 +47,7 @@ bool SettingsApp::init() {
     m_invertOrbitX = cfg.getInvertOrbitX();
     m_invertOrbitY = cfg.getInvertOrbitY();
     m_navStyle = cfg.getNavStyleIndex();
+    m_enableFloatingWindows = cfg.getEnableFloatingWindows();
     m_lightDir = cfg.getRenderLightDir();
     m_lightColor = cfg.getRenderLightColor();
     m_ambient = cfg.getRenderAmbient();
@@ -74,6 +75,10 @@ bool SettingsApp::init() {
     }
     std::strncpy(m_libraryDir, libraryPath.string().c_str(), sizeof(m_libraryDir) - 1);
     m_libraryDir[sizeof(m_libraryDir) - 1] = '\0';
+
+    // API keys
+    std::strncpy(m_geminiApiKey, cfg.getGeminiApiKey().c_str(), sizeof(m_geminiApiKey) - 1);
+    m_geminiApiKey[sizeof(m_geminiApiKey) - 1] = '\0';
 
     // Initialize SDL2
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -292,6 +297,35 @@ void SettingsApp::renderGeneralTab() {
     const char* logLevels[] = {"Debug", "Info", "Warning", "Error"};
     if (ImGui::Combo("Log Level", &m_logLevel, logLevels, 4))
         m_dirty = true;
+    ImGui::Unindent();
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    ImGui::Text("API Keys");
+    ImGui::Indent();
+    ImGui::SetNextItemWidth(-1);
+    if (ImGui::InputText("Gemini API Key", m_geminiApiKey, sizeof(m_geminiApiKey),
+                         ImGuiInputTextFlags_Password))
+        m_dirty = true;
+    ImGui::TextDisabled("Used for AI material generation (Gemini API).");
+    ImGui::Unindent();
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    ImGui::Text("Windows");
+    ImGui::Indent();
+    if (ImGui::Checkbox("Enable Floating Windows", &m_enableFloatingWindows))
+        m_dirty = true;
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Allow undocked panels to float as independent OS windows.\n"
+                          "Forces X11 mode on Wayland (via XWayland).\n"
+                          "Requires application restart.");
+    }
+    ImGui::TextDisabled("Requires restart. Uses X11/XWayland on Wayland.");
     ImGui::Unindent();
 }
 
@@ -658,6 +692,10 @@ void SettingsApp::applySettings() {
     cfg.setFileHandlingMode(static_cast<FileHandlingMode>(m_fileHandlingMode));
     cfg.setLibraryDir(Path(m_libraryDir));
     cfg.setShowImportErrorToasts(m_showImportErrorToasts);
+    cfg.setEnableFloatingWindows(m_enableFloatingWindows);
+
+    // API keys
+    cfg.setGeminiApiKey(m_geminiApiKey);
 
     cfg.save();
     m_dirty = false;

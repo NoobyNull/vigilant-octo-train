@@ -61,6 +61,7 @@ class ConfigManager {
 
     std::unique_ptr<ConfigWatcher> m_configWatcher;
     float m_lastAppliedUiScale = 1.0f;
+    bool m_lastAppliedFloatingWindows = false;
     std::function<void()> m_quitCallback;
 };
 

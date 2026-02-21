@@ -8,6 +8,7 @@
 #include "../../render/camera.h"
 #include "../../render/framebuffer.h"
 #include "../../render/renderer.h"
+#include "../../render/texture.h"
 #include "panel.h"
 
 namespace dw {
@@ -26,11 +27,16 @@ class ViewportPanel : public Panel {
 
     // Set mesh to display
     void setMesh(MeshPtr mesh);
+    // Set mesh that was already auto-oriented on worker thread
+    void setPreOrientedMesh(MeshPtr mesh, f32 orientYaw);
     void clearMesh();
 
     // Set toolpath mesh to display
     void setToolpathMesh(MeshPtr toolpathMesh);
     void clearToolpathMesh();
+
+    // Set active material texture for rendering (nullptr = solid color)
+    void setMaterialTexture(const Texture* texture) { m_materialTexture = texture; }
 
     // Camera access
     Camera& camera() { return m_camera; }
@@ -72,6 +78,9 @@ class ViewportPanel : public Panel {
 
     MeshPtr m_toolpathMesh;
     GPUMesh m_gpuToolpath;
+
+    // Active material texture (not owned — pointer to Application-managed texture)
+    const Texture* m_materialTexture = nullptr;
 
     // Light drag state
     bool m_lightDirDragging = false;

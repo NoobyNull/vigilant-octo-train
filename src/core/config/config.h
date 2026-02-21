@@ -21,9 +21,9 @@ enum class NavStyle : int {
 
 // File handling mode for imported models
 enum class FileHandlingMode : int {
-    LeaveInPlace = 0,   // Leave files at original location (no copy)
-    CopyToLibrary = 1,  // Copy imported files to library directory
-    MoveToLibrary = 2,  // Move imported files to library directory (delete original)
+    LeaveInPlace = 0,  // Leave files at original location (no copy)
+    CopyToLibrary = 1, // Copy imported files to library directory
+    MoveToLibrary = 2, // Move imported files to library directory (delete original)
 };
 
 // Application configuration (persisted to config directory)
@@ -133,6 +133,9 @@ class Config {
     bool getShowGCode() const { return m_wsShowGCode; }
     void setShowGCode(bool v) { m_wsShowGCode = v; }
 
+    bool getShowMaterials() const { return m_wsShowMaterials; }
+    void setShowMaterials(bool v) { m_wsShowMaterials = v; }
+
     bool getShowCutOptimizer() const { return m_wsShowCutOptimizer; }
     void setShowCutOptimizer(bool v) { m_wsShowCutOptimizer = v; }
 
@@ -154,6 +157,13 @@ class Config {
 
     bool getShowImportErrorToasts() const { return m_showImportErrorToasts; }
     void setShowImportErrorToasts(bool show) { m_showImportErrorToasts = show; }
+
+    bool getEnableFloatingWindows() const { return m_enableFloatingWindows; }
+    void setEnableFloatingWindows(bool enable) { m_enableFloatingWindows = enable; }
+
+    // API keys
+    const std::string& getGeminiApiKey() const { return m_geminiApiKey; }
+    void setGeminiApiKey(const std::string& key) { m_geminiApiKey = key; }
 
   private:
     Config();
@@ -203,6 +213,7 @@ class Config {
     bool m_wsShowLibrary = true;
     bool m_wsShowProperties = true;
     bool m_wsShowProject = true;
+    bool m_wsShowMaterials = false;
     bool m_wsShowGCode = false;
     bool m_wsShowCutOptimizer = false;
     bool m_wsShowStartPage = true;
@@ -216,6 +227,10 @@ class Config {
     FileHandlingMode m_fileHandlingMode = FileHandlingMode::LeaveInPlace;
     Path m_libraryDir; // Empty means default (app data dir / "library")
     bool m_showImportErrorToasts = true;
+    bool m_enableFloatingWindows = false;
+
+    // API keys
+    std::string m_geminiApiKey;
 };
 
 } // namespace dw

@@ -52,13 +52,13 @@ class ImportQueue {
     void setOnBatchComplete(SummaryCallback callback);
 
   private:
-    void processTask(ImportTask task);  // Note: takes by value for move into lambda
+    void processTask(ImportTask task); // Note: takes by value for move into lambda
 
     ConnectionPool& m_pool;
-    LibraryManager* m_libraryManager;  // Optional, for auto-detect
+    LibraryManager* m_libraryManager; // Optional, for auto-detect
 
     // Thread management
-    std::unique_ptr<ThreadPool> m_threadPool;  // Lazily created
+    std::unique_ptr<ThreadPool> m_threadPool; // Lazily created
     std::mutex m_mutex;
     std::atomic<bool> m_shutdown{false};
     std::atomic<bool> m_cancelRequested{false};

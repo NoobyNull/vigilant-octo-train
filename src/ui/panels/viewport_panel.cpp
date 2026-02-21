@@ -60,6 +60,26 @@ void ViewportPanel::setMesh(MeshPtr mesh) {
     m_viewCubeCache.valid = false;
 }
 
+void ViewportPanel::setPreOrientedMesh(MeshPtr mesh, f32 orientYaw) {
+    m_mesh = mesh;
+
+    if (m_gpuMesh.vao != 0) {
+        m_gpuMesh.destroy();
+    }
+
+    if (m_mesh && m_mesh->isValid()) {
+        m_gpuMesh = m_renderer.uploadMesh(*m_mesh);
+        fitToModel();
+
+        if (m_mesh->wasAutoOriented()) {
+            m_camera.setYaw(orientYaw);
+            m_camera.setPitch(0.0f);
+        }
+    }
+
+    m_viewCubeCache.valid = false;
+}
+
 void ViewportPanel::clearMesh() {
     m_mesh = nullptr;
     if (m_gpuMesh.vao != 0) {
@@ -286,9 +306,9 @@ void ViewportPanel::renderViewport() {
     m_renderer.renderGrid(20.0f, 1.0f);
     m_renderer.renderAxis(2.0f);
 
-    // Render mesh
+    // Render mesh (with material texture if assigned)
     if (m_gpuMesh.vao != 0) {
-        m_renderer.renderMesh(m_gpuMesh);
+        m_renderer.renderMesh(m_gpuMesh, m_materialTexture);
     }
 
     // Render toolpath (if present)
@@ -363,8 +383,8 @@ void ViewportPanel::renderViewCube() {
     };
 
     const std::array<Face, 6> faces = {{
-        {{0, 1, 2, 3}, "F", 0.0f, 0.0f},    // Front (-Z)
-        {{5, 4, 7, 6}, "Bk", 180.0f, 0.0f}, // Back (+Z)
+        {{0, 1, 2, 3}, "Bk", 0.0f, 0.0f},   // Back (-Z)
+        {{5, 4, 7, 6}, "F", 180.0f, 0.0f},  // Front (+Z)
         {{1, 5, 6, 2}, "R", 90.0f, 0.0f},   // Right (+X)
         {{4, 0, 3, 7}, "L", 270.0f, 0.0f},  // Left (-X)
         {{3, 2, 6, 7}, "T", 0.0f, 89.0f},   // Top (+Y)

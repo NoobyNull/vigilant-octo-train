@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "../../core/database/model_repository.h"
+#include "../../core/materials/material.h"
 #include "../../core/mesh/mesh.h"
 #include "../../core/types.h"
 #include "panel.h"
@@ -42,6 +43,22 @@ class PropertiesPanel : public Panel {
     // Access current object color
     const Color& objectColor() const { return m_objectColor; }
 
+    // Material display and management
+    void setMaterial(const MaterialRecord& material) { m_material = material; }
+    void clearMaterial() { m_material.reset(); }
+
+    // Callback when grain direction slider changes (0-360 degrees)
+    using GrainDirectionCallback = std::function<void(float)>;
+    void setOnGrainDirectionChanged(GrainDirectionCallback callback) {
+        m_onGrainDirectionChanged = std::move(callback);
+    }
+
+    // Callback when user clicks "Remove Material"
+    using MaterialRemovedCallback = std::function<void()>;
+    void setOnMaterialRemoved(MaterialRemovedCallback callback) {
+        m_onMaterialRemoved = std::move(callback);
+    }
+
   private:
     void renderModelRecordInfo();
     void renderMeshInfo();
@@ -58,6 +75,9 @@ class PropertiesPanel : public Panel {
     // Material color (local storage, wired to renderer via callback)
     Color m_objectColor = Color::fromHex(0x6699CC);
 
+    // Assigned material (optional - null if no material assigned)
+    std::optional<MaterialRecord> m_material;
+
     // Transform UI state
     float m_targetSize = 1.0f;
     float m_translate[3] = {0.0f, 0.0f, 0.0f};
@@ -67,6 +87,8 @@ class PropertiesPanel : public Panel {
     // Callbacks
     MeshModifiedCallback m_onMeshModified;
     ColorChangedCallback m_onColorChanged;
+    GrainDirectionCallback m_onGrainDirectionChanged;
+    MaterialRemovedCallback m_onMaterialRemoved;
 };
 
 } // namespace dw

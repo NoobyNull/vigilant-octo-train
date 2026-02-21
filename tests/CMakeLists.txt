@@ -16,6 +16,7 @@ set(DW_TEST_SOURCES
     test_mesh.cpp
     test_database.cpp
     test_model_repository.cpp
+    test_material_repository.cpp
     test_project_repository.cpp
     test_loader_factory.cpp
     test_project.cpp
@@ -38,6 +39,9 @@ set(DW_TEST_SOURCES
     test_config_watcher.cpp
     test_app_paths.cpp
     test_cost_repository.cpp
+    test_material_archive.cpp
+    test_material_manager.cpp
+    test_mesh_uv.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
     # Stubs for GL-dependent classes
@@ -69,12 +73,17 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/database/connection_pool.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/schema.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/model_repository.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/database/material_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/project_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/cost_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/gcode_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/project/project.cpp
     ${CMAKE_SOURCE_DIR}/src/core/export/model_exporter.cpp
     ${CMAKE_SOURCE_DIR}/src/core/archive/archive.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/materials/material_archive.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/materials/default_materials.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/materials/material_manager.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/loaders/texture_loader.cpp
     ${CMAKE_SOURCE_DIR}/src/core/library/library_manager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/import/import_queue.cpp
     ${CMAKE_SOURCE_DIR}/src/core/import/file_handler.cpp
@@ -99,12 +108,15 @@ target_link_libraries(dw_tests PRIVATE
     glm::glm
     SQLite::SQLite3
     ZLIB::ZLIB
+    miniz_static
+    nlohmann_json::nlohmann_json
 )
 
 # Include source directories for testing internal modules
 target_include_directories(dw_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_BINARY_DIR}/generated
+    ${stb_SOURCE_DIR}
 )
 
 # Pass source dir to lint compliance tests
