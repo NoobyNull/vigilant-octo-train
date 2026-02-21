@@ -64,6 +64,9 @@ class MaterialsPanel : public Panel {
     // Load a TGA file into an OpenGL texture, returns 0 on failure
     GLuint loadTGATexture(const Path& path);
 
+    // Load a PNG from raw bytes into an OpenGL texture, returns 0 on failure
+    GLuint loadPNGTexture(const uint8_t* data, size_t size);
+
     // Release all cached GL textures
     void clearTextureCache();
 

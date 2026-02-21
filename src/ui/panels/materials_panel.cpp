@@ -7,6 +7,8 @@
 
 #include <imgui.h>
 
+#include "../../core/loaders/texture_loader.h"
+#include "../../core/materials/material_archive.h"
 #include "../../core/utils/log.h"
 #include "../icons.h"
 
@@ -644,12 +646,46 @@ GLuint MaterialsPanel::getThumbnailTexture(const MaterialRecord& material) {
     }
 
     GLuint tex = 0;
-    if (!material.thumbnailPath.empty()) {
+
+    // Try loading thumbnail from explicit path (TGA)
+    if (tex == 0 && !material.thumbnailPath.empty()) {
         tex = loadTGATexture(material.thumbnailPath);
+    }
+
+    // Try extracting texture from .dwmat archive
+    if (tex == 0 && !material.archivePath.empty()) {
+        auto data = MaterialArchive::load(material.archivePath.string());
+        if (data && !data->textureData.empty()) {
+            tex = loadPNGTexture(data->textureData.data(), data->textureData.size());
+        }
     }
 
     m_thumbnailCache[material.id] = tex;
     return tex;
+}
+
+GLuint MaterialsPanel::loadPNGTexture(const uint8_t* data, size_t size) {
+    auto texData = TextureLoader::loadPNGFromMemory(data, size);
+    if (!texData || texData->pixels.empty()) {
+        return 0;
+    }
+
+    GLuint texture = 0;
+    glGenTextures(1, &texture);
+    if (texture == 0) {
+        return 0;
+    }
+
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, texData->width, texData->height, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, texData->pixels.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    return texture;
 }
 
 // ---------------------------------------------------------------------------
