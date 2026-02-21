@@ -37,9 +37,7 @@ class ProjectPanel : public Panel {
 
     // Callback when a recent project is clicked
     using RecentProjectCallback = std::function<void(const Path&)>;
-    void setOnOpenRecentProject(RecentProjectCallback cb) {
-        m_onOpenRecentProject = std::move(cb);
-    }
+    void setOnOpenRecentProject(RecentProjectCallback cb) { m_onOpenRecentProject = std::move(cb); }
 
   private:
     void renderProjectInfo();

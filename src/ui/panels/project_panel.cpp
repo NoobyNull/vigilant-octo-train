@@ -166,8 +166,7 @@ void ProjectPanel::renderNoProject() {
                 name = projectPath.filename().string();
             }
 
-            if (ImGui::Selectable(name.c_str(), false, ImGuiSelectableFlags_None,
-                                  ImVec2(0, 24))) {
+            if (ImGui::Selectable(name.c_str(), false, ImGuiSelectableFlags_None, ImVec2(0, 24))) {
                 if (m_onOpenRecentProject) {
                     m_onOpenRecentProject(projectPath);
                 }
