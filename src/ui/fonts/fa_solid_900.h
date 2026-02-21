@@ -1,3 +1,5 @@
+#pragma once
+
 // clang-format off
 // File: '/tmp/fa_extract/fontawesome-free-6.5.1-desktop/otfs/Font Awesome 6 Free-Solid-900.otf' (1023996 bytes)
 // Exported using binary_to_compressed_c.exe -base85 "/tmp/fa_extract/fontawesome-free-6.5.1-desktop/otfs/Font Awesome 6 Free-Solid-900.otf" fa_solid_900
@@ -4808,10 +4810,11 @@ static const char fa_solid_900_compressed_data_base85[673280+1] =
     "@2rKEGJ=jLB&]iL2f7iL:[2a'u-R0#ldA3M,S_Xo?;12#90d9M5$SKu>)d'&c%n928D1X:@=.5/mRtx+UJf--(@&_Si_Ds-'?<jLGx^Eu5GN>5.0@X1cJ>_/A?Yc227#^P%&+aAMi:kF"
     "H1XMKT:A&,$Gv/C1,L#$3EK`O>1i^>fi`Qjm2YSj)2BZ$$`kgL4RG&#G3*jL+>UkLICgr-6%Pk+^NCwK2V5;-@63W%O*2wgfS>_/-7h>$WJPi:'vLj;x^i/#PpX?-$W_@->U^C-Kx(t-"
     "2hZ.MrJ^YGIZbLY=1*T.m<tx#I.'`OQ4M'#S41`.F?;,#:Z]4Vh$nM&m>`*M)@9C-=0:k*&AZW-7vMR*A4v^]jmv90s`1#$3Xgp7_/1^#VUiX-3NZ-dZ7DW-_-Yq)1>):.eZu##6$9wP"
-    "(dc&#'fCxL/qS%#9BsQ.i^''#;#d;-K^mL-bfi6MT_G&#ha9B#==4gLrkkjLL2r1./:hHM-Rda$3MTY,>vEv$Maa-dgBYJ(T.r3=2)=A+u95,MkpS%#?)B;-Ql+G-VG[r79<?Z$v79p7"
-    "nR7_8fZR_8?K/=#NhYs.jLWiKJXP8/9&AW.^4$v#5k:s.V59p&m$pW79#SfCnAll&dW8_So0Y^'Pa[NO5>jF&r)hB#*x_@-Qx=G-C+/f.f<tx#wIvD-=xt_.mMHC#x`:ENLG?##FQFv-"
-    "]KvtLR#br7i/h>$N6)=-N:)=-(X*+.>qZiLkC?##Dq1B#]^KD3>CSd*KL?>#w;fs%8ONP&VZ]6'@*gi'DBGJ(>%Nq26=X-?f.n9275TY,cL5;-gelr-k'MS.=2S8/7c,r/wpEM0%3'/1"
+    "(dc&#'fCxL/qS%#9BsQ.i^''#;#d;-K^mL-bfi6MT_G&#ha9B#==4gLrkkjLL2r1./:hHM-Rda$3MTY,>vEv$Maa-"
+    "dgBYJ(T.r3=2)=A+u95,MkpS%#?)B;-Ql+G-VG[r79<?Z$v79p7"
+    "nR7_8fZR_8?K/=#NhYs.jLWiKJXP8/9&AW.^4$v#5k:s.V59p&m$pW79#SfCnAll&dW8_So0Y^'Pa[NO5>jF&r)hB#"
+    "*x_@-Qx=G-C+/f.f<tx#wIvD-=xt_.mMHC#x`:ENLG?##FQFv-"
+    "]KvtLR#br7i/h>$N6)=-N:)=-(X*+.>qZiLkC?##Dq1B#]^KD3>CSd*KL?>#w;fs%8ONP&VZ]6'@*gi'DBGJ(>%Nq26="
+    "X-?f.n9275TY,cL5;-gelr-k'MS.=2S8/7c,r/wpEM0%3'/1"
     ")K^f1-d>G2TU:Atj7j>D";
 // clang-format on
-
-

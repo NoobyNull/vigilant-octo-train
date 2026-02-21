@@ -37,13 +37,13 @@
 #include "managers/ui_manager.h"
 #include "render/texture.h"
 #include "render/thumbnail_generator.h"
+#include "ui/dialogs/import_summary_dialog.h"
 #include "ui/panels/library_panel.h"
 #include "ui/panels/materials_panel.h"
 #include "ui/panels/project_panel.h"
 #include "ui/panels/properties_panel.h"
 #include "ui/panels/start_page.h"
 #include "ui/panels/viewport_panel.h"
-#include "ui/dialogs/import_summary_dialog.h"
 #include "ui/widgets/toast.h"
 #include "version.h"
 
@@ -133,14 +133,14 @@ bool Application::init() {
     // Load default font, then merge FontAwesome 6 Solid icons into it
     io.Fonts->AddFontDefault();
     {
-        #include "ui/fonts/fa_solid_900.h"
-        static const ImWchar iconRanges[] = { 0xf000, 0xf8ff, 0 };
+#include "ui/fonts/fa_solid_900.h"
+        static const ImWchar iconRanges[] = {0xf000, 0xf8ff, 0};
         ImFontConfig iconCfg;
         iconCfg.MergeMode = true;
         iconCfg.PixelSnapH = true;
         iconCfg.GlyphMinAdvanceX = 16.0f;
-        io.Fonts->AddFontFromMemoryCompressedBase85TTF(
-            fa_solid_900_compressed_data_base85, 16.0f, &iconCfg, iconRanges);
+        io.Fonts->AddFontFromMemoryCompressedBase85TTF(fa_solid_900_compressed_data_base85, 16.0f,
+                                                       &iconCfg, iconRanges);
     }
 
     ImGui_ImplSDL2_InitForOpenGL(m_window, m_glContext);

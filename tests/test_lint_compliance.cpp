@@ -111,6 +111,11 @@ TEST(LintCompliance, NoLongLines) {
     auto files = collectFiles(TIER2_DIRS, {".h", ".cpp"});
 
     for (const auto& path : files) {
+        // Skip generated font data files (immutable and necessarily long strings)
+        if (path.find("fa_solid_900.h") != std::string::npos) {
+            continue;
+        }
+
         std::ifstream f(path);
         std::string line;
         int lineNum = 0;
