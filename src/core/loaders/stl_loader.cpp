@@ -106,11 +106,10 @@ LoadResult STLLoader::loadBinary(const ByteBuffer& data) {
         return LoadResult{nullptr, oss.str()};
     }
 
-    // Binary STL stores per-face normals, so shared-position vertices have different
-    // normals and almost never deduplicate. Skip dedup — build flat arrays directly.
-    const u32 vertexCount = triangleCount * 3;
-    std::vector<Vertex> vertices(vertexCount);
-    std::vector<u32> indices(vertexCount);
+    // Binary STL stores per-face normals, but we can deduplicate vertices that have
+    // identical position AND normal (common case where faces share normals).
+    auto mesh = std::make_shared<Mesh>();
+    std::unordered_map<Vertex, u32> vertexMap;
 
     // Each binary STL triangle: 12 bytes normal + 3×12 bytes vertices + 2 bytes attr = 50 bytes
     for (u32 i = 0; i < triangleCount; ++i) {
@@ -125,7 +124,7 @@ LoadResult STLLoader::loadBinary(const ByteBuffer& data) {
         }
 
         Vec3 normal{triData[0], triData[1], triData[2]};
-        u32 base = i * 3;
+        std::vector<u32> faceIndices;
 
         // 3 vertices starting at triData[3]
         for (int j = 0; j < 3; ++j) {
@@ -134,13 +133,26 @@ LoadResult STLLoader::loadBinary(const ByteBuffer& data) {
                 !std::isfinite(triData[off + 2])) {
                 return LoadResult{nullptr, "STL contains invalid vertex data (NaN or Inf values)"};
             }
-            vertices[base + j] =
-                Vertex{Vec3{triData[off], triData[off + 1], triData[off + 2]}, normal};
-            indices[base + j] = base + j;
+
+            Vertex v{Vec3{triData[off], triData[off + 1], triData[off + 2]}, normal};
+
+            // Deduplicate: check if this vertex (position + normal) already exists
+            auto it = vertexMap.find(v);
+            if (it != vertexMap.end()) {
+                faceIndices.push_back(it->second);
+            } else {
+                u32 index = mesh->vertexCount();
+                vertexMap[v] = index;
+                mesh->addVertex(v);
+                faceIndices.push_back(index);
+            }
+        }
+
+        // Add triangle
+        if (faceIndices.size() == 3) {
+            mesh->addTriangle(faceIndices[0], faceIndices[1], faceIndices[2]);
         }
     }
-
-    auto mesh = std::make_shared<Mesh>(std::move(vertices), std::move(indices));
 
     mesh->recalculateBounds();
 

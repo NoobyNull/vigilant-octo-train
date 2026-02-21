@@ -11,6 +11,7 @@
 #include "../../core/loaders/texture_loader.h"
 #include "../../core/materials/material_archive.h"
 #include "../../core/utils/log.h"
+#include "../context_menu_manager.h"
 #include "../icons.h"
 
 namespace dw {
@@ -42,6 +43,13 @@ void MaterialsPanel::refresh() {
 void MaterialsPanel::render() {
     if (!m_open) {
         return;
+    }
+
+    // Lazy initialize context menu manager on first render
+    if (m_contextMenuManager == nullptr) {
+        // This will be set by UIManager after panel initialization
+        // For now, we create a placeholder that will be replaced
+        // registerContextMenuEntries will be called once manager is available
     }
 
     ImGui::SetNextWindowSize(ImVec2(600, 500), ImGuiCond_FirstUseEver);
@@ -225,6 +233,56 @@ void MaterialsPanel::renderToolbar() {
 }
 
 // ---------------------------------------------------------------------------
+// Context menu
+// ---------------------------------------------------------------------------
+
+void MaterialsPanel::registerContextMenuEntries() {
+    if (!m_contextMenuManager) {
+        return;
+    }
+
+    std::vector<ContextMenuEntry> materialEntries = {
+        {.label = "Edit",
+         .action =
+             [this]() {
+                 if (m_currentContextMenuMaterial) {
+                     m_editBuffer = *m_currentContextMenuMaterial;
+                     m_isNewMaterial = false;
+                     m_showEditForm = true;
+                 }
+             }},
+        {.label = "Export",
+         .action =
+             [this]() {
+                 if (m_currentContextMenuMaterial) {
+                     log::info("MaterialsPanel",
+                               "Export material requested (file dialog not yet wired)");
+                 }
+             }},
+        ContextMenuEntry::separator(),
+        {.label = "Set as Default Material",
+         .action =
+             [this]() {
+                 if (m_currentContextMenuMaterial) {
+                     Config::instance().setDefaultMaterialId(m_currentContextMenuMaterial->id);
+                     Config::instance().save();
+                 }
+             }},
+        ContextMenuEntry::separator(),
+        {.label = "Delete",
+         .action =
+             [this]() {
+                 if (m_currentContextMenuMaterial) {
+                     m_deleteId = m_currentContextMenuMaterial->id;
+                     m_deleteName = m_currentContextMenuMaterial->name;
+                     m_showDeleteConfirm = true;
+                 }
+             }},
+    };
+    m_contextMenuManager->registerEntries("MaterialsPanel_MaterialContext", materialEntries);
+}
+
+// ---------------------------------------------------------------------------
 // Category tabs
 // ---------------------------------------------------------------------------
 
@@ -339,33 +397,14 @@ void MaterialsPanel::renderMaterialGrid(const std::vector<MaterialRecord>& mater
         }
 
         // Context menu
-        if (ImGui::BeginPopupContextItem("MatContext")) {
-            if (ImGui::MenuItem("Edit")) {
-                m_editBuffer = mat;
-                m_isNewMaterial = false;
-                m_showEditForm = true;
-            }
-            if (ImGui::MenuItem("Export")) {
-                log::info("MaterialsPanel",
-                          "Export material requested (file dialog not yet wired)");
-            }
-
-            bool isDefault = (mat.id == Config::instance().getDefaultMaterialId());
-            if (ImGui::MenuItem("Set as Default", nullptr, isDefault)) {
-                if (!isDefault) {
-                    Config::instance().setDefaultMaterialId(mat.id);
-                    Config::instance().save();
-                }
-            }
-
-            ImGui::Separator();
-            if (ImGui::MenuItem("Delete")) {
-                m_deleteId = mat.id;
-                m_deleteName = mat.name;
-                m_showDeleteConfirm = true;
+        m_currentContextMenuMaterial = mat;
+        if (ImGui::BeginPopupContextItem("MaterialsPanel_MaterialContext")) {
+            if (m_contextMenuManager) {
+                m_contextMenuManager->render("MaterialsPanel_MaterialContext");
             }
             ImGui::EndPopup();
         }
+        m_currentContextMenuMaterial = std::nullopt;
 
         // Draw thumbnail or placeholder over the selectable
         ImVec2 itemMin = ImGui::GetItemRectMin();

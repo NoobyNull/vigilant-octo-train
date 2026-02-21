@@ -281,20 +281,40 @@ bool Application::init() {
             if (!m_libraryManager)
                 return;
             auto record = m_libraryManager->getModel(modelId);
-            if (!record)
+            if (!record) {
+                ToastManager::instance().show(ToastType::Error, "Thumbnail Failed",
+                                              "Model not found in database");
                 return;
+            }
             Path filePath = record->filePath;
-            std::thread([this, filePath, modelId]() {
+            std::string modelName = record->name;
+            ToastManager::instance().show(ToastType::Info, "Regenerating Thumbnail", modelName);
+            std::thread([this, filePath, modelId, modelName]() {
                 auto result = LoaderFactory::load(filePath);
-                if (!result)
+                if (!result) {
+                    m_mainThreadQueue->enqueue([modelName, error = result.error]() {
+                        ToastManager::instance().show(
+                            ToastType::Error, "Thumbnail Failed",
+                            modelName + ": " + (error.empty() ? "failed to load file" : error));
+                    });
                     return;
+                }
                 if (Config::instance().getAutoOrient())
                     result.mesh->autoOrient();
                 auto mesh = result.mesh;
-                m_mainThreadQueue->enqueue([this, mesh, modelId]() {
-                    m_libraryManager->generateThumbnail(modelId, *mesh);
-                    if (m_uiManager->libraryPanel())
+                m_mainThreadQueue->enqueue([this, mesh, modelId, modelName]() {
+                    bool ok = m_libraryManager->generateThumbnail(modelId, *mesh);
+                    if (m_uiManager->libraryPanel()) {
+                        m_uiManager->libraryPanel()->invalidateThumbnail(modelId);
                         m_uiManager->libraryPanel()->refresh();
+                    }
+                    if (ok) {
+                        ToastManager::instance().show(ToastType::Success, "Thumbnail Updated",
+                                                      modelName);
+                    } else {
+                        ToastManager::instance().show(ToastType::Error, "Thumbnail Failed",
+                                                      modelName + ": generation failed");
+                    }
                 });
             }).detach();
         });

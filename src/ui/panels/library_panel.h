@@ -55,9 +55,15 @@ class LibraryPanel : public Panel {
     // Refresh the model and G-code lists
     void refresh();
 
+    // Invalidate cached thumbnail texture for a model (forces reload from disk)
+    void invalidateThumbnail(int64_t modelId);
+
     // Get/set currently selected model ID (-1 if none)
     int64_t selectedModelId() const { return m_selectedModelId; }
     void setSelectedModelId(int64_t id) { m_selectedModelId = id; }
+
+    // Set context menu manager (must be called before first render)
+    void setContextMenuManager(ContextMenuManager* mgr);
 
   private:
     enum class ViewTab { All, Models, GCode };
@@ -120,6 +126,7 @@ class LibraryPanel : public Panel {
 
     // Context menu management
     ContextMenuManager* m_contextMenuManager = nullptr;
+    bool m_contextMenuRegistered = false;
     std::optional<ModelRecord> m_currentContextMenuModel;
     std::optional<GCodeRecord> m_currentContextMenuGCode;
 };

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -12,6 +13,9 @@
 #include "panel.h"
 
 namespace dw {
+
+// Forward declaration
+class ContextMenuManager;
 
 // Materials panel for browsing, selecting, editing, importing, and exporting wood species materials
 class MaterialsPanel : public Panel {
@@ -49,6 +53,14 @@ class MaterialsPanel : public Panel {
     // Set whether a model is loaded (enables/disables Assign button)
     void setModelLoaded(bool loaded) { m_modelLoaded = loaded; }
 
+    // Set context menu manager (called by UIManager during initialization)
+    void setContextMenuManager(ContextMenuManager* manager) {
+        m_contextMenuManager = manager;
+        if (m_contextMenuManager != nullptr) {
+            registerContextMenuEntries();
+        }
+    }
+
   private:
     enum class CategoryTab { All, Hardwood, Softwood, Domestic, Composite };
 
@@ -57,6 +69,9 @@ class MaterialsPanel : public Panel {
     void renderMaterialGrid(const std::vector<MaterialRecord>& materials);
     void renderEditForm();
     void renderDeleteConfirm();
+
+    // Register context menu entries with ContextMenuManager
+    void registerContextMenuEntries();
 
     // Get a cached GL texture for a material thumbnail (loads lazily)
     GLuint getThumbnailTexture(const MaterialRecord& material);
@@ -106,6 +121,10 @@ class MaterialsPanel : public Panel {
 
     bool m_modelLoaded = false;
     float m_thumbnailSize = 96.0f;
+
+    // Context menu manager (lazy initialized)
+    ContextMenuManager* m_contextMenuManager = nullptr;
+    std::optional<MaterialRecord> m_currentContextMenuMaterial;
 };
 
 } // namespace dw

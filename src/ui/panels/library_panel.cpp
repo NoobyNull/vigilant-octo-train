@@ -25,6 +25,10 @@ LibraryPanel::~LibraryPanel() {
     clearTextureCache();
 }
 
+void LibraryPanel::setContextMenuManager(ContextMenuManager* mgr) {
+    m_contextMenuManager = mgr;
+}
+
 void LibraryPanel::clearTextureCache() {
     for (auto& [id, tex] : m_textureCache) {
         if (tex != 0) {
@@ -121,9 +125,10 @@ void LibraryPanel::render() {
         return;
     }
 
-    // Lazy initialization of context menu manager on first render
-    if (!m_contextMenuManager) {
+    // Lazy initialization of context menu entries on first render
+    if (!m_contextMenuRegistered && m_contextMenuManager) {
         registerContextMenuEntries();
+        m_contextMenuRegistered = true;
     }
 
     if (ImGui::Begin(m_title.c_str(), &m_open)) {
@@ -149,6 +154,15 @@ void LibraryPanel::render() {
         renderDeleteConfirm();
     }
     ImGui::End();
+}
+
+void LibraryPanel::invalidateThumbnail(int64_t modelId) {
+    auto it = m_textureCache.find(modelId);
+    if (it != m_textureCache.end()) {
+        if (it->second != 0)
+            glDeleteTextures(1, &it->second);
+        m_textureCache.erase(it);
+    }
 }
 
 void LibraryPanel::refresh() {
@@ -447,12 +461,6 @@ void LibraryPanel::registerContextMenuEntries() {
              [this]() {
                  if (m_onRegenerateThumbnail && m_currentContextMenuModel) {
                      m_onRegenerateThumbnail(m_currentContextMenuModel->id);
-                     auto it = m_textureCache.find(m_currentContextMenuModel->id);
-                     if (it != m_textureCache.end()) {
-                         if (it->second != 0)
-                             glDeleteTextures(1, &it->second);
-                         m_textureCache.erase(it);
-                     }
                  }
              }},
         {.label = "Assign Default Material",
