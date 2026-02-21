@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(./install.sh:*)"
+      "Bash(__NEW_LINE_f8aec7a1a1dc88ef__ echo \"\")",
+      "Bash(xargs awk 'length > 100 {count++} END {print count+0}' echo \"\" echo \"=== Lines over 120 chars ===\" find /data/DW/src -name '*.cpp' -o -name '*.h')",
+      "Bash(xargs awk 'length > 120 {count++} END {print count+0}' echo \"\" echo \"=== Lines over 150 chars ===\" find /data/DW/src -name '*.cpp' -o -name '*.h')",
+      "Bash(xargs awk 'length > 150 {count++} END {print count+0}' echo \"\" echo \"=== Total lines ===\" find /data/DW/src -name '*.cpp' -o -name '*.h')",
+      "Bash(xargs awk:*)",
+      "Bash(while read f)",
+      "Bash(done)"
     ]
   }
 }

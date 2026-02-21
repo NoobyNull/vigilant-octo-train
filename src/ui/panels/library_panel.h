@@ -36,9 +36,7 @@ class LibraryPanel : public Panel {
     }
 
     // Callback when a G-code file is double-clicked (load into viewport)
-    void setOnGCodeOpened(GCodeSelectedCallback callback) {
-        m_onGCodeOpened = std::move(callback);
-    }
+    void setOnGCodeOpened(GCodeSelectedCallback callback) { m_onGCodeOpened = std::move(callback); }
 
     // Refresh the model and G-code lists
     void refresh();
@@ -60,6 +58,7 @@ class LibraryPanel : public Panel {
     void renderContextMenu(const ModelRecord& model);
     void renderGCodeContextMenu(const GCodeRecord& gcode);
     void renderRenameDialog();
+    void renderDeleteConfirm();
 
     // Load a TGA file into an OpenGL texture, returns 0 on failure
     GLuint loadTGATexture(const Path& path);
@@ -91,6 +90,12 @@ class LibraryPanel : public Panel {
     bool m_showRenameDialog = false;
     int64_t m_renameModelId = 0;
     char m_renameBuffer[256] = {};
+
+    // Delete confirmation state
+    bool m_showDeleteConfirm = false;
+    int64_t m_deleteItemId = 0;
+    bool m_deleteIsGCode = false;
+    std::string m_deleteItemName;
 
     // View options
     bool m_showThumbnails = true;

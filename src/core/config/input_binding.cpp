@@ -158,9 +158,9 @@ const char* bindActionName(BindAction action) {
 InputBinding defaultBinding(BindAction action) {
     switch (action) {
     case BindAction::LightDirDrag:
-        return {Mod_None, InputType::MouseButton, 3}; // Mouse X1 (thumb button)
+        return {Mod_Alt, InputType::MouseButton, 0}; // Alt+LMB
     case BindAction::LightIntensityDrag:
-        return {Mod_None, InputType::MouseButton, 4}; // Mouse X2 (thumb button)
+        return {Mod_Alt | Mod_Shift, InputType::MouseButton, 2}; // Alt+Shift+MMB
     default:
         return {};
     }

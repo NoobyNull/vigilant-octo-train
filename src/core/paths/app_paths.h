@@ -31,6 +31,13 @@ Path getDatabasePath();
 // Log file path
 Path getLogPath();
 
+// Materials directory (app-managed .dwmat files)
+Path getMaterialsDir();
+
+// Bundled materials directory (shipped .dwmat files next to the executable)
+// Returns <exe_dir>/resources/materials/
+Path getBundledMaterialsDir();
+
 // Ensure all application directories exist
 bool ensureDirectoriesExist();
 

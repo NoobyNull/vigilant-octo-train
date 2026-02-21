@@ -48,8 +48,8 @@ void ImportQueue::enqueue(const std::vector<Path>& paths) {
     // Warn if thread count exceeds connection pool size
     // Note: ConnectionPool size is fixed at construction, so we can't resize it here
     // This is a wiring concern for Application to ensure pool has adequate size
-    log::infof("Import", "Starting batch import: %zu files, %zu workers",
-               paths.size(), threadCount);
+    log::infof("Import", "Starting batch import: %zu files, %zu workers", paths.size(),
+               threadCount);
 
     // Reset progress
     m_progress.reset();
@@ -68,9 +68,8 @@ void ImportQueue::enqueue(const std::vector<Path>& paths) {
         task.importType = importTypeFromExtension(task.extension);
 
         // Enqueue to thread pool - capture task by value (moved into lambda)
-        m_threadPool->enqueue([this, task = std::move(task)]() mutable {
-            processTask(std::move(task));
-        });
+        m_threadPool->enqueue(
+            [this, task = std::move(task)]() mutable { processTask(std::move(task)); });
     }
 }
 
@@ -403,10 +402,12 @@ void ImportQueue::processTask(ImportTask task) {
 
                     if (groups.empty()) {
                         // No groups yet - create default "Imported" group
-                        auto newGroupId = m_libraryManager->createOperationGroup(*matchedModelId, "Imported", 0);
+                        auto newGroupId =
+                            m_libraryManager->createOperationGroup(*matchedModelId, "Imported", 0);
                         if (newGroupId) {
                             groupId = *newGroupId;
-                            log::infof("Import", "Created 'Imported' group for model '%s'", modelRecord->name.c_str());
+                            log::infof("Import", "Created 'Imported' group for model '%s'",
+                                       modelRecord->name.c_str());
                         }
                     } else {
                         // Use first existing group
@@ -423,11 +424,20 @@ void ImportQueue::processTask(ImportTask task) {
                 }
             } else {
                 // No match or ambiguous - standalone import
-                log::infof("Import", "No model match for '%s', imported as standalone", record.name.c_str());
+                log::infof("Import", "No model match for '%s', imported as standalone",
+                           record.name.c_str());
             }
         }
 
     } else {
+        // Precompute autoOrient on the worker thread (pure CPU, no GL)
+        // Results are stored in DB so model loads skip recomputation
+        if (Config::instance().getAutoOrient() && task.mesh && task.mesh->isValid()) {
+            f32 orientYaw = task.mesh->autoOrient();
+            task.record.orientYaw = orientYaw;
+            task.record.orientMatrix = task.mesh->getOrientMatrix();
+        }
+
         // Insert mesh model record
         ModelRecord record;
         record.hash = task.fileHash;
@@ -441,6 +451,10 @@ void ImportQueue::processTask(ImportTask task) {
         const auto& bounds = task.mesh->bounds();
         record.boundsMin = bounds.min;
         record.boundsMax = bounds.max;
+
+        // Carry orient data to the DB record
+        record.orientYaw = task.record.orientYaw;
+        record.orientMatrix = task.record.orientMatrix;
 
         auto modelId = modelRepo.insert(record);
         if (!modelId) {
@@ -487,7 +501,8 @@ void ImportQueue::processTask(ImportTask task) {
 
     if (mode != FileHandlingMode::LeaveInPlace) {
         std::string error;
-        Path handledPath = FileHandler::handleImportedFile(task.sourcePath, mode, libraryDir, error);
+        Path handledPath =
+            FileHandler::handleImportedFile(task.sourcePath, mode, libraryDir, error);
 
         if (handledPath.empty()) {
             // File handling failed - log warning but don't fail the import

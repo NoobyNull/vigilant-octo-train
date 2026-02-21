@@ -126,45 +126,47 @@ bool extractFromZipBuffer(const ByteBuffer& zipData, const std::string& targetFi
     const u8* end = ptr + zipData.size();
 
     while (ptr + sizeof(ZipLocalFileHeader) <= end) {
-        const auto* header = reinterpret_cast<const ZipLocalFileHeader*>(ptr);
+        // Use memcpy to avoid strict aliasing violation (u8* -> struct*)
+        ZipLocalFileHeader header;
+        std::memcpy(&header, ptr, sizeof(header));
 
-        if (header->signature != ZIP_LOCAL_HEADER_SIG) {
+        if (header.signature != ZIP_LOCAL_HEADER_SIG) {
             break;
         }
 
         ptr += sizeof(ZipLocalFileHeader);
 
-        if (ptr + header->fileNameLength > end)
+        if (ptr + header.fileNameLength > end)
             break;
 
-        std::string fileName(reinterpret_cast<const char*>(ptr), header->fileNameLength);
-        ptr += header->fileNameLength;
+        std::string fileName(reinterpret_cast<const char*>(ptr), header.fileNameLength);
+        ptr += header.fileNameLength;
 
         // Skip extra field
-        if (ptr + header->extraFieldLength > end)
+        if (ptr + header.extraFieldLength > end)
             break;
-        ptr += header->extraFieldLength;
+        ptr += header.extraFieldLength;
 
         // Check if this is our target file
         bool isTarget =
             (fileName == targetFile) || (fileName.find(targetFile) != std::string::npos);
 
-        if (isTarget && header->compression == 0) {
-            if (ptr + header->uncompressedSize > end)
+        if (isTarget && header.compression == 0) {
+            if (ptr + header.uncompressedSize > end)
                 break;
-            content.assign(reinterpret_cast<const char*>(ptr), header->uncompressedSize);
+            content.assign(reinterpret_cast<const char*>(ptr), header.uncompressedSize);
             return true;
-        } else if (isTarget && header->compression == 8) {
-            if (ptr + header->compressedSize > end)
+        } else if (isTarget && header.compression == 8) {
+            if (ptr + header.compressedSize > end)
                 break;
-            return decompressDeflate(reinterpret_cast<const char*>(ptr), header->compressedSize,
-                                     header->uncompressedSize, content);
+            return decompressDeflate(reinterpret_cast<const char*>(ptr), header.compressedSize,
+                                     header.uncompressedSize, content);
         }
 
         // Skip to next entry
-        if (ptr + header->compressedSize > end)
+        if (ptr + header.compressedSize > end)
             break;
-        ptr += header->compressedSize;
+        ptr += header.compressedSize;
     }
 
     return false;

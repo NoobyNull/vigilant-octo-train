@@ -217,9 +217,9 @@ i64 GCodeRepository::count() {
 // ===== Hierarchy operations =====
 
 std::optional<i64> GCodeRepository::createGroup(i64 modelId, const std::string& name,
-                                                 int sortOrder) {
-    auto stmt = m_db.prepare(
-        "INSERT INTO operation_groups (model_id, name, sort_order) VALUES (?, ?, ?)");
+                                                int sortOrder) {
+    auto stmt =
+        m_db.prepare("INSERT INTO operation_groups (model_id, name, sort_order) VALUES (?, ?, ?)");
 
     if (!stmt.isValid()) {
         return std::nullopt;
@@ -279,8 +279,7 @@ bool GCodeRepository::addToGroup(i64 groupId, i64 gcodeId, int sortOrder) {
 }
 
 bool GCodeRepository::removeFromGroup(i64 groupId, i64 gcodeId) {
-    auto stmt =
-        m_db.prepare("DELETE FROM gcode_group_members WHERE group_id = ? AND gcode_id = ?");
+    auto stmt = m_db.prepare("DELETE FROM gcode_group_members WHERE group_id = ? AND gcode_id = ?");
 
     if (!stmt.isValid()) {
         return false;

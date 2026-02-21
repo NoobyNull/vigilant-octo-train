@@ -9,6 +9,7 @@
 #include "../core/types.h"
 #include "camera.h"
 #include "shader.h"
+#include "texture.h"
 
 namespace dw {
 
@@ -51,9 +52,16 @@ class Renderer {
     // Set camera for rendering
     void setCamera(const Camera& camera);
 
-    // Render a mesh
+    // Render a mesh (solid color fallback)
     void renderMesh(const Mesh& mesh, const Mat4& modelMatrix = Mat4(1.0f));
     void renderMesh(const GPUMesh& gpuMesh, const Mat4& modelMatrix = Mat4(1.0f));
+
+    // Render a mesh with an optional material texture.
+    // Pass nullptr for materialTexture to use solid color (same as above overloads).
+    void renderMesh(const Mesh& mesh, const Texture* materialTexture,
+                    const Mat4& modelMatrix = Mat4(1.0f));
+    void renderMesh(const GPUMesh& gpuMesh, const Texture* materialTexture,
+                    const Mat4& modelMatrix = Mat4(1.0f));
 
     // Render a toolpath mesh with color distinction for rapid vs cutting moves
     void renderToolpath(const Mesh& toolpathMesh, const Mat4& modelMatrix = Mat4(1.0f));

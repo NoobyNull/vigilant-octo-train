@@ -1,264 +1,254 @@
 # Architecture
 
-**Analysis Date:** 2026-02-08
+**Analysis Date:** 2026-02-19
 
 ## Pattern Overview
 
-**Overall:** Layered N-tier architecture with a focused object state management pattern
+**Overall:** Layered Application with Separation of Concerns (Thin Application Coordinator + Core Services + UI Framework)
 
 **Key Characteristics:**
-- **Separation of concerns** with distinct layers: UI (ImGui), Render (OpenGL), Core (domain logic), and Data (SQLite)
-- **Workspace-centric state management** — panels observe and act on a single focused object (mesh, G-code, or cut plan) held in the Workspace
-- **Repository pattern** for data access — repositories mediate all database operations through a SQLite wrapper
-- **Factory pattern** for extensible file format loading (STL, OBJ, 3MF)
-- **Thread-safe import pipeline** with background worker for processing large files
-- **Render-to-texture** architecture for thumbnail generation and viewport rendering
+- **Thin Application Coordinator**: `Application` class handles SDL2/OpenGL lifecycle and event loop, delegates business logic to managers
+- **Manager-Based Abstraction**: Three extracted managers (`UIManager`, `FileIOManager`, `ConfigManager`) implement god class decomposition
+- **Type-Safe Event Bus**: Main-thread-only publish-subscribe system for decoupled subsystem communication
+- **Focus-Based UI Model**: `Workspace` class tracks "focused object" (mesh, g-code, cut plan) that drives panel updates
+- **Multi-Stage Import Pipeline**: Background thread pool with thread-safe staging and main-thread completion handling
+- **Repository Pattern**: Database access abstracted through specialized repositories (`ModelRepository`, `ProjectRepository`, `MaterialRepository`, `GCodeRepository`)
 
 ## Layers
 
-**Application (UI Orchestration):**
-- Purpose: Main application lifecycle, event loop, menu dispatch, panel lifecycle
-- Location: `src/app/application.h`, `src/app/application.cpp`
-- Contains: Application class managing SDL2 window, ImGui frame lifecycle, panel instantiation
-- Depends on: Workspace, Database, LibraryManager, ProjectManager, all UI panels, Renderer
-- Used by: `src/main.cpp` (entry point)
+**Application Layer:**
+- Purpose: SDL2/OpenGL window management, frame loop coordination, manager initialization
+- Location: `src/app/application.cpp`, `src/app/application.h`
+- Contains: Window lifecycle, render loop (processEvents → update → render), manager ownership
+- Depends on: EventBus, MainThreadQueue, all core systems and managers
+- Used by: main.cpp entry point
 
-**Workspace (Focused Object State):**
-- Purpose: Central state holder for "what is currently being worked on" — maintains references to the currently focused Mesh, GCodeFile, and CutPlan
-- Location: `src/app/workspace.h`, `src/app/workspace.cpp`
-- Contains: Shared pointers to focused mesh, G-code, and cut plan; setters and getters
-- Depends on: Core types (Mesh, GCodeFile, CutPlan)
-- Used by: All UI panels read workspace state; Application updates workspace on user actions
+**UI Layer:**
+- Purpose: ImGui-based user interface panels, dialogs, menu bar, keyboard shortcuts
+- Location: `src/ui/`, `src/managers/ui_manager.h`
+- Contains: Panels (Viewport, Library, Properties, Project, GCode, CutOptimizer, StartPage), Dialogs (File, Lighting, ImportSummary, Message), Widgets (StatusBar, Toast, BindingRecorder)
+- Depends on: Workspace (for focused object), LibraryManager, ProjectManager, ImportQueue, EventBus
+- Used by: UIManager for centralized rendering and state management
 
-**UI Layer (ImGui-based):**
-- Purpose: Immediate-mode GUI rendering with dockable panels
-- Location: `src/ui/`, `src/ui/panels/`, `src/ui/dialogs/`, `src/ui/widgets/`
-- Contains:
-  - UIManager (`src/ui/ui_manager.h`) — ImGui context and frame management
-  - Base Panel class (`src/ui/panels/panel.h`) — abstract base for all panels
-  - Concrete panels: ViewportPanel, LibraryPanel, PropertiesPanel, ProjectPanel, GCodePanel, CutOptimizerPanel, StartPage
-  - Dialogs: FileDialog, MessageDialog, ConfirmDialog, LightingDialog
-  - Theme system (`src/ui/theme.h`) — dark/light/high-contrast themes
-  - Icon system (`src/ui/icons.h`) — FontAwesome Unicode constants
-- Depends on: Workspace, render system, library/project managers
-- Used by: Application renders panels each frame; panels query workspace and invoke manager methods
-
-**Render Layer (OpenGL 3.3):**
-- Purpose: 3D visualization with GPU mesh upload, camera control, and offscreen rendering
-- Location: `src/render/`
-- Contains:
-  - Renderer (`src/render/renderer.h`) — main OpenGL context, mesh cache, shader programs
-  - Camera (`src/render/camera.h`) — orbit camera with target-relative positioning
-  - Shader (`src/render/shader.h`) — RAII shader program wrapper with uniform caching
-  - Framebuffer (`src/render/framebuffer.h`) — render-to-texture for thumbnails and viewport
-  - ThumbnailGenerator (`src/render/thumbnail_generator.h`) — offscreen rendering with TGA export
-  - GLUtils (`src/render/gl_utils.h`) — error checking and debug utilities
-- Depends on: Core types (Mesh, Vec3, Mat4), GLAD (OpenGL bindings)
-- Used by: ViewportPanel, LibraryPanel (thumbnails), ThumbnailGenerator
+**Manager Layer (Business Logic):**
+- Purpose: Orchestration of file I/O, configuration, and UI state
+- Location: `src/managers/`
+- Contains: UIManager (panel/dialog ownership), FileIOManager (import/export/project orchestration), ConfigManager (settings, hot-reload, workspace state)
+- Depends on: EventBus, Database, LibraryManager, ProjectManager, ImportQueue
+- Used by: Application for delegating business logic
 
 **Core Domain Layer:**
-- Purpose: Business logic and domain models independent of UI or storage
+- Purpose: Business domain models and operations
 - Location: `src/core/`
 - Contains:
-  - **Types** (`src/core/types.h`) — common type aliases (Vec3, Mat4, i64, etc.) and Color struct
-  - **Mesh** (`src/core/mesh/mesh.h`) — 3D geometry with vertices, indices, bounds; auto-orientation for relief models
-  - **Vertex** (`src/core/mesh/vertex.h`) — vertex structure with position, normal, texcoord, custom hash for deduplication
-  - **Bounds** (`src/core/mesh/bounds.h`) — axis-aligned bounding box (AABB) with spatial queries
-  - **GCode** (`src/core/gcode/`) — parser and analyzer for CNC toolpath files
-  - **CutOptimizer** (`src/core/optimizer/`) — 2D nesting optimizer with guillotine and bin-packing algorithms
-  - **Project** (`src/core/project/project.h`) — project domain model with model associations
-  - **Utils** (`src/core/utils/`) — logging, file I/O, string utilities
-  - **Config** (`src/core/config/`) — configuration loading, input binding, file watching
-  - **Paths** (`src/core/paths/`) — application directory management
-- Depends on: Standard library, GLM (math)
-- Used by: Application, managers, UI panels
+  - **Database**: SQLite wrapper, connection pool, schema, repositories
+  - **Library**: LibraryManager (import, search, tag management, duplicate detection)
+  - **Project**: ProjectManager, Project domain model
+  - **Import**: ImportQueue with multi-stage pipeline, thread-safe progress tracking
+  - **Materials**: MaterialRepository for material records with pricing
+  - **Threading**: ThreadPool, MainThreadQueue, thread utilities
+  - **Config**: Configuration singleton with hot-reload via file watching
+- Depends on: SQLite3, thread library, filesystem utilities
+- Used by: Manager layer for domain operations
 
-**Data Layer (Repositories):**
-- Purpose: Encapsulate database access patterns and SQLite transactions
-- Location: `src/core/database/`
-- Contains:
-  - Database (`src/core/database/database.h`) — RAII SQLite wrapper with prepared statements and transactions
-  - Statement (`src/core/database/database.h`) — prepared statement wrapper with bind/step/get operations
-  - Transaction (`src/core/database/database.h`) — RAII transaction wrapper with rollback on destruction
-  - Schema (`src/core/database/schema.h`) — schema versioning and creation
-  - ModelRepository (`src/core/database/model_repository.h`) — CRUD for models with tags, hash-based deduplication
-  - ProjectRepository (`src/core/database/project_repository.h`) — CRUD for projects and model associations
-  - CostRepository (`src/core/database/cost_repository.h`) — CRUD for cost estimates with line items
-- Depends on: SQLite3, core types
-- Used by: LibraryManager, ProjectManager, ImportQueue
+**Render Layer:**
+- Purpose: OpenGL 3.3 rendering, GPU mesh management, camera control
+- Location: `src/render/`
+- Contains: Renderer (mesh/grid/axis rendering), Camera (orbit-based 3D navigation), Shader (GLSL wrapper), Framebuffer (offscreen rendering), ThumbnailGenerator (offline model thumbnails)
+- Depends on: GLAD (GL loader), GLM (math), stb_image (texture loading)
+- Used by: ViewportPanel for 3D visualization, ThumbnailGenerator for library thumbnails
 
-**Manager Layer (Business Logic Coordinators):**
-- Purpose: Coordinate across multiple layers and implement high-level workflows
-- Location: `src/core/library/`, `src/core/project/`, `src/core/import/`, `src/core/export/`
-- Contains:
-  - LibraryManager (`src/core/library/library_manager.h`) — import, search, tag, delete models; hash-based duplicate detection
-  - ProjectManager (`src/core/project/project.h`) — create/open/save projects; manage model membership
-  - ImportQueue (`src/core/import/import_queue.h`) — background thread worker for multi-stage import pipeline (file → hash → parse → DB → thumbnail)
-  - ModelExporter (`src/core/export/model_exporter.h`) — export mesh to STL, OBJ, 3MF formats
-- Depends on: Repositories, Loaders, Renderer
-- Used by: Application, UI panels
-
-**Loader Layer (File Format Support):**
-- Purpose: Pluggable format-specific mesh loading
+**Loader Layer:**
+- Purpose: Multi-format mesh and g-code file loading
 - Location: `src/core/loaders/`
-- Contains:
-  - MeshLoader interface (`src/core/loaders/loader.h`) — abstract base with load() and supports()
-  - LoaderFactory (`src/core/loaders/loader_factory.h`) — static factory methods for format selection
-  - STLLoader, OBJLoader, ThreeMFLoader — concrete implementations
-- Depends on: Mesh, types
-- Used by: LibraryManager, ImportQueue
+- Contains: LoaderFactory, MeshLoader interface, format-specific loaders (STL, OBJ, 3MF, GCode)
+- Depends on: Mesh domain model, ByteBuffer utilities
+- Used by: ImportQueue during file parsing stage
+
+**Mesh/Geometry Layer:**
+- Purpose: In-memory 3D geometry representation and operations
+- Location: `src/core/mesh/`
+- Contains: Mesh class (vertices, triangles, normals, bounds), auto-orientation for relief models, spatial bounds checking, content-based hashing for deduplication
+- Depends on: GLM math, file utilities
+- Used by: Loaders, Renderer, GCode analyzer, library operations
+
+**G-Code Layer:**
+- Purpose: G-code file parsing, analysis, metadata extraction
+- Location: `src/core/gcode/`
+- Contains: GCodeParser (line-by-line parsing), GCodeAnalyzer (statistics, move types, time estimation)
+- Depends on: String utilities, math
+- Used by: ImportQueue, GCodePanel for visualization and analysis
+
+**Optimization Layer:**
+- Purpose: 2D cutting plan generation and material layout optimization
+- Location: `src/core/optimizer/`
+- Contains: CutOptimizer (orchestration), BinPacker (placement algorithm), Guillotine (rectangle packing)
+- Depends on: Mesh geometry, math
+- Used by: CutOptimizerPanel for interactive layout
 
 ## Data Flow
 
-**Model Import (User drags files → Database + Thumbnail):**
+**Model Import Pipeline:**
 
-1. User drops files or clicks Import
-2. Application calls LibraryManager.importModel(path) for each file
-3. LibraryManager enqueues ImportTask to ImportQueue
-4. Background ImportQueue worker thread:
-   - Reads file into ByteBuffer
-   - Computes hash for deduplication
-   - Calls LoaderFactory.loadFromBuffer() → gets Mesh
-   - Stores Mesh and metadata in database via ModelRepository
-   - Enqueues task to completed queue
-5. Application polls ImportQueue.pollCompleted() each frame
-6. For each completed task:
-   - Application.processCompletedImports() → ThumbnailGenerator.generate()
-   - Renderer uploads mesh to GPU, renders to Framebuffer
-   - ThumbnailGenerator encodes to TGA and writes to library folder
-   - ModelRepository updates thumbnail path in database
-7. Workspace remains unchanged; LibraryPanel refreshes via LibraryManager.getAllModels()
+1. User selects files → FileIOManager.importModel() → FileDialog collects paths
+2. FileIOManager.onFilesDropped() or importModel() enqueues ImportTasks
+3. ImportQueue (worker threads):
+   - Read file → Hash → Check duplicate → Parse → Insert DB → WaitingForThumbnail
+4. Main thread (processCompletedImports):
+   - Render thumbnail → Upload to DB
+   - Update UI panels (Library, Properties)
+   - Emit ModelSelected event → Updates Workspace.focusedMesh
+5. Panels observe Workspace changes and re-render
 
-**Model Focus (User selects model in library → Viewport displays it):**
+**Project Workflow:**
 
-1. User single-clicks model in LibraryPanel
-2. LibraryPanel invokes m_onModelSelected callback → Application.onModelSelected()
-3. Application:
-   - Calls LibraryManager.loadMesh(modelId) → queries ModelRepository, calls LoaderFactory
-   - Mesh is cached in LibraryManager's internal storage
-   - Calls Workspace.setFocusedMesh(mesh)
-4. ViewportPanel observes Workspace (queried in render())
-5. ViewportPanel:
-   - Calls Renderer.uploadMesh(mesh) → caches GPU mesh
-   - Each frame: Renderer.renderMesh(m_mesh, modelMatrix)
-6. PropertiesPanel also reads Workspace.getFocusedMesh() and displays metadata
+1. User creates/opens project → FileIOManager.newProject() or openProject()
+2. ProjectManager creates Project domain object, loads model associations
+3. Project models added to workspace → Panels display model list
+4. User exports → FileIOManager.exportModel() → Loaders serialize format
+5. Project saved to ProjectRepository (SQLite) with modified timestamp
 
-**Project Save (User adds models to project → Database persists associations):**
+**G-Code Workflow:**
 
-1. User drags models from LibraryPanel to ProjectPanel
-2. Application calls ProjectManager.addModelToProject(modelId)
-3. ProjectManager:
-   - Updates in-memory Project.m_modelIds
-   - Marks project as modified
-4. User saves project (Ctrl+S)
-5. Application calls ProjectManager.save(project)
-6. ProjectManager invokes ProjectRepository.update() within a Transaction
-7. ProjectRepository writes project metadata and model associations to database
+1. User imports G-code file → ImportQueue treats as ImportType::GCode
+2. GCodeParser extracts metadata (tool changes, move types, estimates)
+3. GCodeRepository stores file record with metadata
+4. User selects g-code → Workspace.focusedGCode set
+5. GCodePanel displays analysis; user can link to model or operation group
+6. On render: GCodeAnalyzer generates toolpath mesh (visual preview)
 
-**G-code Analysis (User loads G-code file → Analyzer extracts statistics):**
+**Configuration and State:**
 
-1. User imports G-code file (treated as model with .gcode extension)
-2. LoaderFactory creates special handler that:
-   - Reads G-code text
-   - Calls GCodeParser.parse()
-   - Creates virtual Mesh representation (for consistency)
-3. GCode stored in database
-4. User clicks "Analyze" button in GCodePanel
-5. GCodePanel calls GCodeAnalyzer.analyze(gcodeFile)
-6. Analyzer extracts move commands, compute toolpath length, estimate time
-7. Results displayed in GCodePanel
+1. Application startup → Config::instance().load() reads INI file
+2. Config change (UI or external file) → ConfigWatcher detects via polling
+3. ConfigWatcher notifies ConfigManager → hot-reload applied
+4. Workspace state (window size, panel visibility, recent projects) persisted to Config
+5. Application restart restores previous session state
+
+**State Management:**
+
+- **EventBus**: Type-safe publish/subscribe for model selection, import completion, config changes
+- **Workspace**: Tracks "focused" objects (mesh, g-code, toolpath, cut plan) — panels observe
+- **MainThreadQueue**: Workers enqueue UI updates (thumbnail completion) for main thread execution
+- **Atomic Flags**: ImportProgress uses atomics for thread-safe progress updates (no locks)
 
 ## Key Abstractions
 
-**Mesh (Vertex/Index Container):**
-- Purpose: Unified representation for 3D geometry from any source
-- Examples: `src/core/mesh/mesh.h`, loaded by any MeshLoader subclass
-- Pattern: Owner of vertex/index arrays; provides geometry operations (recalculate bounds/normals, transform, auto-orient)
+**LibraryManager:**
+- Purpose: Unified interface for model library operations
+- Examples: `src/core/library/library_manager.h`, `src/core/database/model_repository.h`
+- Pattern: Facade over ModelRepository with deduplication logic, thumbnail generation, metadata management
+- Key methods: importModel(), getAllModels(), searchModels(), filterByTag(), generateThumbnail()
 
-**Panel (Abstract UI Component):**
-- Purpose: Composable UI element with frame-based rendering
-- Examples: `src/ui/panels/viewport_panel.h`, `src/ui/panels/library_panel.h`
-- Pattern: Virtual render() method called by Application each frame; manages own state and visuals
+**Repository Pattern:**
+- Purpose: Abstract database access behind domain-specific queries
+- Examples: `ModelRepository`, `ProjectRepository`, `MaterialRepository`, `GCodeRepository`
+- Pattern: CRUD + domain-specific methods (e.g., getAllModels, filterByTag)
+- Storage: All backed by SQLite with prepared statements
 
-**Repository (Data Access):**
-- Purpose: Encapsulate SQL queries and return domain objects
-- Examples: `src/core/database/model_repository.h`, `src/core/database/project_repository.h`
-- Pattern: Typically owns a Database reference; wraps prepared statements; returns std::optional<Record> or std::vector<Record>
+**Panel Pattern:**
+- Purpose: Reusable UI component framework
+- Base class: `src/ui/panels/panel.h` (virtual render(), title, visibility state)
+- Subclasses: ViewportPanel, LibraryPanel, PropertiesPanel, ProjectPanel, GCodePanel, CutOptimizerPanel, StartPage
+- Pattern: Each panel observes Workspace and updates on focus changes
 
-**Loader (Format Extension):**
-- Purpose: Implement loading for a specific file format
-- Examples: `src/core/loaders/stl_loader.h`, `src/core/loaders/obj_loader.h`
-- Pattern: Inherit MeshLoader interface; implement load(path) → LoadResult; declare supports(ext)
+**Dialog Pattern:**
+- Purpose: Modal dialog framework
+- Base class: `src/ui/dialogs/dialog.h` (virtual render(), open/close state, title)
+- Subclasses: FileDialog, LightingDialog, ImportSummaryDialog, MessageDialog
+- Pattern: Caller triggers dialog.open(), dialog renders modally, caller checks result
 
-**Manager (Workflow Orchestrator):**
-- Purpose: High-level operations spanning multiple layers
-- Examples: `src/core/library/library_manager.h`, `src/core/project/project.h`
-- Pattern: Owns repositories and other managers; provides public API for common workflows (import, search, save)
+**ImportTask Pipeline:**
+- Purpose: Staged processing of import files across threads
+- Stages: Pending → Reading → Hashing → CheckingDuplicate → Parsing → Inserting → WaitingForThumbnail → Done/Failed
+- Pattern: Struct carries data through stages; ImportQueue advances stage; Main thread handles thumbnail stage
+- Thread-safety: Atomic stage enum, mutex-protected filename for progress display
+
+**Loader Factory:**
+- Purpose: Polymorphic file format support
+- Pattern: getLoader(path) → format-specific MeshLoader subclass → LoadResult
+- Supported formats: STL, OBJ, 3MF (mesh); GCode, NC, NGC, TAP (g-code)
+- Extensibility: New loaders added as MeshLoader subclasses
 
 ## Entry Points
 
-**main() - Application Launch:**
+**main():**
 - Location: `src/main.cpp`
-- Triggers: Program execution
-- Responsibilities: Create Application, call init() and run(), return exit code
+- Triggers: Application startup
+- Responsibilities: Create Application instance, call init(), run(), return exit code
 
-**Application::init() - Initialization Sequence:**
-- Location: `src/app/application.h`, `src/app/application.cpp`
-- Triggers: Called by main()
+**Application::init():**
+- Location: `src/app/application.cpp`
+- Triggers: On startup before main loop
 - Responsibilities:
-  - Initialize SDL2 window and OpenGL context
-  - Initialize ImGui with docking backend
-  - Create and initialize all managers (Database, LibraryManager, ProjectManager, ImportQueue)
-  - Create and initialize all panels and dialogs
-  - Set up menu bar
-  - Restore workspace state from config
+  - Initialize paths, config, logging
+  - Create SDL2 window, OpenGL context
+  - Initialize ImGui with docking
+  - Create core systems (EventBus, Database, LibraryManager, ProjectManager, Workspace)
+  - Create managers (UIManager, FileIOManager, ConfigManager)
+  - Initialize thread pool, import queue
 
-**Application::run() - Main Event Loop:**
-- Location: `src/app/application.h`, `src/app/application.cpp`
-- Triggers: Called by main() after init()
-- Responsibilities:
-  - Poll SDL events → processEvents()
-  - Update (import progress, config changes) → update()
-  - Render (menu bar, all panels, dialogs) → render()
-  - Return exit code when m_running becomes false
+**Application::run():**
+- Location: `src/app/application.cpp`
+- Triggers: Main loop entry
+- Responsibilities: Frame loop (processEvents → update → render → swap)
+  - ProcessEvents: SDL_PollEvent, keyboard input, drag-and-drop
+  - Update: Update panels, process MainThreadQueue, advance ImportQueue
+  - Render: UIManager.renderMenuBar() + renderPanels(), ImGui render
 
-**Panel::render() - Frame-Based UI Rendering:**
-- Location: `src/ui/panels/panel.h`, each concrete panel subclass
-- Triggers: Called by Application each frame for visible panels
-- Responsibilities: ImGui calls to render UI and handle interaction; query Workspace and managers; invoke callbacks
+**Application::processEvents():**
+- Location: `src/app/application.cpp`
+- Triggers: Each frame
+- Responsibilities: Handle SDL events (window close, window resize, input), fire EventBus events for custom shortcuts
+
+**UIManager::renderPanels():**
+- Location: `src/managers/ui_manager.cpp`
+- Triggers: Each frame in Application::render()
+- Responsibilities: Call render() on all panels and dialogs, manage ImGui docking layout
+
+**ImportQueue (worker threads):**
+- Location: `src/core/import/import_queue.h`
+- Triggers: FileIOManager.importModel() or onFilesDropped()
+- Responsibilities: Advance ImportTasks through pipeline stages on background ThreadPool
 
 ## Error Handling
 
-**Strategy:** Optional return types (std::optional<T>) and Result<T> type alias for operations that may fail
+**Strategy:** Early validation with optional-based returns; exceptions caught at system boundaries; error propagation via struct fields
 
 **Patterns:**
-- Database operations return bool: `Database::open()`, `Database::execute()`
-- Load operations return LoadResult struct: `{ MeshPtr mesh; std::string error; }`
-- Manager operations return std::optional<T>: `LibraryManager::getModel(modelId) -> std::optional<ModelRecord>`
-- Import workflow tracks ImportTask state with enum flags (pending, hashing, loading, storing, thumbnail)
-- File I/O wrapped in FileUtils with error strings propagated to UI dialogs
+- **Result<T>** (alias for std::optional<T>): Used for file operations, DB queries, loader results
+- **ImportTask::error** field: Populated on failure; displayed in ImportSummaryDialog
+- **try-catch at EventBus boundary**: Handler exceptions logged but don't propagate to other handlers
+- **File I/O**: FileIOManager wraps file operations with error reporting to user via MessageDialog or toast
+- **Database**: Prepared statement execution checked; transaction rollback on failure
+- **GL Errors**: gl_utils.cpp provides checkGLError() for shader compilation and GL state validation
 
 ## Cross-Cutting Concerns
 
 **Logging:**
-- Utility: `src/core/utils/log.h`
-- Approach: Centralized log functions (Log, LogWarning, LogError) writing to stdout and rotating log files
-- Usage: Every manager, loader, and database operation logs significant events
+- Framework: Custom log::errorf(), log::warnf(), log::infof() in `src/core/utils/log.h`
+- Configuration: Log level set from Config, applied via log::setLevel()
+- Pattern: Namespace-based categorization (e.g., "event_bus", "import_queue", "database")
 
 **Validation:**
-- Mesh validation: `src/core/mesh/mesh.h::validate()` checks for NaN, degenerate triangles, out-of-bounds indices
-- File validation: Loaders check file magic bytes and structure before parsing
-- Database validation: Schema version checked on open; transactions used for atomic operations
+- Input: File format validation via LoaderFactory.isSupported(); project name non-empty
+- State: ImportTask stage transitions validated implicitly (stages are sequential)
+- Database: Foreign key constraints enabled in schema; unique hash constraints for deduplication
 
 **Authentication:**
-- Not applicable — single-user desktop application
+- Not applicable (single-user desktop application)
 
 **Threading:**
-- ImportQueue runs background worker thread for I/O and parsing
-- All main-thread work (GL uploads, UI rendering) happens in Application::run()
-- Mutex protects ImportQueue's task queues between worker and main threads
-- ThumbnailGenerator uses Framebuffer created in worker context but rendered in main context
+- Main thread assertion: ASSERT_MAIN_THREAD() macro in thread_utils.h
+- Worker threads: ThreadPool and ImportQueue dequeue from global queue
+- Cross-thread communication: MainThreadQueue for workers → main, EventBus for main → main
+- Synchronization: Mutex for database connection pool; atomics for progress tracking
+
+**Configuration:**
+- Storage: INI file in config directory
+- Hot-reload: ConfigWatcher polls file modification time every 100ms
+- Propagation: ConfigManager.applyConfigChanges() called on change; ApplicationConfig events published
 
 ---
 
-*Architecture analysis: 2026-02-08*
+*Architecture analysis: 2026-02-19*

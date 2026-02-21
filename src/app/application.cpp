@@ -17,11 +17,16 @@
 #include "core/config/config.h"
 #include "core/database/connection_pool.h"
 #include "core/database/database.h"
+#include "core/database/model_repository.h"
 #include "core/database/schema.h"
 #include "core/events/event_bus.h"
 #include "core/import/import_queue.h"
 #include "core/library/library_manager.h"
 #include "core/loaders/loader_factory.h"
+#include "core/loaders/texture_loader.h"
+#include "core/materials/gemini_material_service.h"
+#include "core/materials/material_archive.h"
+#include "core/materials/material_manager.h"
 #include "core/paths/app_paths.h"
 #include "core/threading/main_thread_queue.h"
 #include "core/threading/thread_pool.h"
@@ -30,8 +35,10 @@
 #include "managers/config_manager.h"
 #include "managers/file_io_manager.h"
 #include "managers/ui_manager.h"
+#include "render/texture.h"
 #include "render/thumbnail_generator.h"
 #include "ui/panels/library_panel.h"
+#include "ui/panels/materials_panel.h"
 #include "ui/panels/project_panel.h"
 #include "ui/panels/properties_panel.h"
 #include "ui/panels/start_page.h"
@@ -53,6 +60,11 @@ bool Application::init() {
     paths::ensureDirectoriesExist();
     Config::instance().load();
     log::setLevel(static_cast<log::Level>(Config::instance().getLogLevel()));
+
+    // Multi-viewport requires X11 — Wayland SDL2 backend lacks platform viewport support
+    if (Config::instance().getEnableFloatingWindows()) {
+        SDL_SetHint(SDL_HINT_VIDEODRIVER, "x11");
+    }
 
     // Initialize SDL2
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
@@ -111,11 +123,25 @@ bool Application::init() {
     auto& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    if (Config::instance().getEnableFloatingWindows()) {
+        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    }
     static std::string imguiIniPath = (paths::getConfigDir() / "imgui.ini").string();
     io.IniFilename = imguiIniPath.c_str();
 
     ImGui_ImplSDL2_InitForOpenGL(m_window, m_glContext);
     ImGui_ImplOpenGL3_Init("#version 330");
+
+    if (Config::instance().getEnableFloatingWindows()) {
+        bool platformOk = (io.BackendFlags & ImGuiBackendFlags_PlatformHasViewports) != 0;
+        bool rendererOk = (io.BackendFlags & ImGuiBackendFlags_RendererHasViewports) != 0;
+        if (!platformOk || !rendererOk) {
+            log::errorf("Application",
+                        "Floating windows: platform=%s renderer=%s — viewports disabled",
+                        platformOk ? "ok" : "NO", rendererOk ? "ok" : "NO");
+            io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
+        }
+    }
 
     // Initialize core systems
     dw::threading::initMainThread();
@@ -141,6 +167,9 @@ bool Application::init() {
 
     m_libraryManager = std::make_unique<LibraryManager>(*m_database);
     m_projectManager = std::make_unique<ProjectManager>(*m_database);
+    m_materialManager = std::make_unique<MaterialManager>(*m_database);
+    m_materialManager->seedDefaults();
+    m_geminiService = std::make_unique<GeminiMaterialService>();
     m_workspace = std::make_unique<Workspace>();
 
     m_thumbnailGenerator = std::make_unique<ThumbnailGenerator>();
@@ -152,7 +181,7 @@ bool Application::init() {
 
     // Initialize managers
     m_uiManager = std::make_unique<UIManager>();
-    m_uiManager->init(m_libraryManager.get(), m_projectManager.get());
+    m_uiManager->init(m_libraryManager.get(), m_projectManager.get(), m_materialManager.get());
 
     m_fileIOManager = std::make_unique<FileIOManager>(
         m_eventBus.get(), m_database.get(), m_libraryManager.get(), m_projectManager.get(),
@@ -162,6 +191,13 @@ bool Application::init() {
     m_configManager = std::make_unique<ConfigManager>(m_eventBus.get(), m_uiManager.get());
     m_configManager->init(m_window);
     m_configManager->setQuitCallback([this]() { quit(); });
+
+    // Wire StatusBar cancel button to ImportQueue
+    m_uiManager->setImportCancelCallback([this]() {
+        if (m_importQueue) {
+            m_importQueue->cancel();
+        }
+    });
 
     // Wire ImportQueue callbacks for UI feedback
     m_importQueue->setOnBatchComplete([this](const ImportBatchSummary& summary) {
@@ -236,6 +272,68 @@ bool Application::init() {
         m_uiManager->propertiesPanel()->setOnColorChanged([this](const Color& color) {
             if (m_uiManager->viewportPanel())
                 m_uiManager->viewportPanel()->renderSettings().objectColor = color;
+        });
+        m_uiManager->propertiesPanel()->setOnGrainDirectionChanged([this](float degrees) {
+            auto mesh = m_workspace->getFocusedMesh();
+            if (!mesh)
+                return;
+            mesh->generatePlanarUVs(degrees);
+            if (m_uiManager->viewportPanel())
+                m_uiManager->viewportPanel()->setMesh(mesh);
+        });
+        m_uiManager->propertiesPanel()->setOnMaterialRemoved([this]() {
+            if (m_materialManager && m_focusedModelId > 0)
+                m_materialManager->clearMaterialAssignment(m_focusedModelId);
+            m_activeMaterialTexture.reset();
+            m_activeMaterialId = -1;
+            if (m_uiManager->viewportPanel()) {
+                m_uiManager->viewportPanel()->setMaterialTexture(nullptr);
+            }
+        });
+    }
+
+    // Wire MaterialsPanel callbacks
+    if (m_uiManager->materialsPanel()) {
+        m_uiManager->materialsPanel()->setOnMaterialAssigned(
+            [this](int64_t materialId) { assignMaterialToCurrentModel(materialId); });
+
+        m_uiManager->materialsPanel()->setOnGenerate([this](const std::string& prompt) {
+            std::string apiKey = Config::instance().getGeminiApiKey();
+            if (apiKey.empty()) {
+                log::warning("Application",
+                             "Gemini API key not set. Configure it in Settings > General.");
+                ToastManager::instance().show(ToastType::Warning, "API Key Missing",
+                                              "Set your Gemini API key in Settings.");
+                if (m_uiManager->materialsPanel())
+                    m_uiManager->materialsPanel()->setGenerating(false);
+                return;
+            }
+
+            std::thread([this, prompt, apiKey]() {
+                auto result = m_geminiService->generate(prompt, apiKey);
+                m_mainThreadQueue->enqueue([this, result]() {
+                    if (result.success) {
+                        auto importedId = m_materialManager->importMaterial(result.dwmatPath);
+                        if (importedId) {
+                            log::infof("Application", "Generated and imported material: %s",
+                                       result.record.name.c_str());
+                            ToastManager::instance().show(ToastType::Success, "Material Generated",
+                                                          result.record.name);
+                        }
+                        if (m_uiManager->materialsPanel()) {
+                            m_uiManager->materialsPanel()->refresh();
+                            m_uiManager->materialsPanel()->setGenerating(false);
+                        }
+                    } else {
+                        log::errorf("Application", "Material generation failed: %s",
+                                    result.error.c_str());
+                        ToastManager::instance().show(ToastType::Error, "Generation Failed",
+                                                      result.error);
+                        if (m_uiManager->materialsPanel())
+                            m_uiManager->materialsPanel()->setGenerating(false);
+                    }
+                });
+            }).detach();
         });
     }
 
@@ -336,7 +434,7 @@ void Application::render() {
     m_uiManager->handleKeyboardShortcuts();
     m_uiManager->renderMenuBar();
     m_uiManager->renderPanels();
-    m_uiManager->renderStatusBar(m_loadingState, m_importQueue.get());
+    m_uiManager->renderBackgroundUI(ImGui::GetIO().DeltaTime, &m_loadingState);
     m_uiManager->renderRestartPopup([this]() { m_configManager->relaunchApp(); });
     m_uiManager->renderAboutDialog();
 
@@ -348,6 +446,12 @@ void Application::render() {
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     SDL_GL_SwapWindow(m_window);
+
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+        SDL_GL_MakeCurrent(m_window, m_glContext);
+    }
 }
 
 void Application::onModelSelected(int64_t modelId) {
@@ -358,6 +462,32 @@ void Application::onModelSelected(int64_t modelId) {
     auto record = m_libraryManager->getModel(modelId);
     if (!record)
         return;
+
+    // Track focused model ID for material assignment
+    m_focusedModelId = modelId;
+
+    // Check if this model has a material assigned — load texture proactively
+    if (m_materialManager) {
+        auto assignedMaterial = m_materialManager->getModelMaterial(modelId);
+        if (assignedMaterial) {
+            // Load material texture for this model
+            loadMaterialTextureForModel(modelId);
+            // Update PropertiesPanel material display
+            if (m_uiManager->propertiesPanel())
+                m_uiManager->propertiesPanel()->setMaterial(*assignedMaterial);
+        } else {
+            // No material assigned — assign the first available material as default
+            auto allMaterials = m_materialManager->getAllMaterials();
+            if (!allMaterials.empty()) {
+                assignMaterialToCurrentModel(allMaterials.front().id);
+            } else {
+                m_activeMaterialTexture.reset();
+                m_activeMaterialId = -1;
+                if (m_uiManager->propertiesPanel())
+                    m_uiManager->propertiesPanel()->clearMaterial();
+            }
+        }
+    }
 
     // Bump generation to invalidate any in-flight load
     uint64_t gen = ++m_loadingState.generation;
@@ -370,30 +500,144 @@ void Application::onModelSelected(int64_t modelId) {
     // Capture what we need for the worker
     Path filePath = record->filePath;
     std::string name = record->name;
+    auto storedOrientYaw = record->orientYaw;
+    auto storedOrientMatrix = record->orientMatrix;
 
-    m_loadThread = std::thread([this, filePath, name, gen]() {
-        auto loadResult = LoaderFactory::load(filePath);
-        if (!loadResult) {
-            m_loadingState.reset();
-            return;
-        }
-        loadResult.mesh->setName(name);
-        auto mesh = loadResult.mesh;
-
-        // Post result to main thread via MainThreadQueue
-        m_mainThreadQueue->enqueue([this, mesh, name, gen]() {
-            // Check generation — if user clicked another model, discard
-            if (gen != m_loadingState.generation.load())
+    m_loadThread =
+        std::thread([this, filePath, name, gen, modelId, storedOrientYaw, storedOrientMatrix]() {
+            auto loadResult = LoaderFactory::load(filePath);
+            if (!loadResult) {
+                m_loadingState.reset();
                 return;
-            m_loadingState.reset();
+            }
+            loadResult.mesh->setName(name);
 
-            m_workspace->setFocusedMesh(mesh);
-            if (m_uiManager->viewportPanel())
-                m_uiManager->viewportPanel()->setMesh(mesh);
-            if (m_uiManager->propertiesPanel())
-                m_uiManager->propertiesPanel()->setMesh(mesh, name);
+            // Orient on worker thread (pure CPU, no GL calls)
+            f32 orientYaw = 0.0f;
+            if (Config::instance().getAutoOrient()) {
+                if (storedOrientYaw && storedOrientMatrix) {
+                    // Fast path: apply stored orient (skips axis detection + normal counting)
+                    loadResult.mesh->applyStoredOrient(*storedOrientMatrix);
+                    orientYaw = *storedOrientYaw;
+                } else {
+                    // Fallback: full autoOrient + lazy-write back to DB
+                    orientYaw = loadResult.mesh->autoOrient();
+
+                    // Write computed orient back to DB for future loads
+                    ScopedConnection conn(*m_connectionPool);
+                    ModelRepository repo(*conn);
+                    repo.updateOrient(modelId, orientYaw, loadResult.mesh->getOrientMatrix());
+                }
+            }
+
+            auto mesh = loadResult.mesh;
+
+            // Post result to main thread via MainThreadQueue
+            m_mainThreadQueue->enqueue([this, mesh, name, gen, orientYaw]() {
+                // Check generation — if user clicked another model, discard
+                if (gen != m_loadingState.generation.load())
+                    return;
+                m_loadingState.reset();
+
+                m_workspace->setFocusedMesh(mesh);
+                if (m_uiManager->viewportPanel())
+                    m_uiManager->viewportPanel()->setPreOrientedMesh(mesh, orientYaw);
+                if (m_uiManager->propertiesPanel())
+                    m_uiManager->propertiesPanel()->setMesh(mesh, name);
+                if (m_uiManager->materialsPanel())
+                    m_uiManager->materialsPanel()->setModelLoaded(true);
+            });
         });
-    });
+}
+
+void Application::assignMaterialToCurrentModel(int64_t materialId) {
+    if (!m_materialManager || !m_workspace)
+        return;
+
+    // Get the currently focused mesh
+    auto mesh = m_workspace->getFocusedMesh();
+    if (!mesh)
+        return;
+
+    // Get material record
+    auto material = m_materialManager->getMaterial(materialId);
+    if (!material)
+        return;
+
+    // Persist the assignment to the database
+    if (m_focusedModelId > 0) {
+        m_materialManager->assignMaterialToModel(materialId, m_focusedModelId);
+    }
+
+    // Load and upload material texture if archive path exists
+    m_activeMaterialTexture.reset();
+    if (!material->archivePath.empty()) {
+        auto matData = MaterialArchive::load(material->archivePath.string());
+        if (matData && !matData->textureData.empty()) {
+            // Decode texture PNG from memory
+            auto textureOpt = TextureLoader::loadPNGFromMemory(matData->textureData.data(),
+                                                               matData->textureData.size());
+            if (textureOpt) {
+                m_activeMaterialTexture = std::make_unique<Texture>();
+                m_activeMaterialTexture->upload(textureOpt->pixels.data(), textureOpt->width,
+                                                textureOpt->height);
+            }
+        }
+    }
+
+    // Generate UVs if needed
+    if (mesh->needsUVGeneration()) {
+        mesh->generatePlanarUVs(material->grainDirectionDeg);
+    }
+
+    // Store active material ID
+    m_activeMaterialId = materialId;
+
+    // Update PropertiesPanel to show material info
+    if (m_uiManager->propertiesPanel()) {
+        m_uiManager->propertiesPanel()->setMaterial(*material);
+    }
+
+    // Update viewport material texture pointer
+    if (m_uiManager->viewportPanel()) {
+        m_uiManager->viewportPanel()->setMaterialTexture(m_activeMaterialTexture.get());
+        // Re-upload mesh with updated UVs
+        m_uiManager->viewportPanel()->setMesh(mesh);
+    }
+}
+
+void Application::loadMaterialTextureForModel(int64_t modelId) {
+    if (!m_materialManager)
+        return;
+
+    auto material = m_materialManager->getModelMaterial(modelId);
+    if (!material) {
+        m_activeMaterialTexture.reset();
+        m_activeMaterialId = -1;
+        if (m_uiManager && m_uiManager->viewportPanel())
+            m_uiManager->viewportPanel()->setMaterialTexture(nullptr);
+        return;
+    }
+
+    m_activeMaterialId = material->id;
+    m_activeMaterialTexture.reset();
+
+    if (!material->archivePath.empty()) {
+        auto matData = MaterialArchive::load(material->archivePath.string());
+        if (matData && !matData->textureData.empty()) {
+            auto textureOpt = TextureLoader::loadPNGFromMemory(matData->textureData.data(),
+                                                               matData->textureData.size());
+            if (textureOpt) {
+                m_activeMaterialTexture = std::make_unique<Texture>();
+                m_activeMaterialTexture->upload(textureOpt->pixels.data(), textureOpt->width,
+                                                textureOpt->height);
+            }
+        }
+    }
+
+    // Update viewport texture pointer
+    if (m_uiManager && m_uiManager->viewportPanel())
+        m_uiManager->viewportPanel()->setMaterialTexture(m_activeMaterialTexture.get());
 }
 
 void Application::shutdown() {
@@ -412,6 +656,7 @@ void Application::shutdown() {
     m_uiManager.reset();
 
     // Destroy core systems
+    m_geminiService.reset();
     m_importQueue.reset();
     m_mainThreadQueue->shutdown();
     m_mainThreadQueue.reset();
@@ -422,6 +667,11 @@ void Application::shutdown() {
     m_libraryManager.reset();
     m_database.reset();
     m_eventBus.reset();
+
+    // Destroy any multi-viewport platform windows before backend shutdown
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+        ImGui::DestroyPlatformWindows();
+    }
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();

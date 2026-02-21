@@ -1,0 +1,1 @@
+--out-path /data/DW/build_debug/gladsources/glad_gl33_core --api gl:core=3.3 c

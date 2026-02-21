@@ -45,16 +45,14 @@ void ImportSummaryDialog::render() {
         }
 
         if (m_summary.failedCount > 0) {
-            ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Errors: %d",
-                               m_summary.failedCount);
+            ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Errors: %d", m_summary.failedCount);
         }
 
         ImGui::Spacing();
 
         // Duplicates section (collapsible)
         if (m_summary.duplicateCount > 0 && !m_summary.duplicateNames.empty()) {
-            if (ImGui::CollapsingHeader("Skipped Duplicates",
-                                        ImGuiTreeNodeFlags_DefaultOpen)) {
+            if (ImGui::CollapsingHeader("Skipped Duplicates", ImGuiTreeNodeFlags_DefaultOpen)) {
                 ImGui::Indent();
                 for (const auto& name : m_summary.duplicateNames) {
                     ImGui::BulletText("%s", name.c_str());

@@ -50,9 +50,21 @@ class Mesh {
     f32 autoOrient();
     void revertAutoOrient();
     bool wasAutoOriented() const { return m_autoOriented; }
+    const Mat4& getOrientMatrix() const { return m_orientMatrix; }
+
+    // Apply a previously computed orient matrix (fast path — skips axis detection and normal counting)
+    void applyStoredOrient(const Mat4& matrix);
 
     // Create a copy
     Mesh clone() const;
+
+    // UV coordinate generation
+    // Returns true if all vertices have zero texCoords (typical for STL imports)
+    bool needsUVGeneration() const;
+    // Generate planar UV coordinates from mesh bounds.
+    // Projects onto the plane with largest area (XY, XZ, or YZ).
+    // grainRotationDeg rotates UV around (0.5,0.5) for wood grain direction.
+    void generatePlanarUVs(float grainRotationDeg = 0.0f);
 
     // Check if mesh has valid data
     bool isValid() const;

@@ -60,6 +60,26 @@ void ViewportPanel::setMesh(MeshPtr mesh) {
     m_viewCubeCache.valid = false;
 }
 
+void ViewportPanel::setPreOrientedMesh(MeshPtr mesh, f32 orientYaw) {
+    m_mesh = mesh;
+
+    if (m_gpuMesh.vao != 0) {
+        m_gpuMesh.destroy();
+    }
+
+    if (m_mesh && m_mesh->isValid()) {
+        m_gpuMesh = m_renderer.uploadMesh(*m_mesh);
+        fitToModel();
+
+        if (m_mesh->wasAutoOriented()) {
+            m_camera.setYaw(orientYaw);
+            m_camera.setPitch(0.0f);
+        }
+    }
+
+    m_viewCubeCache.valid = false;
+}
+
 void ViewportPanel::clearMesh() {
     m_mesh = nullptr;
     if (m_gpuMesh.vao != 0) {
@@ -286,9 +306,9 @@ void ViewportPanel::renderViewport() {
     m_renderer.renderGrid(20.0f, 1.0f);
     m_renderer.renderAxis(2.0f);
 
-    // Render mesh
+    // Render mesh (with material texture if assigned)
     if (m_gpuMesh.vao != 0) {
-        m_renderer.renderMesh(m_gpuMesh);
+        m_renderer.renderMesh(m_gpuMesh, m_materialTexture);
     }
 
     // Render toolpath (if present)
@@ -302,35 +322,6 @@ void ViewportPanel::renderViewport() {
     // Display framebuffer texture
     ImGui::Image(static_cast<ImTextureID>(m_framebuffer.colorTexture()), contentSize, ImVec2(0, 1),
                  ImVec2(1, 0));
-
-    // Context menu on right-click (only when not dragging)
-    if (ImGui::IsItemClicked(ImGuiMouseButton_Right) &&
-        !ImGui::IsMouseDragging(ImGuiMouseButton_Right)) {
-        auto& cfg = Config::instance();
-        m_contextMenu.clear();
-        m_contextMenu.addItem("Reset View", [this]() { resetView(); });
-        m_contextMenu.addItem("Fit to Model", [this]() { fitToModel(); }, m_mesh != nullptr);
-        m_contextMenu.addSeparator();
-        m_contextMenu.addToggle("Invert Orbit X", cfg.getInvertOrbitX(), [&cfg]() {
-            cfg.setInvertOrbitX(!cfg.getInvertOrbitX());
-            cfg.save();
-        });
-        m_contextMenu.addToggle("Invert Orbit Y", cfg.getInvertOrbitY(), [&cfg]() {
-            cfg.setInvertOrbitY(!cfg.getInvertOrbitY());
-            cfg.save();
-        });
-        m_contextMenu.addSeparator();
-        m_contextMenu.addToggle("Show Grid", cfg.getShowGrid(), [&cfg]() {
-            cfg.setShowGrid(!cfg.getShowGrid());
-            cfg.save();
-        });
-        m_contextMenu.addToggle("Show Axis", cfg.getShowAxis(), [&cfg]() {
-            cfg.setShowAxis(!cfg.getShowAxis());
-            cfg.save();
-        });
-        m_contextMenu.open();
-    }
-    m_contextMenu.render();
 
     renderViewCube();
 }
@@ -392,8 +383,8 @@ void ViewportPanel::renderViewCube() {
     };
 
     const std::array<Face, 6> faces = {{
-        {{0, 1, 2, 3}, "F", 0.0f, 0.0f},    // Front (-Z)
-        {{5, 4, 7, 6}, "Bk", 180.0f, 0.0f}, // Back (+Z)
+        {{0, 1, 2, 3}, "Bk", 0.0f, 0.0f},   // Back (-Z)
+        {{5, 4, 7, 6}, "F", 180.0f, 0.0f},  // Front (+Z)
         {{1, 5, 6, 2}, "R", 90.0f, 0.0f},   // Right (+X)
         {{4, 0, 3, 7}, "L", 270.0f, 0.0f},  // Left (-X)
         {{3, 2, 6, 7}, "T", 0.0f, 89.0f},   // Top (+Y)

@@ -32,7 +32,10 @@ inline constexpr const char kTruncationSuffix[] = "...[truncated]";
 template <typename... Args>
 void formatAndLog(Level level, const char* module, const char* format, Args... args) {
     char buffer[kFormatBufSize];
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
     int written = std::snprintf(buffer, kFormatBufSize, format, args...);
+#pragma GCC diagnostic pop
 
     // snprintf returns the number of characters that *would* have been written
     // (excluding null terminator). If written >= buffer size, output was truncated.

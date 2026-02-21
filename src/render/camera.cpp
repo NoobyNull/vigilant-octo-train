@@ -28,43 +28,7 @@ Mat4 Camera::viewProjectionMatrix() const {
 }
 
 void Camera::orbit(f32 deltaX, f32 deltaY) {
-    // For screen-space rotation (dragging always rotates in the direction of mouse movement),
-    // we need to rotate around view-relative axes, not fixed world axes.
-    //
-    // Standard orbit camera issue: rotation around world Y-axis creates opposite visual
-    // effects when viewing from front vs back of the object.
-    //
-    // Solution: rotate around camera's local right vector for vertical (pitch) motion,
-    // and around world up (Y) for horizontal (yaw) motion, but with sign adjustment
-    // based on camera orientation.
-    //
-    // For yaw: when camera is on the "back side" of the object (yaw between 90° and 270°),
-    // horizontal mouse movement should be inverted to maintain screen-space consistency.
-    // Actually, simpler: use camera's up vector instead of world up.
-    //
-    // Even simpler: just apply the rotation with proper axis orientation.
-    // The key insight is that for orbit camera, we want turntable-style visual feedback:
-    // drag right = model visually rotates right, regardless of view angle.
-    //
-    // Implementation: Since we're constrained to yaw/pitch representation, we adjust
-    // the delta signs based on viewing angle.
-
-    // For true screen-space behavior, yaw change should flip when viewing from back.
-    // Simple test: if yaw is in range (90, 270), we're viewing from the "back hemisphere"
-    // and should invert horizontal rotation.
-
-    // Normalize yaw to [0, 360) first
-    f32 normalizedYaw = std::fmod(m_yaw, 360.0f);
-    if (normalizedYaw < 0.0f)
-        normalizedYaw += 360.0f;
-
-    // If viewing from back hemisphere (yaw between 90 and 270), invert horizontal delta
-    f32 yawDelta = deltaX;
-    if (normalizedYaw > 90.0f && normalizedYaw < 270.0f) {
-        yawDelta = -deltaX;
-    }
-
-    m_yaw += yawDelta * m_orbitSensitivity;
+    m_yaw += deltaX * m_orbitSensitivity;
     m_pitch += deltaY * m_orbitSensitivity;
 
     // Clamp pitch
@@ -90,11 +54,13 @@ void Camera::pan(f32 deltaX, f32 deltaY) {
 
     f32 panScale = m_distance * m_panSensitivity;
     m_target = m_target + right * (-deltaX * panScale) + up * (deltaY * panScale);
+    updateVectors();
 }
 
 void Camera::zoom(f32 delta) {
     m_distance *= (1.0f - delta * m_zoomSensitivity);
     m_distance = std::clamp(m_distance, m_minDistance, m_maxDistance);
+    updateVectors();
 }
 
 void Camera::reset() {
@@ -149,6 +115,7 @@ f32 Camera::aspectRatio() const {
 
 void Camera::setDistance(f32 distance) {
     m_distance = std::clamp(distance, m_minDistance, m_maxDistance);
+    updateVectors();
 }
 
 void Camera::setClipPlanes(f32 nearPlane, f32 farPlane) {
@@ -157,17 +124,17 @@ void Camera::setClipPlanes(f32 nearPlane, f32 farPlane) {
 }
 
 Vec3 Camera::position() const {
+    return m_cachedPosition;
+}
+
+void Camera::updateVectors() {
     f32 yawRad = m_yaw * DEG_TO_RAD;
     f32 pitchRad = m_pitch * DEG_TO_RAD;
 
     Vec3 offset{std::sin(yawRad) * std::cos(pitchRad) * m_distance, std::sin(pitchRad) * m_distance,
                 std::cos(yawRad) * std::cos(pitchRad) * m_distance};
 
-    return m_target + offset;
-}
-
-void Camera::updateVectors() {
-    // Currently not caching derived values, but could be added for performance
+    m_cachedPosition = m_target + offset;
 }
 
 } // namespace dw

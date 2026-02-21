@@ -8,8 +8,10 @@
 
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
+#include "../core/threading/loading_state.h"
 #include "../core/types.h"
 
 struct SDL_Window;
@@ -26,6 +28,9 @@ class Workspace;
 class ThumbnailGenerator;
 class ImportQueue;
 class MainThreadQueue;
+class MaterialManager;
+class GeminiMaterialService;
+class Texture;
 
 // Managers (extracted from Application)
 class UIManager;
@@ -72,6 +77,8 @@ class Application {
 
     // Callbacks (business logic stays in Application)
     void onModelSelected(int64_t modelId);
+    void assignMaterialToCurrentModel(int64_t materialId);
+    void loadMaterialTextureForModel(int64_t modelId);
 
     SDL_Window* m_window = nullptr;
     void* m_glContext = nullptr;
@@ -97,6 +104,23 @@ class Application {
 
     // Config Manager - config watching, applying, workspace state, settings, relaunch
     std::unique_ptr<ConfigManager> m_configManager;
+
+    // Materials Manager - coordinates material archives, defaults, and database
+    std::unique_ptr<MaterialManager> m_materialManager;
+
+    // Gemini AI material generation service
+    std::unique_ptr<GeminiMaterialService> m_geminiService;
+
+    // Currently focused model ID (for material assignment)
+    int64_t m_focusedModelId = -1;
+
+    // Active material texture for rendering (cached GPU texture)
+    std::unique_ptr<Texture> m_activeMaterialTexture;
+    int64_t m_activeMaterialId = -1;
+
+    // Model loading state and thread (for async mesh loading)
+    LoadingState m_loadingState;
+    std::thread m_loadThread;
 
     static constexpr int DEFAULT_WIDTH = 1280;
     static constexpr int DEFAULT_HEIGHT = 720;

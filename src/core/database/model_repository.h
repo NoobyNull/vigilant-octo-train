@@ -25,6 +25,10 @@ struct ModelRecord {
     Path thumbnailPath;
     std::string importedAt;
     std::vector<std::string> tags;
+
+    // Orientation data (NULL = not yet computed)
+    std::optional<f32> orientYaw;
+    std::optional<Mat4> orientMatrix;
 };
 
 // Repository for model CRUD operations
@@ -47,6 +51,7 @@ class ModelRepository {
     bool update(const ModelRecord& model);
     bool updateThumbnail(i64 id, const Path& thumbnailPath);
     bool updateTags(i64 id, const std::vector<std::string>& tags);
+    bool updateOrient(i64 id, f32 yaw, const Mat4& matrix);
 
     // Delete
     bool remove(i64 id);
@@ -60,6 +65,8 @@ class ModelRepository {
     ModelRecord rowToModel(Statement& stmt);
     std::string tagsToJson(const std::vector<std::string>& tags);
     std::vector<std::string> jsonToTags(const std::string& json);
+    static std::string mat4ToJson(const Mat4& m);
+    static std::optional<Mat4> jsonToMat4(const std::string& json);
 
     Database& m_db;
 };
