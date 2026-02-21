@@ -1,3 +1,4 @@
+// clang-format off
 // File: '/tmp/fa_extract/fontawesome-free-6.5.1-desktop/otfs/Font Awesome 6 Free-Solid-900.otf' (1023996 bytes)
 // Exported using binary_to_compressed_c.exe -base85 "/tmp/fa_extract/fontawesome-free-6.5.1-desktop/otfs/Font Awesome 6 Free-Solid-900.otf" fa_solid_900
 static const char fa_solid_900_compressed_data_base85[673280+1] =
@@ -4811,4 +4812,6 @@ static const char fa_solid_900_compressed_data_base85[673280+1] =
     "nR7_8fZR_8?K/=#NhYs.jLWiKJXP8/9&AW.^4$v#5k:s.V59p&m$pW79#SfCnAll&dW8_So0Y^'Pa[NO5>jF&r)hB#*x_@-Qx=G-C+/f.f<tx#wIvD-=xt_.mMHC#x`:ENLG?##FQFv-"
     "]KvtLR#br7i/h>$N6)=-N:)=-(X*+.>qZiLkC?##Dq1B#]^KD3>CSd*KL?>#w;fs%8ONP&VZ]6'@*gi'DBGJ(>%Nq26=X-?f.n9275TY,cL5;-gelr-k'MS.=2S8/7c,r/wpEM0%3'/1"
     ")K^f1-d>G2TU:Atj7j>D";
+// clang-format on
+
 

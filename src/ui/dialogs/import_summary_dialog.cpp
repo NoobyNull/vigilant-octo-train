@@ -5,6 +5,7 @@
 #include <imgui.h>
 
 #include "core/utils/file_utils.h"
+#include "ui/icons.h"
 
 namespace dw {
 
@@ -52,8 +53,7 @@ void ImportSummaryDialog::render() {
         }
 
         if (m_summary.failedCount > 0) {
-            ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Errors: %d",
-                               m_summary.failedCount);
+            ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Errors: %d", m_summary.failedCount);
         }
 
         ImGui::Spacing();
@@ -78,8 +78,9 @@ void ImportSummaryDialog::render() {
                 // Per-duplicate checkboxes
                 for (size_t i = 0; i < m_summary.duplicates.size(); ++i) {
                     const auto& dup = m_summary.duplicates[i];
-                    std::string label = file::getStem(dup.sourcePath) + "  ->  duplicate of: " +
-                                        dup.existingName + "##dup" + std::to_string(i);
+                    auto stem = file::getStem(dup.sourcePath);
+                    std::string label = stem + "  ->  duplicate of: " + dup.existingName + "##dup" +
+                                        std::to_string(i);
                     bool checked = m_checked[i];
                     if (ImGui::Checkbox(label.c_str(), &checked)) {
                         m_checked[i] = checked;

@@ -629,8 +629,8 @@ void LibraryPanel::renderGCodeItem(const GCodeRecord& gcode, int index, float th
         // Center "GC" text in placeholder
         const char* icon = "GC";
         ImVec2 iconSize = ImGui::CalcTextSize(icon);
-        ImVec2 iconPos = ImVec2(thumbMin.x + (ts - iconSize.x) * 0.5f,
-                                thumbMin.y + (ts - iconSize.y) * 0.5f);
+        ImVec2 iconPos =
+            ImVec2(thumbMin.x + (ts - iconSize.x) * 0.5f, thumbMin.y + (ts - iconSize.y) * 0.5f);
         drawList->AddText(iconPos, IM_COL32(150, 180, 220, 255), icon);
 
         // Selection highlight
