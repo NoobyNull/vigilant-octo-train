@@ -16,6 +16,7 @@ mkdir -p "$STAGING_DIR/bin"
 cp "$BUILD_DIR/digital_workshop" "$STAGING_DIR/bin/"
 cp "$BUILD_DIR/dw_settings" "$STAGING_DIR/bin/"
 cp "$SCRIPT_DIR/install.sh" "$STAGING_DIR/"
+cp "$SCRIPT_DIR/uninstall.sh" "$STAGING_DIR/"
 
 # Build self-extracting archive
 makeself --gzip "$STAGING_DIR" "$OUTPUT" \

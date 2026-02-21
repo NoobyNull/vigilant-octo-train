@@ -54,6 +54,7 @@ echo "$APP_NAME installed successfully."
 echo "  Binaries:  $BIN_DIR/$BIN_NAME"
 echo "             $BIN_DIR/$SETTINGS_BIN"
 echo "  Desktop:   $DESKTOP_DIR/$DESKTOP_ID.desktop"
+echo "  Uninstall: $(dirname "$0")/uninstall.sh"
 if [ "$1" != "--system" ]; then
     echo ""
     echo "Make sure $BIN_DIR is in your PATH."

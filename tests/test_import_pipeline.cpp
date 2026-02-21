@@ -170,8 +170,8 @@ TEST_F(ImportQueueTest, DuplicateRejected) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
-    // Should have 1 failed (duplicate)
-    EXPECT_EQ(queue.progress().failedFiles.load(), 1);
+    // Duplicates go to batchSummary, not pollCompleted
+    EXPECT_EQ(queue.batchSummary().duplicateCount, 1);
 
     // Database should still have only 1 model
     dw::ScopedConnection conn(*m_pool);

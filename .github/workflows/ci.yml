@@ -10,6 +10,16 @@ on:
 jobs:
   linux:
     runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+        include:
+          - compiler: gcc
+            cc: gcc
+            cxx: g++
+          - compiler: clang
+            cc: clang
+            cxx: clang++
     steps:
       - uses: actions/checkout@v4
 
@@ -17,9 +27,15 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libsdl2-dev libgl-dev zlib1g-dev clang-format-18 makeself
+          if [ "${{ matrix.compiler }}" = "clang" ]; then
+            sudo apt-get install -y clang
+          fi
 
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DDW_BUILD_TESTS=ON
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
 
       - name: Build
         run: cmake --build build -j$(nproc)
@@ -28,13 +44,75 @@ jobs:
         run: ./build/tests/dw_tests
 
       - name: Package
+        if: matrix.compiler == 'gcc'
         run: ./packaging/linux/make-installer.sh build ${{ github.ref_name == 'main' && 'dev' || github.ref_name }}
 
       - name: Upload artifact
+        if: matrix.compiler == 'gcc'
         uses: actions/upload-artifact@v4
         with:
           name: DigitalWorkshop-linux
           path: build/DigitalWorkshop-*.run
+
+  static-analysis:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev libgl-dev zlib1g-dev clang-tidy cppcheck
+
+      - name: Configure (for compile_commands.json)
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Debug -DDW_BUILD_TESTS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Run clang-tidy
+        run: |
+          find src -name '*.cpp' -not -path '*/build/*' | head -50 | \
+            xargs -P$(nproc) -I{} clang-tidy -p build {} 2>&1 | tee clang-tidy.log
+          if grep -q 'error:' clang-tidy.log; then exit 1; fi
+
+      - name: Run cppcheck
+        run: |
+          cppcheck --project=build/compile_commands.json \
+            --suppress=missingIncludeSystem \
+            --suppress=unmatchedSuppression \
+            --error-exitcode=1 \
+            --quiet
+
+  coverage:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev libgl-dev zlib1g-dev lcov
+
+      - name: Configure with coverage
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Debug -DDW_BUILD_TESTS=ON
+          -DCMAKE_C_FLAGS="--coverage" -DCMAKE_CXX_FLAGS="--coverage"
+          -DCMAKE_EXE_LINKER_FLAGS="--coverage"
+
+      - name: Build
+        run: cmake --build build -j$(nproc)
+
+      - name: Test
+        run: ./build/tests/dw_tests || true
+
+      - name: Generate coverage report
+        run: |
+          lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch
+          lcov --remove coverage.info '/usr/*' '*/build/_deps/*' '*/tests/*' --output-file coverage.info
+          lcov --list coverage.info
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.info
 
   windows:
     runs-on: windows-latest
@@ -61,7 +139,7 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [linux, windows]
+    needs: [linux, windows, static-analysis]
     runs-on: ubuntu-24.04
     permissions:
       contents: write

@@ -4,6 +4,7 @@
 
 #include "core/optimizer/bin_packer.h"
 #include "core/optimizer/cut_optimizer.h"
+#include "core/optimizer/guillotine.h"
 #include "core/optimizer/sheet.h"
 
 using namespace dw::optimizer;
@@ -186,4 +187,200 @@ TEST(CutOptimizer, FactoryCreatesGuillotine) {
     std::vector<Sheet> sheets = {Sheet(100.0f, 100.0f)};
     CutPlan plan = optimizer->optimize(parts, sheets);
     EXPECT_TRUE(plan.isComplete());
+}
+
+// --- TEST-03: Edge case tests ---
+
+TEST(BinPacker, VerySmallParts) {
+    BinPacker packer;
+    packer.setKerf(0.0f);
+    packer.setMargin(0.0f);
+
+    std::vector<Part> parts = {
+        Part(0.1f, 0.1f, 1),
+        Part(0.5f, 0.5f, 1),
+        Part(1.0f, 0.01f, 1),
+    };
+    std::vector<Sheet> sheets = {Sheet(100.0f, 100.0f)};
+
+    CutPlan plan = packer.optimize(parts, sheets);
+    EXPECT_TRUE(plan.isComplete());
+    EXPECT_EQ(plan.sheets[0].placements.size(), 3u);
+}
+
+TEST(BinPacker, ExactFit_NoWaste) {
+    BinPacker packer;
+    packer.setKerf(0.0f);
+    packer.setMargin(0.0f);
+
+    // Part exactly equals sheet size
+    std::vector<Part> parts = {Part(200.0f, 200.0f, 1)};
+    std::vector<Sheet> sheets = {Sheet(200.0f, 200.0f)};
+
+    CutPlan plan = packer.optimize(parts, sheets);
+    EXPECT_TRUE(plan.isComplete());
+    ASSERT_EQ(plan.sheets[0].placements.size(), 1u);
+}
+
+TEST(BinPacker, ZeroKerfZeroMargin_MaxPacking) {
+    BinPacker packer;
+    packer.setKerf(0.0f);
+    packer.setMargin(0.0f);
+
+    // 4 parts that should tile exactly in a 100x100 sheet
+    std::vector<Part> parts = {
+        Part(50.0f, 50.0f, 4),
+    };
+    std::vector<Sheet> sheets = {Sheet(100.0f, 100.0f)};
+
+    CutPlan plan = packer.optimize(parts, sheets);
+    EXPECT_TRUE(plan.isComplete());
+    EXPECT_EQ(plan.sheets[0].placements.size(), 4u);
+}
+
+TEST(BinPacker, ManySmallParts_StressTest) {
+    BinPacker packer;
+    packer.setKerf(1.0f);
+    packer.setMargin(5.0f);
+
+    // 50 small parts on a large sheet
+    std::vector<Part> parts;
+    for (int i = 0; i < 50; ++i) {
+        parts.emplace_back(10.0f, 10.0f, 1);
+    }
+    std::vector<Sheet> sheets = {Sheet(1000.0f, 1000.0f)};
+
+    CutPlan plan = packer.optimize(parts, sheets);
+    EXPECT_TRUE(plan.isComplete());
+    EXPECT_GT(plan.overallEfficiency(), 0.0f);
+}
+
+TEST(BinPacker, RotationAllowsFit) {
+    BinPacker packer;
+    packer.setKerf(0.0f);
+    packer.setMargin(0.0f);
+    packer.setAllowRotation(true);
+
+    // Part is 150x50, sheet is 100x200 — only fits rotated (50x150)
+    std::vector<Part> parts = {Part(150.0f, 50.0f, 1)};
+    std::vector<Sheet> sheets = {Sheet(100.0f, 200.0f)};
+
+    CutPlan plan = packer.optimize(parts, sheets);
+    EXPECT_TRUE(plan.isComplete());
+}
+
+// --- GuillotineOptimizer tests ---
+
+TEST(Guillotine, SinglePartFitsOnSheet) {
+    GuillotineOptimizer guillotine;
+    guillotine.setKerf(0.0f);
+    guillotine.setMargin(0.0f);
+
+    std::vector<Part> parts = {Part(100.0f, 50.0f, 1)};
+    std::vector<Sheet> sheets = {Sheet(200.0f, 200.0f)};
+
+    CutPlan plan = guillotine.optimize(parts, sheets);
+
+    EXPECT_TRUE(plan.isComplete());
+    EXPECT_TRUE(plan.unplacedParts.empty());
+    ASSERT_EQ(plan.sheets.size(), 1u);
+    ASSERT_EQ(plan.sheets[0].placements.size(), 1u);
+}
+
+TEST(Guillotine, MultiplePartsPlaced) {
+    GuillotineOptimizer guillotine;
+    guillotine.setKerf(0.0f);
+    guillotine.setMargin(0.0f);
+
+    std::vector<Part> parts = {
+        Part(50.0f, 50.0f, 1),
+        Part(50.0f, 50.0f, 1),
+        Part(50.0f, 50.0f, 1),
+    };
+    std::vector<Sheet> sheets = {Sheet(200.0f, 200.0f)};
+
+    CutPlan plan = guillotine.optimize(parts, sheets);
+
+    EXPECT_TRUE(plan.isComplete());
+    EXPECT_EQ(plan.sheets[0].placements.size(), 3u);
+}
+
+TEST(Guillotine, PartTooLarge) {
+    GuillotineOptimizer guillotine;
+    guillotine.setKerf(0.0f);
+    guillotine.setMargin(0.0f);
+    guillotine.setAllowRotation(true);
+
+    std::vector<Part> parts = {Part(300.0f, 300.0f, 1)};
+    std::vector<Sheet> sheets = {Sheet(200.0f, 200.0f)};
+
+    CutPlan plan = guillotine.optimize(parts, sheets);
+
+    EXPECT_FALSE(plan.isComplete());
+    EXPECT_EQ(plan.unplacedParts.size(), 1u);
+}
+
+TEST(Guillotine, EmptyPartsReturnsEmptyPlan) {
+    GuillotineOptimizer guillotine;
+
+    std::vector<Part> parts;
+    std::vector<Sheet> sheets = {Sheet(200.0f, 200.0f)};
+
+    CutPlan plan = guillotine.optimize(parts, sheets);
+
+    EXPECT_TRUE(plan.isComplete());
+    EXPECT_EQ(plan.sheetsUsed, 0);
+}
+
+TEST(Guillotine, KerfReducesSpace) {
+    GuillotineOptimizer guillotine;
+    guillotine.setKerf(0.0f);
+    guillotine.setMargin(0.0f);
+
+    // Two 100x100 parts fit in 200x100 without kerf
+    std::vector<Part> parts = {Part(100.0f, 100.0f, 1), Part(100.0f, 100.0f, 1)};
+    std::vector<Sheet> sheets = {Sheet(200.0f, 100.0f)};
+
+    CutPlan planNoKerf = guillotine.optimize(parts, sheets);
+    EXPECT_TRUE(planNoKerf.isComplete());
+
+    // With large kerf, second part may not fit
+    GuillotineOptimizer guillotineKerf;
+    guillotineKerf.setKerf(10.0f);
+    guillotineKerf.setMargin(0.0f);
+
+    CutPlan planKerf = guillotineKerf.optimize(parts, sheets);
+    EXPECT_FALSE(planKerf.isComplete());
+}
+
+TEST(Guillotine, QuantityExpansion) {
+    GuillotineOptimizer guillotine;
+    guillotine.setKerf(0.0f);
+    guillotine.setMargin(0.0f);
+
+    std::vector<Part> parts = {Part(50.0f, 50.0f, 4)};
+    std::vector<Sheet> sheets = {Sheet(200.0f, 200.0f)};
+
+    CutPlan plan = guillotine.optimize(parts, sheets);
+
+    EXPECT_TRUE(plan.isComplete());
+    EXPECT_EQ(plan.sheets[0].placements.size(), 4u);
+}
+
+TEST(Guillotine, NonZeroEfficiency) {
+    GuillotineOptimizer guillotine;
+    guillotine.setKerf(0.0f);
+    guillotine.setMargin(0.0f);
+
+    std::vector<Part> parts = {
+        Part(200.0f, 100.0f, 1),
+        Part(150.0f, 80.0f, 1),
+    };
+    std::vector<Sheet> sheets = {Sheet(500.0f, 500.0f)};
+
+    CutPlan plan = guillotine.optimize(parts, sheets);
+
+    EXPECT_TRUE(plan.isComplete());
+    EXPECT_GT(plan.overallEfficiency(), 0.0f);
+    EXPECT_LE(plan.overallEfficiency(), 1.0f);
 }
