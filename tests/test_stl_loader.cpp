@@ -112,9 +112,8 @@ TEST(STLLoader, LoadFromBuffer_TwoTrianglesWithSharedVertices) {
 
     ASSERT_TRUE(result.success()) << "Error: " << result.error;
     EXPECT_EQ(result.mesh->triangleCount(), 2u);
-    // With vertex deduplication, shared vertices should be merged.
-    // tri1 has 3 unique verts, tri2 adds 1 new vert (1,1,0) = 4 total
-    EXPECT_EQ(result.mesh->vertexCount(), 4u);
+    // Binary STL uses flat arrays (no dedup) for performance: 2 triangles * 3 = 6 verts
+    EXPECT_EQ(result.mesh->vertexCount(), 6u);
 }
 
 TEST(STLLoader, SupportsExtension) {

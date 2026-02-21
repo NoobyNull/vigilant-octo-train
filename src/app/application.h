@@ -31,6 +31,7 @@ class MainThreadQueue;
 class MaterialManager;
 class CostRepository;
 class GeminiMaterialService;
+class Mesh;
 class Texture;
 
 // Managers (extracted from Application)
@@ -80,6 +81,7 @@ class Application {
     void onModelSelected(int64_t modelId);
     void assignMaterialToCurrentModel(int64_t materialId);
     void loadMaterialTextureForModel(int64_t modelId);
+    bool generateMaterialThumbnail(int64_t modelId, Mesh& mesh);
 
     SDL_Window* m_window = nullptr;
     void* m_glContext = nullptr;

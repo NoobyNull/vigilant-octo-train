@@ -14,8 +14,9 @@
 
 namespace dw {
 
-// Forward declaration
+// Forward declarations
 class ThumbnailGenerator;
+class Texture;
 
 // Import result
 struct ImportResult {
@@ -76,7 +77,8 @@ class LibraryManager {
     void setThumbnailGenerator(ThumbnailGenerator* generator) { m_thumbnailGen = generator; }
 
     // Generate thumbnail and update DB record
-    bool generateThumbnail(i64 modelId, const Mesh& mesh);
+    bool generateThumbnail(i64 modelId, const Mesh& mesh,
+                           const Texture* materialTexture = nullptr);
 
     // G-code operations
     std::vector<GCodeRecord> getAllGCodeFiles();

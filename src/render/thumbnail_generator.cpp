@@ -127,7 +127,7 @@ ByteBuffer ThumbnailGenerator::generateToBuffer(const Mesh& mesh,
 
     renderer.setCamera(camera);
     renderer.beginFrame(settings.backgroundColor);
-    renderer.renderMesh(mesh);
+    renderer.renderMesh(mesh, settings.materialTexture);
     renderer.endFrame();
 
     // Read pixels

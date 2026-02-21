@@ -205,6 +205,9 @@ bool Application::init() {
         m_importQueue.get(), m_workspace.get(), m_uiManager->fileDialog(),
         m_thumbnailGenerator.get());
 
+    m_fileIOManager->setThumbnailCallback(
+        [this](int64_t modelId, Mesh& mesh) { return generateMaterialThumbnail(modelId, mesh); });
+
     m_configManager = std::make_unique<ConfigManager>(m_eventBus.get(), m_uiManager.get());
     m_configManager->init(m_window);
     m_configManager->setQuitCallback([this]() { quit(); });
@@ -303,7 +306,7 @@ bool Application::init() {
                     result.mesh->autoOrient();
                 auto mesh = result.mesh;
                 m_mainThreadQueue->enqueue([this, mesh, modelId, modelName]() {
-                    bool ok = m_libraryManager->generateThumbnail(modelId, *mesh);
+                    bool ok = generateMaterialThumbnail(modelId, *mesh);
                     if (m_uiManager->libraryPanel()) {
                         m_uiManager->libraryPanel()->invalidateThumbnail(modelId);
                         m_uiManager->libraryPanel()->refresh();
@@ -725,6 +728,44 @@ void Application::loadMaterialTextureForModel(int64_t modelId) {
     // Update viewport texture pointer
     if (m_uiManager && m_uiManager->viewportPanel())
         m_uiManager->viewportPanel()->setMaterialTexture(m_activeMaterialTexture.get());
+}
+
+bool Application::generateMaterialThumbnail(int64_t modelId, Mesh& mesh) {
+    // Resolve default material
+    std::unique_ptr<Texture> tex;
+    i64 matId = Config::instance().getDefaultMaterialId();
+    std::optional<MaterialRecord> mat;
+
+    if (matId > 0 && m_materialManager)
+        mat = m_materialManager->getMaterial(matId);
+
+    // Fall back to first available material
+    if (!mat && m_materialManager) {
+        auto all = m_materialManager->getAllMaterials();
+        if (!all.empty())
+            mat = all.front();
+    }
+
+    if (mat) {
+        // Load texture from archive
+        if (!mat->archivePath.empty()) {
+            auto matData = MaterialArchive::load(mat->archivePath.string());
+            if (matData && !matData->textureData.empty()) {
+                auto decoded = TextureLoader::loadPNGFromMemory(matData->textureData.data(),
+                                                                matData->textureData.size());
+                if (decoded) {
+                    tex = std::make_unique<Texture>();
+                    tex->upload(decoded->pixels.data(), decoded->width, decoded->height);
+                }
+            }
+        }
+
+        // Generate UVs if needed
+        if (mesh.needsUVGeneration())
+            mesh.generatePlanarUVs(mat->grainDirectionDeg);
+    }
+
+    return m_libraryManager->generateThumbnail(modelId, mesh, tex.get());
 }
 
 void Application::shutdown() {

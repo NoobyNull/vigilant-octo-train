@@ -5,13 +5,16 @@
 
 namespace dw {
 
+class Texture;
+
 // Thumbnail generation settings
 struct ThumbnailSettings {
-    int width = 256;
-    int height = 256;
+    int width = 512;
+    int height = 512;
     Color backgroundColor{0.2f, 0.2f, 0.2f, 1.0f};
     Color objectColor = Color::fromHex(0x6699CC);
     bool showGrid = false;
+    const Texture* materialTexture = nullptr;
 };
 
 // Generates thumbnail images for 3D models

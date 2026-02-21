@@ -170,7 +170,8 @@ std::string LibraryManager::computeFileHash(const Path& path) {
     return hash::computeFile(path);
 }
 
-bool LibraryManager::generateThumbnail(i64 modelId, const Mesh& mesh) {
+bool LibraryManager::generateThumbnail(i64 modelId, const Mesh& mesh,
+                                       const Texture* materialTexture) {
     if (!m_thumbnailGen) {
         log::warning("Library", "Thumbnail generation skipped - no generator available");
         return false;
@@ -188,8 +189,7 @@ bool LibraryManager::generateThumbnail(i64 modelId, const Mesh& mesh) {
     Path thumbnailPath = thumbnailDir / (std::to_string(modelId) + ".tga");
 
     ThumbnailSettings settings;
-    settings.width = 256;
-    settings.height = 256;
+    settings.materialTexture = materialTexture;
 
     if (!m_thumbnailGen->generate(mesh, thumbnailPath, settings)) {
         log::warningf("Library", "Failed to generate thumbnail for model %lld",

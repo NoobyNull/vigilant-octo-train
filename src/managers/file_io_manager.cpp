@@ -165,12 +165,12 @@ void FileIOManager::processCompletedImports(ViewportPanel* viewport, PropertiesP
     m_pendingCompletions.erase(m_pendingCompletions.begin());
 
     // Generate thumbnail on main thread (needs GL context)
-    // Use LibraryManager which writes the file AND updates the DB
-    if (m_thumbnailGenerator && task.mesh && m_libraryManager) {
-        m_libraryManager->setThumbnailGenerator(m_thumbnailGenerator);
-        bool thumbnailOk = m_libraryManager->generateThumbnail(task.modelId, *task.mesh);
-        if (!thumbnailOk) {
-            // Retry once - framebuffer creation can fail transiently
+    if (task.mesh && m_libraryManager) {
+        bool thumbnailOk = false;
+        if (m_thumbnailCallback) {
+            thumbnailOk = m_thumbnailCallback(task.modelId, *task.mesh);
+        } else if (m_thumbnailGenerator) {
+            m_libraryManager->setThumbnailGenerator(m_thumbnailGenerator);
             thumbnailOk = m_libraryManager->generateThumbnail(task.modelId, *task.mesh);
         }
         if (!thumbnailOk) {

@@ -25,6 +25,7 @@ struct ImportTask;
 class Workspace;
 class FileDialog;
 class ThumbnailGenerator;
+class Mesh;
 class ViewportPanel;
 class PropertiesPanel;
 class LibraryPanel;
@@ -35,6 +36,11 @@ class FileIOManager {
                   ProjectManager* projectManager, ImportQueue* importQueue, Workspace* workspace,
                   FileDialog* fileDialog, ThumbnailGenerator* thumbnailGenerator);
     ~FileIOManager();
+
+    // Optional callback for thumbnail generation with material support.
+    // Signature: (modelId, mesh) -> bool. When set, replaces default thumbnail generation.
+    using ThumbnailCallback = std::function<bool(int64_t modelId, Mesh& mesh)>;
+    void setThumbnailCallback(ThumbnailCallback cb) { m_thumbnailCallback = std::move(cb); }
 
     // Import/Export
     void importModel();
@@ -64,6 +70,9 @@ class FileIOManager {
 
     // Pending completions queue for throttled processing (one per frame)
     std::vector<ImportTask> m_pendingCompletions;
+
+    // Optional material-aware thumbnail callback
+    ThumbnailCallback m_thumbnailCallback;
 };
 
 } // namespace dw
