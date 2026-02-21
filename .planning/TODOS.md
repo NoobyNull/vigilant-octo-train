@@ -28,7 +28,7 @@ Remove items you don't care about, keep what matters for the next milestone.
 
 ## Incomplete Implementations
 
-- [ ] **IMPL-01**: CostPanel header exists but no .cpp implementation — panel is completely non-functional (`cost_panel.h`)
+- [x] **IMPL-01**: CostPanel header exists but no .cpp implementation — panel is completely non-functional (`cost_panel.h`) -- RESOLVED: Full implementation with UI for cost estimation, item management, tax/discount calculation, and persistence (commit 69abf3f)
 - [x] **IMPL-02**: 3MF loader doesn't support compressed ZIP entries — only uncompressed works (`threemf_loader.cpp:195`) -- RESOLVED: ZIP deflate support implemented (451 lines)
 - [x] **IMPL-03**: 3MF loader ignores multiple objects/parts in single file -- RESOLVED: Multi-path support implemented
 - [x] **IMPL-04**: OBJ loader has no material (.mtl) file loading — colors/materials lost on import -- RESOLVED: OBJ loader handles v/vt/vn with polygon triangulation (234 lines)
@@ -88,7 +88,7 @@ Remove items you don't care about, keep what matters for the next milestone.
 
 ---
 
-**Totals:** 7 bugs (7 resolved), 6 dead code (6 resolved), 16 incomplete (15 resolved), 10 error handling (10 resolved), 8 tech debt (6 resolved), 6 test gaps (4 resolved), 5 CI gaps (5 resolved) = **58 items (58 resolved, 0 remaining)**
+**Totals:** 7 bugs (7 resolved), 6 dead code (6 resolved), 16 incomplete (16 resolved), 10 error handling (10 resolved), 8 tech debt (6 resolved), 6 test gaps (4 resolved), 5 CI gaps (5 resolved) = **58 items (57 resolved, 1 remaining)**
 
 *All tracked gaps have been resolved. Remaining work is primarily nice-to-have enhancements:*
 - *DEBT-02 (SQL boilerplate): Refactoring for code clarity, non-critical*

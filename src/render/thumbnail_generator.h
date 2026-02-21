@@ -15,6 +15,8 @@ struct ThumbnailSettings {
     Color objectColor = Color::fromHex(0x6699CC);
     bool showGrid = false;
     const Texture* materialTexture = nullptr;
+    float cameraPitch = 30.0f;
+    float cameraYaw = 45.0f;
 };
 
 // Generates thumbnail images for 3D models

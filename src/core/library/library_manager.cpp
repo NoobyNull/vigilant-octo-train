@@ -171,7 +171,8 @@ std::string LibraryManager::computeFileHash(const Path& path) {
 }
 
 bool LibraryManager::generateThumbnail(i64 modelId, const Mesh& mesh,
-                                       const Texture* materialTexture) {
+                                       const Texture* materialTexture, float cameraPitch,
+                                       float cameraYaw) {
     if (!m_thumbnailGen) {
         log::warning("Library", "Thumbnail generation skipped - no generator available");
         return false;
@@ -190,6 +191,8 @@ bool LibraryManager::generateThumbnail(i64 modelId, const Mesh& mesh,
 
     ThumbnailSettings settings;
     settings.materialTexture = materialTexture;
+    settings.cameraPitch = cameraPitch;
+    settings.cameraYaw = cameraYaw;
 
     if (!m_thumbnailGen->generate(mesh, thumbnailPath, settings)) {
         log::warningf("Library", "Failed to generate thumbnail for model %lld",

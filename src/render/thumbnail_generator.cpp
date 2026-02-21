@@ -31,7 +31,7 @@ bool writeTGA(const Path& path, const ByteBuffer& pixels, int width, int height)
     header[14] = static_cast<uint8_t>(height & 0xFF);
     header[15] = static_cast<uint8_t>((height >> 8) & 0xFF);
     header[16] = 32;   // 32 bits per pixel (BGRA)
-    header[17] = 0x20; // Top-left origin
+    header[17] = 0x08; // 8 alpha bits, bottom-left origin (matches glReadPixels)
 
     file.write(reinterpret_cast<const char*>(header), 18);
 
@@ -117,6 +117,8 @@ ByteBuffer ThumbnailGenerator::generateToBuffer(const Mesh& mesh,
     // Setup camera to fit the model
     Camera camera;
     camera.setViewport(settings.width, settings.height);
+    camera.setPitch(settings.cameraPitch);
+    camera.setYaw(settings.cameraYaw);
 
     // Fit camera to view the whole model
     const auto& bounds = mesh.bounds();

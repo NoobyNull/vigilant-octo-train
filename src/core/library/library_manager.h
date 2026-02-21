@@ -78,7 +78,8 @@ class LibraryManager {
 
     // Generate thumbnail and update DB record
     bool generateThumbnail(i64 modelId, const Mesh& mesh,
-                           const Texture* materialTexture = nullptr);
+                           const Texture* materialTexture = nullptr,
+                           float cameraPitch = 30.0f, float cameraYaw = 45.0f);
 
     // G-code operations
     std::vector<GCodeRecord> getAllGCodeFiles();

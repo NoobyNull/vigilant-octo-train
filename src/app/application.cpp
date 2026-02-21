@@ -302,8 +302,6 @@ bool Application::init() {
                     });
                     return;
                 }
-                if (Config::instance().getAutoOrient())
-                    result.mesh->autoOrient();
                 auto mesh = result.mesh;
                 m_mainThreadQueue->enqueue([this, mesh, modelId, modelName]() {
                     bool ok = generateMaterialThumbnail(modelId, *mesh);
@@ -731,6 +729,18 @@ void Application::loadMaterialTextureForModel(int64_t modelId) {
 }
 
 bool Application::generateMaterialThumbnail(int64_t modelId, Mesh& mesh) {
+    // Auto-orient mesh and capture orientYaw to match viewport camera
+    f32 orientYaw = 0.0f;
+    if (Config::instance().getAutoOrient()) {
+        auto record = m_libraryManager->getModel(modelId);
+        if (record && record->orientYaw && record->orientMatrix) {
+            mesh.applyStoredOrient(*record->orientMatrix);
+            orientYaw = *record->orientYaw;
+        } else {
+            orientYaw = mesh.autoOrient();
+        }
+    }
+
     // Resolve default material
     std::unique_ptr<Texture> tex;
     i64 matId = Config::instance().getDefaultMaterialId();
@@ -765,7 +775,8 @@ bool Application::generateMaterialThumbnail(int64_t modelId, Mesh& mesh) {
             mesh.generatePlanarUVs(mat->grainDirectionDeg);
     }
 
-    return m_libraryManager->generateThumbnail(modelId, mesh, tex.get());
+    // Match viewport camera: pitch=0, yaw=orientYaw (same as setPreOrientedMesh)
+    return m_libraryManager->generateThumbnail(modelId, mesh, tex.get(), 0.0f, orientYaw);
 }
 
 void Application::shutdown() {
