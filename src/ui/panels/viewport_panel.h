@@ -8,7 +8,6 @@
 #include "../../render/camera.h"
 #include "../../render/framebuffer.h"
 #include "../../render/renderer.h"
-#include "../context_menu.h"
 #include "panel.h"
 
 namespace dw {
@@ -84,9 +83,6 @@ class ViewportPanel : public Panel {
 
     // ViewCube cache
     ViewCubeCache m_viewCubeCache;
-
-    // Context menu
-    ContextMenu m_contextMenu{"##ViewportContext"};
 };
 
 } // namespace dw

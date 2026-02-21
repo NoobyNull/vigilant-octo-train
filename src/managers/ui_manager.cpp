@@ -15,6 +15,7 @@
 #include "core/import/import_task.h"
 #include "core/threading/loading_state.h"
 #include "core/utils/thread_utils.h"
+#include "ui/context_menu_manager.h"
 #include "ui/dialogs/file_dialog.h"
 #include "ui/dialogs/import_summary_dialog.h"
 #include "ui/dialogs/lighting_dialog.h"
@@ -54,6 +55,7 @@ void UIManager::init(LibraryManager* libraryManager, ProjectManager* projectMana
 
     // Create widgets
     m_statusBar = std::make_unique<StatusBar>();
+    m_contextMenuManager = std::make_unique<ContextMenuManager>();
 
     // Connect viewport render settings to lighting dialog
     if (m_viewportPanel) {

@@ -98,9 +98,8 @@ GLuint LibraryPanel::getThumbnailTexture(const ModelRecord& model) {
         return it->second;
     }
 
-    // No thumbnail path means no thumbnail
+    // No thumbnail path yet — don't cache so we re-check after generation
     if (model.thumbnailPath.empty()) {
-        m_textureCache[model.id] = 0;
         return 0;
     }
 

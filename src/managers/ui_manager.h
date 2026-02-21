@@ -41,6 +41,7 @@ class Workspace;
 
 // Forward declarations - widgets
 class StatusBar;
+class ContextMenuManager;
 
 // Callback types for actions that remain in Application
 using ActionCallback = std::function<void()>;
@@ -95,6 +96,7 @@ class UIManager {
     FileDialog* fileDialog() { return m_fileDialog.get(); }
     LightingDialog* lightingDialog() { return m_lightingDialog.get(); }
     ImportSummaryDialog* importSummaryDialog() { return m_importSummaryDialog.get(); }
+    ContextMenuManager* contextMenuManager() { return m_contextMenuManager.get(); }
 
     // --- Visibility state ---
     bool& showViewport() { return m_showViewport; }
@@ -152,6 +154,9 @@ class UIManager {
 
     // Widgets (Plan 02-05)
     std::unique_ptr<StatusBar> m_statusBar;
+
+    // Context menu manager (Phase 03-00)
+    std::unique_ptr<ContextMenuManager> m_contextMenuManager;
 
     // Restart popup state
     bool m_showRestartPopup = false;

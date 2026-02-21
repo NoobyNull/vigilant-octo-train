@@ -88,6 +88,7 @@ set(DW_SOURCES
     # UI
     # ui/ui_manager.cpp  -- dead code, replaced by managers/ui_manager.cpp (Phase 1.6 cleanup)
     ui/theme.cpp
+    ui/context_menu_manager.cpp
 
     # UI Panels
     ui/panels/viewport_panel.cpp

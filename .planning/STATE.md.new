@@ -1,0 +1,10 @@
+
+26. **std::optional Uniform Cache Pattern (2026-02-09, Plan 1.5-01)**
+    - Decision: Use `std::unordered_map<std::string, std::optional<GLint>>` for shader uniform cache
+    - Rationale: Distinguishes "not cached" from "cached as -1", eliminates repeated glGetUniformLocation calls for missing uniforms
+    - Impact: BUG-04 fixed - uniform cache now properly caches not-found locations
+
+27. **Normal Matrix CPU-Side Computation (2026-02-09, Plan 1.5-01)**
+    - Decision: Compute normal matrix as `glm::transpose(glm::inverse(glm::mat3(modelMatrix)))` on CPU
+    - Rationale: Correct for non-uniform scaling, GPU matrix inverse is expensive
+    - Impact: BUG-07 fixed - lighting now correct for all model transforms

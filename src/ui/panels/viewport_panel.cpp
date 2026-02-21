@@ -303,34 +303,6 @@ void ViewportPanel::renderViewport() {
     ImGui::Image(static_cast<ImTextureID>(m_framebuffer.colorTexture()), contentSize, ImVec2(0, 1),
                  ImVec2(1, 0));
 
-    // Context menu on right-click (only when not dragging)
-    if (ImGui::IsItemClicked(ImGuiMouseButton_Right) &&
-        !ImGui::IsMouseDragging(ImGuiMouseButton_Right)) {
-        auto& cfg = Config::instance();
-        m_contextMenu.clear();
-        m_contextMenu.addItem("Reset View", [this]() { resetView(); });
-        m_contextMenu.addItem("Fit to Model", [this]() { fitToModel(); }, m_mesh != nullptr);
-        m_contextMenu.addSeparator();
-        m_contextMenu.addToggle("Invert Orbit X", cfg.getInvertOrbitX(), [&cfg]() {
-            cfg.setInvertOrbitX(!cfg.getInvertOrbitX());
-            cfg.save();
-        });
-        m_contextMenu.addToggle("Invert Orbit Y", cfg.getInvertOrbitY(), [&cfg]() {
-            cfg.setInvertOrbitY(!cfg.getInvertOrbitY());
-            cfg.save();
-        });
-        m_contextMenu.addSeparator();
-        m_contextMenu.addToggle("Show Grid", cfg.getShowGrid(), [&cfg]() {
-            cfg.setShowGrid(!cfg.getShowGrid());
-            cfg.save();
-        });
-        m_contextMenu.addToggle("Show Axis", cfg.getShowAxis(), [&cfg]() {
-            cfg.setShowAxis(!cfg.getShowAxis());
-            cfg.save();
-        });
-        m_contextMenu.open();
-    }
-    m_contextMenu.render();
 
     renderViewCube();
 }
