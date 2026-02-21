@@ -41,6 +41,7 @@ set(DW_SOURCES
     core/database/material_repository.cpp
     core/database/project_repository.cpp
     core/database/gcode_repository.cpp
+    core/database/cost_repository.cpp
 
     # Mesh
     core/mesh/mesh.cpp
@@ -106,6 +107,7 @@ set(DW_SOURCES
     ui/panels/properties_panel.cpp
     ui/panels/project_panel.cpp
     ui/panels/gcode_panel.cpp
+    ui/panels/cost_panel.cpp
     ui/panels/cut_optimizer_panel.cpp
     ui/panels/start_page.cpp
 

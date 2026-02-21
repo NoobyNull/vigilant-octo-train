@@ -29,6 +29,7 @@ class ThumbnailGenerator;
 class ImportQueue;
 class MainThreadQueue;
 class MaterialManager;
+class CostRepository;
 class GeminiMaterialService;
 class Texture;
 
@@ -107,6 +108,9 @@ class Application {
 
     // Materials Manager - coordinates material archives, defaults, and database
     std::unique_ptr<MaterialManager> m_materialManager;
+
+    // Cost estimation repository
+    std::unique_ptr<CostRepository> m_costRepo;
 
     // Gemini AI material generation service
     std::unique_ptr<GeminiMaterialService> m_geminiService;

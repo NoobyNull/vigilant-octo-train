@@ -139,6 +139,9 @@ class Config {
     bool getShowCutOptimizer() const { return m_wsShowCutOptimizer; }
     void setShowCutOptimizer(bool v) { m_wsShowCutOptimizer = v; }
 
+    bool getShowCostEstimator() const { return m_wsShowCostEstimator; }
+    void setShowCostEstimator(bool v) { m_wsShowCostEstimator = v; }
+
     bool getShowStartPage() const { return m_wsShowStartPage; }
     void setShowStartPage(bool v) { m_wsShowStartPage = v; }
 
@@ -220,6 +223,7 @@ class Config {
     bool m_wsShowMaterials = false;
     bool m_wsShowGCode = false;
     bool m_wsShowCutOptimizer = false;
+    bool m_wsShowCostEstimator = false;
     bool m_wsShowStartPage = true;
     i64 m_wsLastSelectedModelId = -1;
 

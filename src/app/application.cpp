@@ -16,6 +16,7 @@
 #include "app/workspace.h"
 #include "core/config/config.h"
 #include "core/database/connection_pool.h"
+#include "core/database/cost_repository.h"
 #include "core/database/database.h"
 #include "core/database/model_repository.h"
 #include "core/database/schema.h"
@@ -183,6 +184,7 @@ bool Application::init() {
     m_projectManager = std::make_unique<ProjectManager>(*m_database);
     m_materialManager = std::make_unique<MaterialManager>(*m_database);
     m_materialManager->seedDefaults();
+    m_costRepo = std::make_unique<CostRepository>(*m_database);
     m_geminiService = std::make_unique<GeminiMaterialService>();
     m_workspace = std::make_unique<Workspace>();
 
@@ -195,7 +197,8 @@ bool Application::init() {
 
     // Initialize managers
     m_uiManager = std::make_unique<UIManager>();
-    m_uiManager->init(m_libraryManager.get(), m_projectManager.get(), m_materialManager.get());
+    m_uiManager->init(m_libraryManager.get(), m_projectManager.get(), m_materialManager.get(),
+                      m_costRepo.get());
 
     m_fileIOManager = std::make_unique<FileIOManager>(
         m_eventBus.get(), m_database.get(), m_libraryManager.get(), m_projectManager.get(),
@@ -721,6 +724,7 @@ void Application::shutdown() {
 
     // Destroy core systems
     m_geminiService.reset();
+    m_costRepo.reset();
     m_importQueue.reset();
     m_mainThreadQueue->shutdown();
     m_mainThreadQueue.reset();

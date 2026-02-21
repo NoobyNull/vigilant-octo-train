@@ -20,6 +20,7 @@
 #include "ui/dialogs/import_summary_dialog.h"
 #include "ui/dialogs/lighting_dialog.h"
 #include "ui/dialogs/message_dialog.h"
+#include "ui/panels/cost_panel.h"
 #include "ui/panels/cut_optimizer_panel.h"
 #include "ui/panels/gcode_panel.h"
 #include "ui/panels/library_panel.h"
@@ -41,7 +42,7 @@ UIManager::~UIManager() {
 }
 
 void UIManager::init(LibraryManager* libraryManager, ProjectManager* projectManager,
-                     MaterialManager* materialManager) {
+                     MaterialManager* materialManager, CostRepository* costRepo) {
     // Create panels
     m_viewportPanel = std::make_unique<ViewportPanel>();
     m_libraryPanel = std::make_unique<LibraryPanel>(libraryManager);
@@ -50,6 +51,9 @@ void UIManager::init(LibraryManager* libraryManager, ProjectManager* projectMana
     m_gcodePanel = std::make_unique<GCodePanel>();
     m_cutOptimizerPanel = std::make_unique<CutOptimizerPanel>();
     m_materialsPanel = std::make_unique<MaterialsPanel>(materialManager);
+    if (costRepo) {
+        m_costPanel = std::make_unique<CostPanel>(costRepo);
+    }
     m_startPage = std::make_unique<StartPage>();
 
     // Create dialogs
@@ -91,6 +95,7 @@ void UIManager::shutdown() {
     m_projectPanel.reset();
     m_gcodePanel.reset();
     m_cutOptimizerPanel.reset();
+    m_costPanel.reset();
     m_materialsPanel.reset();
     m_startPage.reset();
 }
@@ -147,6 +152,7 @@ void UIManager::renderViewMenu() {
     ImGui::Separator();
     ImGui::MenuItem("G-code Viewer", nullptr, &m_showGCode);
     ImGui::MenuItem("Cut Optimizer", nullptr, &m_showCutOptimizer);
+    ImGui::MenuItem("Cost Estimator", nullptr, &m_showCostEstimator);
     ImGui::MenuItem("Materials", nullptr, &m_showMaterials);
     ImGui::Separator();
     if (ImGui::MenuItem("Lighting Settings", "Ctrl+L") && m_lightingDialog) {
@@ -208,6 +214,15 @@ void UIManager::renderPanels() {
 
     if (m_showCutOptimizer && m_cutOptimizerPanel) {
         m_cutOptimizerPanel->render();
+    }
+
+    if (m_showCostEstimator && m_costPanel) {
+        m_costPanel->render();
+        // Sync: if user closed panel via X button, update menu checkbox state
+        if (!m_costPanel->isOpen()) {
+            m_showCostEstimator = false;
+            m_costPanel->setOpen(true); // reset for next View menu toggle
+        }
     }
 
     if (m_showMaterials && m_materialsPanel) {
@@ -364,6 +379,7 @@ void UIManager::restoreVisibilityFromConfig() {
     m_showMaterials = cfg.getShowMaterials();
     m_showGCode = cfg.getShowGCode();
     m_showCutOptimizer = cfg.getShowCutOptimizer();
+    m_showCostEstimator = cfg.getShowCostEstimator();
     m_showStartPage = cfg.getShowStartPage();
 }
 
@@ -376,6 +392,7 @@ void UIManager::saveVisibilityToConfig() {
     cfg.setShowMaterials(m_showMaterials);
     cfg.setShowGCode(m_showGCode);
     cfg.setShowCutOptimizer(m_showCutOptimizer);
+    cfg.setShowCostEstimator(m_showCostEstimator);
     cfg.setShowStartPage(m_showStartPage);
 }
 

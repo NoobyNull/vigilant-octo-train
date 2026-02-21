@@ -152,6 +152,8 @@ bool Config::load() {
                 m_wsShowGCode = (value == "true" || value == "1");
             } else if (key == "show_cut_optimizer") {
                 m_wsShowCutOptimizer = (value == "true" || value == "1");
+            } else if (key == "show_cost_estimator") {
+                m_wsShowCostEstimator = (value == "true" || value == "1");
             } else if (key == "show_start_page") {
                 m_wsShowStartPage = (value == "true" || value == "1");
             } else if (key == "last_selected_model") {
@@ -280,6 +282,7 @@ bool Config::save() {
     ss << "show_materials=" << (m_wsShowMaterials ? "true" : "false") << "\n";
     ss << "show_gcode=" << (m_wsShowGCode ? "true" : "false") << "\n";
     ss << "show_cut_optimizer=" << (m_wsShowCutOptimizer ? "true" : "false") << "\n";
+    ss << "show_cost_estimator=" << (m_wsShowCostEstimator ? "true" : "false") << "\n";
     ss << "show_start_page=" << (m_wsShowStartPage ? "true" : "false") << "\n";
     ss << "last_selected_model=" << m_wsLastSelectedModelId << "\n";
     ss << "\n";
