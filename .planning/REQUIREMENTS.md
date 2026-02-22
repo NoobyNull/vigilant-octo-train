@@ -30,8 +30,8 @@
 
 ### Export (EXPORT)
 
-- [ ] **EXPORT-01**: User can export a project as .dwproj ZIP archive containing manifest + model blobs + materials + thumbnails
-- [ ] **EXPORT-02**: .dwproj archive is portable and self-contained (can be imported on another machine)
+- [x] **EXPORT-01**: User can export a project as .dwproj ZIP archive containing manifest + model blobs + materials + thumbnails
+- [x] **EXPORT-02**: .dwproj archive is portable and self-contained (can be imported on another machine)
 
 ---
 
@@ -66,5 +66,5 @@
 | ORG-03 | Phase 4 | 04-02 | Complete |
 | ORG-04 | Phase 4 | 04-03 | Complete |
 | ORG-05 | Phase 4 | 04-03 | Complete |
-| EXPORT-01 | Phase 5 | — | Pending |
-| EXPORT-02 | Phase 5 | — | Pending |
+| EXPORT-01 | Phase 5 | 05-01, 05-02 | Complete |
+| EXPORT-02 | Phase 5 | 05-01, 05-02 | Complete |

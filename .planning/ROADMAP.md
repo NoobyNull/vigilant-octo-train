@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 Foundation & Import Pipeline** — Phases 1-2 (shipped 2026-02-10)
-- [ ] **v1.1 Library Storage & Organization** — Phases 2-5 (started 2026-02-21)
+- ✅ **v1.1 Library Storage & Organization** — Phases 2-5 (completed 2026-02-22)
 
 ## Phases
 
@@ -34,7 +34,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
 - [x] **Phase 2: Content-Addressable Storage** — StorageManager with hash-based blob directories, atomic writes, orphan cleanup
 - [x] **Phase 3: Import File Handling** — Filesystem detection, import dialog with keep/copy/move options
 - [x] **Phase 4: Organization & Graph** — DB schema with FTS5 search, GraphQLite graph extension, categories, Cypher queries
-- [ ] **Phase 5: Project Export** — Portable .dwproj ZIP archives with manifest and embedded blobs
+- [x] **Phase 5: Project Export** — Portable .dwproj ZIP archives with manifest and embedded blobs
 
 ## Phase Details
 
@@ -94,7 +94,7 @@ Plans:
 **Plans:** 2 plans
 Plans:
 - [x] 05-01-PLAN.md — ProjectExportManager core: export/import logic with miniz ZIP and nlohmann/json manifest
-- [ ] 05-02-PLAN.md — UI wiring: Export button in ProjectPanel, Import via File menu, ProgressDialog integration
+- [x] 05-02-PLAN.md — UI wiring: Export button in ProjectPanel, Import via File menu, ProgressDialog integration
 
 ## Progress
 
@@ -111,7 +111,7 @@ Plans:
 | 2 Content-Addressable Storage | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 3 Import File Handling | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 4 Organization & Graph | v1.1 | 4/4 | Complete | 2026-02-22 |
-| 5 Project Export | v1.1 | 1/2 | In progress | - |
+| 5 Project Export | v1.1 | 2/2 | Complete | 2026-02-22 |
 
 ---
 
