@@ -1,0 +1,86 @@
+#pragma once
+
+#include <functional>
+#include <string>
+#include <vector>
+
+#include "../database/model_repository.h"
+#include "../database/project_repository.h"
+#include "../types.h"
+
+namespace dw {
+
+// Forward declarations
+class Database;
+class Project;
+
+// Result of export/import operations
+struct DwprojExportResult {
+    bool success = false;
+    std::string error;
+    int modelCount = 0;
+    uint64_t totalBytes = 0;
+
+    static DwprojExportResult ok(int models = 0, uint64_t bytes = 0) {
+        return {true, "", models, bytes};
+    }
+
+    static DwprojExportResult fail(const std::string& err) {
+        return {false, err, 0, 0};
+    }
+};
+
+// Progress callback: (current, total, currentItemName)
+using ExportProgressCallback = std::function<void(int, int, const std::string&)>;
+
+// Manages exporting/importing projects as .dwproj ZIP archives.
+// A .dwproj archive contains:
+//   - manifest.json  (project metadata + model list)
+//   - models/<hash>.<ext>  (model blob files)
+class ProjectExportManager {
+  public:
+    explicit ProjectExportManager(Database& db);
+
+    // Export a project and its models to a .dwproj ZIP at outputPath
+    DwprojExportResult exportProject(const Project& project,
+                                     const Path& outputPath,
+                                     ExportProgressCallback progress = nullptr);
+
+    // Import a .dwproj ZIP, creating project + models in DB
+    DwprojExportResult importProject(const Path& archivePath,
+                                     ExportProgressCallback progress = nullptr);
+
+    static constexpr const char* Extension = ".dwproj";
+    static constexpr int FormatVersion = 1;
+
+  private:
+    struct ManifestModel {
+        std::string name;
+        std::string hash;
+        std::string originalFilename;
+        std::string fileInArchive;
+        std::string fileFormat;
+        std::vector<std::string> tags;
+        u32 vertexCount = 0;
+        u32 triangleCount = 0;
+        Vec3 boundsMin{0.0f};
+        Vec3 boundsMax{0.0f};
+    };
+
+    struct Manifest {
+        int formatVersion = 1;
+        std::string appVersion;
+        std::string createdAt;
+        i64 projectId = 0;
+        std::string projectName;
+        std::vector<ManifestModel> models;
+    };
+
+    std::string buildManifestJson(const Project& project,
+                                  const std::vector<ModelRecord>& models);
+    bool parseManifest(const std::string& json, Manifest& out, std::string& error);
+
+    Database& m_db;
+};
+
+} // namespace dw

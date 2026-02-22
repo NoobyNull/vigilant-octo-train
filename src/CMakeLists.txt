@@ -75,6 +75,7 @@ set(DW_SOURCES
 
     # Export
     core/export/model_exporter.cpp
+    core/export/project_export_manager.cpp
 
     # G-code
     core/gcode/gcode_parser.cpp
