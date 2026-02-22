@@ -1,519 +1,721 @@
-# Stack Research: Digital Workshop Milestone
-
-**Project:** Digital Workshop - CNC Woodworking Desktop App
-**Domain:** Additional capabilities for existing C++17/SDL2/ImGui desktop app
-**Researched:** 2026-02-08
-**Confidence:** HIGH
-
-## Context
-
-This research covers NEW libraries needed to add CNC control, business workflow, and infrastructure capabilities to an existing C++17 desktop app. The existing stack (SDL2, Dear ImGui, OpenGL 3.3, SQLite3, CMake, zlib, GLM, GoogleTest) is locked and not re-evaluated here.
-
-**Project constraints:**
-- C++17 (no C++20/23 features)
-- Permissive licenses only (MIT, BSD, zlib, Public Domain)
-- CMake FetchContent integration (no external package managers)
-- Under 25MB deployed size
-- Cross-platform (Linux, Windows, macOS)
-
-## Recommended Stack
-
-### HTTP/REST Communication
-
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| cpp-httplib | v0.31.0 | HTTP/HTTPS REST client for ncSender communication | Header-only, MIT license, zero dependencies, proven stability. Latest release Feb 9, 2025. Supports SSL via OpenSSL/mbedTLS. Perfect for REST API calls to ncSender service. |
-
-**Confidence:** HIGH (verified from [official GitHub releases](https://github.com/yhirose/cpp-httplib))
-
-**Integration:**
-```cmake
-FetchContent_Declare(httplib
-  GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
-  GIT_TAG v0.31.0
-)
-FetchContent_MakeAvailable(httplib)
-target_link_libraries(your_target PRIVATE httplib::httplib)
-```
-
-**Notes:**
-- Header-only by default (include `httplib.h`)
-- Optional compiled mode for faster builds
-- Built-in JSON parsing not included; pair with nlohmann/json
-- SSL support requires OpenSSL or mbedTLS
-
-### WebSocket Communication
-
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| IXWebSocket | v11.4.6 | WebSocket client for real-time ncSender events | BSD-3-Clause license, minimal dependencies (no Boost), excellent cross-platform support, actively maintained (May 2025 release). Simpler than WebSocket++. |
-
-**Confidence:** HIGH (verified from [official GitHub](https://github.com/machinezone/IXWebSocket))
-
-**Alternative:** WebSocket++ v0.8.2 (last updated April 2020, less active)
-
-**Integration:**
-```cmake
-FetchContent_Declare(ixwebsocket
-  GIT_REPOSITORY https://github.com/machinezone/IXWebSocket.git
-  GIT_TAG v11.4.6
-)
-FetchContent_MakeAvailable(ixwebsocket)
-target_link_libraries(your_target PRIVATE ixwebsocket::ixwebsocket)
-```
-
-**Notes:**
-- C++11 compatible (works with C++17)
-- Supports deflate compression
-- Multiple SSL backends (OpenSSL, Secure Transport, mbedTLS)
-- Autobahn-compliant WebSocket implementation
-
-### JSON Processing
-
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| nlohmann/json | latest (develop) | JSON parsing for REST APIs and config files | Industry standard for C++ JSON. MIT license, header-only, intuitive API, extensive documentation. Used by millions of projects. Essential for ncSender REST communication. |
-
-**Confidence:** HIGH (verified from [official GitHub](https://github.com/nlohmann/json))
-
-**Integration:**
-```cmake
-FetchContent_Declare(json
-  GIT_REPOSITORY https://github.com/nlohmann/json.git
-  GIT_TAG v3.11.3  # Use specific tag in production
-)
-FetchContent_MakeAvailable(json)
-target_link_libraries(your_target PRIVATE nlohmann_json::nlohmann_json)
-```
-
-**Notes:**
-- Single header file (`json.hpp`)
-- Intuitive syntax: `json j = R"({"key": "value"})"_json;`
-- Native CMake support with FetchContent
-- Excellent error messages
-
-### PDF Generation
-
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| libHaru | v2.4.5 | PDF generation for quotes and reports | Zlib/LIBPNG license (permissive), cross-platform, actively maintained (March 2025 release). Mature library with comprehensive PDF features. No heavy dependencies. |
-
-**Confidence:** MEDIUM (verified from [GitHub releases](https://github.com/libharu/libharu), but maintenance history shows gaps)
-
-**Integration:**
-```cmake
-FetchContent_Declare(libharu
-  GIT_REPOSITORY https://github.com/libharu/libharu.git
-  GIT_TAG v2.4.5
-)
-FetchContent_MakeAvailable(libharu)
-target_link_libraries(your_target PRIVATE hpdf)
-```
-
-**Features:**
-- Text, images, outlines, annotations
-- PNG/JPEG embedding
-- TrueType/Type1 font embedding
-- PDF encryption support
-- Compression (deflate)
-
-**Caveats:**
-- C library (not C++), requires manual resource management
-- API is procedural, not object-oriented
-- Documentation can be sparse; expect code exploration
-
-### Filesystem Monitoring
-
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| efsw | latest (master) | Watch folder monitoring for import workflows | MIT license, cross-platform (inotify/FSEvents/IOCP/kqueue), asynchronous notifications, recursive directory watching. Battle-tested in multiple projects. |
-
-**Confidence:** MEDIUM (verified from [GitHub](https://github.com/SpartanJ/efsw), active but no recent versioned releases)
-
-**Alternative:** watcher (MIT, newer design, minimal dependencies)
-
-**Integration:**
-```cmake
-FetchContent_Declare(efsw
-  GIT_REPOSITORY https://github.com/SpartanJ/efsw.git
-  GIT_TAG master  # Pin to specific commit hash in production
-)
-FetchContent_MakeAvailable(efsw)
-target_link_libraries(your_target PRIVATE efsw)
-```
-
-**Notes:**
-- Platform-specific backends automatically selected
-- UTF-8 string support
-- Minimal overhead; asynchronous event callbacks
-- Fallback to polling if native API unavailable
-
-### Mathematical Expression Evaluation
-
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| ExprTk | latest | Feeds/speeds calculator formula engine | MIT license, header-only, extremely flexible runtime expression parser. Supports variables, functions, vectors. Ideal for user-defined machining formulas. |
-
-**Confidence:** HIGH (verified from [official site](http://www.partow.net/programming/exprtk/) and [GitHub](https://github.com/ArashPartow/exprtk))
-
-**Integration:**
-```cmake
-# Header-only: download exprtk.hpp
-FetchContent_Declare(exprtk
-  GIT_REPOSITORY https://github.com/ArashPartow/exprtk.git
-  GIT_TAG master
-)
-FetchContent_Populate(exprtk)
-target_include_directories(your_target PRIVATE ${exprtk_SOURCE_DIR})
-```
-
-**Usage Example:**
-```cpp
-#include "exprtk.hpp"
-// Feed rate = RPM * chip_load * num_flutes
-expression_t expr;
-expr.register_symbol_table(symbol_table);
-parser_t parser;
-parser.compile("rpm * chip_load * num_flutes", expr);
-double feed_rate = expr.value();
-```
-
-**Notes:**
-- No build step required (header-only)
-- Very fast compilation of expressions
-- Extensible with custom functions
-- Full operator precedence support
-
-### String Formatting
-
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| {fmt} | latest (v11.x) | Modern string formatting for logging and UI | MIT license, optional header-only mode, safe and fast. Basis for C++20 std::format. Type-safe printf replacement. |
-
-**Confidence:** HIGH (verified from [GitHub](https://github.com/fmtlib/fmt))
-
-**Integration:**
-```cmake
-FetchContent_Declare(fmt
-  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 11.0.2  # Or latest stable
-)
-FetchContent_MakeAvailable(fmt)
-target_link_libraries(your_target PRIVATE fmt::fmt)
-# OR for header-only mode:
-# target_compile_definitions(your_target PRIVATE FMT_HEADER_ONLY)
-```
-
-**Why not std::format?**
-- std::format is C++20 (project is C++17)
-- {fmt} is the reference implementation
-- Consistent API across all compilers
-
-### Supporting Libraries
-
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| cppcodec | latest | Base64 encoding for API authentication | If ncSender uses Basic Auth or token encoding. MIT license, header-only, RFC 4648 compliant. |
-| ada-url | v2.x | URL parsing and manipulation | If constructing REST endpoints programmatically. Apache 2.0/MIT dual license, WHATWG-compliant. |
-
-**Confidence:** MEDIUM (cppcodec and ada-url verified from GitHub searches)
-
-**Integration (cppcodec):**
-```cmake
-FetchContent_Declare(cppcodec
-  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git
-  GIT_TAG master
-)
-FetchContent_Populate(cppcodec)
-target_include_directories(your_target PRIVATE ${cppcodec_SOURCE_DIR})
-```
-
-**Integration (ada-url):**
-```cmake
-FetchContent_Declare(ada
-  GIT_REPOSITORY https://github.com/ada-url/ada.git
-  GIT_TAG v2.9.2  # Check for latest
-)
-FetchContent_MakeAvailable(ada)
-target_link_libraries(your_target PRIVATE ada::ada)
-```
-
-## Architectural Pattern: Command Pattern for Undo/Redo
-
-**Recommendation:** Implement in-house using standard C++17 patterns.
-
-**Why not a library?**
-- Command pattern is conceptual, not code-heavy
-- Qt's undo framework is GPL/LGPL (license conflict)
-- Most implementations are framework-specific
-- Custom implementation integrates better with existing architecture
-
-**Confidence:** HIGH (verified from [design pattern articles](https://gernotklingler.com/blog/implementing-undoredo-with-the-command-pattern/))
-
-**Core Pattern:**
-```cpp
-class Command {
-public:
-    virtual ~Command() = default;
-    virtual void execute() = 0;
-    virtual void undo() = 0;
-    virtual std::string describe() const = 0;
-};
-
-class CommandStack {
-    std::vector<std::unique_ptr<Command>> undo_stack;
-    std::vector<std::unique_ptr<Command>> redo_stack;
-public:
-    void execute(std::unique_ptr<Command> cmd);
-    void undo();
-    void redo();
-};
-```
-
-**Resources:**
-- [Implementing Undo/Redo with Command Pattern](https://gernotklingler.com/blog/implementing-undoredo-with-the-command-pattern/)
-- [Command Pattern for Undo Functionality](https://matt.berther.io/2004/09/16/using-the-command-pattern-for-undo-functionality/)
-
-## Alternatives Considered
-
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| HTTP Client | cpp-httplib | cpprestsdk (MS C++ REST SDK) | cpprestsdk is archived/deprecated. Boost dependency. Overcomplicated for simple REST calls. |
-| HTTP Client | cpp-httplib | libcurl | Not header-only, larger binary footprint, complex API. Good choice if HTTPS with many TLS backends needed. |
-| WebSocket | IXWebSocket | WebSocket++ v0.8.2 | WebSocket++ last updated April 2020. IXWebSocket more actively maintained and simpler API. |
-| WebSocket | IXWebSocket | Boost.Beast | Requires Boost (25MB+ size impact), steeper learning curve. |
-| JSON | nlohmann/json | RapidJSON | RapidJSON is faster but less ergonomic. nlohmann/json is standard, readable, debug-friendly. |
-| PDF | libHaru | PoDoFo | PoDoFo is LGPL (license conflict). More complex API. |
-| PDF | libHaru | QPrinter (Qt) | Requires entire Qt framework (massive size increase). GPL/LGPL licensing. |
-| Filesystem Watch | efsw | std::filesystem polling | C++17 std::filesystem has no native watch API. Manual polling is inefficient. |
-| Filesystem Watch | efsw | watcher (e-dant) | Newer library, less battle-tested. efsw has longer track record. Both viable. |
-| Expression Parser | ExprTk | muParser | ExprTk has more flexible API, better documentation, more active. Both MIT. |
-| Formatting | {fmt} | std::ostringstream | Type-unsafe, verbose, error-prone. {fmt} is modern replacement. |
-| Formatting | {fmt} | std::format (C++20) | Project is C++17. {fmt} is the reference implementation anyway. |
-
-## What NOT to Use
-
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| cpprestsdk (Microsoft C++ REST SDK) | Archived/deprecated by Microsoft. Last update 2021. Requires Boost. | cpp-httplib |
-| Boost.Beast | Massive dependency footprint (Boost is 25MB+ alone). Overkill for simple REST/WebSocket. | cpp-httplib + IXWebSocket |
-| Qt Networking | Requires entire Qt framework (100MB+). GPL/LGPL licensing conflicts with permissive-only requirement. | cpp-httplib + IXWebSocket |
-| libcurl (for simple REST) | Not header-only, complex API, larger binary size. Good for complex HTTP needs, overkill here. | cpp-httplib |
-| PoDoFo (PDF) | LGPL license (copyleft, conflicts with project rules). | libHaru |
-| iText (PDF) | Java library. AGPL license. | libHaru |
-| Custom HTTP client | Security vulnerabilities, TLS complexity, substantial development time. | cpp-httplib |
-| Custom WebSocket client | RFC 6455 is complex. Error-prone. Not worth the effort. | IXWebSocket |
-| Custom JSON parser | Slow, bug-prone, reinventing the wheel. | nlohmann/json |
-
-## ncSender Protocol Integration Notes
-
-Based on research, ncSender is not a widely documented standard. Assuming it follows common CNC control patterns:
-
-**Typical CNC Control APIs:**
-- REST endpoints: GET /status, POST /command, GET /state
-- WebSocket events: machine state changes, job progress, alarms
-- JSON payloads for commands and responses
-
-**Recommended Approach:**
-1. Use cpp-httplib for REST API calls (status queries, MDI commands)
-2. Use IXWebSocket for real-time state monitoring
-3. Use nlohmann/json for all payload serialization/deserialization
-
-**Research Gap:** Specific ncSender protocol documentation not found. If ncSender uses a proprietary protocol, may need vendor docs.
-
-**Confidence:** LOW (ncSender-specific), HIGH (general CNC control patterns)
-
-**References:**
-- [CNCjs Controller API](https://github.com/cncjs/cncjs) (WebSocket + REST example)
-- [Buildbotics CNC API](https://buildbotics.com/introduction-to-the-buildbotics-cnc-controller-api/) (WebSocket + HTTP patterns)
-- [NC.js REST API](https://steptools.github.io/NC.js/api/index.html) (WebSocket state management)
-
-## Query Language for Advanced Search
-
-**Recommendation:** Implement simple recursive descent parser in-house OR use ExprTk for boolean expressions.
-
-**Why not a library?**
-- Most query DSL libraries are for SQL (overkill)
-- Lexy (C++ parsing DSL) is header-only but complex for simple search syntax
-- Simple search syntax (e.g., `material:oak AND thickness:>0.75`) can be hand-parsed
-
-**Confidence:** MEDIUM
-
-**Suggested Syntax:**
-```
-field:value
-field:>number
-field:<number
-AND / OR / NOT
-Parentheses for grouping
-```
-
-**Implementation Path:**
-1. Tokenize input string
-2. Recursive descent parser for boolean logic
-3. Build SQLite WHERE clause from parse tree
-
-**If complexity grows:** Consider Lexy or PEG parsers. For MVP, hand-coded parser is sufficient.
-
-## Version Compatibility Matrix
-
-| Package | Compatible With | Notes |
-|---------|-----------------|-------|
-| cpp-httplib v0.31.0 | OpenSSL 1.1+, mbedTLS 2.x+ | SSL backend optional; choose one |
-| IXWebSocket v11.4.6 | OpenSSL, Secure Transport, mbedTLS | Auto-detects platform SSL |
-| nlohmann/json latest | C++11/14/17/20/23 | No external dependencies |
-| libHaru v2.4.5 | zlib, libpng (optional) | zlib already in project |
-| ExprTk | C++11+ | Header-only, no dependencies |
-| {fmt} v11.x | C++11+ | Header-only mode available |
-| efsw | C++11+ | Platform APIs (inotify, FSEvents, IOCP, kqueue) |
-
-**SSL Backend Choice:**
-- **OpenSSL:** Most common, best performance, larger binary (~2MB)
-- **mbedTLS:** Smaller footprint (~500KB), embedded-friendly
-- **Recommendation:** OpenSSL for desktop app (broader compatibility)
-
-## Build Size Impact Estimate
-
-| Library | Size Impact | Notes |
-|---------|-------------|-------|
-| cpp-httplib | ~200KB | Header-only, minimal compiled code |
-| IXWebSocket | ~300KB | Small library, efficient |
-| nlohmann/json | ~100KB | Header-only, optimizes well |
-| libHaru | ~500KB | PDF rendering adds complexity |
-| ExprTk | ~50KB | Header-only, templates optimize out unused code |
-| {fmt} | ~150KB | Optional compiled mode smaller |
-| efsw | ~100KB | Thin wrapper over OS APIs |
-| **Total NEW** | **~1.4MB** | Well under 25MB budget |
-
-Existing stack + new libraries: ~5MB total (SQLite ~1MB, SDL2 ~1MB, ImGui ~500KB, others ~1MB, new ~1.4MB). Ample headroom.
-
-## Installation Pattern (CMakeLists.txt)
-
-```cmake
-include(FetchContent)
-
-# HTTP Client
-FetchContent_Declare(httplib
-  GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
-  GIT_TAG v0.31.0
-)
-
-# WebSocket Client
-FetchContent_Declare(ixwebsocket
-  GIT_REPOSITORY https://github.com/machinezone/IXWebSocket.git
-  GIT_TAG v11.4.6
-)
-
-# JSON
-FetchContent_Declare(json
-  GIT_REPOSITORY https://github.com/nlohmann/json.git
-  GIT_TAG v3.11.3
-)
-
-# PDF Generation
-FetchContent_Declare(libharu
-  GIT_REPOSITORY https://github.com/libharu/libharu.git
-  GIT_TAG v2.4.5
-)
-
-# Filesystem Watcher
-FetchContent_Declare(efsw
-  GIT_REPOSITORY https://github.com/SpartanJ/efsw.git
-  GIT_TAG master
-)
-
-# Expression Parser (header-only)
-FetchContent_Declare(exprtk
-  GIT_REPOSITORY https://github.com/ArashPartow/exprtk.git
-  GIT_TAG master
-)
-
-# String Formatting
-FetchContent_Declare(fmt
-  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 11.0.2
-)
-
-FetchContent_MakeAvailable(httplib ixwebsocket json libharu efsw fmt)
-FetchContent_Populate(exprtk)  # Header-only, just populate
-
-target_link_libraries(DigitalWorkshop PRIVATE
-  httplib::httplib
-  ixwebsocket::ixwebsocket
-  nlohmann_json::nlohmann_json
-  hpdf
-  efsw
-  fmt::fmt
-)
-target_include_directories(DigitalWorkshop PRIVATE ${exprtk_SOURCE_DIR})
-```
-
-## License Compliance Summary
-
-All recommended libraries use permissive licenses compatible with project requirements:
-
-| Library | License | Compliant |
-|---------|---------|-----------|
-| cpp-httplib | MIT | ✓ |
-| IXWebSocket | BSD-3-Clause | ✓ |
-| nlohmann/json | MIT | ✓ |
-| libHaru | zlib/LIBPNG | ✓ |
-| efsw | MIT | ✓ |
-| ExprTk | MIT | ✓ |
-| {fmt} | MIT | ✓ |
-| cppcodec | MIT | ✓ |
-| ada-url | Apache 2.0 / MIT | ✓ |
-
-**No GPL/LGPL dependencies.** All licenses allow commercial use, modification, and distribution.
-
-## Sources
-
-**HTTP/REST Libraries:**
-- [cpp-httplib GitHub](https://github.com/yhirose/cpp-httplib) — Latest release verification (HIGH confidence)
-- [cpp-httplib releases](https://github.com/yhirose/cpp-httplib/releases) — Version v0.31.0 confirmed (HIGH confidence)
-- [Microsoft cpprestsdk](https://github.com/microsoft/cpprestsdk) — Deprecated status (HIGH confidence)
-
-**WebSocket Libraries:**
-- [IXWebSocket GitHub](https://github.com/machinezone/IXWebSocket) — Latest release v11.4.6 (HIGH confidence)
-- [WebSocket++ GitHub](https://github.com/zaphoyd/websocketpp) — Version 0.8.2, April 2020 (MEDIUM confidence)
-
-**JSON Libraries:**
-- [nlohmann/json GitHub](https://github.com/nlohmann/json) — Industry standard status (HIGH confidence)
-- [RapidJSON](https://rapidjson.org/) — Alternative evaluation (MEDIUM confidence)
-
-**PDF Libraries:**
-- [libHaru GitHub](https://github.com/libharu/libharu) — Version v2.4.5, March 2025 (MEDIUM confidence)
-- [libHaru SourceForge](https://libharu.sourceforge.net/) — Feature documentation (MEDIUM confidence)
-
-**Filesystem Monitoring:**
-- [efsw GitHub](https://github.com/SpartanJ/efsw) — Cross-platform support (MEDIUM confidence)
-- [watcher GitHub](https://github.com/e-dant/watcher) — Alternative option (MEDIUM confidence)
-
-**Expression Parsing:**
-- [ExprTk Official](http://www.partow.net/programming/exprtk/) — Documentation and examples (HIGH confidence)
-- [ExprTk GitHub](https://github.com/ArashPartow/exprtk) — MIT license verification (HIGH confidence)
-
-**String Formatting:**
-- [{fmt} GitHub](https://github.com/fmtlib/fmt) — MIT license, C++20 basis (HIGH confidence)
-
-**Supporting Libraries:**
-- [cppcodec GitHub](https://github.com/tplgy/cppcodec) — Base64 encoding (MEDIUM confidence)
-- [ada-url GitHub](https://github.com/ada-url/ada) — URL parsing (MEDIUM confidence)
-
-**Design Patterns:**
-- [Implementing Undo/Redo with Command Pattern](https://gernotklingler.com/blog/implementing-undoredo-with-the-command-pattern/) — Implementation guide (HIGH confidence)
-- [Command Pattern for Undo](https://matt.berther.io/2004/09/16/using-the-command-pattern-for-undo-functionality/) — Additional reference (MEDIUM confidence)
-
-**CNC Control Patterns:**
-- [CNCjs GitHub](https://github.com/cncjs/cncjs) — WebSocket + REST example (MEDIUM confidence)
-- [Buildbotics CNC API](https://buildbotics.com/introduction-to-the-buildbotics-cnc-controller-api/) — Industry patterns (MEDIUM confidence)
-- [NC.js REST API](https://steptools.github.io/NC.js/api/index.html) — WebSocket state management (MEDIUM confidence)
-
-**Query Language Parsing:**
-- [Lexy Parsing DSL](https://lexy.foonathan.net/) — C++ parsing library (MEDIUM confidence)
+# Technology Stack — v1.1 Library Storage & Organization
+
+**Project:** Digital Workshop
+**Scope:** NEW capabilities only for v1.1. Existing stack (C++17, SDL2, Dear ImGui, OpenGL 3.3,
+SQLite3 3.45.0, miniz 3.0.2, zlib, GLM, nlohmann/json, libcurl, stb, GoogleTest, CMake 3.20+)
+is locked and not re-evaluated.
+**Researched:** 2026-02-21
+**Overall confidence:** HIGH (all critical claims verified against GitHub API, official docs,
+and kernel/platform documentation)
 
 ---
 
-**Overall Stack Confidence:** HIGH for core libraries (HTTP, WebSocket, JSON, expression parsing), MEDIUM for PDF and filesystem watching (fewer alternatives, some maintenance concerns).
+## Executive Summary
 
-**Key Recommendation:** Start with cpp-httplib, IXWebSocket, nlohmann/json, and ExprTk. These are battle-tested, well-documented, and integrate seamlessly with CMake FetchContent.
+Five capabilities are needed for v1.1. Only ONE requires a new dependency (Kuzu). The other
+four are unlocked by a single compile flag, platform syscalls, or existing libraries already
+in the build.
+
+| Capability | Approach | New Dependency? |
+|------------|----------|-----------------|
+| Kuzu graph database | Prebuilt `.so`/`.dll` download via FetchContent URL, C API | YES |
+| FTS5 full-text search | `SQLITE_ENABLE_FTS5` compile flag on existing SQLite | NO |
+| Filesystem detection (local vs NAS) | `statfs()`/`GetDriveTypeW()` platform calls | NO |
+| Content-addressable storage | `std::filesystem` + existing SHA-256 hash code | NO |
+| `.dwproj` ZIP export | Existing `miniz_static` (already in build) | NO |
+
+---
+
+## 1. Kuzu Graph Database
+
+### Version
+
+**v0.11.3** — released 2025-10-10. Confirmed via GitHub API query on 2026-02-21.
+This is the latest stable release. The repository has been archived at this version;
+the v0.11.x line is the final stable series.
+
+Source: https://github.com/kuzudb/kuzu/releases/tag/v0.11.3
+
+### C++20 vs C++17 — Critical Constraint
+
+Kuzu's source requires C++20 (`set(CMAKE_CXX_STANDARD 20)` in its `CMakeLists.txt`).
+This project is C++17 with `CMAKE_CXX_STANDARD_REQUIRED ON`. Building Kuzu from source
+via FetchContent would require a project-wide C++ standard upgrade — unacceptable risk
+for a stable shipped codebase.
+
+**Solution: Use prebuilt shared library + C API header only.**
+
+Kuzu ships prebuilt `libkuzu` binaries for all three platforms as GitHub release assets.
+The C API header (`kuzu.h`) is pure C with `extern "C"` guards — zero C++20 contamination.
+
+**Do NOT use `kuzu.hpp`** (the C++ wrapper). It is 338KB and requires C++20 features
+(concepts, ranges). The C API in `kuzu.h` (73KB) covers everything needed.
+
+### Prebuilt Release Assets (v0.11.3)
+
+| Platform | Archive | Library File | Size |
+|----------|---------|--------------|------|
+| Linux x86_64 | `libkuzu-linux-x86_64.tar.gz` | `libkuzu.so` | 8.5 MB |
+| Windows x86_64 | `libkuzu-windows-x86_64.zip` | `kuzu_shared.dll` + `kuzu_shared.lib` | 13 MB DLL |
+| macOS universal | `libkuzu-osx-universal.tar.gz` | `libkuzu.dylib` | 10 MB |
+
+Each archive contains exactly: `kuzu.h`, `kuzu.hpp` (ignore this), and the shared library.
+
+### CMake Integration
+
+Use `FetchContent_Declare` with a URL (downloads the prebuilt tarball, not source) and
+create an `IMPORTED SHARED` target. This fits the existing FetchContent pattern in
+`cmake/Dependencies.cmake`.
+
+```cmake
+# cmake/Dependencies.cmake — add after existing entries
+
+# Kuzu graph database — prebuilt shared library (avoids C++20 build requirement)
+set(KUZU_VERSION "0.11.3")
+
+if(WIN32)
+    set(KUZU_ARCHIVE  "libkuzu-windows-x86_64.zip")
+    set(KUZU_LIB_NAME "kuzu_shared.lib")   # import lib for linking
+    set(KUZU_DLL_NAME "kuzu_shared.dll")   # runtime DLL
+elseif(APPLE)
+    set(KUZU_ARCHIVE  "libkuzu-osx-universal.tar.gz")
+    set(KUZU_LIB_NAME "libkuzu.dylib")
+else()
+    set(KUZU_ARCHIVE  "libkuzu-linux-x86_64.tar.gz")
+    set(KUZU_LIB_NAME "libkuzu.so")
+endif()
+
+FetchContent_Declare(
+    kuzu_prebuilt
+    URL "https://github.com/kuzudb/kuzu/releases/download/v${KUZU_VERSION}/${KUZU_ARCHIVE}"
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+FetchContent_MakeAvailable(kuzu_prebuilt)
+
+# Create IMPORTED target so consumers just link kuzu
+add_library(kuzu SHARED IMPORTED GLOBAL)
+if(WIN32)
+    set_target_properties(kuzu PROPERTIES
+        IMPORTED_IMPLIB   "${kuzu_prebuilt_SOURCE_DIR}/${KUZU_LIB_NAME}"
+        IMPORTED_LOCATION "${kuzu_prebuilt_SOURCE_DIR}/${KUZU_DLL_NAME}"
+        INTERFACE_INCLUDE_DIRECTORIES "${kuzu_prebuilt_SOURCE_DIR}"
+    )
+else()
+    set_target_properties(kuzu PROPERTIES
+        IMPORTED_LOCATION "${kuzu_prebuilt_SOURCE_DIR}/${KUZU_LIB_NAME}"
+        INTERFACE_INCLUDE_DIRECTORIES "${kuzu_prebuilt_SOURCE_DIR}"
+    )
+endif()
+
+message(STATUS "  Kuzu:     ${KUZU_VERSION} (prebuilt shared library)")
+```
+
+**Linking:** Add `kuzu` to `target_link_libraries` for any target that calls the C API.
+
+**Windows deployment:** `kuzu_shared.dll` must be copied next to the executable. Add a
+post-build copy step or handle via the installer.
+
+**Note on URL_HASH:** For reproducible builds, add SHA256 hash after first download:
+```cmake
+URL_HASH SHA256=<compute with sha256sum on downloaded archive>
+```
+Do this before shipping to production CI.
+
+### Thread Safety Contract
+
+Source: Kuzu concurrency documentation (https://docs.kuzudb.com/concurrency/)
+
+**Rules (MEDIUM confidence — from official docs, not independently tested):**
+
+1. **One `kuzu_database` per database directory.** Opening two separate `kuzu_database`
+   instances to the same path causes undefined behavior. Enforce with a singleton.
+
+2. **Multiple connections are safe.** Create one `kuzu_connection` per thread (or per
+   logical operation). Connections are cheap to create and destroy.
+
+3. **Write serialization is automatic.** Kuzu's transaction manager serializes concurrent
+   writes. No external mutex needed for write isolation.
+
+4. **Multi-core reads.** Query execution uses morsel-driven parallelism internally.
+   Each connection's query gets multi-threaded automatically.
+
+**Integration with existing architecture:**
+
+The existing `ConnectionPool` owns all SQLite connections. Kuzu needs a separate, simpler
+singleton (not a pool) because Kuzu handles its own internal concurrency:
+
+```cpp
+// src/core/storage/KuzuDatabase.h  (new file, max 400 lines)
+#pragma once
+#include <kuzu.h>
+#include <filesystem>
+#include <stdexcept>
+
+// Thin RAII singleton over kuzu_database.
+// One instance per app. Never copy or move.
+class KuzuDatabase {
+public:
+    static KuzuDatabase& instance() {
+        static KuzuDatabase inst;
+        return inst;
+    }
+
+    void open(const std::filesystem::path& dbPath) {
+        auto cfg = kuzu_default_system_config();
+        if (kuzu_database_init(&db_, dbPath.string().c_str(), cfg) != KuzuSuccess) {
+            throw std::runtime_error("Failed to open Kuzu database: " + dbPath.string());
+        }
+        opened_ = true;
+    }
+
+    // Returns a connection. Caller must destroy with kuzu_connection_destroy().
+    // Thread-safe: create one connection per calling thread.
+    kuzu_connection openConnection() {
+        kuzu_connection conn{};
+        kuzu_connection_init(&conn, &db_);
+        return conn;
+    }
+
+    ~KuzuDatabase() {
+        if (opened_) kuzu_database_destroy(&db_);
+    }
+
+    KuzuDatabase(const KuzuDatabase&) = delete;
+    KuzuDatabase& operator=(const KuzuDatabase&) = delete;
+
+private:
+    KuzuDatabase() = default;
+    kuzu_database db_{};
+    bool opened_ = false;
+};
+```
+
+### Kuzu C API Quick Reference
+
+```c
+// Lifecycle (once per app)
+kuzu_database db;
+kuzu_database_init(&db, "/path/to/kuzudb", kuzu_default_system_config());
+
+// Per-operation connection (create per thread, destroy when done)
+kuzu_connection conn;
+kuzu_connection_init(&conn, &db);
+
+// Execute query
+kuzu_query_result result;
+kuzu_connection_query(&conn, "MATCH (m:Model) RETURN m.hash LIMIT 10", &result);
+
+// Iterate
+while (kuzu_query_result_has_next(&result)) {
+    kuzu_flat_tuple row;
+    kuzu_query_result_get_next(&result, &row);
+    kuzu_value val;
+    kuzu_flat_tuple_get_value(&row, 0, &val);
+    char* str = kuzu_value_get_string(&val);
+    // use str...
+    kuzu_value_destroy(&val);
+    kuzu_flat_tuple_destroy(&row);
+}
+kuzu_query_result_destroy(&result);
+kuzu_connection_destroy(&conn);
+
+// App shutdown
+kuzu_database_destroy(&db);
+```
+
+### Confidence
+
+HIGH for version, download URLs, and C API usability from C++17 (all verified via
+GitHub API and tarball inspection). MEDIUM for thread safety specifics (from documentation,
+not independently tested in this project's context).
+
+---
+
+## 2. SQLite FTS5 Full-Text Search
+
+### Decision: Enable via compile flag — no new dependency
+
+FTS5 has been bundled in the SQLite amalgamation since version 3.9.0 (2015). The project
+uses SQLite 3.45.0. FTS5 is present but disabled by `#ifdef SQLITE_ENABLE_FTS5`.
+
+Source: https://sqlite.org/fts5.html
+
+### CMake Change
+
+One line added to the existing `sqlite3` target in `cmake/Dependencies.cmake`:
+
+```cmake
+# Existing block (lines ~88-93 in Dependencies.cmake):
+add_library(sqlite3 STATIC
+    ${sqlite3_SOURCE_DIR}/sqlite3.c
+)
+target_include_directories(sqlite3 PUBLIC ${sqlite3_SOURCE_DIR})
+
+# ADD THIS LINE — enables FTS5 in the amalgamation:
+target_compile_definitions(sqlite3 PUBLIC SQLITE_ENABLE_FTS5)
+
+add_library(SQLite::SQLite3 ALIAS sqlite3)
+```
+
+`PUBLIC` propagates the definition to all consumers. Any code that includes `sqlite3.h`
+and calls FTS5 SQL will match the compiled implementation.
+
+**Verify:**
+```sql
+PRAGMA compile_options;
+-- Expected output includes: ENABLE_FTS5
+```
+
+### Content Table + Trigger Pattern
+
+Use a "content table" FTS5 configuration to avoid storing text twice. The real data stays
+in the `models` table; FTS5 stores only the inverted index. Triggers keep them in sync.
+
+```sql
+-- FTS5 virtual table referencing models as the content source
+CREATE VIRTUAL TABLE IF NOT EXISTS models_fts USING fts5(
+    name,
+    description,
+    tags,
+    content='models',
+    content_rowid='id'
+);
+
+-- Rebuild index if table already has rows (idempotent)
+INSERT INTO models_fts(models_fts) VALUES('rebuild');
+
+-- Sync triggers (all three required)
+CREATE TRIGGER IF NOT EXISTS models_fts_ai
+AFTER INSERT ON models BEGIN
+    INSERT INTO models_fts(rowid, name, description, tags)
+    VALUES (new.id, new.name, new.description, new.tags);
+END;
+
+CREATE TRIGGER IF NOT EXISTS models_fts_ad
+AFTER DELETE ON models BEGIN
+    INSERT INTO models_fts(models_fts, rowid, name, description, tags)
+    VALUES ('delete', old.id, old.name, old.description, old.tags);
+END;
+
+CREATE TRIGGER IF NOT EXISTS models_fts_au
+AFTER UPDATE ON models BEGIN
+    INSERT INTO models_fts(models_fts, rowid, name, description, tags)
+    VALUES ('delete', old.id, old.name, old.description, old.tags);
+    INSERT INTO models_fts(rowid, name, description, tags)
+    VALUES (new.id, new.name, new.description, new.tags);
+END;
+```
+
+**Query (BM25-ranked results):**
+
+```sql
+SELECT m.id, m.name, bm25(models_fts) AS rank
+FROM models_fts
+JOIN models m ON models_fts.rowid = m.id
+WHERE models_fts MATCH ?   -- bind user's search term
+ORDER BY rank;
+```
+
+**Thread safety:** FTS5 tables are accessed via the existing `ConnectionPool` (WAL mode).
+No additional locking. FTS5 respects SQLite's standard connection-level isolation.
+
+**Warning:** The `content=` option means FTS5 does NOT store the text — the sync triggers
+are mandatory. A missing trigger will produce stale results silently. Create the FTS5
+table and all three triggers in a single transaction.
+
+### Confidence
+
+HIGH — verified against official SQLite documentation at sqlite.org/fts5.html.
+Compile flag mechanism verified against sqlite.org/compile.html.
+
+---
+
+## 3. Cross-Platform Filesystem Detection (Local vs Network/NAS)
+
+### Decision: Platform syscalls only — no library dependency
+
+Three platforms, three different APIs, one abstraction interface. All APIs are stable
+POSIX or Win32 — no new dependencies.
+
+```cpp
+// src/core/storage/FilesystemInfo.h  (new file)
+#pragma once
+#include <filesystem>
+#include <string>
+
+enum class StorageLocation { Local, Network, Unknown };
+
+struct FilesystemInfo {
+    StorageLocation location = StorageLocation::Unknown;
+    std::string fsTypeName;  // "nfs", "smbfs", "ext4", etc. (when available)
+};
+
+// Returns the storage location for the filesystem containing `path`.
+// Path does not need to exist — its parent directory suffices.
+FilesystemInfo detectFilesystem(const std::filesystem::path& path);
+```
+
+### Linux Implementation
+
+`statfs(2)` returns `f_type`, a magic number identifying the filesystem type.
+Magic numbers are defined in kernel headers or can be hardcoded (they are stable ABI).
+
+```cpp
+// src/core/storage/FilesystemInfo_linux.cpp
+#include "FilesystemInfo.h"
+#include <sys/vfs.h>
+
+FilesystemInfo detectFilesystem(const std::filesystem::path& path) {
+    struct statfs buf{};
+    auto p = path;
+    // Walk up to find existing ancestor if path doesn't exist yet
+    while (!std::filesystem::exists(p) && p.has_parent_path())
+        p = p.parent_path();
+
+    if (statfs(p.c_str(), &buf) != 0)
+        return {StorageLocation::Unknown, ""};
+
+    // Linux kernel magic numbers (stable, from <linux/magic.h>)
+    constexpr long NFS_SUPER_MAGIC   = 0x6969;
+    constexpr long SMB_SUPER_MAGIC   = 0x517B;
+    constexpr long CIFS_MAGIC_NUMBER = 0xFF534D42;
+    constexpr long SMB2_MAGIC_NUMBER = 0xFE534D42;  // SMB2
+    constexpr long FUSE_SUPER_MAGIC  = 0x65735546;  // sshfs, rclone mounts
+
+    bool isNetwork = (buf.f_type == NFS_SUPER_MAGIC  ||
+                      buf.f_type == SMB_SUPER_MAGIC   ||
+                      buf.f_type == CIFS_MAGIC_NUMBER ||
+                      buf.f_type == SMB2_MAGIC_NUMBER ||
+                      buf.f_type == FUSE_SUPER_MAGIC);
+
+    return {isNetwork ? StorageLocation::Network : StorageLocation::Local, ""};
+}
+```
+
+Note: Linux `statfs` does not expose `f_fstypename`. The magic number is the only reliable
+discriminator. FUSE covers most sshfs/rclone/s3fuse NAS mounts.
+
+### macOS Implementation
+
+macOS `statfs` has `f_fstypename` — a string like `"nfs"`, `"smbfs"`, `"afpfs"`. This is
+more reliable than `f_type` on macOS because `f_type` is inconsistent (autofs and APFS can
+share the same value). Source: Apple Developer Forums (developer.apple.com/forums/thread/87745).
+
+```cpp
+// src/core/storage/FilesystemInfo_macos.cpp
+#include "FilesystemInfo.h"
+#include <sys/mount.h>   // macOS uses <sys/mount.h>, not <sys/vfs.h>
+#include <string>
+
+FilesystemInfo detectFilesystem(const std::filesystem::path& path) {
+    struct statfs buf{};
+    auto p = path;
+    while (!std::filesystem::exists(p) && p.has_parent_path())
+        p = p.parent_path();
+
+    if (statfs(p.c_str(), &buf) != 0)
+        return {StorageLocation::Unknown, ""};
+
+    std::string fsType = buf.f_fstypename;
+    bool isNetwork = (fsType == "nfs"    ||
+                      fsType == "smbfs"  ||   // SMB/CIFS shares
+                      fsType == "afpfs"  ||   // AFP (legacy Apple Filing Protocol)
+                      fsType == "webdav" ||
+                      fsType == "autofs");     // automount helper (usually network)
+
+    return {isNetwork ? StorageLocation::Network : StorageLocation::Local, fsType};
+}
+```
+
+### Windows Implementation
+
+`GetDriveTypeW()` returns `DRIVE_REMOTE` (4) for network drives, including mapped drives
+and UNC paths. Source: Microsoft Learn (updated Nov 2024).
+
+```cpp
+// src/core/storage/FilesystemInfo_win.cpp
+#include "FilesystemInfo.h"
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+FilesystemInfo detectFilesystem(const std::filesystem::path& path) {
+    // GetDriveTypeW needs the root path (e.g. "C:\\" or "\\server\share\")
+    std::wstring root = path.root_path().wstring();
+    if (root.empty())
+        return {StorageLocation::Unknown, ""};
+
+    UINT driveType = GetDriveTypeW(root.c_str());
+    bool isNetwork = (driveType == DRIVE_REMOTE);
+    return {isNetwork ? StorageLocation::Network : StorageLocation::Local, ""};
+}
+```
+
+Note on UNC paths: For `\\server\share\path`, `path.root_path()` returns `\\server\share\`.
+`GetDriveTypeW` on a UNC root correctly returns `DRIVE_REMOTE`.
+
+### Dispatch in CMakeLists
+
+```cmake
+# Use platform-appropriate implementation
+if(WIN32)
+    target_sources(dw_core PRIVATE src/core/storage/FilesystemInfo_win.cpp)
+elseif(APPLE)
+    target_sources(dw_core PRIVATE src/core/storage/FilesystemInfo_macos.cpp)
+else()
+    target_sources(dw_core PRIVATE src/core/storage/FilesystemInfo_linux.cpp)
+endif()
+```
+
+### Confidence
+
+HIGH — Linux magic numbers from kernel ABI (stable for decades).
+HIGH — macOS `f_fstypename` approach recommended by Apple Developer Forums as reliable.
+HIGH — Windows `GetDriveTypeW` from Microsoft Learn (updated 2024).
+
+---
+
+## 4. Content-Addressable Storage
+
+### Decision: Git-style two-level prefix directory + atomic rename — std::filesystem only
+
+No new dependency. C++17 `std::filesystem` plus the existing SHA-256 hash infrastructure
+(already used for import deduplication in v1.0).
+
+### Directory Structure
+
+```
+~/.local/share/DigitalWorkshop/cas/    (Linux default)
+%APPDATA%\DigitalWorkshop\cas\         (Windows)
+~/Library/Application Support/DigitalWorkshop/cas/   (macOS)
+    ab/
+        cdef1234ef567890...   (SHA-256 hex with first 2 chars stripped)
+    fe/
+        9a820b7c...
+    tmp/
+        import_<hash>         (in-progress staging area)
+```
+
+Two-character hex prefix = 256 subdirectories. At 3,000 models: ~12 files per bucket.
+At 100,000 models: ~390 per bucket. Git uses this exact structure — proven at scale.
+
+### Core Storage Operation
+
+```cpp
+// src/core/storage/ContentStore.cpp (relevant excerpt)
+
+// Returns the SHA-256 hash if the file was stored (or already existed).
+// Returns nullopt on error.
+std::optional<std::string> ContentStore::store(
+    const std::filesystem::path& sourceFile,
+    bool removeSource)
+{
+    namespace fs = std::filesystem;
+
+    // 1. Hash the source
+    std::string hash = sha256File(sourceFile);  // existing utility
+    if (hash.empty()) return std::nullopt;
+
+    // 2. Compute final destination
+    auto destDir = casRoot_ / hash.substr(0, 2);
+    auto dest    = destDir  / hash.substr(2);
+
+    // 3. Deduplication: already stored?
+    if (fs::exists(dest)) {
+        if (removeSource) fs::remove(sourceFile);
+        return hash;
+    }
+
+    // 4. Stage in tmp/ (must be on same filesystem as casRoot_ for atomic rename)
+    auto tmpDir  = casRoot_ / "tmp";
+    fs::create_directories(tmpDir);
+    auto tmpPath = tmpDir / ("import_" + hash);
+
+    // Copy to tmp first (handles cross-filesystem sources, e.g. NAS)
+    fs::copy_file(sourceFile, tmpPath, fs::copy_options::overwrite_existing);
+
+    // 5. Atomic rename into final position
+    fs::create_directories(destDir);
+    fs::rename(tmpPath, dest);   // atomic on POSIX when same mount; no-op if already there
+
+    // 6. Optionally remove source (only if it was local — never delete NAS originals)
+    if (removeSource && !isNetworkPath(sourceFile))
+        fs::remove(sourceFile);
+
+    return hash;
+}
+```
+
+**Key invariant:** `tmp/` is a subdirectory of `casRoot_`, so `rename()` is always
+on the same filesystem mount. If `tmp/` were in the system `/tmp`, the rename would
+fall back to copy+delete on many systems (not atomic).
+
+**Copy vs Move policy (driven by `detectFilesystem()`):**
+
+| Source Location | Action |
+|----------------|--------|
+| Local, same filesystem as CAS | Copy to `tmp/`, atomic rename to CAS, delete original |
+| Local, different filesystem | Copy to `tmp/`, atomic rename to CAS, delete original |
+| Network (NAS) | Always copy to `tmp/`, atomic rename to CAS, never delete original |
+
+The user controls a "keep originals" preference; the mechanics above are transparent.
+
+### Confidence
+
+HIGH — pattern mirrors Git object store directly.
+HIGH — `std::filesystem::rename()` atomicity on same-mount is guaranteed by POSIX.
+MEDIUM — Windows `rename()` atomicity: `MoveFileEx` with `MOVEFILE_REPLACE_EXISTING` is
+atomic within the same volume. `std::filesystem::rename` on MSVC calls this internally.
+
+---
+
+## 5. ZIP Archive Creation (.dwproj Export)
+
+### Decision: Use existing miniz_static — no new dependency
+
+`miniz_static` (miniz 3.0.2) is already fetched and compiled in the project.
+The `.dwproj` format is a ZIP archive with a different extension — identical to how
+`.dwmat` archives work today (verified by reading `cmake/Dependencies.cmake`).
+
+The existing `miniz_static` target already links all four required source files:
+- `miniz.c` — zlib deflate/inflate
+- `miniz_tdef.c` — deflate compressor
+- `miniz_tinfl.c` — inflate decompressor
+- `miniz_zip.c` — ZIP reader/writer (`mz_zip_writer_*` / `mz_zip_reader_*`)
+
+### Archive Creation Pattern
+
+```cpp
+#include "miniz.h"
+
+// Creates a .dwproj ZIP at outputPath.
+// manifest.json + referenced CAS files are embedded.
+bool ProjectExporter::exportDwproj(
+    const std::filesystem::path& outputPath,
+    const ProjectManifest& manifest,
+    const std::filesystem::path& casRoot)
+{
+    mz_zip_archive zip{};
+    mz_zip_zero_struct(&zip);
+
+    if (!mz_zip_writer_init_file(&zip, outputPath.string().c_str(), 0))
+        return false;
+
+    // 1. Write manifest JSON
+    std::string json = manifest.toJson();
+    mz_zip_writer_add_mem(&zip, "manifest.json",
+        json.data(), json.size(), MZ_DEFAULT_COMPRESSION);
+
+    // 2. Write each referenced model file from CAS
+    for (const auto& entry : manifest.modelEntries) {
+        auto casPath = casRoot / entry.hash.substr(0, 2) / entry.hash.substr(2);
+        // Archive entry name: "models/<original_filename>"
+        std::string archiveName = "models/" + entry.filename;
+        mz_zip_writer_add_file(&zip,
+            archiveName.c_str(),
+            casPath.string().c_str(),
+            /*pComment=*/nullptr, /*comment_size=*/0,
+            MZ_DEFAULT_COMPRESSION);
+    }
+
+    // 3. Write thumbnails (optional)
+    for (const auto& entry : manifest.thumbnailEntries) {
+        mz_zip_writer_add_file(&zip, entry.archivePath.c_str(),
+            entry.localPath.string().c_str(), nullptr, 0, MZ_DEFAULT_COMPRESSION);
+    }
+
+    mz_zip_writer_finalize_archive(&zip);
+    mz_zip_writer_end(&zip);
+    return true;
+}
+```
+
+**Reading .dwproj back:**
+
+```cpp
+mz_zip_archive zip{};
+mz_zip_zero_struct(&zip);
+mz_zip_reader_init_file(&zip, projectPath.string().c_str(), 0);
+// extract manifest.json, model files, thumbnails...
+mz_zip_reader_end(&zip);
+```
+
+**No CMake changes required.** `miniz_static` is already linked to `dw_core` (or whichever
+core target needs it) — just add `#include "miniz.h"` in the new exporter source.
+
+### Confidence
+
+HIGH — verified against existing `cmake/Dependencies.cmake` (miniz_static already built
+with all four `.c` files). API usage pattern from miniz 3.0.2 official examples.
+
+---
+
+## Dependency Delta Table
+
+| Capability | Library | Version | License | Binary Size Added | CMake Change |
+|------------|---------|---------|---------|-------------------|--------------|
+| Kuzu graph DB | libkuzu (prebuilt) | 0.11.3 | MIT | +8.5 MB (Linux `.so`) | FetchContent URL + IMPORTED target |
+| FTS5 search | (SQLite already in build) | 3.45.0 | Public Domain | 0 | 1 `target_compile_definitions` line |
+| Filesystem detection | (POSIX/Win32 syscalls) | — | — | 0 | Platform `target_sources` |
+| CAS storage | (std::filesystem) | C++17 | — | 0 | New `.cpp` source files only |
+| .dwproj export | (miniz_static already in build) | 3.0.2 | MIT | 0 | New `.cpp` source files only |
+
+**Total new binary size impact:** ~8.5 MB (Linux), ~13 MB (Windows), ~10 MB (macOS).
+All from Kuzu's shared library, shipped alongside the main binary.
+
+---
+
+## Critical Warnings
+
+### Kuzu: Never include `kuzu.hpp`
+`kuzu.hpp` is the C++ wrapper and requires C++20. Including it in any project `.cpp` file
+will fail to compile with `-std=c++17`. Use only `kuzu.h`.
+
+### Kuzu: One `kuzu_database` per process
+Opening two `kuzu_database` instances pointing to the same directory path causes undefined
+behavior (per Kuzu documentation). The singleton pattern in `KuzuDatabase` is mandatory.
+
+### FTS5: Triggers are mandatory with `content=` option
+When `content='models'` is set, FTS5 stores only the inverted index, not the text. Missing
+any of the three sync triggers (INSERT, DELETE, UPDATE) silently produces stale or wrong
+search results. All three triggers must be created in the same transaction as the FTS5 table.
+
+### FTS5: Rebuild needed on schema change
+Per the "no migrations" rule, the database is deleted and recreated on schema change.
+Include `INSERT INTO models_fts(models_fts) VALUES('rebuild');` in the initial setup
+to populate FTS from existing rows.
+
+### CAS: `tmp/` must be on the same mount as CAS root
+If `tmp/` is placed in the system `/tmp` directory, `std::filesystem::rename()` across
+filesystems degrades to non-atomic copy+delete. Always use `casRoot_ / "tmp"`.
+
+### Kuzu DLL deployment (Windows)
+`kuzu_shared.dll` must be in the same directory as the `.exe` or on `PATH`. The NSIS
+installer must be updated to copy this file. The existing installer handles `SDL2.dll`
+already — follow that pattern.
+
+---
+
+## Sources
+
+- Kuzu latest release (GitHub API, verified 2026-02-21):
+  https://github.com/kuzudb/kuzu/releases/tag/v0.11.3
+- Kuzu CMakeLists.txt C++ standard requirement (`cmake_minimum_required VERSION 3.11`,
+  `CXX_STANDARD 20`): https://github.com/kuzudb/kuzu/blob/master/CMakeLists.txt
+- Kuzu C API header (pure C, extern "C" guards, C++17-safe):
+  https://github.com/kuzudb/kuzu/blob/master/src/include/c_api/kuzu.h
+- Kuzu concurrency / thread safety:
+  https://docs.kuzudb.com/concurrency/
+- SQLite FTS5 extension (content tables, triggers, BM25):
+  https://sqlite.org/fts5.html
+- SQLite compile-time options (`SQLITE_ENABLE_FTS5`):
+  https://www.sqlite.org/compile.html
+- Linux `statfs(2)` and filesystem magic numbers:
+  https://man7.org/linux/man-pages/man2/statfs.2.html
+- macOS `f_fstypename` reliability over `f_type`:
+  https://developer.apple.com/forums/thread/87745
+- Windows `GetDriveTypeW` (DRIVE_REMOTE = 4):
+  https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getdrivetypew
+- Hashed directory structure (2-char prefix, 256 buckets):
+  https://medium.com/eonian-technologies/file-name-hashing-creating-a-hashed-directory-structure-eabb03aa4091
+- miniz 3.0.2 ZIP API (already in project at cmake/Dependencies.cmake):
+  https://github.com/richgel999/miniz

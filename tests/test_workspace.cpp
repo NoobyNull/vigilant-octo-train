@@ -2,12 +2,17 @@
 
 #include "../src/app/workspace.h"
 #include "../src/core/mesh/mesh.h"
+#include "../src/core/utils/thread_utils.h"
 
 namespace dw {
 
 class WorkspaceTest : public ::testing::Test {
   protected:
     Workspace workspace;
+
+    void SetUp() override {
+        threading::initMainThread();
+    }
 
     // Helper to create a test mesh
     std::shared_ptr<Mesh> createTestMesh(size_t vertexCount = 3) {

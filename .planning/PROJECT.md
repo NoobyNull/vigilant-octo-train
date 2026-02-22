@@ -60,14 +60,14 @@ A single focused workspace where a CNC woodworker can manage their model library
 
 ## Current Milestone: v1.1 Library Storage & Organization
 
-**Goal:** Content-addressable model storage with category-based organization, full-text search, Kuzu graph database for relationship queries, and project export as portable archives.
+**Goal:** Content-addressable model storage with category-based organization, full-text search, GraphQLite graph queries via Cypher, and project export as portable archives.
 
 **Target features:**
 - Content-addressable storage (iTunes-style hash foldering)
 - Smart file handling (auto-detect local vs NAS, copy/move accordingly)
 - Category/genus hierarchy for model organization
 - FTS5 full-text search across library metadata
-- Kuzu graph database alongside SQLite for relationship queries
+- GraphQLite SQLite extension for Cypher graph queries (replaces abandoned Kuzu)
 - Project links as graph edges, exportable as .dwproj zip
 
 ### Active
@@ -88,9 +88,9 @@ A single focused workspace where a CNC woodworker can manage their model library
 
 **Current state:** v1.0 shipped (19,511 LOC, 422 tests). Post-v1.0 added materials system (32 built-in species, Gemini AI generation, .dwmat archives), multi-select with batch operations, context menus, and progress dialog. 491 tests passing. Architecture remains clean — Application as thin coordinator, 3 focused managers.
 
-**Tech stack:** C++17, SDL2, Dear ImGui (docking), OpenGL 3.3, SQLite3, Kuzu (v1.1+), CMake 3.20+
+**Tech stack:** C++17, SDL2, Dear ImGui (docking), OpenGL 3.3, SQLite3, GraphQLite (v1.1+), CMake 3.20+
 
-**v1.1 storage context:** User has 3000+ models on NAS (10G connection), heavily disorganized with duplicates and meaningless filenames. Current import stores original file paths — fragile for network storage. Content-addressable storage decouples physical location from logical organization. Kuzu added for graph relationships (projects, categories) alongside SQLite for relational data and FTS5.
+**v1.1 storage context:** User has 3000+ models on NAS (10G connection), heavily disorganized with duplicates and meaningless filenames. Current import stores original file paths — fragile for network storage. Content-addressable storage decouples physical location from logical organization. GraphQLite adds Cypher graph queries as a SQLite extension — single DB file, single connection pool, graph + relational + FTS5 unified.
 
 **Feature gap reference:** `OBSERVATION_REPORT.md` documents 17 categories of gaps between old and new versions. Major missing subsystems include CNC machine control, cost/quoting workflow, tool database, wood species database, undo/redo, and advanced search.
 
@@ -103,7 +103,7 @@ A single focused workspace where a CNC woodworker can manage their model library
 
 ## Constraints
 
-- **Tech stack**: C++17, SDL2, Dear ImGui (docking), OpenGL 3.3, SQLite3, Kuzu, CMake 3.20+ — per rulebook
+- **Tech stack**: C++17, SDL2, Dear ImGui (docking), OpenGL 3.3, SQLite3, GraphQLite, CMake 3.20+ — per rulebook
 - **Licensing**: Permissive only (MIT, zlib, BSD, Public Domain)
 - **File limits**: .cpp max 800 lines, .h max 400 lines, one class per header
 - **Deployment**: 8-25 MB binary, cross-platform (Linux, Windows, macOS)
@@ -131,7 +131,7 @@ A single focused workspace where a CNC woodworker can manage their model library
 | Per-frame import completion throttling | Prevents UI blocking during large batch imports | ✓ Good |
 | G-code toolpath as extruded quads | Reuses existing mesh renderer, color-coded cutting vs rapid | ✓ Good |
 | Content-addressable storage | Hash-based file store decouples physical location from logical org | — Pending |
-| SQLite + Kuzu hybrid | SQLite for relational/FTS5, Kuzu for graph relationships | — Pending |
+| GraphQLite over Kuzu | Kuzu abandoned Oct 2025; GraphQLite is a SQLite extension — single DB, Cypher queries, MIT license | — Pending |
 | Auto-detect copy vs move on import | Copy from NAS, move if local same filesystem — user picks strategy not mechanics | — Pending |
 
 ---

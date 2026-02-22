@@ -1,459 +1,548 @@
-# Pitfalls Research
+# Domain Pitfalls: v1.1 Library Storage & Organization
 
-**Domain:** C++ Desktop Application - Adding Real-time Communication, Threading, and Business Workflow to Existing Codebase
-**Researched:** 2026-02-08
-**Confidence:** MEDIUM-HIGH
+**Domain:** Adding content-addressable storage, graph DB, FTS5, category hierarchy, and project export to existing C++17 desktop app
+**Researched:** 2026-02-21
+**Overall Confidence:** HIGH for most areas; see individual notes
+
+---
+
+## STOP: Critical Pre-Decision Finding
+
+### Kuzu (kuzudb) Was Abandoned in October 2025
+
+**This finding overrides the stack plan.** Kuzu Inc. archived the `kuzudb/kuzu` GitHub repository on October 10, 2025 — read-only, no warning, no migration path. The `docs.kuzudb.com` domain is unreachable. The last stable release was v0.11.3 (October 10, 2025). A community fork (`bighorn` by Kineviz) exists but has "fewer than 10 developers who actually understand the codebase."
+
+**Consequences for v1.1:**
+- FetchContent will pull abandoned code — no security fixes, no C++ toolchain compatibility updates
+- v0.11.0 introduced a breaking file format change (single-file database replacing directory structure), meaning any data stored before pinning would be unreadable after upgrade
+- The project is listed as requiring C++20 (not C++17), which conflicts with this project's compiler constraint
+- Binary footprint is large (the released precompiled library is tens of MB — far over this project's 8-25 MB budget)
+
+**Decision required before any implementation begins:**
+Option A — Use SQLite recursive CTEs + adjacency list for the relationship queries (project-model links, category hierarchy). This is fully sufficient for the query patterns described in PROJECT.md. **Recommended.**
+
+Option B — Adopt the `bighorn` fork (Kineviz), pin to a specific commit, accept maintenance risk. Not recommended for a solo project with no DB team.
+
+Option C — Adopt FalkorDB or another graph DB. None are embedded C++ with permissive licenses and stable C++17 APIs.
+
+**Recommendation: Do not use Kuzu. Use SQLite recursive CTEs.** Graph queries in PROJECT.md (project links as edges, category hierarchy) are shallow trees and many-to-many joins — exactly what SQLite CTEs handle cleanly at 3000-model scale.
+
+**Sources (HIGH confidence):**
+- [The Register: KuzuDB Abandoned](https://www.theregister.com/2025/10/14/kuzudb_abandoned/)
+- [Kineviz/bighorn fork](https://github.com/Kineviz/bighorn)
+- [FalkorDB migration guide](https://www.falkordb.com/blog/kuzudb-to-falkordb-migration/)
+- [Kuzu GitHub — archived read-only](https://github.com/kuzudb/kuzu)
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: SQLite Single Connection Shared Across Threads
+### Pitfall 1: Partial Write Corrupts the Content-Addressable Store
 
 **What goes wrong:**
-SQLite's default "serialized" mode allows multi-threaded access but causes SQLITE_BUSY errors and timeout failures when multiple threads attempt to write simultaneously. The entire database locks during write operations, blocking all other threads. With a single connection shared across threads (as currently exists in the codebase), the write lock and transaction state machine become toxic—one thread can accidentally hold a write transaction open, causing other threads to timeout.
+A 3D model file is written to `store/ab/cdef...` and then the app crashes, loses power, or is killed. The file is incomplete but its hash path now exists. On the next import of the same file, the deduplication logic sees the path exists, skips the copy, and returns success — but the stored file is truncated or zero-length. The model can never be loaded correctly.
 
 **Why it happens:**
-Developers assume SQLite's thread-safe mode means "safe to share one connection everywhere." The existing codebase has a single Database instance, and adding background import workers will immediately create write contention. The natural reflex is to just "use the existing connection" from worker threads.
+The naive implementation writes directly to the final destination path. `std::filesystem::copy_file` and custom streaming writes are not atomic — a crash mid-write leaves a partial file. This is especially dangerous when importing from a NAS where a copy of a 200MB model can take several seconds.
 
-**How to avoid:**
-1. **Enable WAL mode immediately** (Write-Ahead Logging): Writers and readers operate simultaneously—writers add changes to WAL file while readers read from main database file. This is the single most important fix for mixed read/write operations.
-2. **One connection per thread**: Each worker thread gets its own connection. Never pass connection pointers across threads.
-3. **OR use queue-based architecture**: Single database thread handles all operations, workers send requests via thread-safe queue.
+**Consequences:**
+Silent data corruption. The database says the file is present and valid. The model fails to load with a confusing mesh error. The user cannot re-import because the hash deduplication rejects it as "already present." Recovery requires manual store inspection.
+
+**Prevention:**
+1. **Write to a temp file first, rename last.** Write to `store/.tmp/<uuid>`, then `std::filesystem::rename()` to the final hash path. Rename is atomic on POSIX (same filesystem). On Windows, use `MoveFileExW` with `MOVEFILE_REPLACE_EXISTING` — `std::filesystem::rename` is NOT atomic on Windows when the destination exists.
+2. **Verify before accepting.** After write completes but before rename, hash the temp file and compare with expected hash. Reject if mismatch.
+3. **On startup, scan for and remove `.tmp/` orphans** from previous crashed sessions.
+4. **Check file size after copy.** Zero-length file in store is always an error.
 
 **Warning signs:**
-- "SQLITE_BUSY" errors appearing in logs
-- Import operations hanging or timing out
-- UI freezes when background imports run
-- Intermittent database corruption on application crash
+- Models that "imported successfully" but cannot be loaded
+- Hash path exists on disk but file is 0 bytes or smaller than expected
+- User cannot re-import a file they know is correct
 
-**Phase to address:**
-Phase 1: Thread Safety Foundation (before adding any new threaded features)
+**Phase to address:** CAS foundation phase — must be solved before any import wiring.
 
 **Sources:**
-- [SQLite Official: Using SQLite In Multi-Threaded Applications](https://www.sqlite.org/threadsafe.html)
-- [Multi-threaded SQLite without the OperationalErrors](https://charlesleifer.com/blog/multi-threaded-sqlite-without-the-operationalerrors/)
-- [vadosware: SQLite is threadsafe and concurrent-access safe](https://vadosware.io/post/sqlite-is-threadsafe-and-concurrent-access-safe-but)
+- [borgbackup issue #170: Hash collision detection](https://github.com/borgbackup/borg/issues/170) — shows industry practice of verify-then-accept
+- General POSIX rename atomicity is well-established; Windows behavior documented in Win32 docs
 
 ---
 
-### Pitfall 2: God Class Becomes Threading Nightmare
+### Pitfall 2: FTS5 Index Silently Drifts from Content Table
 
 **What goes wrong:**
-The existing 1,071-line Application.cpp god class manages initialization, event handling, UI state, database access, rendering, and business logic. Adding threading to this architecture means the god class must now coordinate thread synchronization for all these concerns simultaneously. Every field becomes a potential race condition. Refactoring becomes impossible because everything is entangled.
+The FTS5 virtual table is backed by a content table (the `models` table). Using `content=models` with UPDATE triggers is the standard approach, but there is a critical trigger ordering bug: **UPDATE triggers for FTS5 must be BEFORE UPDATE, not AFTER UPDATE.**
+
+If AFTER UPDATE is used, FTS5 fetches the content to build the delete entry *after* the new values are already committed. It deletes tokens for the NEW content instead of the OLD content. Old tokens are never removed. After several thousand updates, the index has stale ghost tokens that return false matches and cause phantom search results.
+
+Additionally, if any code path updates the `models` table directly (bypassing the ORM/repository layer), the triggers still fire — but if triggers are missing from that code path, the index silently goes stale.
 
 **Why it happens:**
-"Just add a mutex" seems easier than restructuring. Developers add `std::mutex m_appMutex;` and wrap every method with locks, creating massive contention and deadlock opportunities. The real problem: god classes have unclear boundaries for what needs thread safety.
+The SQLite documentation shows the correct trigger pattern in one section and wrong patterns in examples elsewhere. Stack Overflow answers frequently show the AFTER UPDATE variant which corrupts the index slowly.
 
-**How to avoid:**
-1. **Refactor BEFORE adding threading**: Extract concerns into focused classes (DatabaseManager, MachineController, DocumentState) with clear ownership boundaries.
-2. **Identify shared mutable state**: What actually needs synchronization? UI state (main thread only), document state (command pattern with locking), machine state (dedicated thread), database (per above).
-3. **Use message passing over shared state**: Workers send results to main thread via thread-safe queue instead of modifying shared objects.
+**Consequences:**
+Search returns models that were renamed/deleted. Searching for a tag that was removed from a model still returns that model. The drift accumulates silently — no errors are thrown.
+
+**Prevention:**
+1. **Use BEFORE UPDATE triggers, not AFTER UPDATE.**
+   ```sql
+   -- Correct FTS5 trigger for update
+   CREATE TRIGGER models_fts_upd BEFORE UPDATE ON models BEGIN
+     INSERT INTO models_fts(models_fts, rowid, name, tags, description)
+       VALUES('delete', old.id, old.name, old.tags, old.description);
+   END;
+   CREATE TRIGGER models_fts_upd_post AFTER UPDATE ON models BEGIN
+     INSERT INTO models_fts(rowid, name, tags, description)
+       VALUES(new.id, new.name, new.tags, new.description);
+   END;
+   ```
+2. **Add an integrity check function.** Periodically run `INSERT INTO models_fts(models_fts) VALUES('integrity-check')` and verify no errors.
+3. **Provide a "rebuild FTS index" command** in settings — a full `INSERT INTO models_fts(models_fts) VALUES('rebuild')` that resynchronizes everything. This is the recovery path.
+4. **Route ALL writes through a single repository class.** Never update `models` directly from two places.
 
 **Warning signs:**
-- Adding mutexes to more than 3 methods in same class
-- Nested lock acquisition (lock A, then lock B)
-- Methods that "sometimes" need locking depending on caller
-- Temptation to make everything `mutable` to lock in const methods
+- Search returns a model that was deleted or renamed
+- Searching by old tag name returns results
+- `integrity-check` command returns errors
 
-**Phase to address:**
-Phase 1: Architecture Cleanup (before threading changes)
+**Phase to address:** FTS5 integration phase — trigger correctness must be verified with tests.
 
 **Sources:**
-- [Multithreading: Handling Race Conditions and Deadlocks in C++](https://dev.to/shreyosghosh/multithreading-handling-race-conditions-and-deadlocks-in-c-4ae4)
-- [Finding Race Conditions in C++](https://symbolicdebugger.com/modern-programming/finding-race-conditions/)
+- [SQLite Forum: Corrupt FTS5 table after wrong trigger pattern](https://sqlite.org/forum/info/da59bf102d7a7951740bd01c4942b1119512a86bfa1b11d4f762056c8eb7fc4e)
+- [SQLite FTS5 Extension official docs](https://sqlite.org/fts5.html)
+- [SQLite Forum: FTS5 rows not searchable with match](https://sqlite.org/forum/info/db41a553368f4d4a)
 
 ---
 
-### Pitfall 3: ImGui Single-Context Threading Violations
+### Pitfall 3: NAS File Operations Are Not Atomic and Lock Unreliably
 
 **What goes wrong:**
-ImGui is fundamentally thread-agnostic and NOT thread-safe. All ImGui calls must happen on the same thread where the context was created (typically main thread). Adding background workers that try to update UI state, trigger ImGui refreshes, or modify ImGui data structures causes crashes, corruption, or silent state desynchronization. The crash manifests as segfaults in `ImGui::Render()` or garbled UI that "sometimes" works.
+When importing from a 10G NAS share, the application reads a file, hashes it (may take seconds for large STL files), then copies it to the local store. Between the initial read and the copy, the NAS file may be modified, moved, or deleted by another process or user. The hash will not match the copied content. The copy may be partial if the connection drops mid-copy.
+
+Additionally, `flock()` / `LockFileEx()` advisory locks do not work reliably across NFS or SMB. A lock that appears to succeed may not actually prevent another client from writing to the file.
+
+For the "auto-detect copy vs move on import" feature: detecting whether the source and destination are on the same filesystem uses `std::filesystem::equivalent()` — this will throw or return false incorrectly for NAS mounts, causing the app to always copy instead of move, which is actually the CORRECT behavior but may confuse logic that assumes local-means-same-device.
 
 **Why it happens:**
-Background worker completes task and wants to update UI immediately. Natural pattern: call `m_statusText = result;` from worker thread, where `m_statusText` is rendered by ImGui on main thread. Or worse: worker calls ImGui functions directly. ImGui's internal structures (draw lists, input state) are not protected by mutexes.
+Local filesystem assumptions (atomic rename, reliable locks, stable inodes) do not hold over network mounts. NFS particularly has notoriously unreliable locking (NLM for NFSv3, integrated in NFSv4 but still dependent on server implementation).
 
-**How to avoid:**
-1. **Main thread owns all ImGui calls**: Zero exceptions. Not a single `ImGui::Text()` from worker threads.
-2. **Workers post results to thread-safe queue**: Main thread polls queue during frame update and applies results.
-3. **Double-buffering pattern for shared state**: Worker writes to `m_workerState`, main thread copies to `m_uiState` during frame, ImGui renders `m_uiState`.
-4. **Never pass ImGui IDs or pointers to workers**: Workers don't know UI exists.
+**Consequences:**
+- Corrupted file in store (partial copy from interrupted NAS read)
+- Wrong file stored under a hash (NAS file modified between hash and copy)
+- Import reports success but stored content is wrong
+
+**Prevention:**
+1. **Never lock NAS files.** Do not attempt advisory locks on remote paths — they will silently fail or behave unpredictably.
+2. **Hash AFTER copy, verify content.** Copy the file to a temp location first, hash the temp file, compare with the hash computed from the original. If they differ, the source changed mid-copy — abort and report error.
+3. **For NAS source paths, always copy — never move.** The "same filesystem" heuristic is unreliable for network mounts. Explicit user configuration ("this path is a NAS — always copy") is safer.
+4. **Detect unreachable mount gracefully.** Use a timeout-wrapped stat() before attempting multi-minute operations. If the mount is unresponsive, report "Network path unavailable" immediately rather than hanging.
+5. **Treat NAS import errors as recoverable, not fatal.** One failed file should not abort the entire 3000-model import job.
 
 **Warning signs:**
-- Crashes in `ImGui::Render()` or `ImGui::EndFrame()`
-- "Invalid ID" assertions from ImGui
-- UI shows stale data despite worker updating variables
-- Race condition crashes that disappear with logging/debugging
+- Import succeeds but model fails to load (hash mismatch caught at load time)
+- Import hangs indefinitely (NAS mount dropped mid-copy)
+- Duplicate models after reconnecting NAS (import was retried, deduplication failed)
 
-**Phase to address:**
-Phase 1: Threading Contract Establishment (document and enforce before WebSocket/workers)
+**Phase to address:** NAS detection and import strategy phase. Must be designed before the import pipeline is modified.
 
 **Sources:**
-- [ImGui Issue #6597: Multithreading lag](https://github.com/ocornut/imgui/issues/6597)
-- [ImGui Issue #221: Multithreading discussion](https://github.com/ocornut/imgui/issues/221)
-- [ImGui Issue #9136: Crash when rendering in separate thread](https://github.com/ocornut/imgui/issues/9136)
+- [Samba docs: NFS and file locking](https://www.samba.org/samba/docs/old/Samba3-HOWTO/locking.html)
+- [NFS and file locking (O'Reilly NFS book)](https://docstore.mik.ua/orelly/networking_2ndEd/nfs/ch11_02.htm)
 
 ---
 
-### Pitfall 4: WebSocket Thread vs Main Event Loop Mismatch
+### Pitfall 4: Windows Long Paths Break the Hash Store Directory Structure
 
 **What goes wrong:**
-WebSocket libraries (like WebSocket++) run an I/O event loop that blocks the calling thread. Running this on the main thread blocks SDL event processing and rendering, freezing the application. Running on background thread is correct, BUT callbacks from WebSocket events (on_message, on_open, on_close) execute on that background thread—so accessing shared state or calling ImGui causes race conditions (see Pitfall 3).
+The CAS directory structure uses the first two hex characters as a subdirectory: `store/ab/cdef1234...`. On Windows, paths are limited to 260 characters (`MAX_PATH`) by default. If the application is installed in a long path (e.g., `C:\Users\username\AppData\Local\Programs\DigitalWorkshop\`) and the hash store is inside it, the total path to any stored file may exceed 260 characters.
+
+`std::filesystem` on MSVC does NOT automatically handle long paths. Operations will silently fail or throw with `ERROR_PATH_NOT_FOUND` which is difficult to distinguish from "file doesn't exist."
 
 **Why it happens:**
-Developers follow WebSocket tutorial examples that run in console applications with no GUI, where blocking the main thread is fine. Or they correctly put WebSocket on background thread but forget callbacks execute on that thread, not main thread.
+Linux/macOS have no practical path length limit. Developers building primarily on Linux miss this failure mode entirely. The path `C:\Users\longusername\AppData\Local\DigitalWorkshop\store\ab\cdef1234567890abcdef1234567890abcdef12` is 95 characters just for the hash path component — add typical Windows user directory lengths and it approaches 200+ characters easily.
 
-**How to avoid:**
-1. **Dedicated WebSocket thread with event loop**: Create thread, run `client.run()`, keep thread alive for connection lifetime.
-2. **Callbacks only post to thread-safe queue**: `on_message` receives data, validates, pushes to queue, returns immediately. Never access shared state.
-3. **Main thread polls queue**: During frame update, drain queue and apply machine state updates.
-4. **Graceful shutdown protocol**: Send close frame, wait for `on_close` callback, join thread. Don't force-kill thread while I/O pending.
+**Consequences:**
+- `std::filesystem::create_directories()` fails silently or throws on store creation
+- `std::filesystem::copy_file()` fails mid-import with cryptic error
+- CI on Windows passes (short CI paths) but fails for real users with long usernames
+
+**Prevention:**
+1. **Add `longPathAware` to the Windows application manifest.** This enables long path support on Windows 10 1607+ when the registry key `LongPathsEnabled` is set.
+   ```xml
+   <application xmlns="urn:schemas-microsoft-com:asm.v3">
+     <windowsSettings>
+       <longPathAware xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">true</longPathAware>
+     </windowsSettings>
+   </application>
+   ```
+2. **Use `\\?\` prefix for Win32 API calls** when `longPathAware` is not guaranteed. `std::filesystem` paths on MSVC can be prefixed with `\\?\` to bypass MAX_PATH.
+3. **Test on Windows CI with a long working directory path.** Add a CI step that runs from `C:\a-very-long-path-name-to-simulate-user-directories\build`.
+4. **Keep the hash store root path as short as possible** — put it in `AppData\Local\DW\store\` not inside the install directory.
 
 **Warning signs:**
-- Application freezes when connecting to machine
-- "Broken pipe" or socket errors on shutdown
-- Machine state updates arrive but UI doesn't refresh
-- Deadlocks during connection loss/reconnection
+- Windows-only import failures
+- `std::filesystem::create_directories()` returns false without throwing on Windows
+- Tests pass in CI, fail on user machines
 
-**Phase to address:**
-Phase 2: WebSocket Infrastructure (after thread safety foundation)
+**Phase to address:** CAS foundation — manifest update and path handling must be done before Windows users can use the store.
 
 **Sources:**
-- [WebSocket++ Utility Client Tutorial](https://docs.websocketpp.org/md_tutorials_utility_client_utility_client.html)
-- [websocket-client threading documentation](https://websocket-client.readthedocs.io/en/latest/threading.html)
-- [WebSocket++ Issue #62: Threaded server](https://github.com/zaphoyd/websocketpp/issues/62)
+- [Microsoft Learn: Maximum Path Length Limitation](https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation)
+- [Microsoft Learn: Enable long path names in Windows 11](https://learn.microsoft.com/en-us/answers/questions/1805411/how-to-enable-long-file-path-names-in-windows-11)
 
 ---
 
-### Pitfall 5: Machine State Synchronization Race Conditions
+## Moderate Pitfalls
+
+### Pitfall 5: Orphan Files Accumulate in the Store Without Cleanup
 
 **What goes wrong:**
-CNC machine sends rapid WebSocket updates (position, feed rate, status) at 10-100Hz. Application receives updates on WebSocket thread, UI renders at 60fps on main thread, user initiates commands on main thread. Without proper synchronization, UI shows stale position (read doesn't see latest write), commands get lost (overwrite between read-modify-write), or application sends duplicate commands because it didn't see acknowledgment yet.
+The content-addressable store decouples physical files from database records. If a model is deleted from the database but the cleanup code has any bug (race condition, exception, failed transaction), the file remains in the store indefinitely. With 3000+ initial models, even a 1% orphan rate means 30+ files that consume disk space silently.
+
+The inverse is also possible: the database record exists but the file was manually deleted from the store. This is the more dangerous case — the model appears in the library but cannot be loaded.
 
 **Why it happens:**
-Developers think "just copy the data" is safe because it's a simple struct. But without atomics or locks, multi-word updates (position X, Y, Z) are not atomic—UI might read X from one update and Y from another, showing physically impossible position. Version numbers/timestamps are forgotten.
+Deletion is a two-phase operation (delete DB record + delete file). If they are not in the same transaction, any crash or error leaves them inconsistent. Since file deletion cannot be part of a SQLite transaction, there is always a window.
 
-**How to avoid:**
-1. **State versioning**: Every machine state update includes monotonic version number. UI only applies updates with version > current.
-2. **Lock-protected machine state object**: `MachineState` with internal mutex. `getPosition()` and `updatePosition()` both lock. Hold lock only for copy, not during UI rendering.
-3. **Command acknowledgment protocol**: Every command gets unique ID. Application waits for ACK before considering command applied. Timeout triggers error state.
-4. **Handle out-of-order messages**: Network can reorder packets. Timestamp or sequence number allows discarding stale updates.
+**Prevention:**
+1. **Delete DB record first, file second** (not vice versa). A record with no file is a load error; a file with no record is just wasted disk space — the latter is recoverable.
+2. **Implement a periodic orphan sweep** that finds files in the store with no corresponding DB record. Run on startup, log orphans found.
+3. **Implement a store integrity check** that finds DB records where the file does not exist. These are broken records — mark them with a `missing` flag rather than silently failing.
+4. **Reference count files in the DB** if multiple models can share the same file (same content, different metadata). The CAS should only delete a file when its reference count reaches zero.
 
 **Warning signs:**
-- Machine position "jumps" backwards in UI
-- Send command twice, machine executes once (or vice versa)
-- "Lost connection" when network is fine (missed heartbeats)
-- Occasional state corruption during rapid movements
+- Store directory grows faster than model count suggests
+- Models appear in library but fail to load with "file not found"
+- Disk usage is unexpectedly high after bulk deletions
 
-**Phase to address:**
-Phase 2: Machine Control Layer (same phase as WebSocket, but separate concerns)
-
-**Sources:**
-- [Synchronizing state with Websockets and JSON Patch](https://cetra3.github.io/blog/synchronising-with-websocket/)
-- [Writing a WebSocket-Controlled State Machine](https://www.endpointdev.com/blog/2024/07/websocket-controlled-state-machine/)
-- [WebSocket architecture best practices](https://ably.com/topic/websocket-architecture-best-practices)
+**Phase to address:** CAS foundation + deletion flow. Build integrity check before shipping.
 
 ---
 
-### Pitfall 6: Command Pattern Memory Explosion
+### Pitfall 6: Hash Store File Count Causes Directory Enumeration Performance Issues
 
 **What goes wrong:**
-Implementing undo/redo with command pattern seems clean: every edit becomes a Command object pushed onto undo stack. But storing entire object snapshots (e.g., full mesh data) for every edit causes memory to balloon. A project with 50 edits × 10MB mesh each = 500MB of undo history. Application runs out of memory or becomes sluggish due to memory pressure.
+With 3000 models, the two-level hash directory (`store/ab/cdef...`) distributes files into 256 top-level buckets. With uniform distribution, each bucket has ~12 files — no problem at all. However, the thumbnails are stored separately (not in the CAS), and temporary files pile up in `.tmp/`. The problem emerges if any code accidentally puts all files in one directory (misconfigured prefix length, bug in path construction), or if the thumbnail cache grows large.
 
 **Why it happens:**
-Following textbook command pattern examples that show `SaveCommand` storing entire document. Developers don't realize they must store deltas (what changed) not full state snapshots. Seems easier to "just clone the object."
+A bug in hex prefix extraction — for example, taking characters [0:2] as index instead of the actual hex string — could put all files under `store/00/` or `store/st/`. This is caught immediately if tested but could slip through if path generation is not unit-tested.
 
-**How to avoid:**
-1. **Store deltas, not snapshots**: `MoveModelCommand` stores old position and new position (48 bytes), not entire mesh (megabytes).
-2. **Limit undo stack depth**: Default to 50-100 commands. Provide user preference. Clear undo history on project close.
-3. **Collapse consecutive commands**: User drags model, generates 100 micro-moves. Collapse into single command with start/end position.
-4. **Memento pattern for complex changes**: When delta is impractical (e.g., mesh decimation), store before/after snapshots but share unchanged data structures.
-5. **Manual memory management**: Commands must clean up resources. Use smart pointers (`unique_ptr<Command>`) to avoid leaks.
+**Prevention:**
+1. **Unit test the path generation function** with a known SHA-256 hash and assert the correct directory structure.
+2. **Assert that directory prefix is two valid hex characters** before creating the directory.
+3. **At 3000 models, the 256-bucket two-level scheme is more than sufficient.** Do not add a third level — it is unnecessary complexity at this scale.
 
 **Warning signs:**
-- Memory usage grows without bound during editing session
-- Undo becomes slower as session progresses
-- Out-of-memory crashes after extended use
-- Undo stack cleared only on app restart
+- One bucket directory has far more files than others (check with `ls -la store/ | wc -l`)
+- Directory enumeration is slow during startup integrity check
 
-**Phase to address:**
-Phase 3: Undo/Redo System (after threading stable)
-
-**Sources:**
-- [C++ Undo Redo Frameworks Part 1](https://blog.meldstudio.co/c-undo-redo-frameworks-part-1/)
-- [Implementing undo/redo with Command Pattern](https://gernotklingler.com/blog/implementing-undoredo-with-the-command-pattern/)
-- [Command Pattern (Game Programming Patterns)](https://gameprogrammingpatterns.com/command.html)
+**Phase to address:** CAS foundation — unit test path generation immediately.
 
 ---
 
-### Pitfall 7: SDL Event Loop + Background Worker Coordination
+### Pitfall 7: FTS5 unicode61 Tokenizer Strips Diacritics from Filenames
 
 **What goes wrong:**
-SDL event loop (`SDL_PollEvent`) runs on main thread. Background workers (import, WebSocket, PDF generation) need to trigger UI updates when complete, but cannot safely call SDL or ImGui functions. Workers that `SDL_PushEvent()` custom events seem to work initially but cause subtle timing bugs—events arrive at unpredictable times, SDL event queue can fill up, custom event data lifetime is unclear (who frees it?).
+The `unicode61` tokenizer (FTS5 default) strips diacritics by default — "Möbius" becomes "Mobius" for indexing. For model names derived from NAS filenames, this is usually fine. However, if the user searches for "Möbius" expecting an exact match, they get a hit (stripped to "Mobius") which is actually correct behavior. The problem is the reverse: the user searches for "Mobius" and the search also returns "Möbel" (stripped to "Mobel") — different word, false positive.
+
+Additionally, `porter` stemmer is English-only. If users have German, French, or other language model names, porter stemming will corrupt the token (it will apply English suffixing rules to non-English words, destroying the terms).
 
 **Why it happens:**
-SDL's custom events (`SDL_RegisterEvents()`) seem designed for this, and tutorials show it working. But tutorials don't cover edge cases: event queue overflow, proper memory management for event data, shutdown race conditions (worker pushes event after SDL quit).
+Default FTS5 configuration is optimized for English text. A model library with international filenames (common when importing from third-party NAS shares) will have non-English names.
 
-**How to avoid:**
-1. **Prefer thread-safe queue over SDL events**: Workers push to `std::queue` protected by mutex + condition variable. Main thread polls queue during frame update, before `SDL_PollEvent()`.
-2. **If using SDL events, allocate event data with `new`, free in event handler**: Document ownership clearly. Use smart pointers in event data struct.
-3. **Shutdown protocol**: Set `m_shuttingDown` flag (atomic), workers check before posting events, main thread drains queue after signaling shutdown.
-4. **Limit event posting rate**: Worker that posts 1000 events/sec will overwhelm main thread. Batch updates or rate-limit.
+**Prevention:**
+1. **Use `unicode61` tokenizer without porter wrapping** for model name search. This gives case-insensitive, diacritic-folding search without aggressive English stemming.
+   ```sql
+   CREATE VIRTUAL TABLE models_fts USING fts5(
+     name, tags, description,
+     content=models,
+     tokenize='unicode61'
+   );
+   ```
+2. **Do not use porter stemmer** for filename-derived model names. Porter is suitable only for English prose description fields.
+3. **Test with non-ASCII model names** — import a model with a Unicode filename and verify it is searchable.
 
 **Warning signs:**
-- Custom SDL events "sometimes" don't arrive
-- Memory leaks in custom event data
-- Crash on shutdown: worker posts event after SDL_Quit
-- UI becomes unresponsive when worker is busy
+- Non-ASCII model names are not found by search
+- Searching by a model name returns unrelated models with similar-sounding names
 
-**Phase to address:**
-Phase 1: Worker Communication Protocol (before adding background workers)
+**Phase to address:** FTS5 integration phase — tokenizer choice is a schema decision, hard to change after data is indexed.
 
 **Sources:**
-- [SDL2 common mistakes](https://nullprogram.com/blog/2023/01/08/)
-- [C++ Background Worker issues](https://www.codeproject.com/Questions/1076065/Cplusplus-Background-Worker)
+- [SQLite FTS5 Tokenizers: unicode61 and ascii (Jan 2025)](https://audrey.feldroy.com/articles/2025-01-13-SQLite-FTS5-Tokenizers-unicode61-and-ascii)
+- [SQLite FTS5 Extension official docs](https://sqlite.org/fts5.html)
 
 ---
 
-## Technical Debt Patterns
+### Pitfall 8: WAL Mode + Attached Database Cross-DB Atomicity Breaks
 
-Shortcuts that seem reasonable but create long-term problems.
+**What goes wrong:**
+The existing codebase uses WAL mode on the SQLite database. If the v1.1 implementation attaches a second SQLite database (for example, a separate graph/category database), SQLite ATTACH makes transactions *appear* atomic but they are NOT when WAL mode is active on either database.
 
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Single global mutex for all threading | Quick to implement, "obviously safe" | Massive contention, deadlocks, no concurrency benefit | Never—defeats purpose of threading |
-| Disable SQLite mutexes for "performance" | Marginal speed gain | Undefined behavior, crashes, corruption in multi-threaded code | Only if single-threaded forever (not this project) |
-| Store full snapshots in undo commands | Simple to implement | Memory explosion, slow undo/redo | MVP with undo depth limit of 10 |
-| Block main thread on WebSocket connect | Avoid threading complexity | UI freeze for 5-30 seconds on connection | Never in production |
-| Poll machine state instead of WebSocket | Avoids WebSocket complexity | 1-2 second latency, server load, missed events | Early prototype/demo only |
-| Hardcode PDF layout instead of template engine | Fast initial implementation | Maintenance nightmare when adding fields | Acceptable for first invoice iteration, must refactor in Phase 4 |
-| Skip command pattern, implement undo ad-hoc per feature | Faster per-feature development | Inconsistent undo behavior, duplication, bugs | Never—consistency is critical |
+From the SQLite documentation: "If the main database is not ':memory:' and the journal_mode is not WAL, then transactions ... are atomic. But if the host computer crashes in the middle of a COMMIT where two or more database files are updated, some of those files might get the changes where others might not."
 
----
+Since the main DB is in WAL mode, any two-database transaction is not crash-safe.
 
-## Integration Gotchas
+**Why it happens:**
+Developers ATTACH a second SQLite database and assume `BEGIN; UPDATE db1.table SET ...; UPDATE db2.table SET ...; COMMIT;` is safe. SQLite documentation describes this limitation but it is easy to miss.
 
-Common mistakes when connecting to external services.
+**Prevention:**
+1. **Do not use ATTACH for a second database in WAL mode.** If graph/category data moves to a separate SQLite file, accept that the two databases can drift on crash, and implement reconciliation on startup.
+2. **Preferred: Keep all data in one SQLite database.** Category hierarchy and project-model graph edges fit naturally in the existing schema as adjacency list tables. One database = one WAL = atomic commits.
+3. **If two DBs are required:** Design for eventual consistency — make each DB individually consistent, detect drift on startup, and provide a "repair" command.
 
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| WebSocket (ncSender) | Assume instant connection, no retry logic | Connection can take 1-10s, fail due to network/firewall. Implement exponential backoff, show "connecting..." UI, timeout after 30s |
-| WebSocket message parsing | Assume all messages are well-formed JSON | Validate JSON schema, handle parse errors gracefully, log malformed messages for debugging |
-| PDF generation (libharu/PoDoFo) | Include library headers in main code, tight coupling | Abstract behind `IPDFGenerator` interface, isolate library includes in .cpp file, allows switching libraries |
-| PDF fonts | Assume system fonts are available | Bundle fonts with application, use relative paths, test on fresh VM with no fonts installed |
-| CNC machine connection | Hardcode localhost URL | Allow user configuration, support DNS names + IP addresses, validate URL format |
-| G-code analysis | Parse entire file synchronously | Stream parse in background worker, show progress, allow cancellation, handle malformed G-code |
-| Thread pool (import) | Create threads on-demand | Pre-create fixed pool (std::thread::hardware_concurrency()), reuse threads, join on shutdown |
+**Warning signs:**
+- App crashes during import, leaves category tree in different state than model table
+- Project-model associations missing after unexpected shutdown
+- ATTACH is used anywhere in a WAL-mode application
+
+**Phase to address:** Schema design phase — must be resolved before writing any cross-DB transactions.
+
+**Sources:**
+- [SQLite Forum: Transactions involving multiple databases](https://sqlite.org/forum/forumpost/ecf53d4eb8)
+- [How To Corrupt An SQLite Database File — SQLite Official](https://www.sqlite.org/howtocorrupt.html)
 
 ---
 
-## Performance Traps
+### Pitfall 9: Migrating Existing file_path Records to CAS Store
 
-Patterns that work at small scale but fail as usage grows.
+**What goes wrong:**
+The existing `models` table has a `file_path` column pointing to original locations (NAS paths, local paths). v1.1 introduces the CAS store. During migration (which per the project rulebook is "delete and recreate DB on schema change"), all model files must be physically copied into the store. For 3000 models on a NAS, this migration could take 30-60 minutes.
 
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| N+1 queries in import | Import becomes slower with more models | Batch queries: fetch all tags in one query, update in transaction | 100+ models in library |
-| Full G-code reparse on edit | Edit latency grows with file size | Incremental parse: only reparse modified section + dependents | Files > 10,000 lines |
-| Unbounded WebSocket message queue | Memory grows during rapid machine updates | Fixed-size ring buffer, drop oldest messages when full | Machine sending > 100 msg/sec |
-| Render entire model list every frame | Frame rate drops with large library | Virtual scrolling: only render visible rows | Library > 500 models |
-| PDF generation on main thread | UI freezes during invoice generation | Background thread + progress indicator | Invoices > 10 pages |
-| Undo stack never compacted | Memory grows indefinitely | Limit depth (50-100), clear on project close | Long editing sessions (> 1 hour) |
-| Lock entire database during import | UI freezes during background import | WAL mode + per-thread connections, imports don't block reads | Importing multiple files simultaneously |
+If the rulebook "delete and recreate DB" applies, all model metadata (tags, thumbnails, associations) is lost unless the migration script copies everything before dropping the schema.
 
----
+**Why it happens:**
+The project rulebook says "no migrations — delete and recreate DB." This is safe when only schema changes. But v1.1 adds physical file relocation — the schema change must be accompanied by a data movement operation, which is a migration in all but name.
 
-## Security Mistakes
+**Consequences:**
+- If DB is dropped before copying files, and the copy fails mid-way, the user loses all their library metadata
+- If NAS is unavailable during "migration", all models that were NAS-sourced cannot be re-imported
+- Thumbnails are regenerated from mesh data, so they can be recovered — but metadata (tags, categories, custom names) cannot
 
-Domain-specific security issues beyond general web security.
+**Prevention:**
+1. **Run file copy BEFORE dropping the old schema.** The sequence must be: (a) copy all referenced files to store, (b) write new schema, (c) re-import metadata from old records, (d) drop old schema. Never drop the old schema first.
+2. **Make the migration resumable.** If the copy is interrupted (NAS drops out), the user should be able to restart and it picks up where it left off. Use the CAS's own deduplication to skip already-copied files.
+3. **Export a backup of metadata before any schema operation.** Write existing model records (name, tags, file_path, original_filename) to a CSV/JSON before dropping tables.
+4. **Log every file that could not be migrated** (NAS unavailable, file moved). Present a "migration report" to the user showing what succeeded and what needs manual attention.
+5. **Keep the migration out of the normal startup path.** The first run after a schema version bump triggers migration, but normal startup should not try to migrate — only verify.
 
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| Trust machine state updates without validation | Malicious/buggy machine sends invalid coordinates, app crashes or corrupts project | Validate ranges (X/Y/Z within machine bounds), reject malformed messages |
-| Execute user-provided G-code without sanitization | If app controls machine directly in future, malicious G-code could damage machine/material | Whitelist allowed G-codes, reject unknown commands, implement dry-run mode |
-| Store database unencrypted with customer PII | Customer names, addresses, pricing in plaintext—data breach risk | SQLite encryption extension (SQLCipher) for customer data, document what's encrypted |
-| Log sensitive data (prices, customer info) | Log files leak business data | Scrub logs: replace customer names with IDs, omit prices from debug logs |
-| No authentication on WebSocket connection | Anyone on network can control machine | Validate API key/token in WebSocket handshake (if ncSender supports), document security model |
-| PDF contains hidden metadata (file paths, usernames) | Leaks internal information to customers | Strip metadata from generated PDFs, test with PDF analyzer |
+**Warning signs:**
+- User upgrades, app crashes during import, all metadata gone
+- 30-minute startup on first run with no progress indicator (appears frozen)
+- Models appear in library with no thumbnail and no tags after upgrade
 
----
-
-## UX Pitfalls
-
-Common user experience mistakes in this domain.
-
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| No indication WebSocket is disconnected | User changes settings, thinks machine updated, machine ignores commands | Connection status indicator (green/yellow/red), disable machine controls when disconnected |
-| No feedback during long operations | User clicks "Import", nothing happens for 30s, clicks again (duplicate import) | Immediate progress dialog, show file being processed, allow cancel |
-| Undo/redo with no description | User sees "Undo" but doesn't know what it will undo, afraid to click | Show action name: "Undo Move Model" / "Redo Rotate 90°" |
-| Machine coordinates update too fast | Position display shows "blur" of numbers changing 60 times/sec, unreadable | Throttle UI updates to 10Hz, use smooth interpolation for visual feedback |
-| Error messages with library internals | "SQLite error: SQLITE_BUSY (5) at connection 0x7f3a4c0" | User-friendly: "Database is busy, please try again" + log technical details |
-| PDF generation with no preview | User prints invoice, sees layout is wrong, wastes paper | Show PDF preview before printing, allow tweaking layout |
-| Background import with no cancellation | User accidentally imports 1000 files, must force-quit to stop | Cancel button stops current file, clears queue, shows "Cancelling..." |
+**Phase to address:** Migration design must happen BEFORE any schema changes are made. It is the highest-risk operation in the milestone.
 
 ---
 
-## "Looks Done But Isn't" Checklist
+### Pitfall 10: Unicode Filename Encoding Mismatch Across Platforms
 
-Things that appear complete but are missing critical pieces.
+**What goes wrong:**
+Windows filenames are UTF-16. macOS enforces UTF-8 NFC normalization. Linux makes no guarantees (can be any encoding, including ISO-8859-1). A NAS shared over SMB to all three platforms may have filenames that appear identical on screen but have different byte sequences (NFC vs NFD Unicode normalization, different encoding entirely).
 
-- [ ] **WebSocket Connection:** Works in demo, but missing—reconnection logic after disconnect, error handling for malformed messages, graceful shutdown without hanging, timeout when server doesn't respond
-- [ ] **Threading Implementation:** Compiles without errors, but missing—proper shutdown (join all threads), race condition testing (run with ThreadSanitizer), deadlock prevention (lock ordering documented), clean separation between UI thread and worker threads
-- [ ] **SQLite WAL Mode:** Enabled in code, but missing—verify PRAGMA wal_checkpoint runs periodically, test that -wal and -shm files are cleaned up on close, confirm backups include WAL file, verify cross-platform behavior (Windows file locking)
-- [ ] **Command Pattern:** Basic commands work, but missing—command coalescing (group micro-edits), undo stack depth limit, memory profiling (verify deltas not snapshots), undo/redo work after load from disk
-- [ ] **PDF Generation:** Produces PDF, but missing—font embedding (works without system fonts), page breaks for long invoices, proper error handling (disk full, permission denied), metadata stripping, preview functionality
-- [ ] **G-code Analysis:** Parses file, but missing—handling of malformed input (partial lines, invalid commands), cancellation support (stop mid-parse), memory limits (reject 1GB files), incremental parse for edits
-- [ ] **Machine Control:** Sends commands successfully, but missing—command acknowledgment tracking, timeout handling, queue management (max pending commands), state recovery after connection loss
-- [ ] **Import Queue:** Imports files, but missing—duplicate detection (skip already imported), proper transaction handling (rollback on error), thumbnail generation for all formats, consistent error reporting
+When the CAS stores a file, the filename is irrelevant (only the hash matters). But the original filename must be preserved in the database for display. If the original filename is stored as raw bytes from the OS, then compared across platforms, the "same" model from a NAS share may appear twice with different raw names but identical content (duplicate detection works because hash matches, but display name is inconsistent).
 
----
+**Why it happens:**
+`std::filesystem::path::filename()` returns a path in the platform's native encoding. On Windows with MSVC, this is `std::wstring` internally. Converting to `std::string` uses the system code page, which may not be UTF-8 on all Windows installations.
 
-## Recovery Strategies
+**Prevention:**
+1. **Always convert filenames to UTF-8 before storing in the database.** On Windows, use `path.wstring()` then `WideCharToMultiByte(CP_UTF8, ...)`.
+2. **Normalize to NFC before storing.** Apply Unicode NFC normalization to all display names. This prevents the same filename appearing differently on macOS (NFD) vs Windows (NFC).
+3. **The stored filename in the database is cosmetic only.** The CAS path is determined by content hash. The display name can be renamed freely by the user.
+4. **Test with filenames that contain Chinese, Arabic, or emoji characters** — these expose normalization and encoding bugs immediately.
 
-When pitfalls occur despite prevention, how to recover.
+**Warning signs:**
+- The same physical file appears twice in the library with slightly different names
+- Model names appear as `?????` on one platform
+- Import fails with "invalid path" for non-ASCII filenames on Windows
 
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| Shared SQLite connection causing SQLITE_BUSY | LOW | 1. Enable WAL mode via PRAGMA, 2. Add per-thread connections for workers, 3. Test with concurrent operations |
-| God class threading deadlock | HIGH | 1. Identify minimal refactoring (extract DatabaseManager, MachineController), 2. Add interfaces, 3. Incremental extraction with tests at each step, 4. Add threading afterward |
-| ImGui called from worker thread (crashes) | MEDIUM | 1. Add thread ID assertions to detect violations, 2. Implement result queue, 3. Audit codebase for ImGui calls (grep for ImGui::), 4. Add threading documentation |
-| WebSocket blocking main thread | LOW | 1. Move WebSocket to dedicated thread, 2. Add message queue, 3. Test connection/disconnection, 4. Add timeout handling |
-| Command pattern memory explosion | MEDIUM | 1. Profile memory usage with heap analyzer, 2. Convert snapshot commands to delta commands, 3. Add undo stack depth limit, 4. Implement command coalescing |
-| Race condition in machine state | MEDIUM | 1. Add state versioning/timestamps, 2. Add mutex to MachineState class, 3. Run with ThreadSanitizer, 4. Add integration tests for concurrent access |
-| PDF generation missing fonts | LOW | 1. Bundle required fonts, 2. Use relative paths, 3. Test on fresh OS install, 4. Add font fallback logic |
-| Background import never completes | MEDIUM | 1. Add per-operation timeout, 2. Add cancellation token, 3. Wrap in transaction with rollback, 4. Log progress for debugging |
+**Phase to address:** CAS foundation — filename handling must be correct from the start.
+
+**Sources:**
+- [Cross-Platform Unicode Support in C++](https://www.studyplan.dev/pro-cpp/character-encoding/q/cross-platform-unicode)
 
 ---
 
-## Pitfall-to-Phase Mapping
+### Pitfall 11: Case-Sensitive vs Case-Insensitive Filesystem Mismatch
 
-How roadmap phases should address these pitfalls.
+**What goes wrong:**
+The CAS path is determined by hex hash (`ab/cdef1234...`). Hex is always lowercase — no case sensitivity issue there. However, the category hierarchy and model names stored in the database may have case sensitivity issues when compared across platforms. A model tagged `"Oak"` on macOS (case-insensitive filesystem) may conflict with `"oak"` on Linux (case-sensitive).
 
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| SQLite single connection (Pitfall 1) | Phase 1: Thread Safety Foundation | Run concurrent import + UI operations, no SQLITE_BUSY errors |
-| God class threading (Pitfall 2) | Phase 1: Architecture Cleanup | Separate DatabaseManager, MachineController, DocumentState classes with tests |
-| ImGui threading violations (Pitfall 3) | Phase 1: Threading Contract | Add thread ID assertions, run with sanitizers, document contract in code comments |
-| WebSocket thread mismatch (Pitfall 4) | Phase 2: WebSocket Infrastructure | Connect/disconnect/reconnect without UI freeze, graceful shutdown |
-| Machine state race conditions (Pitfall 5) | Phase 2: Machine Control Layer | Stress test: 100Hz updates + rapid commands, verify state consistency |
-| Command pattern memory (Pitfall 6) | Phase 3: Undo/Redo System | Profile 1-hour editing session, memory stays < 100MB, undo/redo instant |
-| SDL event coordination (Pitfall 7) | Phase 1: Worker Communication | Background operations complete without SDL event issues, clean shutdown |
-| PDF generation blocking UI | Phase 4: PDF/Invoicing | Generate 50-page invoice, UI remains responsive, progress indicator |
-| Import queue contention | Phase 1: Thread Safety + Phase 5 | Import 100 files concurrently, no database locks, progress updates smooth |
-| G-code parse performance | Phase 2 or later (if analysis needed for machine control) | Parse 100,000-line file in < 2s, cancellable, handles malformed input |
+More critically: if any code path ever constructs a CAS path from user input (rather than from a computed hash), case mismatch on Linux will cause file-not-found errors that Windows and macOS hide silently.
+
+**Why it happens:**
+macOS APFS is case-insensitive by default. HFS+ is case-insensitive. Windows NTFS is case-insensitive. Linux ext4 is case-sensitive. Code that works perfectly on macOS/Windows may silently create wrong paths on Linux.
+
+**Prevention:**
+1. **Always use lowercase hex for CAS paths** — SHA-256 hex output is lowercase by convention and must be kept that way.
+2. **Never construct CAS paths from user input.** Paths are always derived from hash computation only.
+3. **Normalize category names and tags to lowercase** before storing, or enforce case-insensitive comparisons with `COLLATE NOCASE` in SQLite queries.
+4. **Run tests on Linux** for all path-construction code.
+
+**Warning signs:**
+- Works on Windows/macOS, path errors on Linux
+- Duplicate categories after cross-platform sync ("Oak" and "oak" as separate categories)
+
+**Phase to address:** CAS foundation — hash-to-path function must be tested on all three platforms.
 
 ---
 
-## Open Research Questions
+## Minor Pitfalls
 
-Areas that need phase-specific research before implementation.
+### Pitfall 12: FTS5 Index Bloat with Large Tag Sets
 
-**For Phase 2 (WebSocket/Machine Control):**
-- What is ncSender's exact WebSocket message format? (Need API documentation)
-- Does ncSender support authentication/API keys?
-- What is the message rate during typical operation? (Affects queue sizing)
-- How does ncSender handle connection loss/recovery?
+**What goes wrong:**
+FTS5 indexes every word in every indexed column. Tags are stored as a single concatenated string (`"oak hardwood furniture chair"`) and indexed token by token. If models accumulate many tags over time, the FTS5 index grows faster than the content table. For 3000 models with 10 tags each, this is negligible (~few MB). However, the `OPTIMIZE` command is needed periodically to merge the FTS5 B-tree segments — without it, read performance degrades as the number of segments grows.
 
-**For Phase 3 (Undo/Redo):**
-- Which operations need undo? (All edits, or subset?)
-- Should undo persist across app restart? (Affects serialization)
-- How to handle undo for operations that affect multiple entities?
+**Prevention:**
+1. Run `INSERT INTO models_fts(models_fts) VALUES('optimize')` periodically — on startup if last optimization was more than a week ago.
+2. Do NOT run `optimize` after every tag update — it is expensive for frequent writes. Batch it.
+3. The `automerge` FTS5 parameter (default 8) handles routine merging. Only manual `optimize` is needed for large-scale cleanup.
 
-**For Phase 4 (PDF/Invoicing):**
-- Exact layout requirements for invoices/quotes?
-- Must PDFs be PDF/A compliant for archival?
-- What PDF library has best C++17 support + cross-platform?
+**Warning signs:**
+- Search latency grows over weeks of use without increasing model count
+- FTS5 tables are significantly larger than the content table
 
-**For Phase 5 (Tool Database/Feeds & Speeds):**
-- What is data model for tools? (Affects database schema)
-- Are feeds/speeds calculated or looked up?
-- Integration with G-code analysis?
+**Phase to address:** FTS5 integration — set automerge config at table creation time.
+
+---
+
+### Pitfall 13: Disk Space Accounting Is Non-Obvious with CAS
+
+**What goes wrong:**
+In the CAS model, the user has no visible filenames in the store directory — just `ab/cdef1234...` paths. When they ask "how much space are my models using?", the answer requires iterating the store and summing file sizes. If the deduplication is working correctly, two models with identical content share one stored file — so the "actual disk usage" may be significantly less than "total import size." Users may be confused when the library shows 5GB of models but the store is only 3GB.
+
+**Prevention:**
+1. **Show both "logical size" (sum of all model sizes, counting duplicates) and "stored size" (actual disk usage) in settings/library stats.**
+2. **Compute stored size lazily** — walk the store directory on demand, not on every frame.
+3. **Cache the stored size** and invalidate on import or deletion.
+
+**Phase to address:** UI phase — purely informational, but important for user trust.
+
+---
+
+### Pitfall 14: Symlink Handling in the Store
+
+**What goes wrong:**
+If a user's library path or NAS path contains symlinks, `std::filesystem::copy_file` by default follows symlinks (copies the target file, not the link). This is usually correct. However, if the CAS store directory itself is a symlink (user put it on a different drive), operations like `std::filesystem::is_directory()` on the store root may behave differently across platforms. On Windows, symlinks require elevated privileges to create, so user-created symlinks to the store are rare but possible.
+
+**Prevention:**
+1. **Resolve symlinks before all CAS operations** using `std::filesystem::canonical()` on the store root during initialization.
+2. **Do not follow symlinks when enumerating the store for integrity checks** — use `std::filesystem::directory_iterator` with `follow_directory_symlink = false` to avoid infinite loops.
+3. **Warn users if the store root is a symlink** — log it clearly at startup.
+
+**Phase to address:** CAS foundation — store initialization must handle this.
+
+---
+
+## Phase-Specific Warnings
+
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| Kuzu integration | Project abandoned October 2025 | Use SQLite recursive CTEs instead — sufficient for all described relationship queries |
+| CAS store creation | Partial write on crash (Pitfall 1) | Write-to-temp + rename pattern; verify hash after copy |
+| CAS first run migration | Loss of metadata if DB dropped first (Pitfall 9) | Copy files THEN drop schema; build resumable migration |
+| FTS5 trigger setup | AFTER UPDATE corrupts index (Pitfall 2) | Use BEFORE UPDATE for delete half of update trigger |
+| FTS5 tokenizer choice | Porter breaks non-English names (Pitfall 7) | Use unicode61 only; no porter wrapper for filenames |
+| NAS import | Partial reads, unreliable locks (Pitfall 3) | Hash after copy, never lock NAS files, handle mount failures |
+| Windows deployment | MAX_PATH exceeded in hash store (Pitfall 4) | longPathAware manifest + test with long CI paths |
+| Cross-DB transactions | WAL mode breaks ATTACH atomicity (Pitfall 8) | Keep all data in one SQLite database |
+| Category hierarchy | Graph DB required for simple tree? | No — SQLite recursive CTEs handle category trees cleanly |
+| Unicode filenames | Encoding differences across platforms (Pitfall 10) | Normalize to UTF-8 NFC before DB storage |
+| Orphan cleanup | Store files accumulate without DB records (Pitfall 5) | Delete DB record first; run orphan sweep on startup |
 
 ---
 
 ## Confidence Assessment
 
-| Topic | Level | Rationale |
-|-------|-------|-----------|
-| SQLite threading | HIGH | Official documentation + multiple practitioner sources confirm WAL mode + per-thread connections |
-| ImGui threading | HIGH | Official GitHub issues from maintainer confirm thread-agnostic design, multiple crash reports validate pitfall |
-| WebSocket threading | MEDIUM-HIGH | Official library docs + GitHub issues, but specific to WebSocket++ (library choice affects details) |
-| Command pattern memory | MEDIUM | Multiple sources agree on delta storage, but specific to application domain (mesh data vs simple properties) |
-| God class refactoring | MEDIUM | General C++ knowledge, but specific refactoring strategy depends on application architecture review |
-| PDF integration | MEDIUM-LOW | Library options identified, but specific pitfalls depend on library choice (need phase-specific research) |
-| Machine control protocols | LOW | No access to ncSender API docs, message format/rate assumptions need verification |
+| Area | Confidence | Notes |
+|------|------------|-------|
+| Kuzu abandonment | HIGH | Multiple independent sources confirm: The Register, GitHub archive status, community forums (October 2025) |
+| Kuzu C++20 requirement | MEDIUM | Observed in build requirements; not verified against every release; the archived codebase may have worked with C++17 on older versions |
+| CAS partial write | HIGH | Well-established filesystem behavior; POSIX rename atomicity is documented |
+| FTS5 trigger ordering | HIGH | SQLite forum posts show confirmed corruption from AFTER UPDATE pattern; official docs corroborate |
+| WAL + ATTACH atomicity | HIGH | Official SQLite documentation explicitly states this limitation |
+| NAS file locking | HIGH | Well-documented behavior across NFS/SMB literature |
+| Windows MAX_PATH | HIGH | Official Microsoft documentation; confirmed behavior in C++17 std::filesystem on MSVC |
+| Migration risk | HIGH | Derived from project constraints (no migrations) + data loss analysis |
+| Unicode filename handling | MEDIUM | General cross-platform knowledge; specific C++17 behavior on each OS verified by community sources |
+| FTS5 tokenizer impact | MEDIUM | Official SQLite FTS5 docs confirm behavior; real-world impact on non-English filenames is inference |
 
 ---
 
-## Summary: Critical Pitfalls by Phase
+## What NOT To Do (Anti-Patterns Specific to This Milestone)
 
-**Phase 1 (Foundation):**
-- SQLite threading → Must fix before any background workers
-- God class refactoring → Blocks clean threading architecture
-- ImGui contract → Prevents entire class of crashes
+| Anti-Pattern | Why Dangerous | Correct Approach |
+|--------------|--------------|------------------|
+| Write CAS file directly to final path | Partial write on crash leaves corrupted store entry | Write-to-temp, verify hash, rename |
+| Use `AFTER UPDATE` trigger for FTS5 external content | Silently corrupts index by deleting wrong tokens | Use `BEFORE UPDATE` for delete phase |
+| Use ATTACH for a second SQLite DB in WAL mode | Non-atomic cross-DB commits on crash | One database; adjacency list for graphs |
+| Pull Kuzu from FetchContent | Repository archived, no fixes, C++20 requirement, large binary | SQLite recursive CTEs for graph relationships |
+| Lock files on NAS before reading/copying | Advisory locks unreliable over NFS/SMB | Read-copy-verify pattern without locking |
+| Drop schema before migrating files | All metadata lost if file copy fails | Copy files first, then drop schema |
+| Store Windows filenames as raw system encoding | Cross-platform encoding mismatches | Convert to UTF-8 before DB storage |
+| Trust `std::filesystem::equivalent()` for NAS detection | Returns wrong results for network mounts | Use explicit configuration for NAS paths |
+| Use porter tokenizer for model name FTS | Corrupts non-English tokens | Use unicode61 only |
+| Skip longPathAware manifest on Windows | Store paths exceed MAX_PATH for users with long usernames | Add manifest entry; test with long paths in CI |
 
-**Phase 2 (Machine Control):**
-- WebSocket threading → Core feature enablement
-- Machine state synchronization → Data integrity for control
+---
 
-**Phase 3 (Undo/Redo):**
-- Command pattern memory → Usability and stability
+## Open Questions Requiring Phase-Specific Research
 
-**Phase 4 (PDF/Invoicing):**
-- PDF generation blocking → UX quality
+1. **Graph relationships scope:** What specific graph queries does the project need? PROJECT.md mentions "project links as graph edges." SQLite CTEs can handle: "find all models in project X", "find all projects containing model Y", "find models related to model Z (shared project)". If deeper multi-hop queries are needed, reconsider — but current scope appears CTE-sufficient.
 
-**Phase 5 (Advanced Features):**
-- Import queue performance → Scalability
+2. **FTS5 vs SQLite LIKE for 3000 models:** At 3000 models, SQLite LIKE queries with a trigram index may be sufficient and simpler than FTS5. FTS5 is justified if substring search, ranked results, or tag proximity search is required. Verify query requirements before committing to FTS5 trigger complexity.
 
-The most critical pitfalls (1, 2, 3, 7) must be addressed in Phase 1 before any new features. Skipping Phase 1 foundation work will cause compounding technical debt as features are added.
+3. **Thumbnail CAS:** Should thumbnails be stored in the CAS or separately? They are derived content (regenerable from mesh), not original content. Storing separately (by model ID, not hash) is simpler and avoids the CAS for content that changes independently.
+
+4. **Project export format:** The `.dwproj` zip format needs specification. What happens if a project references a model that is in the CAS store? Does the export bundle the model file? If yes, the export must read from the CAS store, which requires the store path to be resolvable at export time.
+
+5. **Category hierarchy depth:** How deep can categories be? Recursive CTEs in SQLite handle arbitrary depth, but the UI must have a practical limit. Establish this before designing the schema.
 
 ---
 
 ## Sources
 
-### SQLite & Threading
-- [SQLite Official: Using SQLite In Multi-Threaded Applications](https://www.sqlite.org/threadsafe.html)
-- [Multi-threaded SQLite without the OperationalErrors](https://charlesleifer.com/blog/multi-threaded-sqlite-without-the-operationalerrors/)
-- [vadosware: SQLite is threadsafe and concurrent-access safe](https://vadosware.io/post/sqlite-is-threadsafe-and-concurrent-access-safe-but)
+### Kuzu Abandonment
+- [The Register: KuzuDB Abandoned (October 2025)](https://www.theregister.com/2025/10/14/kuzudb_abandoned/)
+- [LavX News: KuzuDB Abandoned by Corporate Sponsor](https://news.lavx.hu/article/kuzudb-abandoned-open-source-graph-database-cast-adrift-by-corporate-sponsor)
+- [Kineviz/bighorn — community fork](https://github.com/Kineviz/bighorn)
+- [FalkorDB: KuzuDB to FalkorDB Migration](https://www.falkordb.com/blog/kuzudb-to-falkordb-migration/)
+- [Kuzu GitHub Releases — last release v0.11.3 Oct 10, 2025](https://github.com/kuzudb/kuzu/releases)
 
-### C++ Multithreading
-- [Multithreading: Handling Race Conditions and Deadlocks in C++](https://dev.to/shreyosghosh/multithreading-handling-race-conditions-and-deadlocks-in-c-4ae4)
-- [Finding Race Conditions in C++](https://symbolicdebugger.com/modern-programming/finding-race-conditions/)
-- [How to debug race conditions in C/C++](https://undo.io/resources/debugging-race-conditions-cpp/)
+### Content-Addressable Storage
+- [borgbackup Issue #170: Hash collision detection in practice](https://github.com/borgbackup/borg/issues/170)
+- [borgbackup Issue #7765: Hash collisions — universal solution](https://github.com/borgbackup/borg/issues/7765)
+- [Content-Addressable Storage overview](https://lab.abilian.com/Tech/Databases%20&%20Persistence/Content%20Addressable%20Storage%20(CAS)/)
 
-### ImGui & Threading
-- [ImGui Issue #6597: Multithreading lag](https://github.com/ocornut/imgui/issues/6597)
-- [ImGui Issue #221: Multithreading discussion](https://github.com/ocornut/imgui/issues/221)
-- [ImGui Issue #9136: Crash when rendering in separate thread](https://github.com/ocornut/imgui/issues/9136)
+### SQLite FTS5
+- [SQLite FTS5 Extension — Official Documentation](https://sqlite.org/fts5.html)
+- [SQLite Forum: Corrupt FTS5 table after wrong trigger pattern](https://sqlite.org/forum/info/da59bf102d7a7951740bd01c4942b1119512a86bfa1b11d4f762056c8eb7fc4e)
+- [SQLite Forum: FTS5 rows not searchable with match](https://sqlite.org/forum/info/db41a553368f4d4a)
+- [Optimizing FTS5 External Content Tables and Vacuum Interactions](https://sqlite.work/optimizing-fts5-external-content-tables-and-vacuum-interactions/)
+- [SQLite FTS5 Tokenizers: unicode61 and ascii (January 2025)](https://audrey.feldroy.com/articles/2025-01-13-SQLite-FTS5-Tokenizers-unicode61-and-ascii)
 
-### WebSocket
-- [WebSocket++ Utility Client Tutorial](https://docs.websocketpp.org/md_tutorials_utility_client_utility_client.html)
-- [websocket-client threading documentation](https://websocket-client.readthedocs.io/en/latest/threading.html)
-- [WebSocket++ Issue #62: Threaded server](https://github.com/zaphoyd/websocketpp/issues/62)
+### SQLite Multi-DB Atomicity
+- [SQLite Forum: Transactions involving multiple databases](https://sqlite.org/forum/forumpost/ecf53d4eb8)
+- [How To Corrupt An SQLite Database File — SQLite Official](https://www.sqlite.org/howtocorrupt.html)
 
-### Machine Control & State Synchronization
-- [Synchronizing state with Websockets and JSON Patch](https://cetra3.github.io/blog/synchronising-with-websocket/)
-- [Writing a WebSocket-Controlled State Machine](https://www.endpointdev.com/blog/2024/07/websocket-controlled-state-machine/)
-- [WebSocket architecture best practices](https://ably.com/topic/websocket-architecture-best-practices)
+### NAS and Network Filesystem
+- [Samba: File and Record Locking](https://www.samba.org/samba/docs/old/Samba3-HOWTO/locking.html)
+- [O'Reilly: NFS and File Locking](https://docstore.mik.ua/orelly/networking_2ndEd/nfs/ch11_02.htm)
 
-### Command Pattern & Undo/Redo
-- [C++ Undo Redo Frameworks Part 1](https://blog.meldstudio.co/c-undo-redo-frameworks-part-1/)
-- [Implementing undo/redo with Command Pattern](https://gernotklingler.com/blog/implementing-undoredo-with-the-command-pattern/)
-- [Command Pattern (Game Programming Patterns)](https://gameprogrammingpatterns.com/command.html)
+### Windows Long Paths
+- [Microsoft Learn: Maximum Path Length Limitation](https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation)
+- [Microsoft Learn: Enable long path names in Windows 11](https://learn.microsoft.com/en-us/answers/questions/1805411/how-to-enable-long-file-path-names-in-windows-11)
 
-### SDL & Event Handling
-- [SDL2 common mistakes](https://nullprogram.com/blog/2023/01/08/)
+### Unicode and Cross-Platform Paths
+- [Cross-Platform Unicode Support in C++](https://www.studyplan.dev/pro-cpp/character-encoding/q/cross-platform-unicode)
+- [pathie-cpp: C++ library for crossplatform Unicode path management](https://github.com/Quintus/pathie-cpp)
 
-### PDF Generation
-- [Apryse C++ SDK Documentation](https://docs.apryse.com/core/guides/get-started/cpp)
-- [PoDoFo: C++17 PDF manipulation library](https://github.com/podofo/podofo)
-
-### CNC & G-code
-- [Grbl: G-code parser and CNC controller](https://github.com/gnea/grbl)
-- [LinuxCNC G-Codes Documentation](https://linuxcnc.org/docs/html/gcode/g-code.html)
+### SQLite Graph Queries
+- [SQLite: Recursive Common Table Expressions](https://sqlite.org/lang_with.html)
+- [SQLite Recursive Queries for Graph Traversal](https://runebook.dev/en/articles/sqlite/lang_with/rcex3)
 
 ---
 
-*Pitfalls research for: CNC Workshop Management Desktop Software (C++17, SDL2, ImGui, SQLite)*
-*Researched: 2026-02-08*
+*Pitfalls research for: Digital Workshop v1.1 Library Storage & Organization*
+*Researched: 2026-02-21*
+*Previous PITFALLS.md content (v1.0 threading/CNC work) is superseded by this file for v1.1 milestone.*

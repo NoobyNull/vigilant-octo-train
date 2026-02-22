@@ -11,7 +11,7 @@ See: `.planning/PROJECT.md` (updated 2026-02-21)
 
 **Core Value:** A single focused workspace where a CNC woodworker can manage their model library, analyze toolpaths, and optimize material usage — without switching between tools.
 
-**Current Focus:** v1.1 Library Storage & Organization — content-addressable storage, categories, FTS5, Kuzu graph, project export
+**Current Focus:** v1.1 Library Storage & Organization — content-addressable storage, categories, FTS5, GraphQLite graph queries, project export
 
 ---
 
@@ -78,11 +78,12 @@ Last activity: 2026-02-21 — Milestone v1.1 started
 ### v1.1 Design Decisions (2026-02-21)
 
 - **Storage:** Content-addressable with iTunes-style 2-byte hash prefix directories (e.g., `library/models/a7/3b/a73b4f...c821.stl`)
-- **Database:** SQLite remains primary (relational + FTS5). Kuzu added alongside for graph relationships (categories, projects)
+- **Database:** SQLite remains sole database. GraphQLite loaded as SQLite extension for Cypher graph queries. FTS5 for full-text search. Single DB file, single connection pool.
+- **Graph DB decision:** Kuzu abandoned Oct 2025 (repo archived). GraphQLite chosen instead — MIT-licensed SQLite extension, actively maintained (v0.3.5, Feb 2026), Cypher support, 15+ graph algorithms, loaded via `sqlite3_load_extension()`.
 - **File handling:** Auto-detect source filesystem — copy from NAS/remote, move if same local drive. User picks organizational strategy (keep in place / organize locally / custom location)
 - **Categories:** Manual genus assignment by default. AI-assisted classification (Gemini Vision) deferred — not required for customers
 - **Projects:** Lightweight graph links in DB, exportable as .dwproj zip (manifest + model blobs + materials + thumbnails)
-- **Rejected alternatives:** DuckDB (wrong workload — columnar/analytical, weak OLTP, no graph), MySQL (server-based), SurrealDB (no C++ SDK)
+- **Rejected alternatives:** DuckDB (wrong workload — columnar/analytical, weak OLTP, no graph), MySQL (server-based), SurrealDB (no C++ SDK), Kuzu (abandoned Oct 2025)
 
 ---
 
