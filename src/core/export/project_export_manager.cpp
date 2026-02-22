@@ -469,7 +469,9 @@ ProjectExportManager::importProject(const Path& archivePath,
                manifest.projectName.c_str(), importedCount,
                archivePath.string().c_str());
 
-    return DwprojExportResult::ok(importedCount, totalBytes);
+    auto result = DwprojExportResult::ok(importedCount, totalBytes);
+    result.importedProjectId = *projectId;
+    return result;
 }
 
 // --- Manifest JSON ---

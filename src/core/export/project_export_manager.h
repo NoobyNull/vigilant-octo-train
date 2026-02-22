@@ -24,13 +24,14 @@ struct DwprojExportResult {
     std::string error;
     int modelCount = 0;
     uint64_t totalBytes = 0;
+    std::optional<i64> importedProjectId;  // Set on successful import, nullopt on export or failure
 
     static DwprojExportResult ok(int models = 0, uint64_t bytes = 0) {
-        return {true, "", models, bytes};
+        return {true, "", models, bytes, std::nullopt};
     }
 
     static DwprojExportResult fail(const std::string& err) {
-        return {false, err, 0, 0};
+        return {false, err, 0, 0, std::nullopt};
     }
 };
 
