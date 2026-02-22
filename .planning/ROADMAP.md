@@ -61,7 +61,10 @@ Plans:
   2. Importing from a NAS or cloud-synced folder auto-selects "copy" and displays a recommendation explaining why
   3. Importing from a local drive defaults to "move" (user can override)
   4. Files imported via "copy" or "move" land in the CAS blob store; "keep in place" preserves original path
-**Plans:** TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 03-01-PLAN.md — Filesystem detector + import options dialog UI
+- [ ] 03-02-PLAN.md — Wire dialog into import flow with per-batch mode
 
 ### Phase 4: Organization & Graph
 **Goal:** User can organize models into categories, search across all metadata, and traverse relationships via graph queries
@@ -73,7 +76,12 @@ Plans:
   3. Models, categories, and projects exist as graph nodes with relationship edges (belongs_to, contains, related_to)
   4. User can query relationships via Cypher (e.g., "all models in project X", "models related to this model")
   5. GraphQLite extension loads at DB init; application starts cleanly with graph support enabled
-**Plans:** TBD
+**Plans:** 4 plans
+Plans:
+- [ ] 04-01-PLAN.md — Schema v7: categories tables, FTS5 virtual table + triggers, ModelRepository methods
+- [ ] 04-02-PLAN.md — GraphQLite extension loading, Database extension API, GraphManager foundation
+- [ ] 04-03-PLAN.md — Graph node/edge CRUD, LibraryManager dual-write integration
+- [ ] 04-04-PLAN.md — Category UI, FTS5 search bar, Application wiring, human verification
 
 ### Phase 5: Project Export
 **Goal:** User can share a project as a portable, self-contained archive that works on another machine
@@ -101,8 +109,8 @@ Plans:
 | 2 Import Pipeline | v1.0 | 10/10 | Complete | 2026-02-09 |
 | 1 Materials System | Post-v1.0 | 6/6 | Complete | 2026-02-20 |
 | 2 Content-Addressable Storage | v1.1 | 0/2 | In progress | - |
-| 3 Import File Handling | v1.1 | 0/? | Not started | - |
-| 4 Organization & Graph | v1.1 | 0/? | Not started | - |
+| 3 Import File Handling | v1.1 | 0/2 | Planned | - |
+| 4 Organization & Graph | v1.1 | 0/4 | Planned | - |
 | 5 Project Export | v1.1 | 0/2 | Not started | - |
 
 ---
@@ -110,3 +118,5 @@ Plans:
 *Roadmap created: 2026-02-08*
 *v1.0 milestone shipped: 2026-02-10*
 *v1.1 phases added: 2026-02-21*
+*Phase 3 planned: 2026-02-21*
+*Phase 4 planned: 2026-02-21*
