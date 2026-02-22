@@ -43,6 +43,13 @@ constexpr const char* ICON_QUESTION = "\xef\x81\x99"; // f059 circle-question
 // View modes
 constexpr const char* ICON_LIST = "\xef\x80\x8b"; // f00b list
 
+// Domain-specific
+constexpr const char* ICON_GCODE = "\xef\x87\x81";      // f1c1 file-code (G-code files)
+constexpr const char* ICON_MATERIAL = "\xef\x87\xbc";   // f1fc paintbrush (materials)
+constexpr const char* ICON_COST = "\xef\x85\x95";       // f155 dollar-sign (costs)
+constexpr const char* ICON_OPTIMIZER = "\xef\x84\xa8";   // f128 puzzle-piece (cut plans)
+constexpr const char* ICON_NOTES = "\xef\x89\x89";      // f249 sticky-note (notes)
+
 // Materials-specific
 constexpr const char* ICON_ASSIGN = "\xef\x87\x87";     // f1c7 link (chain)
 constexpr const char* ICON_WAND = "\xef\x83\x90";       // f0d0 wand-magic-sparkles
@@ -77,6 +84,11 @@ struct Icons {
     static constexpr const char* Error = icons::ICON_ERROR;
     static constexpr const char* Question = icons::ICON_QUESTION;
     static constexpr const char* List = icons::ICON_LIST;
+    static constexpr const char* GCode = icons::ICON_GCODE;
+    static constexpr const char* Material = icons::ICON_MATERIAL;
+    static constexpr const char* Cost = icons::ICON_COST;
+    static constexpr const char* Optimizer = icons::ICON_OPTIMIZER;
+    static constexpr const char* Notes = icons::ICON_NOTES;
     static constexpr const char* Assign = icons::ICON_ASSIGN;
     static constexpr const char* Wand = icons::ICON_WAND;
     static constexpr const char* Paintbrush = icons::ICON_PAINTBRUSH;

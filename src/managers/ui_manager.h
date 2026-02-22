@@ -43,6 +43,9 @@ struct ImportProgress;
 class LibraryManager;
 class ProjectManager;
 class MaterialManager;
+class ModelRepository;
+class GCodeRepository;
+class CutPlanRepository;
 class CostRepository;
 class ImportQueue;
 class Workspace;
@@ -74,7 +77,10 @@ class UIManager {
     void init(LibraryManager* libraryManager,
               ProjectManager* projectManager,
               MaterialManager* materialManager,
-              CostRepository* costRepo = nullptr);
+              CostRepository* costRepo = nullptr,
+              ModelRepository* modelRepo = nullptr,
+              GCodeRepository* gcodeRepo = nullptr,
+              CutPlanRepository* cutPlanRepo = nullptr);
 
     // Shutdown and destroy all UI resources
     void shutdown();

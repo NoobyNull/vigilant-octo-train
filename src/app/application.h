@@ -31,6 +31,9 @@ class StorageManager;
 class MaterialManager;
 class CostRepository;
 class GraphManager;
+class ModelRepository;
+class GCodeRepository;
+class CutPlanRepository;
 class GeminiMaterialService;
 class GeminiDescriptorService;
 class ProjectExportManager;
@@ -113,6 +116,11 @@ class Application {
 
     // Materials Manager - coordinates material archives, defaults, and database
     std::unique_ptr<MaterialManager> m_materialManager;
+
+    // Repositories for project asset navigator
+    std::unique_ptr<ModelRepository> m_modelRepo;
+    std::unique_ptr<GCodeRepository> m_gcodeRepo;
+    std::unique_ptr<CutPlanRepository> m_cutPlanRepo;
 
     // Cost estimation repository
     std::unique_ptr<CostRepository> m_costRepo;

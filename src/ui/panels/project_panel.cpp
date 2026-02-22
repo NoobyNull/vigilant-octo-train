@@ -1,15 +1,31 @@
 #include "project_panel.h"
 
+#include <cstring>
+#include <unordered_set>
+
 #include <imgui.h>
 
 #include "../../core/config/config.h"
+#include "../../core/database/cost_repository.h"
+#include "../../core/database/cut_plan_repository.h"
+#include "../../core/database/gcode_repository.h"
+#include "../../core/database/model_repository.h"
 #include "../icons.h"
 #include "../widgets/toast.h"
 
 namespace dw {
 
-ProjectPanel::ProjectPanel(ProjectManager* projectManager)
-    : Panel("Project"), m_projectManager(projectManager) {}
+ProjectPanel::ProjectPanel(ProjectManager* projectManager,
+                           ModelRepository* modelRepo,
+                           GCodeRepository* gcodeRepo,
+                           CutPlanRepository* cutPlanRepo,
+                           CostRepository* costRepo)
+    : Panel("Project"),
+      m_projectManager(projectManager),
+      m_modelRepo(modelRepo),
+      m_gcodeRepo(gcodeRepo),
+      m_cutPlanRepo(cutPlanRepo),
+      m_costRepo(costRepo) {}
 
 void ProjectPanel::render() {
     if (!m_open) {
@@ -20,7 +36,13 @@ void ProjectPanel::render() {
         if (m_projectManager && m_projectManager->currentProject()) {
             renderProjectInfo();
             ImGui::Separator();
-            renderModelList();
+            renderModelsSection();
+            renderGCodeSection();
+            renderMaterialsSection();
+            renderCostsSection();
+            renderCutPlansSection();
+            ImGui::Separator();
+            renderNotesSection();
         } else {
             renderNoProject();
         }
@@ -95,7 +117,7 @@ void ProjectPanel::renderProjectInfo() {
             }
         }
 
-        // Export .dwproj button — only enabled when project has models
+        // Export .dwproj button -- only enabled when project has models
         ImGui::Spacing();
         {
             bool hasModels = !project->modelIds().empty();
@@ -114,7 +136,8 @@ void ProjectPanel::renderProjectInfo() {
         }
 
         // Unsaved changes confirmation dialog
-        if (ImGui::BeginPopupModal("Unsaved Changes", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        if (ImGui::BeginPopupModal("Unsaved Changes", nullptr,
+                                   ImGuiWindowFlags_AlwaysAutoResize)) {
             ImGui::Text("Save changes before closing?");
             ImGui::TextDisabled("You have unsaved changes in this project.");
             ImGui::Spacing();
@@ -142,47 +165,221 @@ void ProjectPanel::renderProjectInfo() {
     }
 }
 
-void ProjectPanel::renderModelList() {
+void ProjectPanel::renderModelsSection() {
     auto project = m_projectManager->currentProject();
-    if (!project) {
-        return;
-    }
+    if (!project) return;
 
-    if (ImGui::CollapsingHeader("Project Models", ImGuiTreeNodeFlags_DefaultOpen)) {
+    const auto& modelIds = project->modelIds();
+    std::string header = std::string(Icons::Model) + " Models (" +
+                         std::to_string(modelIds.size()) + ")";
+
+    bool open = ImGui::CollapsingHeader(header.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+    if (!open) return;
+
+    ImGui::Indent();
+
+    if (modelIds.empty()) {
+        ImGui::TextDisabled("No models -- add from Library panel");
+    } else {
+        for (int64_t modelId : modelIds) {
+            ImGui::PushID(static_cast<int>(modelId));
+
+            std::string label;
+            if (m_modelRepo) {
+                auto record = m_modelRepo->findById(modelId);
+                if (record) {
+                    label = std::string(Icons::Model) + " " + record->name;
+                } else {
+                    label = std::string(Icons::Model) + " Model #" + std::to_string(modelId);
+                }
+            } else {
+                label = std::string(Icons::Model) + " Model #" + std::to_string(modelId);
+            }
+
+            bool selected = (modelId == m_selectedModelId);
+            if (ImGui::Selectable(label.c_str(), selected)) {
+                m_selectedModelId = modelId;
+                if (m_onModelSelected) m_onModelSelected(modelId);
+            }
+
+            // Context menu: remove from project
+            if (ImGui::BeginPopupContextItem()) {
+                if (ImGui::MenuItem("Remove from Project")) {
+                    project->removeModel(modelId);
+                }
+                ImGui::EndPopup();
+            }
+            ImGui::PopID();
+        }
+    }
+    ImGui::Unindent();
+}
+
+void ProjectPanel::renderGCodeSection() {
+    auto project = m_projectManager->currentProject();
+    if (!project || !m_gcodeRepo) return;
+
+    auto gcodeFiles = m_gcodeRepo->findByProject(project->id());
+    std::string header = std::string(Icons::GCode) + " G-code (" +
+                         std::to_string(gcodeFiles.size()) + ")";
+
+    bool open = ImGui::CollapsingHeader(header.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+    if (!open) return;
+
+    ImGui::Indent();
+
+    if (gcodeFiles.empty()) {
+        ImGui::TextDisabled("No G-code files -- import from G-code panel");
+    } else {
+        for (const auto& gc : gcodeFiles) {
+            ImGui::PushID(static_cast<int>(gc.id));
+            std::string label = std::string(Icons::GCode) + " " + gc.name;
+            if (ImGui::Selectable(label.c_str())) {
+                if (m_onGCodeSelected) m_onGCodeSelected(gc.id);
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Time: %.1f min | Tools: %zu",
+                    gc.estimatedTime / 60.0f, gc.toolNumbers.size());
+            }
+            if (ImGui::BeginPopupContextItem()) {
+                if (ImGui::MenuItem("Remove from Project")) {
+                    m_gcodeRepo->removeFromProject(project->id(), gc.id);
+                }
+                ImGui::EndPopup();
+            }
+            ImGui::PopID();
+        }
+    }
+    ImGui::Unindent();
+}
+
+void ProjectPanel::renderMaterialsSection() {
+    auto project = m_projectManager->currentProject();
+    if (!project || !m_modelRepo) return;
+
+    // Collect unique materials from project models
+    // ModelRecord doesn't have materialId/materialName, so we just show
+    // a count of unique models that could have materials assigned.
+    // For now, show the section as a placeholder with model-count info.
+    std::string header = std::string(Icons::Material) + " Materials";
+
+    bool open = ImGui::CollapsingHeader(header.c_str());
+    if (!open) return;
+
+    ImGui::Indent();
+    ImGui::TextDisabled("Assign materials to models in the Materials panel");
+    ImGui::Unindent();
+}
+
+void ProjectPanel::renderCostsSection() {
+    auto project = m_projectManager->currentProject();
+    if (!project || !m_costRepo) return;
+
+    auto estimates = m_costRepo->findByProject(project->id());
+    std::string header = std::string(Icons::Cost) + " Cost Estimates (" +
+                         std::to_string(estimates.size()) + ")";
+
+    bool open = ImGui::CollapsingHeader(header.c_str());
+    if (!open) return;
+
+    ImGui::Indent();
+
+    if (estimates.empty()) {
+        ImGui::TextDisabled("No estimates -- create in Cost panel");
+    } else {
+        for (const auto& est : estimates) {
+            ImGui::PushID(static_cast<int>(est.id));
+            std::string label = std::string(Icons::Cost) + " " + est.name;
+            if (ImGui::Selectable(label.c_str())) {
+                if (m_onCostSelected) m_onCostSelected(est.id);
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Total: $%.2f | Items: %zu",
+                    est.total, est.items.size());
+            }
+            ImGui::PopID();
+        }
+    }
+    ImGui::Unindent();
+}
+
+void ProjectPanel::renderCutPlansSection() {
+    auto project = m_projectManager->currentProject();
+    if (!project || !m_cutPlanRepo) return;
+
+    auto plans = m_cutPlanRepo->findByProject(project->id());
+    std::string header = std::string(Icons::Optimizer) + " Cut Plans (" +
+                         std::to_string(plans.size()) + ")";
+
+    bool open = ImGui::CollapsingHeader(header.c_str());
+    if (!open) return;
+
+    ImGui::Indent();
+
+    if (plans.empty()) {
+        ImGui::TextDisabled("No cut plans -- save from Optimizer panel");
+    } else {
+        for (const auto& plan : plans) {
+            ImGui::PushID(static_cast<int>(plan.id));
+            std::string label = std::string(Icons::Optimizer) + " " + plan.name;
+            if (ImGui::Selectable(label.c_str())) {
+                if (m_onCutPlanSelected) m_onCutPlanSelected(plan.id);
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Sheets: %d | Efficiency: %.1f%%",
+                    plan.sheetsUsed, plan.efficiency * 100.0f);
+            }
+            if (ImGui::BeginPopupContextItem()) {
+                if (ImGui::MenuItem("Remove from Project")) {
+                    m_cutPlanRepo->remove(plan.id);
+                }
+                ImGui::EndPopup();
+            }
+            ImGui::PopID();
+        }
+    }
+    ImGui::Unindent();
+}
+
+void ProjectPanel::renderNotesSection() {
+    auto project = m_projectManager->currentProject();
+    if (!project) return;
+
+    std::string header = std::string(Icons::Notes) + " Notes";
+    if (ImGui::CollapsingHeader(header.c_str())) {
         ImGui::Indent();
 
-        const auto& modelIds = project->modelIds();
-
-        if (modelIds.empty()) {
-            ImGui::TextDisabled("No models in project");
-            ImGui::TextDisabled("Add models from the Library panel");
-        } else {
-            for (int64_t modelId : modelIds) {
-                ImGui::PushID(static_cast<int>(modelId));
-
-                bool isSelected = (modelId == m_selectedModelId);
-                std::string label = Icons::Model + std::string(" Model #") +
-                                    std::to_string(modelId);
-
-                if (ImGui::Selectable(label.c_str(), isSelected)) {
-                    m_selectedModelId = modelId;
-                    if (m_onModelSelected) {
-                        m_onModelSelected(modelId);
-                    }
-                }
-
-                // Context menu
-                if (ImGui::BeginPopupContextItem()) {
-                    if (ImGui::MenuItem("Remove from Project")) {
-                        project->removeModel(modelId);
-                    }
-                    ImGui::EndPopup();
-                }
-
-                ImGui::PopID();
+        // Load notes into buffer on first render or project change
+        if (m_notesProjectId != project->id()) {
+            auto record = m_projectManager->getProjectInfo(project->id());
+            if (record) {
+                std::strncpy(m_notesBuf, record->notes.c_str(), sizeof(m_notesBuf) - 1);
+                m_notesBuf[sizeof(m_notesBuf) - 1] = '\0';
+            } else {
+                m_notesBuf[0] = '\0';
             }
+            m_notesProjectId = project->id();
+            m_notesChanged = false;
         }
 
+        if (ImGui::InputTextMultiline("##notes", m_notesBuf, sizeof(m_notesBuf),
+                ImVec2(-1, 120))) {
+            m_notesChanged = true;
+        }
+
+        if (m_notesChanged && ImGui::IsItemDeactivatedAfterEdit()) {
+            // Auto-save notes via ProjectManager
+            auto record = m_projectManager->getProjectInfo(project->id());
+            if (record) {
+                ProjectRecord updated = *record;
+                updated.notes = m_notesBuf;
+                // Save updated record -- ProjectRepository::update persists notes
+                // We access it through the project's record
+                project->record().notes = m_notesBuf;
+                project->markModified();
+                m_notesChanged = false;
+            }
+        }
         ImGui::Unindent();
     }
 }
@@ -231,7 +428,8 @@ void ProjectPanel::renderNoProject() {
                 name = projectPath.filename().string();
             }
 
-            if (ImGui::Selectable(name.c_str(), false, ImGuiSelectableFlags_None, ImVec2(0, 24))) {
+            if (ImGui::Selectable(name.c_str(), false, ImGuiSelectableFlags_None,
+                                  ImVec2(0, 24))) {
                 if (m_onOpenRecentProject) {
                     m_onOpenRecentProject(projectPath);
                 }
