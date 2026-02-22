@@ -329,7 +329,8 @@ std::optional<i64> LibraryManager::autoDetectModelMatch(const std::string& gcode
 bool LibraryManager::assignCategory(i64 modelId, i64 categoryId) {
     // SQLite is source of truth
     bool ok = m_modelRepo.assignCategory(modelId, categoryId);
-    if (!ok) return false;
+    if (!ok)
+        return false;
 
     // Dual-write: graph edge (non-fatal)
     if (m_graphManager && m_graphManager->isAvailable()) {
@@ -340,7 +341,8 @@ bool LibraryManager::assignCategory(i64 modelId, i64 categoryId) {
 
 bool LibraryManager::removeModelCategory(i64 modelId, i64 categoryId) {
     bool ok = m_modelRepo.removeCategory(modelId, categoryId);
-    if (!ok) return false;
+    if (!ok)
+        return false;
 
     // Dual-write: remove graph edge (non-fatal)
     if (m_graphManager && m_graphManager->isAvailable()) {
@@ -350,9 +352,10 @@ bool LibraryManager::removeModelCategory(i64 modelId, i64 categoryId) {
 }
 
 std::optional<i64> LibraryManager::createCategory(const std::string& name,
-                                                   std::optional<i64> parentId) {
+                                                  std::optional<i64> parentId) {
     auto catId = m_modelRepo.createCategory(name, parentId);
-    if (!catId) return std::nullopt;
+    if (!catId)
+        return std::nullopt;
 
     // Dual-write: create graph node (non-fatal)
     if (m_graphManager && m_graphManager->isAvailable()) {
@@ -363,7 +366,8 @@ std::optional<i64> LibraryManager::createCategory(const std::string& name,
 
 bool LibraryManager::deleteCategory(i64 categoryId) {
     bool ok = m_modelRepo.deleteCategory(categoryId);
-    if (!ok) return false;
+    if (!ok)
+        return false;
 
     // Dual-write: remove graph node (non-fatal)
     if (m_graphManager && m_graphManager->isAvailable()) {
