@@ -20,7 +20,7 @@ See: `.planning/PROJECT.md` (updated 2026-02-21)
 **Milestone:** v1.1 Library Storage & Organization
 **Phase:** 4 — Organization & Graph (in progress)
 **Plan:** 04-04 complete
-**Status:** Phase 04 complete
+**Status:** Ready to plan
 
 ```
 v1.1 Progress: [===============_____] 3/4 phases complete
