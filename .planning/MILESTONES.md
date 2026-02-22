@@ -39,6 +39,22 @@
 
 ---
 
+## v1.3 AI Material UX & Fixes (Completed: 2026-02-21)
+
+**Tests:** 545 passing
+**Timeline:** Same day (Feb 21, 2026)
+
+**Delivered:** Unified AI-first material creation dialog, Gemini API fixes for texture generation, AI descriptor integration with category classification, and infrastructure bug fixes.
+
+**Key accomplishments:**
+1. AI-first Add Material dialog — click Add, type name, generate with AI or manual entry in one unified flow
+2. Gemini texture fix — removed invalid `imageSizeOptions` field that caused 400 errors
+3. HTTP error diagnostics — Gemini API responses now log status code and body on failure
+4. AI descriptor integration — GeminiDescriptorService classifies materials with category metadata
+5. GraphQLite extension loading — corrected repository URL and download method
+
+---
+
 ## v1.1 Library Storage & Organization (Completed: 2026-02-22)
 
 **Phases completed:** 4 phases, 12 plans

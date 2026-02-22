@@ -66,30 +66,24 @@ A single focused workspace where a CNC woodworker can manage their model library
 - ✓ GraphQLite SQLite extension for Cypher graph queries — v1.1
 - ✓ Project export as portable .dwproj ZIP archives — v1.1
 
-## Completed Milestone: v1.2 UI Freshen-Up
+## Current State: v1.3 shipped
 
-**Goal:** Modernize the Dear ImGui interface to feel polished and contemporary — eliminating the "developer tool" aesthetic that deters Windows users from adopting the application.
+**Latest milestone:** v1.3 AI Material UX & Fixes (2026-02-21)
+- AI-first Add Material dialog with unified generate + manual entry
+- Gemini API fixes for texture generation
+- AI descriptor integration with category classification
 
-**Target features:**
-- Platform-native font rendering (Inter/Segoe UI/system sans with oversampling)
-- DPI-aware scaling for Windows HiDPI displays
-- Refined color palette and spacing across all three themes
-- Polished light theme (currently bare `StyleColorsLight`)
-- Consistent visual language across all panels and dialogs
+**Previous milestones:** v1.0 (Foundation), v1.1 (Library Storage), v1.2 (UI Freshen-Up)
 
-### Active
-
-### Out of Scope
+### Out of Scope (standing)
 
 - wxWidgets migration — too deep an ImGui integration (~1,637 calls across 31 files)
-- AI genus classification — deferred to future milestone
 - Cloud-based operation — fully offline desktop app
-- New functional features — this is purely visual/UX polish
 - Custom window chrome / frameless window — OS-native title bar is fine
 
 ## Context
 
-**Current state:** v1.1 complete. Content-addressable storage, FTS5 search, GraphQLite graph queries, project export all shipped. 544 tests passing. Architecture remains clean — Application as thin coordinator, 3 focused managers.
+**Current state:** v1.3 complete. AI-first material creation, descriptor integration, Gemini fixes all shipped on top of v1.2 UI polish and v1.1 library storage. 545 tests passing. Architecture remains clean — Application as thin coordinator, 3 focused managers.
 
 **Tech stack:** C++17, SDL2, Dear ImGui (docking), OpenGL 3.3, SQLite3, GraphQLite, CMake 3.20+
 
@@ -140,4 +134,4 @@ A single focused workspace where a CNC woodworker can manage their model library
 | Stay on ImGui over wxWidgets | 1,637 ImGui calls across 31 files; wxWidgets would be a full rewrite for marginal gain | ✓ Good |
 
 ---
-*Last updated: 2026-02-21 after v1.2 milestone start*
+*Last updated: 2026-02-21 after v1.3 milestone completion*

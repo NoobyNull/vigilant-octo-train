@@ -5,6 +5,7 @@
 - ✅ **v1.0 Foundation & Import Pipeline** — Phases 1-2 (shipped 2026-02-10)
 - ✅ **v1.1 Library Storage & Organization** — Phases 2-5 (completed 2026-02-22)
 - ✅ **v1.2 UI Freshen-Up** — Phase 5 (completed 2026-02-21)
+- ✅ **v1.3 AI Material UX & Fixes** — AI-first Add dialog, descriptor integration, Gemini fixes (completed 2026-02-21)
 
 ## Phases
 
@@ -42,9 +43,25 @@ See Phase Details below for full breakdown.
 
 </details>
 
-### v1.2 UI Freshen-Up
+<details>
+<summary>✅ v1.2 UI Freshen-Up (Phase 5) — COMPLETED 2026-02-21</summary>
 
-- [x] **Phase 5: Theme Modernization** — Modern fonts, DPI scaling, refined color palettes, polished light/dark/high-contrast themes
+- [x] Phase 5: Theme Modernization (3/3 plans) — completed 2026-02-21
+
+</details>
+
+<details>
+<summary>✅ v1.3 AI Material UX & Fixes — COMPLETED 2026-02-21</summary>
+
+- [x] AI-first "Add Material" dialog — unified generate + manual entry
+- [x] AI descriptor integration with category classification
+- [x] Gemini API fixes (texture request, HTTP logging)
+- [x] GraphQLite extension loading fix
+- [x] Lint compliance and schema test fixes
+
+See: `.planning/milestones/v1.3-ROADMAP.md` for full details.
+
+</details>
 
 ## Phase Details
 
@@ -109,21 +126,16 @@ Plans:
 
 </details>
 
-### Phase 5: Theme Modernization
-**Goal:** Application looks polished and contemporary on all platforms — no longer reads as a "developer tool"
-**Depends on:** None (pure UI, no functional dependencies)
-**Requirements:** FONT-01, FONT-02, FONT-03, DPI-01, DPI-02, DPI-03, THEME-01, THEME-02, THEME-03, THEME-04, VIS-01, VIS-02
-**Success Criteria** (what must be TRUE):
-  1. Application renders text using a modern proportional font (Inter or equivalent), not the ImGui default bitmap font
-  2. FontAwesome icons render correctly alongside the new font at all sizes
-  3. Moving the application window to a HiDPI display on Windows scales the UI proportionally
-  4. Light theme is fully hand-tuned with distinct colors (not `StyleColorsLight` defaults)
-  5. All panels and dialogs have consistent margins, spacing, and interactive element styling
-**Plans:** 3 plans
+<details>
+<summary>v1.2 Phase 5: Theme Modernization (completed)</summary>
+
+**Goal:** Application looks polished and contemporary on all platforms
 Plans:
 - [x] 05-01-PLAN.md — Inter font embedding + FontAwesome merge, dead code cleanup
 - [x] 05-02-PLAN.md — DPI detection, atlas-based scaling, runtime monitor-switch handling
 - [x] 05-03-PLAN.md — Light theme full customization, dark/high-contrast refinement, visual consistency audit
+
+</details>
 
 ## Progress
 
@@ -142,6 +154,7 @@ Plans:
 | 4 Organization & Graph | v1.1 | 4/4 | Complete | 2026-02-22 |
 | 5 Project Export | v1.1 | 4/4 | Complete | 2026-02-22 |
 | 5 Theme Modernization | v1.2 | 3/3 | Complete | 2026-02-21 |
+| AI Material UX & Fixes | v1.3 | — | Complete | 2026-02-21 |
 
 ---
 
@@ -149,4 +162,5 @@ Plans:
 *v1.0 milestone shipped: 2026-02-10*
 *v1.1 phases added: 2026-02-21*
 *v1.1 milestone completed: 2026-02-22*
-*v1.2 milestone started: 2026-02-21*
+*v1.2 milestone completed: 2026-02-21*
+*v1.3 milestone completed: 2026-02-21*
