@@ -93,6 +93,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/materials/material_manager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/loaders/texture_loader.cpp
     ${CMAKE_SOURCE_DIR}/src/core/library/library_manager.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/graph/graph_manager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/import/import_queue.cpp
     ${CMAKE_SOURCE_DIR}/src/core/import/file_handler.cpp
     ${CMAKE_SOURCE_DIR}/src/core/import/filesystem_detector.cpp
