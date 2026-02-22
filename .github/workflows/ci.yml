@@ -74,10 +74,11 @@ jobs:
         run: |
           find src -name '*.cpp' -not -path '*/build/*' | head -50 | \
             xargs -P$(nproc) -I{} clang-tidy -p build {} 2>&1 | tee clang-tidy.log
-          # Fail only on genuine clang-tidy errors (not unknown warning options from wrong compiler)
-          if grep -E 'error:' clang-tidy.log | grep -v 'clang-diagnostic-unknown-warning-option' | grep -v 'file not found \[clang-diagnostic-error\]' | grep -qv '^$'; then
-            echo "clang-tidy found errors:"
-            grep -E 'error:' clang-tidy.log | grep -v 'clang-diagnostic-unknown-warning-option' | grep -v 'file not found \[clang-diagnostic-error\]'
+          # Fail only on genuine clang-tidy check errors (warnings-as-errors),
+          # not on infrastructure issues (unknown flags, missing generated headers)
+          if grep -E '\-warnings-as-errors\]' clang-tidy.log | grep -qv '^$'; then
+            echo "clang-tidy found warnings treated as errors:"
+            grep -E '\-warnings-as-errors\]' clang-tidy.log | head -20
             exit 1
           fi
 

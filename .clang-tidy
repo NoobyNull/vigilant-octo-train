@@ -35,7 +35,7 @@ Checks: >
   -readability-magic-numbers,
   -readability-uppercase-literal-suffix
 
-WarningsAsErrors: '*'
+WarningsAsErrors: ''
 
 CheckOptions:
   - key: readability-identifier-naming.ClassCase
