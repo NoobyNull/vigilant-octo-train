@@ -9,13 +9,15 @@
 #include "../loaders/gcode_loader.h"
 #include "../loaders/loader_factory.h"
 #include "../mesh/hash.h"
+#include "../storage/storage_manager.h"
 #include "../utils/file_utils.h"
 #include "../utils/log.h"
 
 namespace dw {
 
-ImportQueue::ImportQueue(ConnectionPool& pool, LibraryManager* libraryManager)
-    : m_pool(pool), m_libraryManager(libraryManager) {}
+ImportQueue::ImportQueue(ConnectionPool& pool, LibraryManager* libraryManager,
+                         StorageManager* storageManager)
+    : m_pool(pool), m_libraryManager(libraryManager), m_storageManager(storageManager) {}
 
 ImportQueue::~ImportQueue() {
     m_shutdown.store(true);
@@ -338,12 +340,20 @@ void ImportQueue::processTask(ImportTask task) {
 
     Path finalPath = task.sourcePath;
 
+    auto mode = Config::instance().getFileHandlingMode();
+
     if (task.importType == ImportType::GCode) {
         // Insert G-code record
         GCodeRecord record;
         record.hash = task.fileHash;
         record.name = file::getStem(task.sourcePath);
-        record.filePath = task.sourcePath;
+
+        // Set filePath to CAS blob path before insert (if StorageManager available)
+        if (m_storageManager && mode != FileHandlingMode::LeaveInPlace) {
+            record.filePath = m_storageManager->blobPath(task.fileHash, task.extension);
+        } else {
+            record.filePath = task.sourcePath;
+        }
         record.fileSize = actualFileSize;
 
         // Populate metadata from extracted data
@@ -449,7 +459,13 @@ void ImportQueue::processTask(ImportTask task) {
         ModelRecord record;
         record.hash = task.fileHash;
         record.name = file::getStem(task.sourcePath);
-        record.filePath = task.sourcePath;
+
+        // Set filePath to CAS blob path before insert (if StorageManager available)
+        if (m_storageManager && mode != FileHandlingMode::LeaveInPlace) {
+            record.filePath = m_storageManager->blobPath(task.fileHash, task.extension);
+        } else {
+            record.filePath = task.sourcePath;
+        }
         record.fileFormat = task.extension;
         record.fileSize = actualFileSize;
         record.vertexCount = task.mesh->vertexCount();
@@ -500,23 +516,74 @@ void ImportQueue::processTask(ImportTask task) {
     }
 
     // Stage 5.5: File Handling (apply copy/move/leave mode)
-    auto mode = Config::instance().getFileHandlingMode();
-    auto libraryDir = Config::instance().getLibraryDir();
-    if (libraryDir.empty()) {
-        libraryDir = FileHandler::defaultLibraryDir();
-    }
+    if (m_storageManager && mode != FileHandlingMode::LeaveInPlace) {
+        // CAS blob store path
+        std::string storageError;
+        Path storedPath;
+        if (mode == FileHandlingMode::CopyToLibrary) {
+            storedPath = m_storageManager->storeFile(task.sourcePath, task.fileHash,
+                                                     task.extension, storageError);
+        } else if (mode == FileHandlingMode::MoveToLibrary) {
+            storedPath = m_storageManager->moveFile(task.sourcePath, task.fileHash,
+                                                    task.extension, storageError);
+        }
 
-    if (mode != FileHandlingMode::LeaveInPlace) {
+        if (storedPath.empty()) {
+            // Blob store failed -- roll back the DB insert
+            log::errorf("Import", "Blob store failed for '%s': %s",
+                        file::getStem(task.sourcePath).c_str(), storageError.c_str());
+
+            if (task.importType == ImportType::GCode) {
+                gcodeRepo.remove(task.gcodeId);
+            } else {
+                modelRepo.remove(task.modelId);
+            }
+
+            task.stage = ImportStage::Failed;
+            task.error = "Blob store failed: " + storageError;
+
+            // Update summary
+            {
+                std::lock_guard<std::mutex> lock(m_summaryMutex);
+                m_batchSummary.failedCount++;
+                m_batchSummary.errors.push_back(
+                    {file::getStem(task.sourcePath), task.error});
+            }
+
+            m_progress.failedFiles.fetch_add(1);
+            m_progress.completedFiles.fetch_add(1);
+
+            // Check if this was the last task
+            if (m_remainingTasks.fetch_sub(1) == 1) {
+                m_progress.active.store(false);
+                if (m_onBatchComplete) {
+                    std::lock_guard<std::mutex> lock(m_summaryMutex);
+                    m_onBatchComplete(m_batchSummary);
+                }
+            }
+            return;
+        }
+
+        finalPath = storedPath;
+        log::infof("Import", "Stored in blob: %s -> %s",
+                   task.sourcePath.filename().string().c_str(),
+                   storedPath.filename().string().c_str());
+
+    } else if (mode != FileHandlingMode::LeaveInPlace) {
+        // Fallback: legacy FileHandler when no StorageManager
+        auto libraryDir = Config::instance().getLibraryDir();
+        if (libraryDir.empty()) {
+            libraryDir = FileHandler::defaultLibraryDir();
+        }
+
         std::string error;
         Path handledPath =
             FileHandler::handleImportedFile(task.sourcePath, mode, libraryDir, error);
 
         if (handledPath.empty()) {
-            // File handling failed - log warning but don't fail the import
             log::warningf("Import", "File handling failed for '%s': %s",
                           file::getStem(task.sourcePath).c_str(), error.c_str());
         } else {
-            // Update the record's file path in DB
             finalPath = handledPath;
 
             if (task.importType == ImportType::GCode) {
