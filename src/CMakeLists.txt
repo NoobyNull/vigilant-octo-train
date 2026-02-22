@@ -126,6 +126,7 @@ set(DW_SOURCES
     ui/dialogs/file_dialog.cpp
     ui/dialogs/lighting_dialog.cpp
     ui/dialogs/import_summary_dialog.cpp
+    ui/dialogs/import_options_dialog.cpp
     ui/dialogs/progress_dialog.cpp
 )
 

@@ -1,0 +1,151 @@
+// Digital Workshop - Import Options Dialog Implementation
+
+#include "ui/dialogs/import_options_dialog.h"
+
+#include <imgui.h>
+
+#include "ui/icons.h"
+
+namespace dw {
+
+ImportOptionsDialog::ImportOptionsDialog() : Dialog("Import Options") {}
+
+void ImportOptionsDialog::open(const std::vector<Path>& paths) {
+    m_paths = paths;
+    m_selectedMode = static_cast<int>(FileHandlingMode::LeaveInPlace);
+    m_detectedLocation = StorageLocation::Unknown;
+
+    // Detect filesystem of first file's parent directory
+    if (!paths.empty()) {
+        Path target = paths.front();
+        if (target.has_parent_path())
+            target = target.parent_path();
+        auto info = detectFilesystem(target);
+        m_detectedLocation = info.location;
+    }
+
+    // Auto-select based on detection
+    if (m_detectedLocation == StorageLocation::Network) {
+        m_selectedMode = static_cast<int>(FileHandlingMode::CopyToLibrary);
+    } else {
+        m_selectedMode = static_cast<int>(FileHandlingMode::MoveToLibrary);
+    }
+
+    m_open = true;
+    ImGui::OpenPopup(m_title.c_str());
+}
+
+void ImportOptionsDialog::setOnConfirm(ResultCallback callback) {
+    m_onConfirm = std::move(callback);
+}
+
+void ImportOptionsDialog::render() {
+    if (!m_open)
+        return;
+
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(520, 0), ImGuiCond_Appearing);
+
+    ImGuiWindowFlags flags =
+        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
+
+    if (ImGui::BeginPopupModal(m_title.c_str(), &m_open, flags)) {
+        // File count header
+        ImGui::Text("Importing %zu file(s)", m_paths.size());
+        ImGui::Spacing();
+
+        // Network source warning
+        if (m_detectedLocation == StorageLocation::Network) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
+            ImGui::Text("%s Source appears to be a network/remote drive "
+                        "(NAS, cloud sync, etc.)",
+                        Icons::Warning);
+            ImGui::PopStyleColor();
+            ImGui::Spacing();
+        }
+
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        // Radio button section
+        ImGui::Text("Where should imported files live?");
+        ImGui::Spacing();
+
+        int leaveInPlace = static_cast<int>(FileHandlingMode::LeaveInPlace);
+        int copyToLib = static_cast<int>(FileHandlingMode::CopyToLibrary);
+        int moveToLib = static_cast<int>(FileHandlingMode::MoveToLibrary);
+
+        ImGui::RadioButton("Keep in original location", &m_selectedMode,
+                           leaveInPlace);
+        ImGui::Indent();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+        ImGui::TextWrapped(
+            "Files stay where they are. Path stored as-is -- may break if "
+            "files move.");
+        ImGui::PopStyleColor();
+        ImGui::Unindent();
+        ImGui::Spacing();
+
+        ImGui::RadioButton("Copy to library", &m_selectedMode, copyToLib);
+        ImGui::Indent();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+        ImGui::TextWrapped("Safe copy to local library folder.");
+        ImGui::PopStyleColor();
+        ImGui::Unindent();
+        ImGui::Spacing();
+
+        ImGui::RadioButton("Move to library", &m_selectedMode, moveToLib);
+        ImGui::Indent();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+        ImGui::TextWrapped(
+            "Moves files from current location to library.");
+        ImGui::PopStyleColor();
+        ImGui::Unindent();
+        ImGui::Spacing();
+
+        // Network-specific recommendations
+        if (m_detectedLocation == StorageLocation::Network) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
+            ImGui::TextWrapped(
+                "Recommended: Copy to library. Network files should be "
+                "copied locally for reliable access.");
+            ImGui::PopStyleColor();
+
+            // Extra warning if user selects Move on a network drive
+            if (m_selectedMode == moveToLib) {
+                ImGui::Spacing();
+                ImGui::PushStyleColor(ImGuiCol_Text,
+                                      ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
+                ImGui::TextWrapped(
+                    "%s Moving files from a network drive is not recommended "
+                    "-- connection drops can cause data loss.",
+                    Icons::Warning);
+                ImGui::PopStyleColor();
+            }
+        }
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        // Action buttons
+        if (ImGui::Button("Import", ImVec2(120, 0))) {
+            if (m_onConfirm) {
+                m_onConfirm(static_cast<FileHandlingMode>(m_selectedMode),
+                            m_paths);
+            }
+            m_open = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            m_open = false;
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
+}
+
+} // namespace dw
