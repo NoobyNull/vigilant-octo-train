@@ -70,6 +70,9 @@ jobs:
           CC: clang
           CXX: clang++
 
+      - name: Build (for generated files)
+        run: cmake --build build -j$(nproc)
+
       - name: Run clang-tidy
         run: |
           find src -name '*.cpp' -not -path '*/build/*' | head -50 | \
