@@ -63,7 +63,7 @@
 | IMPORT-02 | Phase 3 | 03-01 | Complete |
 | ORG-01 | Phase 4 | 04-01, 04-04 | In Progress |
 | ORG-02 | Phase 4 | 04-01, 04-04 | In Progress |
-| ORG-03 | Phase 4 | — | Pending |
+| ORG-03 | Phase 4 | 04-02 | Complete |
 | ORG-04 | Phase 4 | — | Pending |
 | ORG-05 | Phase 4 | — | Pending |
 | EXPORT-01 | Phase 5 | — | Pending |
