@@ -119,6 +119,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Python dependencies
+        run: pip install jinja2
+
       - name: Configure
         run: cmake -B build -DDW_BUILD_TESTS=ON
 
