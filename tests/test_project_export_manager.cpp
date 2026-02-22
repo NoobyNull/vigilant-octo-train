@@ -242,7 +242,7 @@ TEST_F(ProjectExportTest, ImportIgnoresUnknownManifestFields) {
     model["bounds_min"] = {0.0, 0.0, 0.0};
     model["bounds_max"] = {1.0, 1.0, 1.0};
     model["unknown_model_field"] = "should be ignored";
-    manifest["models"] = {model};
+    manifest["models"] = nlohmann::json::array({model});
 
     // Create archive with blob
     std::string blobContent = "FAKE_STL_BLOB";
@@ -289,7 +289,7 @@ TEST_F(ProjectExportTest, ImportDeduplicatesExistingModels) {
     model["triangle_count"] = 100;
     model["bounds_min"] = {0.0, 0.0, 0.0};
     model["bounds_max"] = {1.0, 1.0, 1.0};
-    manifest["models"] = {model};
+    manifest["models"] = nlohmann::json::array({model});
 
     std::string blobContent = "FAKE_BLOB_DEDUP";
     createArchiveWithManifest(m_archivePath, manifest,
