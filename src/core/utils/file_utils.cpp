@@ -5,8 +5,13 @@
 #include <fstream>
 
 #ifdef _WIN32
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
+    #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+    #endif
     #include <windows.h>
-    #include <shellapi.h>
 #else
     #include <unistd.h>
 #endif
@@ -274,7 +279,17 @@ u64 fileSize(const Path& path) {
 
 void openInFileManager(const Path& path) {
 #ifdef _WIN32
-    ShellExecuteW(nullptr, L"open", path.wstring().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+    // Dynamically load ShellExecuteW to avoid including shellapi.h
+    // (shellapi.h causes build issues with some Windows SDK versions)
+    auto shell32 = LoadLibraryW(L"shell32.dll");
+    if (shell32) {
+        using ShellExecuteWFn = HINSTANCE(WINAPI*)(HWND, LPCWSTR, LPCWSTR, LPCWSTR, LPCWSTR, INT);
+        auto shellExecute = reinterpret_cast<ShellExecuteWFn>(GetProcAddress(shell32, "ShellExecuteW"));
+        if (shellExecute) {
+            shellExecute(nullptr, L"open", path.wstring().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+        }
+        FreeLibrary(shell32);
+    }
 #elif defined(__APPLE__)
     pid_t pid = fork();
     if (pid == 0) {
