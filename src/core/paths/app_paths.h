@@ -31,6 +31,12 @@ Path getDatabasePath();
 // Log file path
 Path getLogPath();
 
+// Content-addressable blob store directory
+Path getBlobStoreDir();
+
+// Temporary file directory for atomic writes (co-located with blob store)
+Path getTempStoreDir();
+
 // Materials directory (app-managed .dwmat files)
 Path getMaterialsDir();
 

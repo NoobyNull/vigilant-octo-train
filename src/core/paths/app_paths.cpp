@@ -144,6 +144,14 @@ Path getLogPath() {
     return getDataDir() / "digital_workshop.log";
 }
 
+Path getBlobStoreDir() {
+    return getDataDir() / "blobs";
+}
+
+Path getTempStoreDir() {
+    return getBlobStoreDir() / ".tmp";
+}
+
 Path getMaterialsDir() {
     return getDataDir() / "materials";
 }
@@ -193,6 +201,8 @@ bool ensureDirectoriesExist() {
     ensureDir(getThumbnailDir(), "thumbnail");
     ensureDir(getDefaultProjectsDir(), "projects");
     ensureDir(getMaterialsDir(), "materials");
+    ensureDir(getBlobStoreDir(), "blob store");
+    ensureDir(getTempStoreDir(), "temp store");
 
     return success;
 }

@@ -59,6 +59,9 @@ set(DW_SOURCES
     # Project
     core/project/project.cpp
 
+    # Storage
+    core/storage/storage_manager.cpp
+
     # Import
     core/import/import_queue.cpp
     core/import/file_handler.cpp
