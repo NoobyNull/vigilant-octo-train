@@ -95,8 +95,7 @@ std::vector<uint8_t> GeminiMaterialService::fetchTexture(const std::string& prom
                            "Lighting: Uniform flat lighting, no shadows, no 3D depth. "
                            "Subject: A raw material surface grain only."}}}}}}},
         {"generationConfig",
-         {{"responseModalities", nlohmann::json::array({"IMAGE"})},
-          {"imageSizeOptions", {{"aspectRatio", "1:1"}}}}}};
+         {{"responseModalities", nlohmann::json::array({"IMAGE"})}}}};
 
 
     std::string response = gemini::curlPost(url, requestBody.dump());

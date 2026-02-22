@@ -689,16 +689,13 @@ bool Application::init() {
                 auto result = m_geminiService->generate(prompt, apiKey);
                 m_mainThreadQueue->enqueue([this, result]() {
                     if (result.success) {
-                        auto importedId = m_materialManager->importMaterial(result.dwmatPath);
-                        if (importedId) {
-                            log::infof("Application", "Generated and imported material: %s",
-                                       result.record.name.c_str());
-                            ToastManager::instance().show(ToastType::Success, "Material Generated",
-                                                          result.record.name);
-                        }
+                        log::infof("Application", "AI generated material: %s",
+                                   result.record.name.c_str());
+                        ToastManager::instance().show(ToastType::Success, "Material Generated",
+                                                      "Review and save: " + result.record.name);
                         if (m_uiManager->materialsPanel()) {
-                            m_uiManager->materialsPanel()->refresh();
-                            m_uiManager->materialsPanel()->setGenerating(false);
+                            m_uiManager->materialsPanel()->setGeneratedResult(result.record,
+                                                                              result.dwmatPath);
                         }
                     } else {
                         log::errorf("Application", "Material generation failed: %s",

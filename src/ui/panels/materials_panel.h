@@ -44,6 +44,9 @@ class MaterialsPanel : public Panel {
     // Set generating state (called from main thread after async generation completes/fails)
     void setGenerating(bool generating) { m_isGenerating = generating; }
 
+    // Called by application when AI generation completes — populates edit form for review
+    void setGeneratedResult(const MaterialRecord& record, const Path& dwmatPath);
+
     // Reload materials from database
     void refresh();
 
@@ -69,6 +72,7 @@ class MaterialsPanel : public Panel {
     void renderToolbar();
     void renderCategoryTabs();
     void renderMaterialGrid(const std::vector<MaterialRecord>& materials);
+    void renderAddDialog();
     void renderEditForm();
     void renderDeleteConfirm();
 
@@ -99,6 +103,10 @@ class MaterialsPanel : public Panel {
     std::string m_searchQuery;
     i64 m_selectedMaterialId = -1;
     CategoryTab m_activeCategory = CategoryTab::All;
+
+    // Add dialog state
+    bool m_showAddDialog = false;
+    bool m_closeAddDialog = false;
 
     // Edit form state
     bool m_showEditForm = false;

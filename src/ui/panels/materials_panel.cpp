@@ -59,6 +59,7 @@ void MaterialsPanel::render() {
         renderToolbar();
         ImGui::Separator();
         renderCategoryTabs();
+        renderAddDialog();
         renderEditForm();
         renderDeleteConfirm();
     }
@@ -104,10 +105,8 @@ void MaterialsPanel::renderToolbar() {
 
     // Add new material button
     if (ImGui::Button(Icons::Add)) {
-        m_editBuffer = MaterialRecord{};
-        m_editBuffer.name = "New Material";
-        m_isNewMaterial = true;
-        m_showEditForm = true;
+        std::memset(m_generatePrompt, 0, sizeof(m_generatePrompt));
+        m_showAddDialog = true;
     }
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Add new material");
@@ -185,44 +184,6 @@ void MaterialsPanel::renderToolbar() {
     }
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Thumbnail size (Ctrl+scroll in grid)");
-    }
-
-    ImGui::SameLine();
-    ImGui::TextDisabled("|");
-    ImGui::SameLine();
-
-    // Generate material section
-    if (m_isGenerating) {
-        ImGui::BeginDisabled();
-    }
-    ImGui::SetNextItemWidth(120.0f);
-    ImGui::InputTextWithHint("##GenPrompt", "Material...", m_generatePrompt,
-                             sizeof(m_generatePrompt));
-    ImGui::SameLine();
-    bool promptEmpty = (m_generatePrompt[0] == '\0');
-    if (promptEmpty && !m_isGenerating) {
-        ImGui::BeginDisabled();
-    }
-    if (ImGui::Button(m_isGenerating ? "..." : Icons::Wand)) {
-        if (m_onGenerate && !promptEmpty) {
-            m_isGenerating = true;
-            m_onGenerate(std::string(m_generatePrompt));
-        }
-    }
-    if (promptEmpty && !m_isGenerating) {
-        ImGui::EndDisabled();
-    }
-    if (m_isGenerating) {
-        ImGui::EndDisabled();
-    }
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-        if (m_isGenerating) {
-            ImGui::SetTooltip("Generating material via Gemini AI...");
-        } else if (promptEmpty) {
-            ImGui::SetTooltip("Enter a material name to generate");
-        } else {
-            ImGui::SetTooltip("Generate material texture and properties via AI");
-        }
     }
 
     ImGui::SameLine();
@@ -492,6 +453,87 @@ void MaterialsPanel::renderMaterialGrid(const std::vector<MaterialRecord>& mater
 }
 
 // ---------------------------------------------------------------------------
+// Add Material dialog (AI-first)
+// ---------------------------------------------------------------------------
+
+void MaterialsPanel::renderAddDialog() {
+    if (m_showAddDialog) {
+        ImGui::OpenPopup("Add Material");
+        m_showAddDialog = false;
+    }
+
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(340, 0), ImGuiCond_Appearing);
+
+    if (ImGui::BeginPopupModal("Add Material", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        bool closing = m_closeAddDialog;
+        if (closing) {
+            m_closeAddDialog = false;
+        }
+
+        ImGui::Text("Material Name");
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        ImGui::BeginDisabled(m_isGenerating);
+        ImGui::InputTextWithHint("##AddName", "e.g. Walnut, Cherry, Maple...", m_generatePrompt,
+                                 sizeof(m_generatePrompt));
+        ImGui::EndDisabled();
+
+        ImGui::Spacing();
+        bool promptEmpty = (m_generatePrompt[0] == '\0');
+
+        // Generate with AI button (primary action)
+        ImGui::BeginDisabled(promptEmpty || m_isGenerating);
+        std::string genLabel = std::string(Icons::Wand) + " Generate with AI";
+        if (ImGui::Button(genLabel.c_str(), ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+            if (m_onGenerate && !promptEmpty) {
+                m_isGenerating = true;
+                m_onGenerate(std::string(m_generatePrompt));
+            }
+        }
+        ImGui::EndDisabled();
+
+        if (m_isGenerating) {
+            ImGui::TextDisabled("Generating material via AI...");
+        }
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        // Manual entry button
+        ImGui::BeginDisabled(m_isGenerating);
+        if (ImGui::Button("Manual Entry", ImVec2(120, 0))) {
+            m_editBuffer = MaterialRecord{};
+            m_editBuffer.name = promptEmpty ? "New Material" : std::string(m_generatePrompt);
+            m_isNewMaterial = true;
+            m_showEditForm = true;
+            closing = true;
+        }
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            m_isGenerating = false;
+            closing = true;
+        }
+
+        if (closing) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+}
+
+void MaterialsPanel::setGeneratedResult(const MaterialRecord& record, const Path& dwmatPath) {
+    m_isGenerating = false;
+    m_editBuffer = record;
+    m_editBuffer.archivePath = dwmatPath;
+    m_isNewMaterial = true;
+    m_showEditForm = true;
+    m_closeAddDialog = true; // Signal renderAddDialog() to close on next frame
+}
+
+// ---------------------------------------------------------------------------
 // Edit form (modal)
 // ---------------------------------------------------------------------------
 
@@ -581,7 +623,17 @@ void MaterialsPanel::renderEditForm() {
 
         if (ImGui::Button("Save", ImVec2(120, 0))) {
             if (m_materialManager && !m_editBuffer.name.empty()) {
-                if (m_isNewMaterial) {
+                if (m_isNewMaterial && !m_editBuffer.archivePath.empty()) {
+                    // AI-generated: import the .dwmat archive, then apply user edits
+                    auto importedId = m_materialManager->importMaterial(m_editBuffer.archivePath);
+                    if (importedId) {
+                        m_editBuffer.id = *importedId;
+                        m_materialManager->updateMaterial(m_editBuffer);
+                        refresh();
+                    } else {
+                        log::error("MaterialsPanel", "Failed to import AI-generated material");
+                    }
+                } else if (m_isNewMaterial) {
                     auto newId = m_materialManager->addMaterial(m_editBuffer);
                     if (newId) {
                         refresh();

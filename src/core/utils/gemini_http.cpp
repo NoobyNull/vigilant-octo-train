@@ -37,12 +37,18 @@ std::string curlPost(const std::string& url, const std::string& body) {
 
     CURLcode res = curl_easy_perform(curl);
 
+    long httpCode = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
 
     if (res != CURLE_OK) {
         log::errorf("GeminiHTTP", "curl error: %s", curl_easy_strerror(res));
         return {};
+    }
+    if (httpCode != 200) {
+        log::errorf("GeminiHTTP", "HTTP %ld: %.500s", httpCode, response.c_str());
     }
     return response;
 }
