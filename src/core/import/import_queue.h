@@ -60,8 +60,8 @@ class ImportQueue {
     void processTask(ImportTask task); // Note: takes by value for move into lambda
 
     ConnectionPool& m_pool;
-    LibraryManager* m_libraryManager;   // Optional, for auto-detect
-    StorageManager* m_storageManager;    // Optional, for CAS blob storage
+    LibraryManager* m_libraryManager; // Optional, for auto-detect
+    StorageManager* m_storageManager; // Optional, for CAS blob storage
 
     // Thread management
     std::unique_ptr<ThreadPool> m_threadPool; // Lazily created

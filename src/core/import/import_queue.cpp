@@ -521,11 +521,11 @@ void ImportQueue::processTask(ImportTask task) {
         std::string storageError;
         Path storedPath;
         if (mode == FileHandlingMode::CopyToLibrary) {
-            storedPath = m_storageManager->storeFile(task.sourcePath, task.fileHash,
-                                                     task.extension, storageError);
+            storedPath = m_storageManager->storeFile(task.sourcePath, task.fileHash, task.extension,
+                                                     storageError);
         } else if (mode == FileHandlingMode::MoveToLibrary) {
-            storedPath = m_storageManager->moveFile(task.sourcePath, task.fileHash,
-                                                    task.extension, storageError);
+            storedPath = m_storageManager->moveFile(task.sourcePath, task.fileHash, task.extension,
+                                                    storageError);
         }
 
         if (storedPath.empty()) {
@@ -546,8 +546,7 @@ void ImportQueue::processTask(ImportTask task) {
             {
                 std::lock_guard<std::mutex> lock(m_summaryMutex);
                 m_batchSummary.failedCount++;
-                m_batchSummary.errors.push_back(
-                    {file::getStem(task.sourcePath), task.error});
+                m_batchSummary.errors.push_back({file::getStem(task.sourcePath), task.error});
             }
 
             m_progress.failedFiles.fetch_add(1);

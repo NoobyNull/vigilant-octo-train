@@ -29,6 +29,7 @@
 #include "core/materials/material_archive.h"
 #include "core/materials/material_manager.h"
 #include "core/paths/app_paths.h"
+#include "core/storage/storage_manager.h"
 #include "core/threading/main_thread_queue.h"
 #include "core/threading/thread_pool.h"
 #include "core/utils/log.h"
@@ -194,7 +195,17 @@ bool Application::init() {
         m_libraryManager->setThumbnailGenerator(m_thumbnailGenerator.get());
     }
 
-    m_importQueue = std::make_unique<ImportQueue>(*m_connectionPool, m_libraryManager.get());
+    // Content-addressable blob store (STOR-01/02/03)
+    m_storageManager = std::make_unique<StorageManager>(StorageManager::defaultBlobRoot());
+
+    // Clean up orphaned temp files from prior crashes (STOR-03)
+    int orphansCleaned = m_storageManager->cleanupOrphanedTempFiles();
+    if (orphansCleaned > 0) {
+        log::infof("App", "Cleaned up %d orphaned temp file(s) from prior session", orphansCleaned);
+    }
+
+    m_importQueue = std::make_unique<ImportQueue>(*m_connectionPool, m_libraryManager.get(),
+                                                  m_storageManager.get());
 
     // Initialize managers
     m_uiManager = std::make_unique<UIManager>();
@@ -891,6 +902,7 @@ void Application::shutdown() {
     m_geminiService.reset();
     m_costRepo.reset();
     m_importQueue.reset();
+    m_storageManager.reset();
     m_mainThreadQueue->shutdown();
     m_mainThreadQueue.reset();
     m_connectionPool.reset();

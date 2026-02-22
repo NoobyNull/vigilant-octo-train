@@ -28,6 +28,7 @@ class Workspace;
 class ThumbnailGenerator;
 class ImportQueue;
 class MainThreadQueue;
+class StorageManager;
 class MaterialManager;
 class CostRepository;
 class GeminiMaterialService;
@@ -98,6 +99,7 @@ class Application {
     std::unique_ptr<Workspace> m_workspace;
     std::unique_ptr<ThumbnailGenerator> m_thumbnailGenerator;
     std::unique_ptr<ImportQueue> m_importQueue;
+    std::unique_ptr<StorageManager> m_storageManager;
 
     // UI Manager - owns all panels, dialogs, visibility state
     std::unique_ptr<UIManager> m_uiManager;
