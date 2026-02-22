@@ -3,99 +3,14 @@
 #include <cstdlib>
 #include <fstream>
 
-#include <curl/curl.h>
 #include <nlohmann/json.hpp>
 
 #include "../paths/app_paths.h"
+#include "../utils/gemini_http.h"
 #include "../utils/log.h"
 #include "material_archive.h"
 
 namespace dw {
-
-// ---------------------------------------------------------------------------
-// curl helpers
-// ---------------------------------------------------------------------------
-
-namespace {
-
-size_t writeCallback(char* ptr, size_t size, size_t nmemb, void* userdata) {
-    auto* buffer = static_cast<std::string*>(userdata);
-    size_t bytes = size * nmemb;
-    buffer->append(ptr, bytes);
-    return bytes;
-}
-
-// POST JSON to a URL, return response body. Empty string on failure.
-std::string curlPost(const std::string& url, const std::string& body) {
-    CURL* curl = curl_easy_init();
-    if (curl == nullptr) {
-        return {};
-    }
-
-    std::string response;
-    struct curl_slist* headers = nullptr;
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.c_str());
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, static_cast<long>(body.size()));
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 120L);
-
-    CURLcode res = curl_easy_perform(curl);
-
-    curl_slist_free_all(headers);
-    curl_easy_cleanup(curl);
-
-    if (res != CURLE_OK) {
-        log::errorf("GeminiService", "curl error: %s", curl_easy_strerror(res));
-        return {};
-    }
-    return response;
-}
-
-// Base64 decode (standard alphabet)
-std::vector<uint8_t> base64Decode(const std::string& encoded) {
-    static constexpr unsigned char kTable[128] = {
-        64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
-        64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
-        64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 62, 64, 64, 64, 63,
-        52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 64, 64, 64, 64, 64, 64,
-        64,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14,
-        15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 64, 64, 64, 64, 64,
-        64, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-        41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 64, 64, 64, 64, 64,
-    };
-
-    std::vector<uint8_t> out;
-    out.reserve(encoded.size() * 3 / 4);
-
-    uint32_t val = 0;
-    int bits = -8;
-    for (unsigned char c : encoded) {
-        if (c == '=' || c == '\n' || c == '\r') {
-            continue;
-        }
-        if (c >= 128 || kTable[c] == 64) {
-            continue;
-        }
-        val = (val << 6) | kTable[c];
-        bits += 6;
-        if (bits >= 0) {
-            out.push_back(static_cast<uint8_t>((val >> bits) & 0xFF));
-            bits -= 8;
-        }
-    }
-    return out;
-}
-
-} // anonymous namespace
-
-// ---------------------------------------------------------------------------
-// API calls
-// ---------------------------------------------------------------------------
 
 namespace {
 const char* kGeminiApiBase = "https://generativelanguage.googleapis.com/v1beta/models/";
@@ -141,7 +56,7 @@ std::string GeminiMaterialService::fetchProperties(const std::string& prompt,
     requestBody["generationConfig"]["responseMimeType"] = "application/json";
     requestBody["generationConfig"]["responseSchema"] = schema;
 
-    std::string response = curlPost(url, requestBody.dump());
+    std::string response = gemini::curlPost(url, requestBody.dump());
     if (response.empty()) {
         return {};
     }
@@ -184,7 +99,7 @@ std::vector<uint8_t> GeminiMaterialService::fetchTexture(const std::string& prom
           {"imageSizeOptions", {{"aspectRatio", "1:1"}}}}}};
 
 
-    std::string response = curlPost(url, requestBody.dump());
+    std::string response = gemini::curlPost(url, requestBody.dump());
     if (response.empty()) {
         return {};
     }
@@ -208,7 +123,7 @@ std::vector<uint8_t> GeminiMaterialService::fetchTexture(const std::string& prom
         for (auto& part : parts) {
             if (part.contains("inlineData")) {
                 std::string base64 = part["inlineData"]["data"].get<std::string>();
-                return base64Decode(base64);
+                return gemini::base64Decode(base64);
             }
         }
         log::error("GeminiService", "No image data in texture response");

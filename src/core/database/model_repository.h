@@ -51,6 +51,11 @@ struct ModelRecord {
 
     // Camera state (NULL = never saved, use fit-to-bounds default)
     std::optional<CameraState> cameraState;
+
+    // AI descriptor fields (populated by GeminiDescriptorService)
+    std::string descriptorTitle;       // AI-generated short title
+    std::string descriptorDescription; // Detailed AI classification
+    std::string descriptorHover;       // One-line hover text
 };
 
 // Repository for model CRUD operations
@@ -75,6 +80,8 @@ class ModelRepository {
     bool updateTags(i64 id, const std::vector<std::string>& tags);
     bool updateOrient(i64 id, f32 yaw, const Mat4& matrix);
     bool updateCameraState(i64 id, const CameraState& state);
+    bool updateDescriptor(i64 id, const std::string& title, const std::string& description,
+                          const std::string& hover);
 
     // Delete
     bool remove(i64 id);
@@ -95,6 +102,8 @@ class ModelRepository {
     std::vector<CategoryRecord> getAllCategories();
     std::vector<CategoryRecord> getChildCategories(i64 parentId);
     std::vector<CategoryRecord> getRootCategories();
+    std::optional<i64> findCategoryByNameAndParent(const std::string& name,
+                                                   std::optional<i64> parentId = std::nullopt);
 
     // Utility
     bool exists(std::string_view hash);

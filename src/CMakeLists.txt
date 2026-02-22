@@ -20,6 +20,7 @@ set(DW_SOURCES
     core/utils/log.cpp
     core/utils/file_utils.cpp
     core/utils/string_utils.cpp
+    core/utils/gemini_http.cpp
 
     # Threading
     core/threading/main_thread_queue.cpp
@@ -92,6 +93,7 @@ set(DW_SOURCES
     # Materials
     core/materials/default_materials.cpp
     core/materials/gemini_material_service.cpp
+    core/materials/gemini_descriptor_service.cpp
     core/materials/material_archive.cpp
     core/materials/material_manager.cpp
 

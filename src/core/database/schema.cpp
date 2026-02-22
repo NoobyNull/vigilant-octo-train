@@ -432,6 +432,14 @@ bool Schema::migrate(Database& db, int fromVersion) {
         log::info("Schema", "Added categories, model_categories, and FTS5 index");
     }
 
+    if (fromVersion < 8) {
+        // v8: Add AI descriptor fields to models table
+        (void)db.execute("ALTER TABLE models ADD COLUMN descriptor_title TEXT DEFAULT NULL");
+        (void)db.execute("ALTER TABLE models ADD COLUMN descriptor_description TEXT DEFAULT NULL");
+        (void)db.execute("ALTER TABLE models ADD COLUMN descriptor_hover TEXT DEFAULT NULL");
+        log::info("Schema", "Added descriptor_title, descriptor_description, descriptor_hover columns to models");
+    }
+
     if (!setVersion(db, CURRENT_VERSION)) {
         txn.rollback();
         return false;

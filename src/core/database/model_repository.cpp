@@ -422,6 +422,30 @@ std::vector<CategoryRecord> ModelRepository::getRootCategories() {
     return results;
 }
 
+std::optional<i64> ModelRepository::findCategoryByNameAndParent(const std::string& name,
+                                                                std::optional<i64> parentId) {
+    std::string query;
+    auto stmt = m_db.prepare(
+        "SELECT id FROM categories WHERE name = ? AND parent_id IS ?");
+    if (!stmt.isValid()) return std::nullopt;
+
+    if (!stmt.bindText(1, name)) return std::nullopt;
+
+    if (parentId) {
+        // Use a different prepared statement for non-NULL parent_id
+        stmt = m_db.prepare("SELECT id FROM categories WHERE name = ? AND parent_id = ?");
+        if (!stmt.isValid()) return std::nullopt;
+        if (!stmt.bindText(1, name) || !stmt.bindInt(2, *parentId)) return std::nullopt;
+    } else {
+        if (!stmt.bindNull(2)) return std::nullopt;
+    }
+
+    if (stmt.step()) {
+        return stmt.getInt(0);
+    }
+    return std::nullopt;
+}
+
 ModelRecord ModelRepository::rowToModel(Statement& stmt) {
     ModelRecord model;
     model.id = stmt.getInt(0);
@@ -460,6 +484,10 @@ ModelRecord ModelRepository::rowToModel(Statement& stmt) {
         cam.target.z = static_cast<f32>(stmt.getDouble(25));
         model.cameraState = cam;
     }
+    // Columns 26-28: descriptor fields (title, description, hover)
+    model.descriptorTitle = stmt.getText(26);
+    model.descriptorDescription = stmt.getText(27);
+    model.descriptorHover = stmt.getText(28);
     return model;
 }
 
@@ -498,6 +526,27 @@ bool ModelRepository::updateCameraState(i64 id, const CameraState& state) {
         !stmt.bindDouble(4, static_cast<f64>(state.target.x)) ||
         !stmt.bindDouble(5, static_cast<f64>(state.target.y)) ||
         !stmt.bindDouble(6, static_cast<f64>(state.target.z)) || !stmt.bindInt(7, id)) {
+        return false;
+    }
+
+    return stmt.execute();
+}
+
+bool ModelRepository::updateDescriptor(i64 id, const std::string& title,
+                                       const std::string& description, const std::string& hover) {
+    auto stmt = m_db.prepare(R"(
+        UPDATE models SET
+            descriptor_title = ?,
+            descriptor_description = ?,
+            descriptor_hover = ?
+        WHERE id = ?
+    )");
+    if (!stmt.isValid()) {
+        return false;
+    }
+
+    if (!stmt.bindText(1, title) || !stmt.bindText(2, description) || !stmt.bindText(3, hover) ||
+        !stmt.bindInt(4, id)) {
         return false;
     }
 

@@ -5,7 +5,7 @@
 
 namespace dw {
 
-constexpr const char* VERSION = "c60097c-dirty";
+constexpr const char* VERSION = "8c43d61-dirty";
 constexpr const char* BUILD_DATE = "2026-02-21";
 
 } // namespace dw
