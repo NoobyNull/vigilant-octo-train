@@ -20,7 +20,7 @@ See: `.planning/PROJECT.md` (updated 2026-02-21)
 **Milestone:** v1.1 Library Storage & Organization
 **Phase:** 3 — Import File Handling (complete)
 **Plan:** 03-02 complete
-**Status:** Phase complete
+**Status:** Ready to plan
 
 ```
 v1.1 Progress: [==========__________] 2/4 phases complete
