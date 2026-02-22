@@ -217,42 +217,38 @@ void MaterialsPanel::registerContextMenuEntries() {
     }
 
     std::vector<ContextMenuEntry> materialEntries = {
-        {.label = "Edit",
-         .action =
-             [this]() {
-                 if (m_currentContextMenuMaterial) {
-                     m_editBuffer = *m_currentContextMenuMaterial;
-                     m_isNewMaterial = false;
-                     m_showEditForm = true;
-                 }
-             }},
-        {.label = "Export",
-         .action =
-             [this]() {
-                 if (m_currentContextMenuMaterial) {
-                     log::info("MaterialsPanel",
-                               "Export material requested (file dialog not yet wired)");
-                 }
-             }},
+        {"Edit",
+         [this]() {
+             if (m_currentContextMenuMaterial) {
+                 m_editBuffer = *m_currentContextMenuMaterial;
+                 m_isNewMaterial = false;
+                 m_showEditForm = true;
+             }
+         }},
+        {"Export",
+         [this]() {
+             if (m_currentContextMenuMaterial) {
+                 log::info("MaterialsPanel",
+                           "Export material requested (file dialog not yet wired)");
+             }
+         }},
         ContextMenuEntry::separator(),
-        {.label = "Set as Default Material",
-         .action =
-             [this]() {
-                 if (m_currentContextMenuMaterial) {
-                     Config::instance().setDefaultMaterialId(m_currentContextMenuMaterial->id);
-                     Config::instance().save();
-                 }
-             }},
+        {"Set as Default Material",
+         [this]() {
+             if (m_currentContextMenuMaterial) {
+                 Config::instance().setDefaultMaterialId(m_currentContextMenuMaterial->id);
+                 Config::instance().save();
+             }
+         }},
         ContextMenuEntry::separator(),
-        {.label = "Delete",
-         .action =
-             [this]() {
-                 if (m_currentContextMenuMaterial) {
-                     m_deleteId = m_currentContextMenuMaterial->id;
-                     m_deleteName = m_currentContextMenuMaterial->name;
-                     m_showDeleteConfirm = true;
-                 }
-             }},
+        {"Delete",
+         [this]() {
+             if (m_currentContextMenuMaterial) {
+                 m_deleteId = m_currentContextMenuMaterial->id;
+                 m_deleteName = m_currentContextMenuMaterial->name;
+                 m_showDeleteConfirm = true;
+             }
+         }},
     };
     m_contextMenuManager->registerEntries("MaterialsPanel_MaterialContext", materialEntries);
 }
