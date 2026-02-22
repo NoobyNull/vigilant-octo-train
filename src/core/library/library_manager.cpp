@@ -418,4 +418,53 @@ bool LibraryManager::isGraphAvailable() const {
     return m_graphManager && m_graphManager->isAvailable();
 }
 
+// --- AI Descriptor management ---
+
+bool LibraryManager::updateDescriptor(i64 modelId, const std::string& title,
+                                      const std::string& description,
+                                      const std::string& hover) {
+    return m_modelRepo.updateDescriptor(modelId, title, description, hover);
+}
+
+bool LibraryManager::resolveAndAssignCategories(i64 modelId,
+                                                const std::vector<std::string>& categoryChain) {
+    if (categoryChain.empty()) {
+        return true; // Nothing to assign
+    }
+
+    // Build category chain: create missing categories and assign to model
+    // Example: ["Character", "Fantasy", "Dragon"] creates hierarchy:
+    //   Character (root)
+    //   -> Fantasy (parent: Character)
+    //   -> Dragon (parent: Fantasy)
+    // Then assigns Dragon to the model.
+
+    std::optional<i64> parentId = std::nullopt;
+    i64 lastCategoryId = 0;
+
+    for (const auto& catName : categoryChain) {
+        // Try to find existing category with this name and parent
+        auto existingId = m_modelRepo.findCategoryByNameAndParent(catName, parentId);
+
+        if (existingId) {
+            // Category exists, use it
+            lastCategoryId = *existingId;
+        } else {
+            // Create new category
+            auto newId = m_modelRepo.createCategory(catName, parentId);
+            if (!newId) {
+                log::warningf("LibraryMgr", "Failed to create category: %s", catName.c_str());
+                return false;
+            }
+            lastCategoryId = *newId;
+        }
+
+        // Next iteration searches under this category
+        parentId = lastCategoryId;
+    }
+
+    // Assign the leaf category (last in chain) to the model
+    return m_modelRepo.assignCategory(modelId, lastCategoryId);
+}
+
 } // namespace dw

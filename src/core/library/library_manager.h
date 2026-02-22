@@ -117,6 +117,11 @@ class LibraryManager {
     std::vector<CategoryRecord> getChildCategories(i64 parentId);
     std::vector<ModelRecord> filterByCategory(i64 categoryId);
 
+    // --- AI Descriptor management ---
+    bool updateDescriptor(i64 modelId, const std::string& title, const std::string& description,
+                          const std::string& hover);
+    bool resolveAndAssignCategories(i64 modelId, const std::vector<std::string>& categoryChain);
+
     // FTS5 search (preferred over LIKE-based searchModels for text queries)
     std::vector<ModelRecord> searchModelsFTS(const std::string& query);
 

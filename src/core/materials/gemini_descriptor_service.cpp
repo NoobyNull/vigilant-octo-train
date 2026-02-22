@@ -1,12 +1,12 @@
 #include "gemini_descriptor_service.h"
 
-#include <cstring>
 #include <fstream>
-#include <sstream>
 
 #include <nlohmann/json.hpp>
 #include <stb_image.h>
-#include <stb_image_write.h>
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h> // NOLINT
 
 #include "../utils/gemini_http.h"
 #include "../utils/log.h"
@@ -15,27 +15,64 @@ namespace dw {
 
 namespace {
 const char* kGeminiApiBase = "https://generativelanguage.googleapis.com/v1beta/models/";
+
+struct PngWriteContext {
+    std::vector<uint8_t> data;
+};
+
+void pngWriteCallback(void* context, void* data, int size) {
+    auto* ctx = static_cast<PngWriteContext*>(context);
+    auto* bytes = static_cast<uint8_t*>(data);
+    ctx->data.insert(ctx->data.end(), bytes, bytes + size);
+}
+
 } // anonymous namespace
 
 std::vector<uint8_t> GeminiDescriptorService::tgaToPng(const std::string& tgaPath) {
-    // Load TGA image with stb_image
-    int width, height, channels;
-    uint8_t* imageData = stbi_load(tgaPath.c_str(), &width, &height, &channels, 4);
-
-    if (!imageData) {
-        log::errorf("DescriptorService", "Failed to load TGA: %s", tgaPath.c_str());
+    // Read TGA manually (18-byte header, BGRA top-down, 32bpp) — same format as
+    // ThumbnailGenerator output, avoiding stb_image dependency here.
+    std::ifstream file(tgaPath, std::ios::binary);
+    if (!file) {
+        log::errorf("Descriptor", "Failed to open TGA: %s", tgaPath.c_str());
         return {};
     }
 
-    // Since we already have stb_image_write linked elsewhere, we can use it
-    // Write to a temporary buffer using stb_image_write's buffer output
-    // Note: This will be implemented when stb_image_write is available in this compilation unit
-    // For now, return the raw RGBA bytes which will be base64 encoded as-is
-    std::vector<uint8_t> result(imageData, imageData + (width * height * 4));
+    uint8_t header[18];
+    file.read(reinterpret_cast<char*>(header), 18);
+    if (!file || header[2] != 2 || header[16] != 32) {
+        return {};
+    }
 
-    stbi_image_free(imageData);
+    int width = header[12] | (header[13] << 8);
+    int height = header[14] | (header[15] << 8);
+    if (width <= 0 || height <= 0 || width > 4096 || height > 4096) {
+        return {};
+    }
 
-    return result;
+    size_t pixelCount = static_cast<size_t>(width) * height;
+    std::vector<uint8_t> bgra(pixelCount * 4);
+    file.read(reinterpret_cast<char*>(bgra.data()), static_cast<std::streamsize>(bgra.size()));
+    if (!file) {
+        return {};
+    }
+
+    // Convert BGRA -> RGB for PNG
+    std::vector<uint8_t> rgb(pixelCount * 3);
+    for (size_t i = 0; i < pixelCount; ++i) {
+        rgb[i * 3 + 0] = bgra[i * 4 + 2];
+        rgb[i * 3 + 1] = bgra[i * 4 + 1];
+        rgb[i * 3 + 2] = bgra[i * 4 + 0];
+    }
+
+    PngWriteContext writeCtx;
+    int ok = stbi_write_png_to_func(pngWriteCallback, &writeCtx, width, height, 3, rgb.data(),
+                                    width * 3);
+    if (!ok) {
+        log::error("Descriptor", "Failed to encode PNG");
+        return {};
+    }
+
+    return writeCtx.data;
 }
 
 std::string GeminiDescriptorService::fetchClassification(const std::vector<uint8_t>& imageData,
