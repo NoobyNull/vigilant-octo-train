@@ -63,7 +63,7 @@ Plans:
   4. Files imported via "copy" or "move" land in the CAS blob store; "keep in place" preserves original path
 **Plans:** 2 plans
 Plans:
-- [ ] 03-01-PLAN.md — Filesystem detector + import options dialog UI
+- [x] 03-01-PLAN.md — Filesystem detector + import options dialog UI
 - [ ] 03-02-PLAN.md — Wire dialog into import flow with per-batch mode
 
 ### Phase 4: Organization & Graph
@@ -109,7 +109,7 @@ Plans:
 | 2 Import Pipeline | v1.0 | 10/10 | Complete | 2026-02-09 |
 | 1 Materials System | Post-v1.0 | 6/6 | Complete | 2026-02-20 |
 | 2 Content-Addressable Storage | v1.1 | 2/2 | Complete | 2026-02-22 |
-| 3 Import File Handling | v1.1 | 0/2 | Planned | - |
+| 3 Import File Handling | v1.1 | 1/2 | In Progress | - |
 | 4 Organization & Graph | v1.1 | 0/4 | Planned | - |
 | 5 Project Export | v1.1 | 0/2 | Not started | - |
 

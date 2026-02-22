@@ -1,7 +1,7 @@
 # Project State: Digital Workshop
 
 **Last Updated:** 2026-02-22
-**Current Session:** Phase 02 Plan 02 completed (Import Pipeline CAS wiring)
+**Current Session:** Phase 03 Plan 01 completed (Filesystem Detector & Import Options Dialog)
 
 ---
 
@@ -18,16 +18,16 @@ See: `.planning/PROJECT.md` (updated 2026-02-21)
 ## Current Position
 
 **Milestone:** v1.1 Library Storage & Organization
-**Phase:** 2 — Content-Addressable Storage
-**Plan:** 02-02 complete, phase 02 complete
-**Status:** Ready to plan
+**Phase:** 3 — Import File Handling
+**Plan:** 03-01 complete
+**Status:** Executing
 
 ```
-v1.1 Progress: [=====_______________] 1/4 phases complete
-Phase 02: Plan 2/2 complete
+v1.1 Progress: [=======_____________] 1/4 phases complete
+Phase 03: Plan 1/2 complete
 ```
 
-Last activity: 2026-02-22 — 02-02 Import Pipeline CAS wiring completed (2 tasks, 2m 32s)
+Last activity: 2026-02-22 — 03-01 Filesystem Detector & Import Options Dialog completed (2 tasks, 2m 37s)
 
 ---
 
@@ -41,13 +41,14 @@ Last activity: 2026-02-22 — 02-02 Import Pipeline CAS wiring completed (2 task
 **Phase 01:** 6 plans, materials system (completed 2026-02-20)
 
 ### v1.1
-**Plans completed:** 2
-**Cycle time:** 2m 49s avg (2 plans)
+**Plans completed:** 3
+**Cycle time:** 2m 45s avg (3 plans)
 
 | Phase | Plan | Duration | Tasks | Tests |
 |-------|------|----------|-------|-------|
 | 02 | 01 - StorageManager | 3m 5s | 2 | 9 |
 | 02 | 02 - Import Pipeline CAS | 2m 32s | 2 | 0 |
+| 03 | 01 - Filesystem Detector & Dialog | 2m 37s | 2 | 5 |
 
 ---
 
@@ -58,7 +59,7 @@ Last activity: 2026-02-22 — 02-02 Import Pipeline CAS wiring completed (2 task
 - Manager architecture: UIManager, FileIOManager, ConfigManager
 
 **Test Coverage:**
-- 534 tests passing (1 pre-existing failure in STLLoader)
+- 539 tests passing (1 pre-existing failure in STLLoader)
 - StorageManager: 9 tests (path computation, atomic store, dedup, cleanup)
 - Infrastructure: EventBus (10), ConnectionPool (10), MainThreadQueue (10)
 - Bug regression tests: 12

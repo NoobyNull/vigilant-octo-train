@@ -13,12 +13,12 @@
 - [x] **STOR-01**: User's imported models are stored in content-addressable blob directories (hash-based layout: `blobs/ab/cd/abcdef...ext`)
 - [x] **STOR-02**: File writes use atomic temp+verify+rename to prevent corruption from crashes or network disconnects
 - [x] **STOR-03**: Application cleans up orphaned temp files on startup
-- [ ] **STOR-04**: Application detects non-local filesystems (NAS, Google Drive, OneDrive, mapped drives) and auto-suggests copy instead of move
+- [x] **STOR-04**: Application detects non-local filesystems (NAS, Google Drive, OneDrive, mapped drives) and auto-suggests copy instead of move
 
 ### Import (IMPORT)
 
 - [ ] **IMPORT-01**: User can choose organizational strategy on import: keep in place, copy to organized local store, or move to organized local store
-- [ ] **IMPORT-02**: Import dialog shows filesystem detection result and recommends copy for non-local sources
+- [x] **IMPORT-02**: Import dialog shows filesystem detection result and recommends copy for non-local sources
 
 ### Organization (ORG)
 
@@ -58,9 +58,9 @@
 | STOR-01 | Phase 2 | 02-01, 02-02 | Complete |
 | STOR-02 | Phase 2 | 02-01, 02-02 | Complete |
 | STOR-03 | Phase 2 | 02-01, 02-02 | Complete |
-| STOR-04 | Phase 3 | — | Pending |
+| STOR-04 | Phase 3 | 03-01 | Complete |
 | IMPORT-01 | Phase 3 | — | Pending |
-| IMPORT-02 | Phase 3 | — | Pending |
+| IMPORT-02 | Phase 3 | 03-01 | Complete |
 | ORG-01 | Phase 4 | — | Pending |
 | ORG-02 | Phase 4 | — | Pending |
 | ORG-03 | Phase 4 | — | Pending |
