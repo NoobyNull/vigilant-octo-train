@@ -30,12 +30,16 @@ class ViewportPanel;
 class PropertiesPanel;
 class LibraryPanel;
 class ImportOptionsDialog;
+class ProjectExportManager;
+class ProgressDialog;
+class MainThreadQueue;
 
 class FileIOManager {
   public:
     FileIOManager(EventBus* eventBus, Database* database, LibraryManager* libraryManager,
                   ProjectManager* projectManager, ImportQueue* importQueue, Workspace* workspace,
-                  FileDialog* fileDialog, ThumbnailGenerator* thumbnailGenerator);
+                  FileDialog* fileDialog, ThumbnailGenerator* thumbnailGenerator,
+                  ProjectExportManager* projectExportManager = nullptr);
     ~FileIOManager();
 
     // Optional callback for thumbnail generation with material support.
@@ -55,6 +59,14 @@ class FileIOManager {
     void openProject(std::function<void(bool)> setShowStartPage);
     void saveProject();
     void openRecentProject(const Path& path, std::function<void(bool)> setShowStartPage);
+
+    // Project archive export/import (.dwproj)
+    void exportProjectArchive();
+    void importProjectArchive(std::function<void(bool)> setShowStartPage);
+
+    // Dependency injection
+    void setProgressDialog(ProgressDialog* dialog) { m_progressDialog = dialog; }
+    void setMainThreadQueue(MainThreadQueue* queue) { m_mainThreadQueue = queue; }
 
   private:
     // Recursive directory scanning helper
@@ -77,6 +89,11 @@ class FileIOManager {
 
     // Import options dialog (owned by UIManager, nullable)
     ImportOptionsDialog* m_importOptionsDialog = nullptr;
+
+    // Project export/import
+    ProjectExportManager* m_projectExportManager = nullptr;
+    ProgressDialog* m_progressDialog = nullptr;
+    MainThreadQueue* m_mainThreadQueue = nullptr;
 
   public:
     void setImportOptionsDialog(ImportOptionsDialog* dialog) { m_importOptionsDialog = dialog; }

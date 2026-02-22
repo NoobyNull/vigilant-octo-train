@@ -22,6 +22,7 @@
 #include "core/database/model_repository.h"
 #include "core/database/schema.h"
 #include "core/events/event_bus.h"
+#include "core/export/project_export_manager.h"
 #include "core/graph/graph_manager.h"
 #include "core/import/import_queue.h"
 #include "core/library/library_manager.h"
@@ -228,6 +229,9 @@ bool Application::init() {
         log::infof("App", "Cleaned up %d orphaned temp file(s) from prior session", orphansCleaned);
     }
 
+    // Project export/import manager (.dwproj archives) (EXPORT-01/02)
+    m_projectExportManager = std::make_unique<ProjectExportManager>(*m_database);
+
     m_importQueue = std::make_unique<ImportQueue>(*m_connectionPool, m_libraryManager.get(),
                                                   m_storageManager.get());
 
@@ -239,7 +243,9 @@ bool Application::init() {
     m_fileIOManager = std::make_unique<FileIOManager>(
         m_eventBus.get(), m_database.get(), m_libraryManager.get(), m_projectManager.get(),
         m_importQueue.get(), m_workspace.get(), m_uiManager->fileDialog(),
-        m_thumbnailGenerator.get());
+        m_thumbnailGenerator.get(), m_projectExportManager.get());
+    m_fileIOManager->setProgressDialog(m_uiManager->progressDialog());
+    m_fileIOManager->setMainThreadQueue(m_mainThreadQueue.get());
 
     m_fileIOManager->setThumbnailCallback(
         [this](int64_t modelId, Mesh& mesh) { return generateMaterialThumbnail(modelId, mesh); });
@@ -945,6 +951,7 @@ void Application::shutdown() {
     m_thumbnailGenerator.reset();
     m_projectManager.reset();
     m_libraryManager.reset();
+    m_projectExportManager.reset();
     m_graphManager.reset(); // Must be destroyed before m_database
     m_database.reset();
     m_eventBus.reset();

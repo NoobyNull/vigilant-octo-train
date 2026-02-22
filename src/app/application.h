@@ -33,6 +33,7 @@ class MaterialManager;
 class CostRepository;
 class GraphManager;
 class GeminiMaterialService;
+class ProjectExportManager;
 class Mesh;
 class Texture;
 
@@ -122,6 +123,9 @@ class Application {
 
     // Gemini AI material generation service
     std::unique_ptr<GeminiMaterialService> m_geminiService;
+
+    // Project export/import (.dwproj archives)
+    std::unique_ptr<ProjectExportManager> m_projectExportManager;
 
     // Currently focused model ID (for material assignment)
     int64_t m_focusedModelId = -1;

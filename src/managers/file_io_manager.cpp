@@ -8,6 +8,7 @@
 #include "core/config/config.h"
 #include "core/events/event_bus.h"
 #include "core/export/model_exporter.h"
+#include "core/export/project_export_manager.h"
 #include "core/import/import_queue.h"
 #include "core/import/import_task.h"
 #include "core/library/library_manager.h"
@@ -19,17 +20,23 @@
 #include "ui/dialogs/file_dialog.h"
 #include "ui/dialogs/import_options_dialog.h"
 #include "ui/dialogs/message_dialog.h"
+#include "ui/dialogs/progress_dialog.h"
 #include "ui/panels/library_panel.h"
 #include "ui/panels/properties_panel.h"
 #include "ui/panels/viewport_panel.h"
 #include "ui/widgets/toast.h"
+
+#include "core/threading/main_thread_queue.h"
+
+#include <thread>
 
 namespace dw {
 
 FileIOManager::FileIOManager(EventBus* eventBus, Database* database, LibraryManager* libraryManager,
                              ProjectManager* projectManager, ImportQueue* importQueue,
                              Workspace* workspace, FileDialog* fileDialog,
-                             ThumbnailGenerator* thumbnailGenerator)
+                             ThumbnailGenerator* thumbnailGenerator,
+                             ProjectExportManager* projectExportManager)
     : m_eventBus(eventBus)
     , m_database(database)
     , m_libraryManager(libraryManager)
@@ -37,7 +44,8 @@ FileIOManager::FileIOManager(EventBus* eventBus, Database* database, LibraryMana
     , m_importQueue(importQueue)
     , m_workspace(workspace)
     , m_fileDialog(fileDialog)
-    , m_thumbnailGenerator(thumbnailGenerator) {}
+    , m_thumbnailGenerator(thumbnailGenerator)
+    , m_projectExportManager(projectExportManager) {}
 
 FileIOManager::~FileIOManager() = default;
 
@@ -123,6 +131,45 @@ void FileIOManager::onFilesDropped(const std::vector<std::string>& paths) {
     std::vector<Path> importPaths;
     for (const auto& p : paths) {
         Path path{p};
+
+        // Detect .dwproj files and route to project import directly
+        if (path.extension() == ".dwproj") {
+            if (m_projectExportManager && m_mainThreadQueue) {
+                auto archivePath = path;
+                auto* progressDlg = m_progressDialog;
+                auto* exportMgr = m_projectExportManager;
+                auto* projMgr = m_projectManager;
+                auto* mtq = m_mainThreadQueue;
+
+                std::thread([archivePath, progressDlg, exportMgr, projMgr, mtq]() {
+                    if (progressDlg)
+                        progressDlg->start("Importing Project...", 1, true);
+
+                    auto result = exportMgr->importProject(
+                        archivePath,
+                        [progressDlg](int /*current*/, int /*total*/, const std::string& item) {
+                            if (progressDlg)
+                                progressDlg->advance(item);
+                        });
+
+                    mtq->enqueue([result, progressDlg, projMgr, archivePath]() {
+                        if (progressDlg)
+                            progressDlg->finish();
+
+                        if (result.success) {
+                            ToastManager::instance().show(
+                                ToastType::Success, "Project Imported",
+                                archivePath.stem().string() + " (" +
+                                    std::to_string(result.modelCount) + " models)");
+                        } else {
+                            ToastManager::instance().show(ToastType::Error, "Import Failed",
+                                                          result.error);
+                        }
+                    });
+                }).detach();
+            }
+            continue;
+        }
 
         // Check if this is a directory
         if (fs::is_directory(path)) {
@@ -341,6 +388,126 @@ void FileIOManager::openRecentProject(const Path& path,
         Config::instance().save();
         setShowStartPage(false);
     }
+}
+
+void FileIOManager::exportProjectArchive() {
+    if (!m_projectExportManager) {
+        MessageDialog::warning("Export Unavailable", "Project export is not available.");
+        return;
+    }
+
+    auto project = m_projectManager->currentProject();
+    if (!project) {
+        MessageDialog::warning("No Project", "No project is currently open.");
+        return;
+    }
+
+    if (project->modelIds().empty()) {
+        MessageDialog::warning("No Models", "Add models to the project before exporting.");
+        return;
+    }
+
+    if (!m_fileDialog)
+        return;
+
+    std::string defaultName = project->name() + ".dwproj";
+
+    m_fileDialog->showSave(
+        "Export Project Archive", FileDialog::projectFilters(), defaultName,
+        [this, project](const std::string& path) {
+            if (path.empty())
+                return;
+
+            Path outputPath{path};
+
+            // Ensure .dwproj extension
+            if (outputPath.extension() != ".dwproj") {
+                outputPath += ".dwproj";
+            }
+
+            auto* progressDlg = m_progressDialog;
+            auto* exportMgr = m_projectExportManager;
+            auto* mtq = m_mainThreadQueue;
+            int modelCount = project->modelCount();
+
+            if (progressDlg)
+                progressDlg->start("Exporting Project...", modelCount, true);
+
+            std::thread([project, outputPath, progressDlg, exportMgr, mtq]() {
+                auto result = exportMgr->exportProject(
+                    *project, outputPath,
+                    [progressDlg](int /*current*/, int /*total*/, const std::string& item) {
+                        if (progressDlg)
+                            progressDlg->advance(item);
+                    });
+
+                mtq->enqueue([result, progressDlg, outputPath]() {
+                    if (progressDlg)
+                        progressDlg->finish();
+
+                    if (result.success) {
+                        ToastManager::instance().show(
+                            ToastType::Success, "Project Exported",
+                            outputPath.filename().string() + " (" +
+                                std::to_string(result.modelCount) + " models)");
+                    } else {
+                        ToastManager::instance().show(ToastType::Error, "Export Failed",
+                                                      result.error);
+                    }
+                });
+            }).detach();
+        });
+}
+
+void FileIOManager::importProjectArchive(std::function<void(bool)> setShowStartPage) {
+    if (!m_projectExportManager) {
+        MessageDialog::warning("Import Unavailable", "Project import is not available.");
+        return;
+    }
+
+    if (!m_fileDialog)
+        return;
+
+    m_fileDialog->showOpen(
+        "Import Project Archive", FileDialog::projectFilters(),
+        [this, setShowStartPage](const std::string& path) {
+            if (path.empty())
+                return;
+
+            Path archivePath{path};
+            auto* progressDlg = m_progressDialog;
+            auto* exportMgr = m_projectExportManager;
+            auto* projMgr = m_projectManager;
+            auto* mtq = m_mainThreadQueue;
+
+            if (progressDlg)
+                progressDlg->start("Importing Project...", 1, true);
+
+            std::thread([archivePath, progressDlg, exportMgr, projMgr, mtq, setShowStartPage]() {
+                auto result = exportMgr->importProject(
+                    archivePath,
+                    [progressDlg](int /*current*/, int /*total*/, const std::string& item) {
+                        if (progressDlg)
+                            progressDlg->advance(item);
+                    });
+
+                mtq->enqueue([result, progressDlg, archivePath, setShowStartPage]() {
+                    if (progressDlg)
+                        progressDlg->finish();
+
+                    if (result.success) {
+                        setShowStartPage(false);
+                        ToastManager::instance().show(
+                            ToastType::Success, "Project Imported",
+                            archivePath.stem().string() + " (" +
+                                std::to_string(result.modelCount) + " models)");
+                    } else {
+                        ToastManager::instance().show(ToastType::Error, "Import Failed",
+                                                      result.error);
+                    }
+                });
+            }).detach();
+        });
 }
 
 } // namespace dw
