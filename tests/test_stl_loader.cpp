@@ -4,6 +4,7 @@
 
 #include "core/loaders/stl_loader.h"
 
+#include <array>
 #include <cstring>
 
 namespace {
