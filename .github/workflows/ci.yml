@@ -137,6 +137,9 @@ jobs:
       - name: Test
         run: ./build/tests/Release/dw_tests.exe
 
+      - name: Install NSIS
+        run: choco install nsis -y
+
       - name: Package
         run: cd build && cpack -C Release
 
