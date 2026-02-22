@@ -71,7 +71,8 @@ jobs:
         run: |
           find src -name '*.cpp' -not -path '*/build/*' | head -50 | \
             xargs -P$(nproc) -I{} clang-tidy -p build {} 2>&1 | tee clang-tidy.log
-          if grep -q 'error:' clang-tidy.log; then exit 1; fi
+          # Filter out clang-diagnostic errors (unknown warning flags from GCC) but catch other errors
+          grep -E '(error|warning):' clang-tidy.log | grep -v 'clang-diagnostic-unknown-warning-option' | grep -q 'error:' && exit 1 || true
 
       - name: Run cppcheck
         run: |
