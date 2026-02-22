@@ -104,7 +104,9 @@ if(NOT ZLIB_FOUND)
         GIT_SHALLOW TRUE
     )
     set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(CMAKE_SKIP_INSTALL_RULES ON)
     FetchContent_MakeAvailable(zlib)
+    set(CMAKE_SKIP_INSTALL_RULES OFF)
 
     # Create ZLIB::ZLIB alias if not already defined
     if(NOT TARGET ZLIB::ZLIB)
