@@ -13,6 +13,7 @@
 #include <imgui.h>
 
 #include "../../core/config/config.h"
+#include "../../core/project/project.h"
 #include "../../core/utils/file_utils.h"
 #include "../context_menu_manager.h"
 #include "../icons.h"
@@ -329,6 +330,20 @@ void LibraryPanel::registerContextMenuEntries() {
                  m_onTagImage(ids);
              }
          }},
+        {"Add to Project" + countSuffix,
+         [this]() {
+             if (!m_projectManager || !m_projectManager->currentProject())
+                 return;
+             for (int64_t id : m_selectedModelIds) {
+                 if (!m_projectManager->currentProject()->hasModel(id)) {
+                     m_projectManager->addModelToProject(id);
+                 }
+             }
+         },
+         "",
+         [this]() {
+             return m_projectManager != nullptr && m_projectManager->currentProject() != nullptr;
+         }},
         ContextMenuEntry::separator(),
         {"Rename",
          [this]() {
@@ -397,6 +412,17 @@ void LibraryPanel::registerContextMenuEntries() {
              if (m_onGCodeOpened && m_currentContextMenuGCode) {
                  m_onGCodeOpened(m_currentContextMenuGCode->id);
              }
+         }},
+        {"Add to Project" + gcodeCountSuffix,
+         [this]() {
+             if (!m_onGCodeAddToProject)
+                 return;
+             std::vector<int64_t> ids(m_selectedGCodeIds.begin(), m_selectedGCodeIds.end());
+             m_onGCodeAddToProject(ids);
+         },
+         "",
+         [this]() {
+             return m_projectManager != nullptr && m_projectManager->currentProject() != nullptr;
          }},
         ContextMenuEntry::separator(),
         {"Delete" + gcodeCountSuffix,

@@ -340,6 +340,31 @@ void CostPanel::renderNewItemRow() {
     }
 }
 
+void CostPanel::selectEstimate(i64 estimateId) {
+    // Refresh list to ensure we have latest data
+    if (m_repo) {
+        m_estimates = m_repo->findAll();
+    }
+
+    // Find the estimate by ID
+    for (int i = 0; i < static_cast<int>(m_estimates.size()); ++i) {
+        if (m_estimates[static_cast<size_t>(i)].id == estimateId) {
+            m_selectedIndex = i;
+            m_isNewEstimate = false;
+            m_editBuffer = m_estimates[static_cast<size_t>(i)];
+            std::memset(m_editName, 0, sizeof(m_editName));
+            std::snprintf(
+                m_editName, sizeof(m_editName), "%s", m_editBuffer.name.c_str());
+            std::memset(m_editNotes, 0, sizeof(m_editNotes));
+            std::snprintf(
+                m_editNotes, sizeof(m_editNotes), "%s", m_editBuffer.notes.c_str());
+            m_editTaxRate = static_cast<float>(m_editBuffer.taxRate);
+            m_editDiscountRate = static_cast<float>(m_editBuffer.discountRate);
+            return;
+        }
+    }
+}
+
 void CostPanel::recalculateEditBuffer() {
     m_editBuffer.subtotal = 0.0;
     for (auto& item : m_editBuffer.items) {

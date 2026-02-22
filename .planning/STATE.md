@@ -18,16 +18,17 @@ See: `.planning/PROJECT.md` (updated 2026-02-22)
 ## Current Position
 
 **Milestone:** v1.5 Project Manager
-**Status:** Requirements written, roadmap defined, ready for planning
+**Status:** In progress — Phase 7, Plan 1 complete
+**Current Plan:** Phase 7, Plan 2
 
 ```
-Phase 6: Schema & Data Layer (1 plan) — not started
-Phase 7: Unified Project Panel (2 plans) — not started
+Phase 6: Schema & Data Layer (1 plan) — complete
+Phase 7: Unified Project Panel (2 plans) — 1/2 complete
 Phase 8: Cut Plan & G-code Association (2 plans) — not started
 Phase 9: Comprehensive .dwproj Export/Import (2 plans) — not started
 ```
 
-Last activity: 2026-02-22 — v1.5 milestone created
+Last activity: 2026-02-22 — 07-01 ProjectPanel asset navigator complete
 
 ---
 
@@ -67,7 +68,7 @@ Last activity: 2026-02-22 — v1.5 milestone created
 - All files under 800 line limit
 
 **Test Coverage:**
-- 526 tests passing
+- 538 tests passing
 - StorageManager: 9 tests
 - Infrastructure: ConnectionPool (10), MainThreadQueue (10)
 - Bug regression tests: 12

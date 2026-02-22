@@ -15,6 +15,7 @@
 namespace dw {
 
 class ContextMenuManager;
+class ProjectManager;
 
 // Library panel for browsing and managing imported models
 class LibraryPanel : public Panel {
@@ -57,6 +58,12 @@ class LibraryPanel : public Panel {
     using TagImageCallback = std::function<void(const std::vector<int64_t>& modelIds)>;
     void setOnTagImage(TagImageCallback callback) { m_onTagImage = std::move(callback); }
 
+    // Callback when "Add to Project" is chosen for G-code files
+    using GCodeAddToProjectCallback = std::function<void(const std::vector<int64_t>& gcodeIds)>;
+    void setOnGCodeAddToProject(GCodeAddToProjectCallback cb) {
+        m_onGCodeAddToProject = std::move(cb);
+    }
+
     // Refresh the model and G-code lists
     void refresh();
 
@@ -80,6 +87,9 @@ class LibraryPanel : public Panel {
 
     // Set context menu manager (must be called before first render)
     void setContextMenuManager(ContextMenuManager* mgr);
+
+    // Set project manager for "Add to Project" context menu
+    void setProjectManager(ProjectManager* pm) { m_projectManager = pm; }
 
   private:
     enum class ViewTab { All, Models, GCode };
@@ -125,6 +135,7 @@ class LibraryPanel : public Panel {
     TagImageCallback m_onTagImage;
     GCodeSelectedCallback m_onGCodeSelected;
     GCodeSelectedCallback m_onGCodeOpened;
+    GCodeAddToProjectCallback m_onGCodeAddToProject;
 
     // Thumbnail texture cache: model ID -> GL texture
     std::unordered_map<int64_t, GLuint> m_textureCache;
@@ -159,6 +170,9 @@ class LibraryPanel : public Panel {
     std::set<int64_t> m_assignedCategoryIds; // Categories checked for current model(s)
     char m_newCategoryName[128] = {};
     int64_t m_newCategoryParent = -1; // -1 = root
+
+    // Project manager for "Add to Project" functionality
+    ProjectManager* m_projectManager = nullptr;
 
     // Context menu management
     ContextMenuManager* m_contextMenuManager = nullptr;

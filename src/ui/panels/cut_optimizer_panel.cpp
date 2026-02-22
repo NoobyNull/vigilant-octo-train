@@ -72,6 +72,42 @@ void CutOptimizerPanel::render() {
     ImGui::End();
 }
 
+void CutOptimizerPanel::loadCutPlan(const CutPlanRecord& record) {
+    // Deserialize sheet config
+    if (!record.sheetConfigJson.empty()) {
+        m_sheet = CutPlanRepository::jsonToSheet(record.sheetConfigJson);
+    }
+
+    // Deserialize parts
+    if (!record.partsJson.empty()) {
+        m_parts = CutPlanRepository::jsonToParts(record.partsJson);
+    } else {
+        m_parts.clear();
+    }
+
+    // Deserialize result
+    if (!record.resultJson.empty()) {
+        m_result = CutPlanRepository::jsonToCutPlan(record.resultJson);
+        m_hasResults = true;
+        m_selectedSheet = 0;
+    } else {
+        m_result = optimizer::CutPlan{};
+        m_hasResults = false;
+    }
+
+    // Restore settings
+    m_allowRotation = record.allowRotation;
+    m_kerf = record.kerf;
+    m_margin = record.margin;
+
+    // Restore algorithm
+    if (record.algorithm == "first_fit_decreasing") {
+        m_algorithm = optimizer::Algorithm::FirstFitDecreasing;
+    } else {
+        m_algorithm = optimizer::Algorithm::Guillotine;
+    }
+}
+
 void CutOptimizerPanel::clear() {
     m_parts.clear();
     m_result = optimizer::CutPlan{};

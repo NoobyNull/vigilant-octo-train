@@ -18,6 +18,9 @@ class CostPanel : public Panel {
 
     void render() override;
 
+    // Navigate to and select a specific estimate by ID
+    void selectEstimate(i64 estimateId);
+
   private:
     void renderToolbar();
     void renderEstimateList();

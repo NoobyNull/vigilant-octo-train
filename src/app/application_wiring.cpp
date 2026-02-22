@@ -10,6 +10,8 @@
 #include "core/config/config.h"
 #include "core/database/connection_pool.h"
 #include "core/database/model_repository.h"
+#include "core/database/cut_plan_repository.h"
+#include "core/database/gcode_repository.h"
 #include "core/export/project_export_manager.h"
 #include "core/import/import_queue.h"
 #include "core/library/library_manager.h"
@@ -30,6 +32,9 @@
 #include "ui/dialogs/maintenance_dialog.h"
 #include "ui/dialogs/progress_dialog.h"
 #include "ui/dialogs/tag_image_dialog.h"
+#include "ui/panels/cost_panel.h"
+#include "ui/panels/cut_optimizer_panel.h"
+#include "ui/panels/gcode_panel.h"
 #include "ui/panels/library_panel.h"
 #include "ui/panels/materials_panel.h"
 #include "ui/panels/project_panel.h"
@@ -105,6 +110,17 @@ void Application::initWiring() {
 
     // Wire panel callbacks
     if (m_uiManager->libraryPanel()) {
+        m_uiManager->libraryPanel()->setProjectManager(m_projectManager.get());
+        m_uiManager->libraryPanel()->setOnGCodeAddToProject(
+            [this](const std::vector<int64_t>& gcodeIds) {
+                if (!m_projectManager || !m_projectManager->currentProject() || !m_gcodeRepo)
+                    return;
+                i64 pid = m_projectManager->currentProject()->id();
+                for (int64_t gid : gcodeIds)
+                    if (!m_gcodeRepo->isInProject(pid, gid))
+                        m_gcodeRepo->addToProject(pid, gid);
+            });
+
         m_uiManager->libraryPanel()->setOnModelSelected([this](int64_t modelId) {
             if (!m_libraryManager)
                 return;
@@ -428,6 +444,36 @@ void Application::initWiring() {
         });
         m_uiManager->projectPanel()->setExportProjectCallback(
             [this]() { m_fileIOManager->exportProjectArchive(); });
+
+        // Cross-panel navigation from ProjectPanel
+        m_uiManager->projectPanel()->setOnGCodeSelected([this](i64 gcodeId) {
+            if (!m_gcodeRepo) return;
+            auto rec = m_gcodeRepo->findById(gcodeId);
+            if (rec && m_uiManager->gcodePanel()) {
+                m_uiManager->gcodePanel()->setOpen(true);
+                m_uiManager->gcodePanel()->loadFile(rec->filePath.string());
+            }
+        });
+        m_uiManager->projectPanel()->setOnMaterialSelected([this](i64 materialId) {
+            if (m_uiManager->materialsPanel()) {
+                m_uiManager->materialsPanel()->setOpen(true);
+                m_uiManager->materialsPanel()->selectMaterial(materialId);
+            }
+        });
+        m_uiManager->projectPanel()->setOnCostSelected([this](i64 estimateId) {
+            if (m_uiManager->costPanel()) {
+                m_uiManager->costPanel()->setOpen(true);
+                m_uiManager->costPanel()->selectEstimate(estimateId);
+            }
+        });
+        m_uiManager->projectPanel()->setOnCutPlanSelected([this](i64 planId) {
+            if (!m_cutPlanRepo) return;
+            auto rec = m_cutPlanRepo->findById(planId);
+            if (rec && m_uiManager->cutOptimizerPanel()) {
+                m_uiManager->cutOptimizerPanel()->setOpen(true);
+                m_uiManager->cutOptimizerPanel()->loadCutPlan(*rec);
+            }
+        });
     }
 
     if (m_uiManager->propertiesPanel()) {
@@ -547,35 +593,25 @@ void Application::initWiring() {
 }
 
 void Application::onModelSelected(int64_t modelId) {
-    if (!m_libraryManager)
-        return;
+    if (!m_libraryManager) return;
 
-    // Save current camera state before switching models
     if (m_focusedModelId > 0 && m_uiManager->viewportPanel()) {
         auto camState = m_uiManager->viewportPanel()->getCameraState();
         ModelRepository repo(*m_database);
         repo.updateCameraState(m_focusedModelId, camState);
     }
 
-    // Get model record on main thread (fast DB read)
     auto record = m_libraryManager->getModel(modelId);
-    if (!record)
-        return;
-
-    // Track focused model ID for material assignment
+    if (!record) return;
     m_focusedModelId = modelId;
 
-    // Check if this model has a material assigned — load texture proactively
     if (m_materialManager) {
         auto assignedMaterial = m_materialManager->getModelMaterial(modelId);
         if (assignedMaterial) {
-            // Load material texture for this model
             loadMaterialTextureForModel(modelId);
-            // Update PropertiesPanel material display
             if (m_uiManager->propertiesPanel())
                 m_uiManager->propertiesPanel()->setMaterial(*assignedMaterial);
         } else {
-            // No material assigned — prefer configured default, then first available
             i64 defaultId = Config::instance().getDefaultMaterialId();
             if (defaultId > 0 && m_materialManager->getMaterial(defaultId)) {
                 assignMaterialToCurrentModel(defaultId);
@@ -593,15 +629,10 @@ void Application::onModelSelected(int64_t modelId) {
         }
     }
 
-    // Bump generation to invalidate any in-flight load
     uint64_t gen = ++m_loadingState.generation;
     m_loadingState.set(record->name);
+    if (m_loadThread.joinable()) m_loadThread.join();
 
-    // Join previous load thread if still running
-    if (m_loadThread.joinable())
-        m_loadThread.join();
-
-    // Capture what we need for the worker
     Path filePath = record->filePath;
     std::string name = record->name;
     auto storedOrientYaw = record->orientYaw;
@@ -611,39 +642,24 @@ void Application::onModelSelected(int64_t modelId) {
     m_loadThread = std::thread(
         [this, filePath, name, gen, modelId, storedOrientYaw, storedOrientMatrix, storedCamera]() {
             auto loadResult = LoaderFactory::load(filePath);
-            if (!loadResult) {
-                m_loadingState.reset();
-                return;
-            }
+            if (!loadResult) { m_loadingState.reset(); return; }
             loadResult.mesh->setName(name);
-
-            // Orient on worker thread (pure CPU, no GL calls)
             f32 orientYaw = 0.0f;
             if (Config::instance().getAutoOrient()) {
                 if (storedOrientYaw && storedOrientMatrix) {
-                    // Fast path: apply stored orient (skips axis detection + normal counting)
                     loadResult.mesh->applyStoredOrient(*storedOrientMatrix);
                     orientYaw = *storedOrientYaw;
                 } else {
-                    // Fallback: full autoOrient + lazy-write back to DB
                     orientYaw = loadResult.mesh->autoOrient();
-
-                    // Write computed orient back to DB for future loads
                     ScopedConnection conn(*m_connectionPool);
                     ModelRepository repo(*conn);
                     repo.updateOrient(modelId, orientYaw, loadResult.mesh->getOrientMatrix());
                 }
             }
-
             auto mesh = loadResult.mesh;
-
-            // Post result to main thread via MainThreadQueue
             m_mainThreadQueue->enqueue([this, mesh, name, gen, orientYaw, storedCamera]() {
-                // Check generation — if user clicked another model, discard
-                if (gen != m_loadingState.generation.load())
-                    return;
+                if (gen != m_loadingState.generation.load()) return;
                 m_loadingState.reset();
-
                 m_workspace->setFocusedMesh(mesh);
                 if (m_uiManager->viewportPanel())
                     m_uiManager->viewportPanel()->setPreOrientedMesh(mesh, orientYaw, storedCamera);
@@ -669,7 +685,6 @@ void Application::assignMaterialToCurrentModel(int64_t materialId) {
     if (!material)
         return;
 
-    // Persist the assignment to the database
     if (m_focusedModelId > 0) {
         m_materialManager->assignMaterialToModel(materialId, m_focusedModelId);
     }
@@ -742,39 +757,29 @@ void Application::loadMaterialTextureForModel(int64_t modelId) {
         }
     }
 
-    // Update viewport texture pointer
     if (m_uiManager && m_uiManager->viewportPanel())
         m_uiManager->viewportPanel()->setMaterialTexture(m_activeMaterialTexture.get());
 }
 
 bool Application::generateMaterialThumbnail(int64_t modelId, Mesh& mesh) {
-    // Auto-orient mesh
     if (Config::instance().getAutoOrient()) {
         auto record = m_libraryManager->getModel(modelId);
-        if (record && record->orientYaw && record->orientMatrix) {
+        if (record && record->orientYaw && record->orientMatrix)
             mesh.applyStoredOrient(*record->orientMatrix);
-        } else {
+        else
             static_cast<void>(mesh.autoOrient());
-        }
     }
 
-    // Resolve default material
     std::unique_ptr<Texture> tex;
     i64 matId = Config::instance().getDefaultMaterialId();
     std::optional<MaterialRecord> mat;
-
     if (matId > 0 && m_materialManager)
         mat = m_materialManager->getMaterial(matId);
-
-    // Fall back to first available material
     if (!mat && m_materialManager) {
         auto all = m_materialManager->getAllMaterials();
-        if (!all.empty())
-            mat = all.front();
+        if (!all.empty()) mat = all.front();
     }
-
     if (mat) {
-        // Load texture from archive
         if (!mat->archivePath.empty()) {
             auto matData = MaterialArchive::load(mat->archivePath.string());
             if (matData && !matData->textureData.empty()) {
@@ -786,13 +791,9 @@ bool Application::generateMaterialThumbnail(int64_t modelId, Mesh& mesh) {
                 }
             }
         }
-
-        // Generate UVs if needed
         if (mesh.needsUVGeneration())
             mesh.generatePlanarUVs(mat->grainDirectionDeg);
     }
-
-    // Camera from front: pitch=0, yaw=0
     return m_libraryManager->generateThumbnail(modelId, mesh, tex.get(), 0.0f, 0.0f);
 }
 

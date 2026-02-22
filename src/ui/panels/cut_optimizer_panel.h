@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#include "../../core/database/cut_plan_repository.h"
 #include "../../core/optimizer/cut_optimizer.h"
 #include "../../core/optimizer/sheet.h"
 #include "../widgets/canvas_2d.h"
@@ -20,6 +21,9 @@ class CutOptimizerPanel : public Panel {
 
     // Clear all data
     void clear();
+
+    // Load a saved cut plan record into the panel state
+    void loadCutPlan(const CutPlanRecord& record);
 
   private:
     void renderToolbar();

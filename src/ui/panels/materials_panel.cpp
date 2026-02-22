@@ -42,6 +42,17 @@ void MaterialsPanel::refresh() {
     m_allMaterials = m_materialManager->getAllMaterials();
 }
 
+void MaterialsPanel::selectMaterial(i64 materialId) {
+    // Refresh to ensure we have latest data
+    refresh();
+    m_selectedMaterialId = materialId;
+
+    // Notify selection callback
+    if (m_onMaterialSelected) {
+        m_onMaterialSelected(materialId);
+    }
+}
+
 void MaterialsPanel::render() {
     if (!m_open) {
         return;

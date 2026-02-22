@@ -50,6 +50,9 @@ class MaterialsPanel : public Panel {
     // Reload materials from database
     void refresh();
 
+    // Navigate to and select a specific material by ID
+    void selectMaterial(i64 materialId);
+
     // Get currently selected material ID (-1 if none)
     i64 selectedMaterialId() const { return m_selectedMaterialId; }
 
