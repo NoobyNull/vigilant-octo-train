@@ -1,9 +1,13 @@
 #pragma once
 
 #include <functional>
+#include <optional>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
+#include "../database/material_repository.h"
 #include "../database/model_repository.h"
 #include "../database/project_repository.h"
 #include "../types.h"
@@ -65,6 +69,9 @@ class ProjectExportManager {
         u32 triangleCount = 0;
         Vec3 boundsMin{0.0f};
         Vec3 boundsMax{0.0f};
+        std::optional<i64> materialId;      // material_id from models table
+        std::string materialInArchive;      // e.g. "materials/3.dwmat"
+        std::string thumbnailInArchive;     // e.g. "thumbnails/<hash>.png"
     };
 
     struct Manifest {
@@ -76,9 +83,12 @@ class ProjectExportManager {
         std::vector<ManifestModel> models;
     };
 
-    std::string buildManifestJson(const Project& project,
-                                  const std::vector<ModelRecord>& models);
+    std::string buildManifestJson(
+        const Project& project, const std::vector<ModelRecord>& models,
+        const std::unordered_map<i64, i64>& modelIdToMaterialId,
+        const std::unordered_map<std::string, std::string>& hashToThumbnailPath);
     bool parseManifest(const std::string& json, Manifest& out, std::string& error);
+    std::optional<i64> getModelMaterialId(i64 modelId);
 
     Database& m_db;
 };

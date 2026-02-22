@@ -3,6 +3,7 @@
 
 #include "project_export_manager.h"
 
+#include "../materials/material_archive.h"
 #include "../paths/app_paths.h"
 #include "../project/project.h"
 #include "../utils/file_utils.h"
@@ -47,6 +48,22 @@ static bool containsPathTraversal(const std::string& path) {
 
 ProjectExportManager::ProjectExportManager(Database& db) : m_db(db) {}
 
+// --- Helpers ---
+
+std::optional<i64> ProjectExportManager::getModelMaterialId(i64 modelId) {
+    auto stmt = m_db.prepare("SELECT material_id FROM models WHERE id = ?");
+    if (!stmt.isValid() || !stmt.bindInt(1, modelId)) {
+        return std::nullopt;
+    }
+    if (stmt.step()) {
+        if (stmt.isNull(0)) {
+            return std::nullopt;
+        }
+        return stmt.getInt(0);
+    }
+    return std::nullopt;
+}
+
 // --- Export ---
 
 DwprojExportResult
@@ -75,8 +92,7 @@ ProjectExportManager::exportProject(const Project& project, const Path& outputPa
         return DwprojExportResult::fail("No valid models found in project");
     }
 
-    // Build manifest JSON
-    std::string manifestJson = buildManifestJson(project, models);
+    MaterialRepository materialRepo(m_db);
 
     // Initialize ZIP writer
     mz_zip_archive zip{};
@@ -85,30 +101,20 @@ ProjectExportManager::exportProject(const Project& project, const Path& outputPa
                                         outputPath.string());
     }
 
-    // Add manifest.json
-    if (!mz_zip_writer_add_mem(&zip, kManifestFile, manifestJson.data(),
-                               manifestJson.size(), MZ_DEFAULT_COMPRESSION)) {
-        mz_zip_writer_end(&zip);
-        (void)file::remove(outputPath);
-        return DwprojExportResult::fail("Failed to write manifest to archive");
-    }
-
     // Add each model blob
     uint64_t totalBytes = 0;
-    int modelIndex = 0;
-    int totalModels = static_cast<int>(models.size());
+    int itemIndex = 0;
+    int totalItems = static_cast<int>(models.size());
 
     for (const auto& model : models) {
-        // Read model file from disk
         auto blobData = file::readBinary(model.filePath);
         if (!blobData) {
             log::warningf(kLogModule, "Skipping model '%s': cannot read file '%s'",
                           model.name.c_str(), model.filePath.string().c_str());
-            modelIndex++;
+            itemIndex++;
             continue;
         }
 
-        // Construct archive path: models/<hash>.<ext>
         std::string ext = getFileExtension(model.filePath);
         std::string archPath = "models/" + model.hash + ext;
 
@@ -121,11 +127,82 @@ ProjectExportManager::exportProject(const Project& project, const Path& outputPa
         }
 
         totalBytes += blobData->size();
-        modelIndex++;
+        itemIndex++;
 
         if (progress) {
-            progress(modelIndex, totalModels, model.name);
+            progress(itemIndex, totalItems, model.name);
         }
+    }
+
+    // Phase A: Export thumbnails
+    std::unordered_map<std::string, std::string> hashToThumbnailPath;
+    for (const auto& model : models) {
+        if (model.thumbnailPath.empty() || !file::exists(model.thumbnailPath)) {
+            continue;
+        }
+        auto thumbData = file::readBinary(model.thumbnailPath);
+        if (!thumbData) {
+            continue;
+        }
+        std::string thumbArchPath =
+            "thumbnails/" + model.hash + ".png";
+        if (!mz_zip_writer_add_mem(&zip, thumbArchPath.c_str(),
+                                   thumbData->data(), thumbData->size(),
+                                   MZ_DEFAULT_COMPRESSION)) {
+            log::warningf(kLogModule, "Failed to add thumbnail for model '%s'",
+                          model.name.c_str());
+            continue;
+        }
+        hashToThumbnailPath[model.hash] = thumbArchPath;
+    }
+
+    // Phase B: Export materials
+    std::unordered_map<i64, i64> modelIdToMaterialId;
+    std::unordered_set<i64> writtenMaterialIds;
+    for (const auto& model : models) {
+        auto matId = getModelMaterialId(model.id);
+        if (!matId) {
+            continue;
+        }
+        modelIdToMaterialId[model.id] = *matId;
+
+        if (writtenMaterialIds.count(*matId)) {
+            continue; // Already written (shared material)
+        }
+
+        auto matRec = materialRepo.findById(*matId);
+        if (!matRec || matRec->archivePath.empty() ||
+            !file::exists(matRec->archivePath)) {
+            continue;
+        }
+
+        auto matData = file::readBinary(matRec->archivePath);
+        if (!matData) {
+            continue;
+        }
+
+        std::string matArchPath =
+            "materials/" + std::to_string(*matId) + ".dwmat";
+        if (!mz_zip_writer_add_mem(&zip, matArchPath.c_str(), matData->data(),
+                                   matData->size(), MZ_DEFAULT_COMPRESSION)) {
+            log::warningf(kLogModule,
+                          "Failed to add material %lld for model '%s'",
+                          static_cast<long long>(*matId), model.name.c_str());
+            continue;
+        }
+        writtenMaterialIds.insert(*matId);
+    }
+
+    // Build manifest with material/thumbnail info and add to ZIP
+    std::string manifestJson =
+        buildManifestJson(project, models, modelIdToMaterialId,
+                          hashToThumbnailPath);
+
+    if (!mz_zip_writer_add_mem(&zip, kManifestFile, manifestJson.data(),
+                               manifestJson.size(), MZ_DEFAULT_COMPRESSION)) {
+        mz_zip_writer_end(&zip);
+        (void)file::remove(outputPath);
+        return DwprojExportResult::fail("Failed to write manifest to archive");
     }
 
     // Finalize archive
@@ -137,12 +214,14 @@ ProjectExportManager::exportProject(const Project& project, const Path& outputPa
 
     mz_zip_writer_end(&zip);
 
-    log::infof(kLogModule, "Exported project '%s' with %d models (%llu bytes) to '%s'",
-               project.name().c_str(), modelIndex,
+    int modelCount = static_cast<int>(models.size());
+    log::infof(kLogModule,
+               "Exported project '%s' with %d models (%llu bytes) to '%s'",
+               project.name().c_str(), modelCount,
                static_cast<unsigned long long>(totalBytes),
                outputPath.string().c_str());
 
-    return DwprojExportResult::ok(modelIndex, totalBytes);
+    return DwprojExportResult::ok(modelCount, totalBytes);
 }
 
 // --- Import ---
@@ -283,6 +362,107 @@ ProjectExportManager::importProject(const Path& archivePath,
         }
     }
 
+    // Phase A: Restore thumbnails
+    Path thumbnailDir = paths::getThumbnailDir();
+    (void)file::createDirectories(thumbnailDir);
+
+    for (size_t i = 0; i < manifest.models.size(); i++) {
+        const auto& mm = manifest.models[i];
+        if (mm.thumbnailInArchive.empty() ||
+            containsPathTraversal(mm.thumbnailInArchive)) {
+            continue;
+        }
+
+        size_t thumbSize = 0;
+        void* thumbData = mz_zip_reader_extract_file_to_heap(
+            &zip, mm.thumbnailInArchive.c_str(), &thumbSize, 0);
+        if (!thumbData) {
+            continue;
+        }
+
+        Path thumbDest = thumbnailDir / (mm.hash + ".png");
+        if (file::writeBinary(thumbDest, thumbData, thumbSize)) {
+            // Find the model we just imported and update its thumbnail
+            auto imported = modelRepo.findByHash(mm.hash);
+            if (imported) {
+                modelRepo.updateThumbnail(imported->id, thumbDest);
+            }
+        }
+        mz_free(thumbData);
+    }
+
+    // Phase B: Restore materials
+    MaterialRepository materialRepo(m_db);
+    Path materialsDir = paths::getMaterialsDir();
+    (void)file::createDirectories(materialsDir);
+
+    std::unordered_map<i64, i64> oldToNewMaterialId;
+    for (size_t i = 0; i < manifest.models.size(); i++) {
+        const auto& mm = manifest.models[i];
+        if (!mm.materialId || mm.materialInArchive.empty() ||
+            containsPathTraversal(mm.materialInArchive)) {
+            continue;
+        }
+
+        i64 oldMatId = *mm.materialId;
+
+        // Find the imported model
+        auto imported = modelRepo.findByHash(mm.hash);
+        if (!imported) {
+            continue;
+        }
+
+        i64 newMatId = 0;
+        auto mapIt = oldToNewMaterialId.find(oldMatId);
+        if (mapIt != oldToNewMaterialId.end()) {
+            newMatId = mapIt->second;
+        } else {
+            // Extract .dwmat from ZIP
+            size_t matSize = 0;
+            void* matData = mz_zip_reader_extract_file_to_heap(
+                &zip, mm.materialInArchive.c_str(), &matSize, 0);
+            if (!matData) {
+                continue;
+            }
+
+            std::string matFilename =
+                std::to_string(oldMatId) + ".dwmat";
+            Path matDest = materialsDir / matFilename;
+            if (!file::writeBinary(matDest, matData, matSize)) {
+                mz_free(matData);
+                continue;
+            }
+            mz_free(matData);
+
+            // Try to load metadata from the .dwmat archive
+            MaterialRecord matRec;
+            auto matArchiveData =
+                MaterialArchive::load(matDest.string());
+            if (matArchiveData) {
+                matRec = matArchiveData->metadata;
+            } else {
+                matRec.name = "Imported Material " +
+                              std::to_string(oldMatId);
+            }
+            matRec.archivePath = matDest;
+
+            auto insertedId = materialRepo.insert(matRec);
+            if (!insertedId) {
+                continue;
+            }
+            newMatId = *insertedId;
+            oldToNewMaterialId[oldMatId] = newMatId;
+        }
+
+        // Assign material to model
+        auto stmt = m_db.prepare(
+            "UPDATE models SET material_id = ? WHERE id = ?");
+        if (stmt.isValid() && stmt.bindInt(1, newMatId) &&
+            stmt.bindInt(2, imported->id)) {
+            (void)stmt.execute();
+        }
+    }
+
     mz_zip_reader_end(&zip);
 
     log::infof(kLogModule, "Imported project '%s' with %d models from '%s'",
@@ -294,9 +474,10 @@ ProjectExportManager::importProject(const Path& archivePath,
 
 // --- Manifest JSON ---
 
-std::string
-ProjectExportManager::buildManifestJson(const Project& project,
-                                        const std::vector<ModelRecord>& models) {
+std::string ProjectExportManager::buildManifestJson(
+    const Project& project, const std::vector<ModelRecord>& models,
+    const std::unordered_map<i64, i64>& modelIdToMaterialId,
+    const std::unordered_map<std::string, std::string>& hashToThumbnailPath) {
     nlohmann::json j;
     j["format_version"] = FormatVersion;
     j["app_version"] = kAppVersion;
@@ -320,6 +501,25 @@ ProjectExportManager::buildManifestJson(const Project& project,
         mj["triangle_count"] = m.triangleCount;
         mj["bounds_min"] = {m.boundsMin.x, m.boundsMin.y, m.boundsMin.z};
         mj["bounds_max"] = {m.boundsMax.x, m.boundsMax.y, m.boundsMax.z};
+
+        // Material info
+        auto matIt = modelIdToMaterialId.find(m.id);
+        if (matIt != modelIdToMaterialId.end()) {
+            mj["material_id"] = matIt->second;
+            mj["material_in_archive"] =
+                "materials/" + std::to_string(matIt->second) + ".dwmat";
+        } else {
+            mj["material_id"] = nullptr;
+            mj["material_in_archive"] = "";
+        }
+
+        // Thumbnail info
+        auto thumbIt = hashToThumbnailPath.find(m.hash);
+        if (thumbIt != hashToThumbnailPath.end()) {
+            mj["thumbnail_in_archive"] = thumbIt->second;
+        } else {
+            mj["thumbnail_in_archive"] = "";
+        }
 
         modelsArr.push_back(mj);
     }
@@ -374,6 +574,13 @@ bool ProjectExportManager::parseManifest(const std::string& json, Manifest& out,
                                     mj["bounds_max"][1].get<float>(),
                                     mj["bounds_max"][2].get<float>());
             }
+
+            // Material and thumbnail fields (optional, for forward compat)
+            if (mj.contains("material_id") && !mj["material_id"].is_null()) {
+                mm.materialId = mj["material_id"].get<i64>();
+            }
+            mm.materialInArchive = mj.value("material_in_archive", "");
+            mm.thumbnailInArchive = mj.value("thumbnail_in_archive", "");
 
             if (mm.hash.empty()) {
                 log::warningf(kLogModule,
