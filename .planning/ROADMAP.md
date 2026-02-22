@@ -3,6 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 Foundation & Import Pipeline** — Phases 1-2 (shipped 2026-02-10)
+- [ ] **v1.1 Library Storage & Organization** — Phases 2-5 (started 2026-02-21)
 
 ## Phases
 
@@ -21,6 +22,66 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
 
 </details>
 
+<details>
+<summary>✅ Post-v1.0 Materials (Phase 1) — COMPLETED 2026-02-20</summary>
+
+- [x] Phase 1: Materials System (6/6 plans) — completed 2026-02-20
+
+</details>
+
+### v1.1 Library Storage & Organization
+
+- [ ] **Phase 2: Content-Addressable Storage** — StorageManager with hash-based blob directories, atomic writes, orphan cleanup
+- [ ] **Phase 3: Import File Handling** — Filesystem detection, import dialog with keep/copy/move options
+- [ ] **Phase 4: Organization & Graph** — DB schema with FTS5 search, GraphQLite graph extension, categories, Cypher queries
+- [ ] **Phase 5: Project Export** — Portable .dwproj ZIP archives with manifest and embedded blobs
+
+## Phase Details
+
+### Phase 2: Content-Addressable Storage
+**Goal:** Imported models are stored in a reliable, hash-addressed blob store that survives crashes and network failures
+**Depends on:** v1.0 import pipeline, post-v1.0 materials system
+**Requirements:** STOR-01, STOR-02, STOR-03
+**Success Criteria** (what must be TRUE):
+  1. Importing a model places its file in `blobs/ab/cd/abcdef...ext` based on content hash
+  2. Killing the application mid-import leaves no corrupt or partial files in the blob store
+  3. Orphaned temp files from prior crashes are cleaned up automatically on next startup
+  4. Importing the same file twice does not create a duplicate blob (dedup by hash)
+**Plans:** TBD
+
+### Phase 3: Import File Handling
+**Goal:** User understands where their files will go and the application makes smart defaults based on source filesystem
+**Depends on:** Phase 2 (CAS must exist to copy/move into)
+**Requirements:** STOR-04, IMPORT-01, IMPORT-02
+**Success Criteria** (what must be TRUE):
+  1. User sees a file handling choice (keep in place / copy to library / move to library) during import
+  2. Importing from a NAS or cloud-synced folder auto-selects "copy" and displays a recommendation explaining why
+  3. Importing from a local drive defaults to "move" (user can override)
+  4. Files imported via "copy" or "move" land in the CAS blob store; "keep in place" preserves original path
+**Plans:** TBD
+
+### Phase 4: Organization & Graph
+**Goal:** User can organize models into categories, search across all metadata, and traverse relationships via graph queries
+**Depends on:** Phase 2 (CAS blob store for model storage), Phase 3 (import pipeline integrated)
+**Requirements:** ORG-01, ORG-02, ORG-03, ORG-04, ORG-05
+**Success Criteria** (what must be TRUE):
+  1. User can assign a model to a 2-level category (e.g., "Furniture > Chair") and filter the library by category
+  2. User can type a search query and get ranked results matching across model name, tags, filename, and category
+  3. Models, categories, and projects exist as graph nodes with relationship edges (belongs_to, contains, related_to)
+  4. User can query relationships via Cypher (e.g., "all models in project X", "models related to this model")
+  5. GraphQLite extension loads at DB init; application starts cleanly with graph support enabled
+**Plans:** TBD
+
+### Phase 5: Project Export
+**Goal:** User can share a project as a portable, self-contained archive that works on another machine
+**Depends on:** Phase 2 (CAS for blob access), Phase 4 (graph for project-model relationships)
+**Requirements:** EXPORT-01, EXPORT-02
+**Success Criteria** (what must be TRUE):
+  1. User can export a project to a .dwproj file containing manifest, model blobs, materials, and thumbnails
+  2. A .dwproj file exported on one machine can be imported on a different machine with all models and metadata intact
+  3. Export progress is visible and does not block the UI
+**Plans:** TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -33,23 +94,13 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
 | 1.6 Dead Code Cleanup | v1.0 | 1/1 | Complete | 2026-02-09 |
 | 2 Import Pipeline | v1.0 | 10/10 | Complete | 2026-02-09 |
 | 1 Materials System | Post-v1.0 | 6/6 | Complete | 2026-02-20 |
-
-### Phase 1: Add materials mapping to object view with coordinated materials database
-
-**Goal:** CNC woodworker can assign wood species materials to 3D objects with texture-mapped visualization, browsable materials database with 23 built-in species, and portable .dwmat archive import/export
-**Depends on:** v1.0
-**Status:** COMPLETE
-**Plans:** 6/6 plans executed
-
-Plans:
-- [x] 01-01-PLAN.md — Dependencies, material types, database schema, MaterialRepository (completed 2026-02-19)
-- [x] 01-02-PLAN.md — MaterialArchive (.dwmat ZIP), TextureLoader, Texture RAII wrapper (completed 2026-02-20)
-- [x] 01-03-PLAN.md — Default materials list, MaterialManager import/export/seeding (completed 2026-02-20)
-- [x] 01-04-PLAN.md — Shader texture support, UV generation, Renderer integration (completed 2026-02-20)
-- [x] 01-05-PLAN.md — MaterialsPanel UI with category tabs, thumbnail grid, edit form (completed 2026-02-20)
-- [x] 01-06-PLAN.md — Application wiring, PropertiesPanel integration, human verification (completed 2026-02-20)
+| 2 Content-Addressable Storage | v1.1 | 0/? | Not started | - |
+| 3 Import File Handling | v1.1 | 0/? | Not started | - |
+| 4 Organization & Graph | v1.1 | 0/? | Not started | - |
+| 5 Project Export | v1.1 | 0/? | Not started | - |
 
 ---
 
 *Roadmap created: 2026-02-08*
 *v1.0 milestone shipped: 2026-02-10*
+*v1.1 phases added: 2026-02-21*

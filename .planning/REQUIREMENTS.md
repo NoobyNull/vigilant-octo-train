@@ -55,16 +55,16 @@
 
 | REQ-ID | Phase | Plan | Status |
 |--------|-------|------|--------|
-| STOR-01 | — | — | Pending |
-| STOR-02 | — | — | Pending |
-| STOR-03 | — | — | Pending |
-| STOR-04 | — | — | Pending |
-| IMPORT-01 | — | — | Pending |
-| IMPORT-02 | — | — | Pending |
-| ORG-01 | — | — | Pending |
-| ORG-02 | — | — | Pending |
-| ORG-03 | — | — | Pending |
-| ORG-04 | — | — | Pending |
-| ORG-05 | — | — | Pending |
-| EXPORT-01 | — | — | Pending |
-| EXPORT-02 | — | — | Pending |
+| STOR-01 | Phase 2 | — | Pending |
+| STOR-02 | Phase 2 | — | Pending |
+| STOR-03 | Phase 2 | — | Pending |
+| STOR-04 | Phase 3 | — | Pending |
+| IMPORT-01 | Phase 3 | — | Pending |
+| IMPORT-02 | Phase 3 | — | Pending |
+| ORG-01 | Phase 4 | — | Pending |
+| ORG-02 | Phase 4 | — | Pending |
+| ORG-03 | Phase 4 | — | Pending |
+| ORG-04 | Phase 4 | — | Pending |
+| ORG-05 | Phase 4 | — | Pending |
+| EXPORT-01 | Phase 5 | — | Pending |
+| EXPORT-02 | Phase 5 | — | Pending |
