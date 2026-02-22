@@ -1,0 +1,3025 @@
+{
+  "tests": 545,
+  "name": "AllTests",
+  "testsuites": [
+    {
+      "name": "Placeholder",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "TestFrameworkWorks",
+          "file": "\/data\/DW\/tests\/test_main.cpp",
+          "line": 6
+        }
+      ]
+    },
+    {
+      "name": "STLLoader",
+      "tests": 5,
+      "testsuite": [
+        {
+          "name": "LoadFromBuffer_SingleTriangle",
+          "file": "\/data\/DW\/tests\/test_stl_loader.cpp",
+          "line": 36
+        },
+        {
+          "name": "LoadFromBuffer_EmptyBuffer",
+          "file": "\/data\/DW\/tests\/test_stl_loader.cpp",
+          "line": 71
+        },
+        {
+          "name": "LoadFromBuffer_TooSmallBuffer",
+          "file": "\/data\/DW\/tests\/test_stl_loader.cpp",
+          "line": 81
+        },
+        {
+          "name": "LoadFromBuffer_TwoTrianglesWithSharedVertices",
+          "file": "\/data\/DW\/tests\/test_stl_loader.cpp",
+          "line": 92
+        },
+        {
+          "name": "SupportsExtension",
+          "file": "\/data\/DW\/tests\/test_stl_loader.cpp",
+          "line": 119
+        }
+      ]
+    },
+    {
+      "name": "OBJLoader",
+      "tests": 7,
+      "testsuite": [
+        {
+          "name": "LoadFromBuffer_SingleTriangle",
+          "file": "\/data\/DW\/tests\/test_obj_loader.cpp",
+          "line": 15
+        },
+        {
+          "name": "LoadFromBuffer_Quad",
+          "file": "\/data\/DW\/tests\/test_obj_loader.cpp",
+          "line": 43
+        },
+        {
+          "name": "LoadFromBuffer_WithNormals",
+          "file": "\/data\/DW\/tests\/test_obj_loader.cpp",
+          "line": 60
+        },
+        {
+          "name": "LoadFromBuffer_EmptyData",
+          "file": "\/data\/DW\/tests\/test_obj_loader.cpp",
+          "line": 79
+        },
+        {
+          "name": "LoadFromBuffer_NoFaces",
+          "file": "\/data\/DW\/tests\/test_obj_loader.cpp",
+          "line": 89
+        },
+        {
+          "name": "LoadFromBuffer_CommentsIgnored",
+          "file": "\/data\/DW\/tests\/test_obj_loader.cpp",
+          "line": 103
+        },
+        {
+          "name": "SupportsExtension",
+          "file": "\/data\/DW\/tests\/test_obj_loader.cpp",
+          "line": 119
+        }
+      ]
+    },
+    {
+      "name": "Hash",
+      "tests": 9,
+      "testsuite": [
+        {
+          "name": "ComputeBuffer_ConsistentResults",
+          "file": "\/data\/DW\/tests\/test_hash.cpp",
+          "line": 8
+        },
+        {
+          "name": "ComputeBuffer_DifferentDataDifferentHash",
+          "file": "\/data\/DW\/tests\/test_hash.cpp",
+          "line": 18
+        },
+        {
+          "name": "ComputeBuffer_EmptyBufferReturnsEmpty",
+          "file": "\/data\/DW\/tests\/test_hash.cpp",
+          "line": 30
+        },
+        {
+          "name": "ToHexFromHex_Roundtrip",
+          "file": "\/data\/DW\/tests\/test_hash.cpp",
+          "line": 38
+        },
+        {
+          "name": "ToHex_Format",
+          "file": "\/data\/DW\/tests\/test_hash.cpp",
+          "line": 47
+        },
+        {
+          "name": "ToHex_Zero",
+          "file": "\/data\/DW\/tests\/test_hash.cpp",
+          "line": 57
+        },
+        {
+          "name": "FromHex_Zero",
+          "file": "\/data\/DW\/tests\/test_hash.cpp",
+          "line": 64
+        },
+        {
+          "name": "ComputeBytes_Deterministic",
+          "file": "\/data\/DW\/tests\/test_hash.cpp",
+          "line": 70
+        },
+        {
+          "name": "ComputeBytes_DifferentDataDifferentHash",
+          "file": "\/data\/DW\/tests\/test_hash.cpp",
+          "line": 79
+        }
+      ]
+    },
+    {
+      "name": "GcodeParser",
+      "tests": 12,
+      "testsuite": [
+        {
+          "name": "ParseSimpleG0",
+          "file": "\/data\/DW\/tests\/test_gcode_parser.cpp",
+          "line": 10
+        },
+        {
+          "name": "ParseSimpleG1",
+          "file": "\/data\/DW\/tests\/test_gcode_parser.cpp",
+          "line": 24
+        },
+        {
+          "name": "ParseTwoMotionCommands",
+          "file": "\/data\/DW\/tests\/test_gcode_parser.cpp",
+          "line": 36
+        },
+        {
+          "name": "ParseWithFeedRate",
+          "file": "\/data\/DW\/tests\/test_gcode_parser.cpp",
+          "line": 45
+        },
+        {
+          "name": "CommentLinesSkipped",
+          "file": "\/data\/DW\/tests\/test_gcode_parser.cpp",
+          "line": 54
+        },
+        {
+          "name": "EmptyInputProducesEmptyResult",
+          "file": "\/data\/DW\/tests\/test_gcode_parser.cpp",
+          "line": 68
+        },
+        {
+          "name": "PathSegmentsGenerated",
+          "file": "\/data\/DW\/tests\/test_gcode_parser.cpp",
+          "line": 76
+        },
+        {
+          "name": "UnitSetting",
+          "file": "\/data\/DW\/tests\/test_gcode_parser.cpp",
+          "line": 98
+        },
+        {
+          "name": "AbsolutePositioning",
+          "file": "\/data\/DW\/tests\/test_gcode_parser.cpp",
+          "line": 108
+        },
+        {
+          "name": "RelativePositioning",
+          "file": "\/data\/DW\/tests\/test_gcode_parser.cpp",
+          "line": 122
+        },
+        {
+          "name": "MCommands",
+          "file": "\/data\/DW\/tests\/test_gcode_parser.cpp",
+          "line": 136
+        },
+        {
+          "name": "InlineCommentStripped",
+          "file": "\/data\/DW\/tests\/test_gcode_parser.cpp",
+          "line": 150
+        }
+      ]
+    },
+    {
+      "name": "BinPacker",
+      "tests": 14,
+      "testsuite": [
+        {
+          "name": "SinglePartFitsOnSheet",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 12
+        },
+        {
+          "name": "MultiplePartsPlaced",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 29
+        },
+        {
+          "name": "PartTooLargeForSheet",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 49
+        },
+        {
+          "name": "EmptyPartsReturnsEmptyPlan",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 66
+        },
+        {
+          "name": "EmptySheetsReturnsEmptyPlan",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 79
+        },
+        {
+          "name": "PartQuantityExpanded",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 92
+        },
+        {
+          "name": "KerfReducesAvailableSpace",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 108
+        },
+        {
+          "name": "MarginReducesAvailableSpace",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 133
+        },
+        {
+          "name": "NonZeroEfficiency",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 151
+        },
+        {
+          "name": "VerySmallParts",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 194
+        },
+        {
+          "name": "ExactFit_NoWaste",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 211
+        },
+        {
+          "name": "ZeroKerfZeroMargin_MaxPacking",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 225
+        },
+        {
+          "name": "ManySmallParts_StressTest",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 241
+        },
+        {
+          "name": "RotationAllowsFit",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 258
+        }
+      ]
+    },
+    {
+      "name": "CutOptimizer",
+      "tests": 2,
+      "testsuite": [
+        {
+          "name": "FactoryCreatesBinPacker",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 171
+        },
+        {
+          "name": "FactoryCreatesGuillotine",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 182
+        }
+      ]
+    },
+    {
+      "name": "Guillotine",
+      "tests": 7,
+      "testsuite": [
+        {
+          "name": "SinglePartFitsOnSheet",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 274
+        },
+        {
+          "name": "MultiplePartsPlaced",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 290
+        },
+        {
+          "name": "PartTooLarge",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 308
+        },
+        {
+          "name": "EmptyPartsReturnsEmptyPlan",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 323
+        },
+        {
+          "name": "KerfReducesSpace",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 335
+        },
+        {
+          "name": "QuantityExpansion",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 356
+        },
+        {
+          "name": "NonZeroEfficiency",
+          "file": "\/data\/DW\/tests\/test_optimizer.cpp",
+          "line": 370
+        }
+      ]
+    },
+    {
+      "name": "StringUtils",
+      "tests": 55,
+      "testsuite": [
+        {
+          "name": "Trim_RemovesBothSides",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 9
+        },
+        {
+          "name": "Trim_TabsAndNewlines",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 13
+        },
+        {
+          "name": "Trim_EmptyString",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 17
+        },
+        {
+          "name": "Trim_AllWhitespace",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 21
+        },
+        {
+          "name": "Trim_NoWhitespace",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 25
+        },
+        {
+          "name": "TrimLeft_OnlyLeft",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 29
+        },
+        {
+          "name": "TrimRight_OnlyRight",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 33
+        },
+        {
+          "name": "ToLower_Basic",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 39
+        },
+        {
+          "name": "ToLower_Mixed",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 43
+        },
+        {
+          "name": "ToLower_AlreadyLower",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 47
+        },
+        {
+          "name": "ToUpper_Basic",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 51
+        },
+        {
+          "name": "ToUpper_WithNumbers",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 55
+        },
+        {
+          "name": "Split_Char_Basic",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 61
+        },
+        {
+          "name": "Split_Char_Empty",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 69
+        },
+        {
+          "name": "Split_Char_NoDelimiter",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 75
+        },
+        {
+          "name": "Split_Char_TrailingDelimiter",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 81
+        },
+        {
+          "name": "Split_String_Basic",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 88
+        },
+        {
+          "name": "Join_Basic",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 98
+        },
+        {
+          "name": "Join_SingleElement",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 102
+        },
+        {
+          "name": "Join_Empty",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 106
+        },
+        {
+          "name": "StartsWith_True",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 112
+        },
+        {
+          "name": "StartsWith_False",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 116
+        },
+        {
+          "name": "StartsWith_EmptyPrefix",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 120
+        },
+        {
+          "name": "EndsWith_True",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 124
+        },
+        {
+          "name": "EndsWith_False",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 128
+        },
+        {
+          "name": "EndsWith_EmptyString",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 132
+        },
+        {
+          "name": "Contains_True",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 138
+        },
+        {
+          "name": "Contains_False",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 142
+        },
+        {
+          "name": "ContainsIgnoreCase_True",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 146
+        },
+        {
+          "name": "ContainsIgnoreCase_False",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 150
+        },
+        {
+          "name": "Replace_Basic",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 156
+        },
+        {
+          "name": "Replace_Multiple",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 160
+        },
+        {
+          "name": "Replace_NotFound",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 164
+        },
+        {
+          "name": "FormatFileSize_Bytes",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 170
+        },
+        {
+          "name": "FormatFileSize_Kilobytes",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 175
+        },
+        {
+          "name": "FormatFileSize_Megabytes",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 181
+        },
+        {
+          "name": "FormatFileSize_Zero",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 186
+        },
+        {
+          "name": "FormatNumber_Small",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 193
+        },
+        {
+          "name": "FormatNumber_Thousands",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 198
+        },
+        {
+          "name": "FormatNumber_Negative",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 204
+        },
+        {
+          "name": "ParseInt_Valid",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 212
+        },
+        {
+          "name": "ParseInt_Negative",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 218
+        },
+        {
+          "name": "ParseInt_Invalid",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 224
+        },
+        {
+          "name": "ParseFloat_Valid",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 229
+        },
+        {
+          "name": "ParseFloat_Invalid",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 235
+        },
+        {
+          "name": "ParseDouble_Valid",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 240
+        },
+        {
+          "name": "ParseDouble_Invalid",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 246
+        },
+        {
+          "name": "EscapeLike_NoSpecialChars",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 253
+        },
+        {
+          "name": "EscapeLike_PercentEscaped",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 257
+        },
+        {
+          "name": "EscapeLike_UnderscoreEscaped",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 261
+        },
+        {
+          "name": "EscapeLike_BackslashEscaped",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 265
+        },
+        {
+          "name": "EscapeLike_MultipleWildcards",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 269
+        },
+        {
+          "name": "EscapeLike_EmptyString",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 273
+        },
+        {
+          "name": "EscapeLike_NoEscapeNeeded",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 277
+        },
+        {
+          "name": "EscapeLike_MixedContent",
+          "file": "\/data\/DW\/tests\/test_string_utils.cpp",
+          "line": 281
+        }
+      ]
+    },
+    {
+      "name": "FileUtils",
+      "tests": 23,
+      "testsuite": [
+        {
+          "name": "GetExtension_Basic",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 31
+        },
+        {
+          "name": "GetExtension_Uppercase",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 35
+        },
+        {
+          "name": "GetExtension_NoExtension",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 39
+        },
+        {
+          "name": "GetExtension_MultiDot",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 43
+        },
+        {
+          "name": "GetStem_Basic",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 47
+        },
+        {
+          "name": "GetStem_NoExtension",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 51
+        },
+        {
+          "name": "GetParent_Basic",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 55
+        },
+        {
+          "name": "WriteAndReadText",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 61
+        },
+        {
+          "name": "ReadText_NonExistent",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 72
+        },
+        {
+          "name": "WriteAndReadBinary",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 79
+        },
+        {
+          "name": "ReadBinary_NonExistent",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 91
+        },
+        {
+          "name": "Exists_CreatedFile",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 98
+        },
+        {
+          "name": "Exists_Directory",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 108
+        },
+        {
+          "name": "Exists_NonExistent",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 115
+        },
+        {
+          "name": "CreateDirectory_Single",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 121
+        },
+        {
+          "name": "CreateDirectories_Nested",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 128
+        },
+        {
+          "name": "Remove_File",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 137
+        },
+        {
+          "name": "Copy_File",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 149
+        },
+        {
+          "name": "Move_File",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 164
+        },
+        {
+          "name": "GetFileSize_NonZero",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 177
+        },
+        {
+          "name": "ListFiles_Basic",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 189
+        },
+        {
+          "name": "ListFiles_FilteredByExtension",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 199
+        },
+        {
+          "name": "MakeAbsolute_RelativePath",
+          "file": "\/data\/DW\/tests\/test_file_utils.cpp",
+          "line": 211
+        }
+      ]
+    },
+    {
+      "name": "Mesh",
+      "tests": 16,
+      "testsuite": [
+        {
+          "name": "DefaultConstruction_Empty",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 47
+        },
+        {
+          "name": "ConstructFromData",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 55
+        },
+        {
+          "name": "Bounds_Triangle",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 65
+        },
+        {
+          "name": "Bounds_Cube",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 76
+        },
+        {
+          "name": "RecalculateBounds",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 87
+        },
+        {
+          "name": "SetName",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 97
+        },
+        {
+          "name": "Clear",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 105
+        },
+        {
+          "name": "AddVertexAndTriangle",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 116
+        },
+        {
+          "name": "Reserve_DoesNotChangeSize",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 129
+        },
+        {
+          "name": "Clone_IndependentCopy",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 138
+        },
+        {
+          "name": "Merge_CombinesGeometry",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 154
+        },
+        {
+          "name": "CenterOnOrigin",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 169
+        },
+        {
+          "name": "NormalizeSize",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 182
+        },
+        {
+          "name": "Transform_Scale",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 195
+        },
+        {
+          "name": "Transform_Translate",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 204
+        },
+        {
+          "name": "RecalculateNormals",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 215
+        }
+      ]
+    },
+    {
+      "name": "AABB",
+      "tests": 7,
+      "testsuite": [
+        {
+          "name": "DefaultInvalid",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 235
+        },
+        {
+          "name": "ExpandPoints",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 240
+        },
+        {
+          "name": "Center",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 251
+        },
+        {
+          "name": "Contains",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 259
+        },
+        {
+          "name": "Intersects",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 265
+        },
+        {
+          "name": "MaxExtent",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 274
+        },
+        {
+          "name": "Reset",
+          "file": "\/data\/DW\/tests\/test_mesh.cpp",
+          "line": 279
+        }
+      ]
+    },
+    {
+      "name": "Database",
+      "tests": 2,
+      "testsuite": [
+        {
+          "name": "Open_InMemory",
+          "file": "\/data\/DW\/tests\/test_database.cpp",
+          "line": 21
+        },
+        {
+          "name": "Close",
+          "file": "\/data\/DW\/tests\/test_database.cpp",
+          "line": 28
+        }
+      ]
+    },
+    {
+      "name": "DatabaseTest",
+      "tests": 12,
+      "testsuite": [
+        {
+          "name": "Execute_CreateTable",
+          "file": "\/data\/DW\/tests\/test_database.cpp",
+          "line": 38
+        },
+        {
+          "name": "Execute_InvalidSQL",
+          "file": "\/data\/DW\/tests\/test_database.cpp",
+          "line": 42
+        },
+        {
+          "name": "PrepareAndBind_InsertAndQuery",
+          "file": "\/data\/DW\/tests\/test_database.cpp",
+          "line": 49
+        },
+        {
+          "name": "PrepareAndBind_Null",
+          "file": "\/data\/DW\/tests\/test_database.cpp",
+          "line": 73
+        },
+        {
+          "name": "PrepareAndBind_Blob",
+          "file": "\/data\/DW\/tests\/test_database.cpp",
+          "line": 85
+        },
+        {
+          "name": "Statement_Reset",
+          "file": "\/data\/DW\/tests\/test_database.cpp",
+          "line": 99
+        },
+        {
+          "name": "Statement_ColumnName",
+          "file": "\/data\/DW\/tests\/test_database.cpp",
+          "line": 115
+        },
+        {
+          "name": "Transaction_Commit",
+          "file": "\/data\/DW\/tests\/test_database.cpp",
+          "line": 126
+        },
+        {
+          "name": "Transaction_Rollback",
+          "file": "\/data\/DW\/tests\/test_database.cpp",
+          "line": 141
+        },
+        {
+          "name": "Transaction_AutoRollbackOnDestruction",
+          "file": "\/data\/DW\/tests\/test_database.cpp",
+          "line": 156
+        },
+        {
+          "name": "MultipleInserts_LastInsertId",
+          "file": "\/data\/DW\/tests\/test_database.cpp",
+          "line": 172
+        },
+        {
+          "name": "Statement_MoveConstruct",
+          "file": "\/data\/DW\/tests\/test_database.cpp",
+          "line": 187
+        }
+      ]
+    },
+    {
+      "name": "ModelRepoTest",
+      "tests": 20,
+      "testsuite": [
+        {
+          "name": "Insert_ReturnsId",
+          "file": "\/data\/DW\/tests\/test_model_repository.cpp",
+          "line": 42
+        },
+        {
+          "name": "Insert_DuplicateHashFails",
+          "file": "\/data\/DW\/tests\/test_model_repository.cpp",
+          "line": 49
+        },
+        {
+          "name": "FindById_Found",
+          "file": "\/data\/DW\/tests\/test_model_repository.cpp",
+          "line": 59
+        },
+        {
+          "name": "FindById_NotFound",
+          "file": "\/data\/DW\/tests\/test_model_repository.cpp",
+          "line": 74
+        },
+        {
+          "name": "FindByHash_Found",
+          "file": "\/data\/DW\/tests\/test_model_repository.cpp",
+          "line": 81
+        },
+        {
+          "name": "FindByHash_NotFound",
+          "file": "\/data\/DW\/tests\/test_model_repository.cpp",
+          "line": 90
+        },
+        {
+          "name": "FindAll_Empty",
+          "file": "\/data\/DW\/tests\/test_model_repository.cpp",
+          "line": 97
+        },
+        {
+          "name": "FindAll_Multiple",
+          "file": "\/data\/DW\/tests\/test_model_repository.cpp",
+          "line": 102
+        },
+        {
+          "name": "FindByName_Matches",
+          "file": "\/data\/DW\/tests\/test_model_repository.cpp",
+          "line": 113
+        },
+        {
+          "name": "FindByName_NoMatch",
+          "file": "\/data\/DW\/tests\/test_model_repository.cpp",
+          "line": 122
+        },
+        {
+          "name": "FindByFormat",
+          "file": "\/data\/DW\/tests\/test_model_repository.cpp",
+          "line": 130
+        },
+        {
+          "name": "Update_ChangesName",
+          "file": "\/data\/DW\/tests\/test_model_repository.cpp",
+          "line": 146
+        },
+        {
+          "name": "UpdateThumbnail",
+          "file": "\/data\/DW\/tests\/test_model_repository.cpp",
+          "line": 163
+        },
+        {
+          "name": "UpdateTags",
+          "file": "\/data\/DW\/tests\/test_model_repository.cpp",
+          "line": 176
+        },
+        {
+          "name": "FindByTag",
+          "file": "\/data\/DW\/tests\/test_model_repository.cpp",
+          "line": 188
+        },
+        {
+          "name": "Remove_ById",
+          "file": "\/data\/DW\/tests\/test_model_repository.cpp",
+          "line": 204
+        },
+        {
+          "name": "RemoveByHash",
+          "file": "\/data\/DW\/tests\/test_model_repository.cpp",
+          "line": 213
+        },
+        {
+          "name": "Exists_True",
+          "file": "\/data\/DW\/tests\/test_model_repository.cpp",
+          "line": 223
+        },
+        {
+          "name": "Exists_False",
+          "file": "\/data\/DW\/tests\/test_model_repository.cpp",
+          "line": 228
+        },
+        {
+          "name": "Count",
+          "file": "\/data\/DW\/tests\/test_model_repository.cpp",
+          "line": 232
+        }
+      ]
+    },
+    {
+      "name": "MaterialRepoTest",
+      "tests": 21,
+      "testsuite": [
+        {
+          "name": "Insert_ReturnsId",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 43
+        },
+        {
+          "name": "Insert_MultipleMaterials",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 50
+        },
+        {
+          "name": "FindById_Found",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 64
+        },
+        {
+          "name": "FindById_NotFound",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 81
+        },
+        {
+          "name": "FindAll_Empty",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 88
+        },
+        {
+          "name": "FindAll_OrderedByName",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 93
+        },
+        {
+          "name": "FindByCategory_Hardwood",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 107
+        },
+        {
+          "name": "FindByCategory_Softwood",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 118
+        },
+        {
+          "name": "FindByCategory_Composite",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 129
+        },
+        {
+          "name": "FindByCategory_NoneFound",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 138
+        },
+        {
+          "name": "FindByName_ExactMatch",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 147
+        },
+        {
+          "name": "FindByName_PartialMatch",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 156
+        },
+        {
+          "name": "FindByName_CaseInsensitive",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 165
+        },
+        {
+          "name": "FindByName_NotFound",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 173
+        },
+        {
+          "name": "Update_Success",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 182
+        },
+        {
+          "name": "Update_CategoryChange",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 203
+        },
+        {
+          "name": "Remove_Success",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 221
+        },
+        {
+          "name": "Remove_NonExistent",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 230
+        },
+        {
+          "name": "Count_Empty",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 236
+        },
+        {
+          "name": "Count_Multiple",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 240
+        },
+        {
+          "name": "Count_AfterRemove",
+          "file": "\/data\/DW\/tests\/test_material_repository.cpp",
+          "line": 248
+        }
+      ]
+    },
+    {
+      "name": "ProjectRepoTest",
+      "tests": 15,
+      "testsuite": [
+        {
+          "name": "Insert_ReturnsId",
+          "file": "\/data\/DW\/tests\/test_project_repository.cpp",
+          "line": 48
+        },
+        {
+          "name": "FindById_Found",
+          "file": "\/data\/DW\/tests\/test_project_repository.cpp",
+          "line": 56
+        },
+        {
+          "name": "FindById_NotFound",
+          "file": "\/data\/DW\/tests\/test_project_repository.cpp",
+          "line": 66
+        },
+        {
+          "name": "FindAll_Empty",
+          "file": "\/data\/DW\/tests\/test_project_repository.cpp",
+          "line": 73
+        },
+        {
+          "name": "FindAll_Multiple",
+          "file": "\/data\/DW\/tests\/test_project_repository.cpp",
+          "line": 78
+        },
+        {
+          "name": "FindByName",
+          "file": "\/data\/DW\/tests\/test_project_repository.cpp",
+          "line": 89
+        },
+        {
+          "name": "Update_ChangesDescription",
+          "file": "\/data\/DW\/tests\/test_project_repository.cpp",
+          "line": 100
+        },
+        {
+          "name": "Remove",
+          "file": "\/data\/DW\/tests\/test_project_repository.cpp",
+          "line": 116
+        },
+        {
+          "name": "Count",
+          "file": "\/data\/DW\/tests\/test_project_repository.cpp",
+          "line": 127
+        },
+        {
+          "name": "AddModel_ToProject",
+          "file": "\/data\/DW\/tests\/test_project_repository.cpp",
+          "line": 137
+        },
+        {
+          "name": "RemoveModel_FromProject",
+          "file": "\/data\/DW\/tests\/test_project_repository.cpp",
+          "line": 145
+        },
+        {
+          "name": "GetModelIds",
+          "file": "\/data\/DW\/tests\/test_project_repository.cpp",
+          "line": 156
+        },
+        {
+          "name": "GetProjectsForModel",
+          "file": "\/data\/DW\/tests\/test_project_repository.cpp",
+          "line": 170
+        },
+        {
+          "name": "HasModel_False",
+          "file": "\/data\/DW\/tests\/test_project_repository.cpp",
+          "line": 182
+        },
+        {
+          "name": "UpdateModelOrder",
+          "file": "\/data\/DW\/tests\/test_project_repository.cpp",
+          "line": 187
+        }
+      ]
+    },
+    {
+      "name": "LoaderFactory",
+      "tests": 13,
+      "testsuite": [
+        {
+          "name": "IsSupported_STL",
+          "file": "\/data\/DW\/tests\/test_loader_factory.cpp",
+          "line": 11
+        },
+        {
+          "name": "IsSupported_OBJ",
+          "file": "\/data\/DW\/tests\/test_loader_factory.cpp",
+          "line": 16
+        },
+        {
+          "name": "IsSupported_3MF",
+          "file": "\/data\/DW\/tests\/test_loader_factory.cpp",
+          "line": 21
+        },
+        {
+          "name": "IsSupported_Unknown",
+          "file": "\/data\/DW\/tests\/test_loader_factory.cpp",
+          "line": 26
+        },
+        {
+          "name": "GetLoaderByExtension_STL",
+          "file": "\/data\/DW\/tests\/test_loader_factory.cpp",
+          "line": 34
+        },
+        {
+          "name": "GetLoaderByExtension_OBJ",
+          "file": "\/data\/DW\/tests\/test_loader_factory.cpp",
+          "line": 40
+        },
+        {
+          "name": "GetLoaderByExtension_Unknown",
+          "file": "\/data\/DW\/tests\/test_loader_factory.cpp",
+          "line": 46
+        },
+        {
+          "name": "SupportedExtensions_ContainsKnownFormats",
+          "file": "\/data\/DW\/tests\/test_loader_factory.cpp",
+          "line": 53
+        },
+        {
+          "name": "GetLoader_ByPath",
+          "file": "\/data\/DW\/tests\/test_loader_factory.cpp",
+          "line": 70
+        },
+        {
+          "name": "GetLoader_ByPath_CaseInsensitive",
+          "file": "\/data\/DW\/tests\/test_loader_factory.cpp",
+          "line": 76
+        },
+        {
+          "name": "LoadFromBuffer_STL",
+          "file": "\/data\/DW\/tests\/test_loader_factory.cpp",
+          "line": 84
+        },
+        {
+          "name": "LoadFromBuffer_OBJ_ValidTriangle",
+          "file": "\/data\/DW\/tests\/test_loader_factory.cpp",
+          "line": 96
+        },
+        {
+          "name": "LoadFromBuffer_UnsupportedExtension",
+          "file": "\/data\/DW\/tests\/test_loader_factory.cpp",
+          "line": 109
+        }
+      ]
+    },
+    {
+      "name": "Project",
+      "tests": 13,
+      "testsuite": [
+        {
+          "name": "DefaultState",
+          "file": "\/data\/DW\/tests\/test_project.cpp",
+          "line": 9
+        },
+        {
+          "name": "SetName",
+          "file": "\/data\/DW\/tests\/test_project.cpp",
+          "line": 18
+        },
+        {
+          "name": "SetDescription",
+          "file": "\/data\/DW\/tests\/test_project.cpp",
+          "line": 24
+        },
+        {
+          "name": "SetFilePath",
+          "file": "\/data\/DW\/tests\/test_project.cpp",
+          "line": 30
+        },
+        {
+          "name": "ModifiedFlag",
+          "file": "\/data\/DW\/tests\/test_project.cpp",
+          "line": 38
+        },
+        {
+          "name": "AddModel",
+          "file": "\/data\/DW\/tests\/test_project.cpp",
+          "line": 51
+        },
+        {
+          "name": "AddModel_NoDuplicate",
+          "file": "\/data\/DW\/tests\/test_project.cpp",
+          "line": 63
+        },
+        {
+          "name": "RemoveModel",
+          "file": "\/data\/DW\/tests\/test_project.cpp",
+          "line": 72
+        },
+        {
+          "name": "RemoveModel_NotPresent",
+          "file": "\/data\/DW\/tests\/test_project.cpp",
+          "line": 85
+        },
+        {
+          "name": "HasModel_False",
+          "file": "\/data\/DW\/tests\/test_project.cpp",
+          "line": 92
+        },
+        {
+          "name": "ModelIds_Order",
+          "file": "\/data\/DW\/tests\/test_project.cpp",
+          "line": 97
+        },
+        {
+          "name": "ReorderModel",
+          "file": "\/data\/DW\/tests\/test_project.cpp",
+          "line": 110
+        },
+        {
+          "name": "RecordAccess",
+          "file": "\/data\/DW\/tests\/test_project.cpp",
+          "line": 125
+        }
+      ]
+    },
+    {
+      "name": "ExporterTest",
+      "tests": 8,
+      "testsuite": [
+        {
+          "name": "STLBinary_Roundtrip",
+          "file": "\/data\/DW\/tests\/test_exporter.cpp",
+          "line": 53
+        },
+        {
+          "name": "STLBinary_MultiTriangle",
+          "file": "\/data\/DW\/tests\/test_exporter.cpp",
+          "line": 70
+        },
+        {
+          "name": "STLASCII_Roundtrip",
+          "file": "\/data\/DW\/tests\/test_exporter.cpp",
+          "line": 86
+        },
+        {
+          "name": "OBJ_Roundtrip",
+          "file": "\/data\/DW\/tests\/test_exporter.cpp",
+          "line": 108
+        },
+        {
+          "name": "AutoDetect_STL",
+          "file": "\/data\/DW\/tests\/test_exporter.cpp",
+          "line": 131
+        },
+        {
+          "name": "AutoDetect_OBJ",
+          "file": "\/data\/DW\/tests\/test_exporter.cpp",
+          "line": 141
+        },
+        {
+          "name": "EmptyMesh",
+          "file": "\/data\/DW\/tests\/test_exporter.cpp",
+          "line": 153
+        },
+        {
+          "name": "STLBinary_PreservesGeometry",
+          "file": "\/data\/DW\/tests\/test_exporter.cpp",
+          "line": 166
+        }
+      ]
+    },
+    {
+      "name": "EventBusTest",
+      "tests": 10,
+      "testsuite": [
+        {
+          "name": "SubscribeAndReceive_SingleSubscriber",
+          "file": "\/data\/DW\/tests\/test_event_bus.cpp",
+          "line": 19
+        },
+        {
+          "name": "SubscribeAndReceive_MultipleSubscribers",
+          "file": "\/data\/DW\/tests\/test_event_bus.cpp",
+          "line": 40
+        },
+        {
+          "name": "SubscribeAndReceive_DifferentEventTypes",
+          "file": "\/data\/DW\/tests\/test_event_bus.cpp",
+          "line": 62
+        },
+        {
+          "name": "Publish_NoSubscribers_DoesNotCrash",
+          "file": "\/data\/DW\/tests\/test_event_bus.cpp",
+          "line": 87
+        },
+        {
+          "name": "WeakRefCleanup_ExpiredSubscriberRemoved",
+          "file": "\/data\/DW\/tests\/test_event_bus.cpp",
+          "line": 98
+        },
+        {
+          "name": "WeakRefCleanup_MixedAliveAndExpired",
+          "file": "\/data\/DW\/tests\/test_event_bus.cpp",
+          "line": 123
+        },
+        {
+          "name": "ReentrancySafety_SubscribeDuringPublish",
+          "file": "\/data\/DW\/tests\/test_event_bus.cpp",
+          "line": 156
+        },
+        {
+          "name": "ExceptionIsolation_HandlerThrowDoesNotBlockOthers",
+          "file": "\/data\/DW\/tests\/test_event_bus.cpp",
+          "line": 185
+        },
+        {
+          "name": "EmptyEvent_WorksWithNoFields",
+          "file": "\/data\/DW\/tests\/test_event_bus.cpp",
+          "line": 210
+        },
+        {
+          "name": "SubscriptionId_KeepsHandlerAlive",
+          "file": "\/data\/DW\/tests\/test_event_bus.cpp",
+          "line": 225
+        }
+      ]
+    },
+    {
+      "name": "ConnectionPoolTest",
+      "tests": 13,
+      "testsuite": [
+        {
+          "name": "ConstructorCreatesConnections",
+          "file": "\/data\/DW\/tests\/test_connection_pool.cpp",
+          "line": 24
+        },
+        {
+          "name": "AcquireReturnsValidConnection",
+          "file": "\/data\/DW\/tests\/test_connection_pool.cpp",
+          "line": 32
+        },
+        {
+          "name": "ReleaseReturnsConnectionToPool",
+          "file": "\/data\/DW\/tests\/test_connection_pool.cpp",
+          "line": 45
+        },
+        {
+          "name": "ExhaustionThrowsException",
+          "file": "\/data\/DW\/tests\/test_connection_pool.cpp",
+          "line": 57
+        },
+        {
+          "name": "ScopedConnectionAutoReleases",
+          "file": "\/data\/DW\/tests\/test_connection_pool.cpp",
+          "line": 72
+        },
+        {
+          "name": "ScopedConnectionOperators",
+          "file": "\/data\/DW\/tests\/test_connection_pool.cpp",
+          "line": 87
+        },
+        {
+          "name": "ScopedConnectionMoveConstructor",
+          "file": "\/data\/DW\/tests\/test_connection_pool.cpp",
+          "line": 107
+        },
+        {
+          "name": "ScopedConnectionMoveAssignment",
+          "file": "\/data\/DW\/tests\/test_connection_pool.cpp",
+          "line": 121
+        },
+        {
+          "name": "PooledConnectionsHaveWALMode",
+          "file": "\/data\/DW\/tests\/test_connection_pool.cpp",
+          "line": 138
+        },
+        {
+          "name": "PooledConnectionsHaveSynchronousNormal",
+          "file": "\/data\/DW\/tests\/test_connection_pool.cpp",
+          "line": 151
+        },
+        {
+          "name": "ConcurrentAccessIsThreadSafe",
+          "file": "\/data\/DW\/tests\/test_connection_pool.cpp",
+          "line": 164
+        },
+        {
+          "name": "DestructorClosesConnections",
+          "file": "\/data\/DW\/tests\/test_connection_pool.cpp",
+          "line": 196
+        },
+        {
+          "name": "ReleaseHandlesNullptr",
+          "file": "\/data\/DW\/tests\/test_connection_pool.cpp",
+          "line": 211
+        }
+      ]
+    },
+    {
+      "name": "MainThreadQueueTest",
+      "tests": 10,
+      "testsuite": [
+        {
+          "name": "EnqueueSingleTask",
+          "file": "\/data\/DW\/tests\/test_main_thread_queue.cpp",
+          "line": 26
+        },
+        {
+          "name": "FIFOOrder",
+          "file": "\/data\/DW\/tests\/test_main_thread_queue.cpp",
+          "line": 38
+        },
+        {
+          "name": "ProcessEmptyQueue",
+          "file": "\/data\/DW\/tests\/test_main_thread_queue.cpp",
+          "line": 55
+        },
+        {
+          "name": "SizeTracking",
+          "file": "\/data\/DW\/tests\/test_main_thread_queue.cpp",
+          "line": 64
+        },
+        {
+          "name": "CrossThreadEnqueue",
+          "file": "\/data\/DW\/tests\/test_main_thread_queue.cpp",
+          "line": 80
+        },
+        {
+          "name": "ShutdownUnblocksEnqueue",
+          "file": "\/data\/DW\/tests\/test_main_thread_queue.cpp",
+          "line": 105
+        },
+        {
+          "name": "EnqueueAfterShutdown",
+          "file": "\/data\/DW\/tests\/test_main_thread_queue.cpp",
+          "line": 135
+        },
+        {
+          "name": "MultipleProcessCalls",
+          "file": "\/data\/DW\/tests\/test_main_thread_queue.cpp",
+          "line": 147
+        },
+        {
+          "name": "IsMainThreadTrue",
+          "file": "\/data\/DW\/tests\/test_main_thread_queue.cpp",
+          "line": 167
+        },
+        {
+          "name": "IsMainThreadFalse",
+          "file": "\/data\/DW\/tests\/test_main_thread_queue.cpp",
+          "line": 173
+        }
+      ]
+    },
+    {
+      "name": "Vec3",
+      "tests": 9,
+      "testsuite": [
+        {
+          "name": "ExplicitZero",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 16
+        },
+        {
+          "name": "Add",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 25
+        },
+        {
+          "name": "Subtract",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 34
+        },
+        {
+          "name": "ScalarMultiply",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 43
+        },
+        {
+          "name": "Length",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 51
+        },
+        {
+          "name": "Normalized",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 56
+        },
+        {
+          "name": "Normalized_ZeroVector",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 64
+        },
+        {
+          "name": "Dot",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 70
+        },
+        {
+          "name": "Cross",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 79
+        }
+      ]
+    },
+    {
+      "name": "Mat4",
+      "tests": 15,
+      "testsuite": [
+        {
+          "name": "Identity",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 90
+        },
+        {
+          "name": "Translate",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 102
+        },
+        {
+          "name": "Translate_Direction_Unaffected",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 113
+        },
+        {
+          "name": "Scale",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 125
+        },
+        {
+          "name": "Scale_Uniform",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 134
+        },
+        {
+          "name": "RotateZ_90Degrees",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 145
+        },
+        {
+          "name": "RotateX_90Degrees",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 154
+        },
+        {
+          "name": "RotateY_90Degrees",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 163
+        },
+        {
+          "name": "Rotate_360_Identity",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 172
+        },
+        {
+          "name": "Multiply_Identity",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 183
+        },
+        {
+          "name": "Multiply_TranslateScale",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 195
+        },
+        {
+          "name": "Perspective_NonZero",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 209
+        },
+        {
+          "name": "LookAt_ForwardIsNegZ",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 220
+        },
+        {
+          "name": "Ortho_CenterMapsToOrigin",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 234
+        },
+        {
+          "name": "Ortho_CornerMapsToNDCCorner",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 244
+        }
+      ]
+    },
+    {
+      "name": "Color",
+      "tests": 2,
+      "testsuite": [
+        {
+          "name": "FromRGB",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 255
+        },
+        {
+          "name": "FromHex",
+          "file": "\/data\/DW\/tests\/test_types.cpp",
+          "line": 263
+        }
+      ]
+    },
+    {
+      "name": "GcodeAnalyzer",
+      "tests": 10,
+      "testsuite": [
+        {
+          "name": "EmptyProgram",
+          "file": "\/data\/DW\/tests\/test_gcode_analyzer.cpp",
+          "line": 10
+        },
+        {
+          "name": "SingleRapidMove",
+          "file": "\/data\/DW\/tests\/test_gcode_analyzer.cpp",
+          "line": 24
+        },
+        {
+          "name": "SingleCuttingMove",
+          "file": "\/data\/DW\/tests\/test_gcode_analyzer.cpp",
+          "line": 37
+        },
+        {
+          "name": "DiagonalMove_Length",
+          "file": "\/data\/DW\/tests\/test_gcode_analyzer.cpp",
+          "line": 50
+        },
+        {
+          "name": "MixedRapidAndCutting",
+          "file": "\/data\/DW\/tests\/test_gcode_analyzer.cpp",
+          "line": 61
+        },
+        {
+          "name": "EstimatedTime",
+          "file": "\/data\/DW\/tests\/test_gcode_analyzer.cpp",
+          "line": 78
+        },
+        {
+          "name": "EstimatedTime_DefaultFeedRate",
+          "file": "\/data\/DW\/tests\/test_gcode_analyzer.cpp",
+          "line": 89
+        },
+        {
+          "name": "ToolChangeCount",
+          "file": "\/data\/DW\/tests\/test_gcode_analyzer.cpp",
+          "line": 102
+        },
+        {
+          "name": "Bounds",
+          "file": "\/data\/DW\/tests\/test_gcode_analyzer.cpp",
+          "line": 121
+        },
+        {
+          "name": "CommandCount_SkipsUnknown",
+          "file": "\/data\/DW\/tests\/test_gcode_analyzer.cpp",
+          "line": 138
+        }
+      ]
+    },
+    {
+      "name": "Schema",
+      "tests": 6,
+      "testsuite": [
+        {
+          "name": "Initialize_FreshDatabase",
+          "file": "\/data\/DW\/tests\/test_schema.cpp",
+          "line": 8
+        },
+        {
+          "name": "GetVersion_AfterInit",
+          "file": "\/data\/DW\/tests\/test_schema.cpp",
+          "line": 17
+        },
+        {
+          "name": "GetVersion_BeforeInit",
+          "file": "\/data\/DW\/tests\/test_schema.cpp",
+          "line": 25
+        },
+        {
+          "name": "DoubleInit_Idempotent",
+          "file": "\/data\/DW\/tests\/test_schema.cpp",
+          "line": 32
+        },
+        {
+          "name": "TablesCreated",
+          "file": "\/data\/DW\/tests\/test_schema.cpp",
+          "line": 41
+        },
+        {
+          "name": "IndexesCreated",
+          "file": "\/data\/DW\/tests\/test_schema.cpp",
+          "line": 79
+        }
+      ]
+    },
+    {
+      "name": "Camera",
+      "tests": 26,
+      "testsuite": [
+        {
+          "name": "DefaultState",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 15
+        },
+        {
+          "name": "DefaultTarget_Origin",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 23
+        },
+        {
+          "name": "Position_NonZero",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 32
+        },
+        {
+          "name": "Position_ChangesWithDistance",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 40
+        },
+        {
+          "name": "Orbit_ChangesYaw",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 50
+        },
+        {
+          "name": "Orbit_ChangesPitch",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 57
+        },
+        {
+          "name": "Orbit_PitchClamped",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 64
+        },
+        {
+          "name": "Orbit_YawWraps",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 75
+        },
+        {
+          "name": "Zoom_ReducesDistance",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 86
+        },
+        {
+          "name": "Zoom_IncreasesDistance",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 93
+        },
+        {
+          "name": "Zoom_ClampsMinDistance",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 100
+        },
+        {
+          "name": "Zoom_ClampsMaxDistance",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 107
+        },
+        {
+          "name": "Pan_MovesTarget",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 116
+        },
+        {
+          "name": "FitToBounds_CentersOnBounds",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 131
+        },
+        {
+          "name": "FitToBounds_DistanceProportional",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 141
+        },
+        {
+          "name": "Reset_RestoresDefaults",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 150
+        },
+        {
+          "name": "Viewport_AspectRatio",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 165
+        },
+        {
+          "name": "Viewport_MinClamped",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 171
+        },
+        {
+          "name": "ViewMatrix_NotIdentity",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 181
+        },
+        {
+          "name": "ProjectionMatrix_ValidPerspective",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 197
+        },
+        {
+          "name": "SetDistance_Clamps",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 208
+        },
+        {
+          "name": "SetClipPlanes",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 217
+        },
+        {
+          "name": "Orbit_NegativeYaw_WrapsToPositive",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 226
+        },
+        {
+          "name": "Orbit_ExactlyZero",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 236
+        },
+        {
+          "name": "Orbit_Exactly360_WrapsToZero",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 243
+        },
+        {
+          "name": "Orbit_SmallNegative_WrapsCorrectly",
+          "file": "\/data\/DW\/tests\/test_camera.cpp",
+          "line": 253
+        }
+      ]
+    },
+    {
+      "name": "ArchiveTest",
+      "tests": 12,
+      "testsuite": [
+        {
+          "name": "CreateAndExtract_SingleFile",
+          "file": "\/data\/DW\/tests\/test_archive.cpp",
+          "line": 43
+        },
+        {
+          "name": "CreateAndExtract_MultipleFiles",
+          "file": "\/data\/DW\/tests\/test_archive.cpp",
+          "line": 60
+        },
+        {
+          "name": "CreateAndExtract_BinaryData",
+          "file": "\/data\/DW\/tests\/test_archive.cpp",
+          "line": 82
+        },
+        {
+          "name": "List_ReturnsEntries",
+          "file": "\/data\/DW\/tests\/test_archive.cpp",
+          "line": 100
+        },
+        {
+          "name": "List_NonExistentFile",
+          "file": "\/data\/DW\/tests\/test_archive.cpp",
+          "line": 115
+        },
+        {
+          "name": "IsValidArchive_True",
+          "file": "\/data\/DW\/tests\/test_archive.cpp",
+          "line": 122
+        },
+        {
+          "name": "IsValidArchive_RandomFile",
+          "file": "\/data\/DW\/tests\/test_archive.cpp",
+          "line": 129
+        },
+        {
+          "name": "IsValidArchive_NonExistent",
+          "file": "\/data\/DW\/tests\/test_archive.cpp",
+          "line": 134
+        },
+        {
+          "name": "Create_NonExistentDir",
+          "file": "\/data\/DW\/tests\/test_archive.cpp",
+          "line": 140
+        },
+        {
+          "name": "Create_EmptyDir",
+          "file": "\/data\/DW\/tests\/test_archive.cpp",
+          "line": 146
+        },
+        {
+          "name": "Extract_InvalidArchive",
+          "file": "\/data\/DW\/tests\/test_archive.cpp",
+          "line": 152
+        },
+        {
+          "name": "Extract_NonExistentArchive",
+          "file": "\/data\/DW\/tests\/test_archive.cpp",
+          "line": 158
+        }
+      ]
+    },
+    {
+      "name": "LibraryManagerTest",
+      "tests": 13,
+      "testsuite": [
+        {
+          "name": "ImportModel_Success",
+          "file": "\/data\/DW\/tests\/test_library_manager.cpp",
+          "line": 78
+        },
+        {
+          "name": "ImportModel_DuplicateDetected",
+          "file": "\/data\/DW\/tests\/test_library_manager.cpp",
+          "line": 86
+        },
+        {
+          "name": "ImportModel_NonExistent",
+          "file": "\/data\/DW\/tests\/test_library_manager.cpp",
+          "line": 96
+        },
+        {
+          "name": "ImportModel_UnsupportedFormat",
+          "file": "\/data\/DW\/tests\/test_library_manager.cpp",
+          "line": 102
+        },
+        {
+          "name": "GetAllModels_Empty",
+          "file": "\/data\/DW\/tests\/test_library_manager.cpp",
+          "line": 111
+        },
+        {
+          "name": "GetAllModels_AfterImport",
+          "file": "\/data\/DW\/tests\/test_library_manager.cpp",
+          "line": 116
+        },
+        {
+          "name": "SearchModels",
+          "file": "\/data\/DW\/tests\/test_library_manager.cpp",
+          "line": 126
+        },
+        {
+          "name": "FilterByFormat",
+          "file": "\/data\/DW\/tests\/test_library_manager.cpp",
+          "line": 138
+        },
+        {
+          "name": "GetModel_ById",
+          "file": "\/data\/DW\/tests\/test_library_manager.cpp",
+          "line": 149
+        },
+        {
+          "name": "UpdateTags",
+          "file": "\/data\/DW\/tests\/test_library_manager.cpp",
+          "line": 163
+        },
+        {
+          "name": "RemoveModel",
+          "file": "\/data\/DW\/tests\/test_library_manager.cpp",
+          "line": 177
+        },
+        {
+          "name": "ModelExists",
+          "file": "\/data\/DW\/tests\/test_library_manager.cpp",
+          "line": 189
+        },
+        {
+          "name": "ModelCount",
+          "file": "\/data\/DW\/tests\/test_library_manager.cpp",
+          "line": 202
+        }
+      ]
+    },
+    {
+      "name": "ThreeMFLoader",
+      "tests": 6,
+      "testsuite": [
+        {
+          "name": "SupportsExtension",
+          "file": "\/data\/DW\/tests\/test_threemf_loader.cpp",
+          "line": 7
+        },
+        {
+          "name": "Extensions_Contains3MF",
+          "file": "\/data\/DW\/tests\/test_threemf_loader.cpp",
+          "line": 15
+        },
+        {
+          "name": "LoadFromBuffer_EmptyData",
+          "file": "\/data\/DW\/tests\/test_threemf_loader.cpp",
+          "line": 26
+        },
+        {
+          "name": "LoadFromBuffer_GarbageData",
+          "file": "\/data\/DW\/tests\/test_threemf_loader.cpp",
+          "line": 33
+        },
+        {
+          "name": "LoadFromBuffer_TooSmall",
+          "file": "\/data\/DW\/tests\/test_threemf_loader.cpp",
+          "line": 40
+        },
+        {
+          "name": "Load_NonExistentFile",
+          "file": "\/data\/DW\/tests\/test_threemf_loader.cpp",
+          "line": 47
+        }
+      ]
+    },
+    {
+      "name": "ImportProgress",
+      "tests": 4,
+      "testsuite": [
+        {
+          "name": "PercentComplete_Zero",
+          "file": "\/data\/DW\/tests\/test_import_pipeline.cpp",
+          "line": 20
+        },
+        {
+          "name": "PercentComplete_Half",
+          "file": "\/data\/DW\/tests\/test_import_pipeline.cpp",
+          "line": 25
+        },
+        {
+          "name": "PercentComplete_Full",
+          "file": "\/data\/DW\/tests\/test_import_pipeline.cpp",
+          "line": 32
+        },
+        {
+          "name": "Reset",
+          "file": "\/data\/DW\/tests\/test_import_pipeline.cpp",
+          "line": 39
+        }
+      ]
+    },
+    {
+      "name": "ImportStageName",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "AllStages",
+          "file": "\/data\/DW\/tests\/test_import_pipeline.cpp",
+          "line": 56
+        }
+      ]
+    },
+    {
+      "name": "ImportTask",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "DefaultState",
+          "file": "\/data\/DW\/tests\/test_import_pipeline.cpp",
+          "line": 71
+        }
+      ]
+    },
+    {
+      "name": "ImportQueueTest",
+      "tests": 3,
+      "testsuite": [
+        {
+          "name": "EnqueueAndProcess",
+          "file": "\/data\/DW\/tests\/test_import_pipeline.cpp",
+          "line": 125
+        },
+        {
+          "name": "DuplicateRejected",
+          "file": "\/data\/DW\/tests\/test_import_pipeline.cpp",
+          "line": 154
+        },
+        {
+          "name": "Progress_TracksCorrectly",
+          "file": "\/data\/DW\/tests\/test_import_pipeline.cpp",
+          "line": 182
+        }
+      ]
+    },
+    {
+      "name": "ConfigWatcherTest",
+      "tests": 4,
+      "testsuite": [
+        {
+          "name": "CallbackNotFiredBeforeInterval",
+          "file": "\/data\/DW\/tests\/test_config_watcher.cpp",
+          "line": 30
+        },
+        {
+          "name": "CallbackFiredAfterFileChange",
+          "file": "\/data\/DW\/tests\/test_config_watcher.cpp",
+          "line": 42
+        },
+        {
+          "name": "StopSuppressesCallback",
+          "file": "\/data\/DW\/tests\/test_config_watcher.cpp",
+          "line": 58
+        },
+        {
+          "name": "NoCallbackWithoutChange",
+          "file": "\/data\/DW\/tests\/test_config_watcher.cpp",
+          "line": 74
+        }
+      ]
+    },
+    {
+      "name": "AppPaths",
+      "tests": 9,
+      "testsuite": [
+        {
+          "name": "GetConfigDir_NonEmpty",
+          "file": "\/data\/DW\/tests\/test_app_paths.cpp",
+          "line": 10
+        },
+        {
+          "name": "GetDataDir_NonEmpty",
+          "file": "\/data\/DW\/tests\/test_app_paths.cpp",
+          "line": 16
+        },
+        {
+          "name": "GetDefaultProjectsDir_NonEmpty",
+          "file": "\/data\/DW\/tests\/test_app_paths.cpp",
+          "line": 22
+        },
+        {
+          "name": "GetCacheDir_NonEmpty",
+          "file": "\/data\/DW\/tests\/test_app_paths.cpp",
+          "line": 28
+        },
+        {
+          "name": "GetThumbnailDir_NonEmpty",
+          "file": "\/data\/DW\/tests\/test_app_paths.cpp",
+          "line": 34
+        },
+        {
+          "name": "GetDatabasePath_HasFilename",
+          "file": "\/data\/DW\/tests\/test_app_paths.cpp",
+          "line": 40
+        },
+        {
+          "name": "GetLogPath_HasFilename",
+          "file": "\/data\/DW\/tests\/test_app_paths.cpp",
+          "line": 48
+        },
+        {
+          "name": "GetAppName_NonEmpty",
+          "file": "\/data\/DW\/tests\/test_app_paths.cpp",
+          "line": 54
+        },
+        {
+          "name": "EnsureDirectoriesExist",
+          "file": "\/data\/DW\/tests\/test_app_paths.cpp",
+          "line": 60
+        }
+      ]
+    },
+    {
+      "name": "CostRepoTest",
+      "tests": 31,
+      "testsuite": [
+        {
+          "name": "Insert_ReturnsId",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 60
+        },
+        {
+          "name": "Insert_WithItems",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 67
+        },
+        {
+          "name": "Insert_WithProjectId",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 83
+        },
+        {
+          "name": "Insert_WithoutProjectId",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 95
+        },
+        {
+          "name": "FindById_Found",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 107
+        },
+        {
+          "name": "FindById_NotFound",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 126
+        },
+        {
+          "name": "FindAll_Empty",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 133
+        },
+        {
+          "name": "FindAll_Multiple",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 138
+        },
+        {
+          "name": "FindByProject_MatchesCorrectProject",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 149
+        },
+        {
+          "name": "FindByProject_NoMatch",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 165
+        },
+        {
+          "name": "Update_ChangesName",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 174
+        },
+        {
+          "name": "Update_ChangesItems",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 189
+        },
+        {
+          "name": "Update_ChangesFinancials",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 212
+        },
+        {
+          "name": "Remove_ById",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 241
+        },
+        {
+          "name": "Remove_NonexistentReturnsTrueButNoEffect",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 250
+        },
+        {
+          "name": "Count_Empty",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 261
+        },
+        {
+          "name": "Count_AfterInserts",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 265
+        },
+        {
+          "name": "Count_AfterRemove",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 273
+        },
+        {
+          "name": "Recalculate_EmptyItems",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 284
+        },
+        {
+          "name": "Recalculate_SingleItem",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 296
+        },
+        {
+          "name": "Recalculate_MultipleItems",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 306
+        },
+        {
+          "name": "Recalculate_WithTax",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 320
+        },
+        {
+          "name": "Recalculate_WithDiscount",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 331
+        },
+        {
+          "name": "Recalculate_WithTaxAndDiscount",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 342
+        },
+        {
+          "name": "Recalculate_UpdatesItemTotals",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 356
+        },
+        {
+          "name": "ItemsSerialization_EmptyItems",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 372
+        },
+        {
+          "name": "ItemsSerialization_AllCategories",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 382
+        },
+        {
+          "name": "ItemsSerialization_PreservesNotes",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 422
+        },
+        {
+          "name": "ItemsSerialization_ManyItems",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 442
+        },
+        {
+          "name": "Insert_SetsTimestamps",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 465
+        },
+        {
+          "name": "RoundTrip_FullEstimate",
+          "file": "\/data\/DW\/tests\/test_cost_repository.cpp",
+          "line": 477
+        }
+      ]
+    },
+    {
+      "name": "MaterialArchiveTest",
+      "tests": 15,
+      "testsuite": [
+        {
+          "name": "Create_Succeeds",
+          "file": "\/data\/DW\/tests\/test_material_archive.cpp",
+          "line": 74
+        },
+        {
+          "name": "Create_ReturnsExpectedFiles",
+          "file": "\/data\/DW\/tests\/test_material_archive.cpp",
+          "line": 81
+        },
+        {
+          "name": "Create_MissingTextureFails",
+          "file": "\/data\/DW\/tests\/test_material_archive.cpp",
+          "line": 92
+        },
+        {
+          "name": "Load_Succeeds",
+          "file": "\/data\/DW\/tests\/test_material_archive.cpp",
+          "line": 100
+        },
+        {
+          "name": "Load_TextureDataNonEmpty",
+          "file": "\/data\/DW\/tests\/test_material_archive.cpp",
+          "line": 108
+        },
+        {
+          "name": "Load_MetadataRoundTrips",
+          "file": "\/data\/DW\/tests\/test_material_archive.cpp",
+          "line": 119
+        },
+        {
+          "name": "Load_CategoryRoundTrips",
+          "file": "\/data\/DW\/tests\/test_material_archive.cpp",
+          "line": 146
+        },
+        {
+          "name": "Load_NonExistentFails",
+          "file": "\/data\/DW\/tests\/test_material_archive.cpp",
+          "line": 170
+        },
+        {
+          "name": "List_ReturnsExpectedEntries",
+          "file": "\/data\/DW\/tests\/test_material_archive.cpp",
+          "line": 177
+        },
+        {
+          "name": "List_SizesAreNonZero",
+          "file": "\/data\/DW\/tests\/test_material_archive.cpp",
+          "line": 194
+        },
+        {
+          "name": "List_EmptyOnNonExistent",
+          "file": "\/data\/DW\/tests\/test_material_archive.cpp",
+          "line": 204
+        },
+        {
+          "name": "IsValidArchive_ValidArchive",
+          "file": "\/data\/DW\/tests\/test_material_archive.cpp",
+          "line": 211
+        },
+        {
+          "name": "IsValidArchive_NonExistentFile",
+          "file": "\/data\/DW\/tests\/test_material_archive.cpp",
+          "line": 217
+        },
+        {
+          "name": "IsValidArchive_NotAZip",
+          "file": "\/data\/DW\/tests\/test_material_archive.cpp",
+          "line": 221
+        },
+        {
+          "name": "Extension_IsCorrect",
+          "file": "\/data\/DW\/tests\/test_material_archive.cpp",
+          "line": 229
+        }
+      ]
+    },
+    {
+      "name": "MaterialManagerTest",
+      "tests": 20,
+      "testsuite": [
+        {
+          "name": "SeedDefaults_PopulatesEmptyDatabase",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 93
+        },
+        {
+          "name": "SeedDefaults_IsIdempotent",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 99
+        },
+        {
+          "name": "SeedDefaults_SkipsNonEmptyDatabase",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 106
+        },
+        {
+          "name": "SeedDefaults_CoversCoreCategories",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 122
+        },
+        {
+          "name": "SeedDefaults_MaterialsHaveNames",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 136
+        },
+        {
+          "name": "Import_SucceedsWithValidArchive",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 147
+        },
+        {
+          "name": "Import_InsertsIntoDatabase",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 155
+        },
+        {
+          "name": "Import_FailsForNonExistentFile",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 167
+        },
+        {
+          "name": "Import_FailsForInvalidArchive",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 172
+        },
+        {
+          "name": "Import_MetadataPreservedAfterRoundTrip",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 183
+        },
+        {
+          "name": "Update_ChangesFields",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 205
+        },
+        {
+          "name": "Remove_DeletesFromDatabase",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 225
+        },
+        {
+          "name": "Remove_ReturnsFalseForNonExistent",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 235
+        },
+        {
+          "name": "Assign_PersistsMaterialOnModel",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 243
+        },
+        {
+          "name": "Assign_FailsForNonExistentMaterial",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 258
+        },
+        {
+          "name": "GetModelMaterial_ReturnsNulloptWhenNotAssigned",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 263
+        },
+        {
+          "name": "ClearMaterialAssignment_RemovesAssignment",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 269
+        },
+        {
+          "name": "Export_DefaultMaterial_CreatesArchive",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 286
+        },
+        {
+          "name": "Export_DefaultMaterial_IsValidArchive",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 296
+        },
+        {
+          "name": "Export_FailsForNonExistentMaterial",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 306
+        }
+      ]
+    },
+    {
+      "name": "DefaultMaterialsTest",
+      "tests": 4,
+      "testsuite": [
+        {
+          "name": "Returns32Materials",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 315
+        },
+        {
+          "name": "AllHaveNames",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 320
+        },
+        {
+          "name": "CompositesMayHaveZeroJanka",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 326
+        },
+        {
+          "name": "WoodSpeciesHavePositiveJanka",
+          "file": "\/data\/DW\/tests\/test_material_manager.cpp",
+          "line": 335
+        }
+      ]
+    },
+    {
+      "name": "MeshUV",
+      "tests": 10,
+      "testsuite": [
+        {
+          "name": "NeedsUVGeneration_EmptyMesh",
+          "file": "\/data\/DW\/tests\/test_mesh_uv.cpp",
+          "line": 64
+        },
+        {
+          "name": "NeedsUVGeneration_ZeroTexCoords",
+          "file": "\/data\/DW\/tests\/test_mesh_uv.cpp",
+          "line": 70
+        },
+        {
+          "name": "NeedsUVGeneration_NonZeroTexCoords",
+          "file": "\/data\/DW\/tests\/test_mesh_uv.cpp",
+          "line": 76
+        },
+        {
+          "name": "GeneratePlanarUVs_ProducesNonZeroUVs",
+          "file": "\/data\/DW\/tests\/test_mesh_uv.cpp",
+          "line": 84
+        },
+        {
+          "name": "GeneratePlanarUVs_XYPlane_CorrectMapping",
+          "file": "\/data\/DW\/tests\/test_mesh_uv.cpp",
+          "line": 95
+        },
+        {
+          "name": "GeneratePlanarUVs_XZPlane_CorrectMapping",
+          "file": "\/data\/DW\/tests\/test_mesh_uv.cpp",
+          "line": 117
+        },
+        {
+          "name": "GeneratePlanarUVs_GrainRotation_90Deg",
+          "file": "\/data\/DW\/tests\/test_mesh_uv.cpp",
+          "line": 139
+        },
+        {
+          "name": "GeneratePlanarUVs_NoRotation_vs_ZeroRotation",
+          "file": "\/data\/DW\/tests\/test_mesh_uv.cpp",
+          "line": 156
+        },
+        {
+          "name": "GeneratePlanarUVs_EmptyMesh_DoesNotCrash",
+          "file": "\/data\/DW\/tests\/test_mesh_uv.cpp",
+          "line": 171
+        },
+        {
+          "name": "GeneratePlanarUVs_GrainRotation_ChangesUVs",
+          "file": "\/data\/DW\/tests\/test_mesh_uv.cpp",
+          "line": 178
+        }
+      ]
+    },
+    {
+      "name": "StorageManagerTest",
+      "tests": 9,
+      "testsuite": [
+        {
+          "name": "BlobPathComputation",
+          "file": "\/data\/DW\/tests\/test_storage_manager.cpp",
+          "line": 43
+        },
+        {
+          "name": "BlobPathShortHash",
+          "file": "\/data\/DW\/tests\/test_storage_manager.cpp",
+          "line": 58
+        },
+        {
+          "name": "StoreFileBasic",
+          "file": "\/data\/DW\/tests\/test_storage_manager.cpp",
+          "line": 63
+        },
+        {
+          "name": "StoreFileDedup",
+          "file": "\/data\/DW\/tests\/test_storage_manager.cpp",
+          "line": 93
+        },
+        {
+          "name": "StoreFileHashMismatch",
+          "file": "\/data\/DW\/tests\/test_storage_manager.cpp",
+          "line": 109
+        },
+        {
+          "name": "MoveFileBasic",
+          "file": "\/data\/DW\/tests\/test_storage_manager.cpp",
+          "line": 136
+        },
+        {
+          "name": "ExistsCheck",
+          "file": "\/data\/DW\/tests\/test_storage_manager.cpp",
+          "line": 148
+        },
+        {
+          "name": "RemoveBlob",
+          "file": "\/data\/DW\/tests\/test_storage_manager.cpp",
+          "line": 162
+        },
+        {
+          "name": "CleanupOrphanedTempFiles",
+          "file": "\/data\/DW\/tests\/test_storage_manager.cpp",
+          "line": 175
+        }
+      ]
+    },
+    {
+      "name": "FilesystemDetector",
+      "tests": 5,
+      "testsuite": [
+        {
+          "name": "RootIsLocal",
+          "file": "\/data\/DW\/tests\/test_filesystem_detector.cpp",
+          "line": 9
+        },
+        {
+          "name": "TmpIsLocal",
+          "file": "\/data\/DW\/tests\/test_filesystem_detector.cpp",
+          "line": 15
+        },
+        {
+          "name": "NonexistentPathDoesNotCrash",
+          "file": "\/data\/DW\/tests\/test_filesystem_detector.cpp",
+          "line": 20
+        },
+        {
+          "name": "EmptyPathReturnsUnknown",
+          "file": "\/data\/DW\/tests\/test_filesystem_detector.cpp",
+          "line": 26
+        },
+        {
+          "name": "HomeDirIsLocal",
+          "file": "\/data\/DW\/tests\/test_filesystem_detector.cpp",
+          "line": 31
+        }
+      ]
+    },
+    {
+      "name": "ProjectExportTest",
+      "tests": 5,
+      "testsuite": [
+        {
+          "name": "ExportCreatesValidZipWithManifest",
+          "file": "\/data\/DW\/tests\/test_project_export_manager.cpp",
+          "line": 126
+        },
+        {
+          "name": "ImportRoundTripPreservesMetadata",
+          "file": "\/data\/DW\/tests\/test_project_export_manager.cpp",
+          "line": 174
+        },
+        {
+          "name": "ImportIgnoresUnknownManifestFields",
+          "file": "\/data\/DW\/tests\/test_project_export_manager.cpp",
+          "line": 222
+        },
+        {
+          "name": "ImportDeduplicatesExistingModels",
+          "file": "\/data\/DW\/tests\/test_project_export_manager.cpp",
+          "line": 267
+        },
+        {
+          "name": "RoundTripPreservesMaterialsAndThumbnails",
+          "file": "\/data\/DW\/tests\/test_project_export_manager.cpp",
+          "line": 330
+        }
+      ]
+    },
+    {
+      "name": "LintCompliance",
+      "tests": 8,
+      "testsuite": [
+        {
+          "name": "AllHeaders_HavePragmaOnce",
+          "file": "\/data\/DW\/tests\/test_lint_compliance.cpp",
+          "line": 55
+        },
+        {
+          "name": "NoUsingNamespaceInHeaders",
+          "file": "\/data\/DW\/tests\/test_lint_compliance.cpp",
+          "line": 68
+        },
+        {
+          "name": "NoTabs",
+          "file": "\/data\/DW\/tests\/test_lint_compliance.cpp",
+          "line": 80
+        },
+        {
+          "name": "NoTrailingWhitespace",
+          "file": "\/data\/DW\/tests\/test_lint_compliance.cpp",
+          "line": 92
+        },
+        {
+          "name": "NoLongLines",
+          "file": "\/data\/DW\/tests\/test_lint_compliance.cpp",
+          "line": 110
+        },
+        {
+          "name": "NoEmptyFiles",
+          "file": "\/data\/DW\/tests\/test_lint_compliance.cpp",
+          "line": 134
+        },
+        {
+          "name": "HeadersIncludeGuardConsistency",
+          "file": "\/data\/DW\/tests\/test_lint_compliance.cpp",
+          "line": 145
+        },
+        {
+          "name": "ClangFormatCompliance",
+          "file": "\/data\/DW\/tests\/test_lint_compliance.cpp",
+          "line": 171
+        }
+      ]
+    },
+    {
+      "name": "WorkspaceTest",
+      "tests": 10,
+      "testsuite": [
+        {
+          "name": "SetAndGetFocusedMesh",
+          "file": "\/data\/DW\/tests\/test_workspace.cpp",
+          "line": 32
+        },
+        {
+          "name": "ClearFocusedMesh",
+          "file": "\/data\/DW\/tests\/test_workspace.cpp",
+          "line": 43
+        },
+        {
+          "name": "ReplaceFocusedMesh",
+          "file": "\/data\/DW\/tests\/test_workspace.cpp",
+          "line": 53
+        },
+        {
+          "name": "SetNullFocusedMesh",
+          "file": "\/data\/DW\/tests\/test_workspace.cpp",
+          "line": 64
+        },
+        {
+          "name": "SetAndGetFocusedToolpath",
+          "file": "\/data\/DW\/tests\/test_workspace.cpp",
+          "line": 74
+        },
+        {
+          "name": "ClearFocusedToolpath",
+          "file": "\/data\/DW\/tests\/test_workspace.cpp",
+          "line": 85
+        },
+        {
+          "name": "MeshAndToolpathAreIndependent",
+          "file": "\/data\/DW\/tests\/test_workspace.cpp",
+          "line": 96
+        },
+        {
+          "name": "ClearAllRemovesAllFocusedObjects",
+          "file": "\/data\/DW\/tests\/test_workspace.cpp",
+          "line": 113
+        },
+        {
+          "name": "WorkspaceDoesNotHoldExtraneousReferences",
+          "file": "\/data\/DW\/tests\/test_workspace.cpp",
+          "line": 129
+        },
+        {
+          "name": "MultipleSetAndClearCycles",
+          "file": "\/data\/DW\/tests\/test_workspace.cpp",
+          "line": 144
+        }
+      ]
+    },
+    {
+      "name": "IntegrationPipelineTest",
+      "tests": 12,
+      "testsuite": [
+        {
+          "name": "CanLoadAndValidateMesh",
+          "file": "\/data\/DW\/tests\/test_integration_pipeline.cpp",
+          "line": 43
+        },
+        {
+          "name": "CanPrepareMeshForExport",
+          "file": "\/data\/DW\/tests\/test_integration_pipeline.cpp",
+          "line": 53
+        },
+        {
+          "name": "CanParseGCode",
+          "file": "\/data\/DW\/tests\/test_integration_pipeline.cpp",
+          "line": 65
+        },
+        {
+          "name": "CanAnalyzeGCode",
+          "file": "\/data\/DW\/tests\/test_integration_pipeline.cpp",
+          "line": 79
+        },
+        {
+          "name": "ImportPipelineLoadValidatePrepare",
+          "file": "\/data\/DW\/tests\/test_integration_pipeline.cpp",
+          "line": 96
+        },
+        {
+          "name": "GCodePipelineParseAnalyzeStatistics",
+          "file": "\/data\/DW\/tests\/test_integration_pipeline.cpp",
+          "line": 112
+        },
+        {
+          "name": "MeshTransformAndBounds",
+          "file": "\/data\/DW\/tests\/test_integration_pipeline.cpp",
+          "line": 132
+        },
+        {
+          "name": "FullImportExportCycle",
+          "file": "\/data\/DW\/tests\/test_integration_pipeline.cpp",
+          "line": 142
+        },
+        {
+          "name": "GCodeParserHandlesEmptyInput",
+          "file": "\/data\/DW\/tests\/test_integration_pipeline.cpp",
+          "line": 158
+        },
+        {
+          "name": "MeshValidationCatchesInvalidData",
+          "file": "\/data\/DW\/tests\/test_integration_pipeline.cpp",
+          "line": 169
+        },
+        {
+          "name": "MeshBoundsComputation",
+          "file": "\/data\/DW\/tests\/test_integration_pipeline.cpp",
+          "line": 180
+        },
+        {
+          "name": "GCodeStatisticsAreComputed",
+          "file": "\/data\/DW\/tests\/test_integration_pipeline.cpp",
+          "line": 197
+        }
+      ]
+    }
+  ]
+}

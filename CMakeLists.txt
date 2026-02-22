@@ -22,6 +22,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Options
 option(DW_BUILD_TESTS "Build test suite" ON)
 option(DW_BUILD_TOOLS "Build developer tools (matgen, etc.)" OFF)
+option(DW_ENABLE_GRAPHQLITE "Enable GraphQLite extension for graph queries" OFF)
 
 # Include CMake modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
