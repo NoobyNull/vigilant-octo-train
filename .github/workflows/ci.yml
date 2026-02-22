@@ -124,10 +124,14 @@ jobs:
           python-version: '3.12'
 
       - name: Install Python dependencies
-        run: pip install jinja2
+        run: |
+          pip install jinja2
+          # Also install for any other Python CMake might find
+          Get-Command python -All | ForEach-Object { & $_.Source -m pip install jinja2 2>$null }
+        shell: pwsh
 
       - name: Configure
-        run: cmake -B build -DDW_BUILD_TESTS=ON
+        run: cmake -B build -DDW_BUILD_TESTS=ON -DPython3_ROOT_DIR="$env:pythonLocation"
 
       - name: Build
         run: cmake --build build --config Release -j $env:NUMBER_OF_PROCESSORS
