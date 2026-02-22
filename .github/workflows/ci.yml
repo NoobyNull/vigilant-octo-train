@@ -127,7 +127,9 @@ jobs:
         run: pip install jinja2
 
       - name: Configure
-        run: cmake -B build -DDW_BUILD_TESTS=ON -DPython_ROOT_DIR="$env:pythonLocation" -DPython3_ROOT_DIR="$env:pythonLocation"
+        run: |
+          $pythonExe = (Get-Command python).Source
+          cmake -B build -DDW_BUILD_TESTS=ON "-DPython_EXECUTABLE=$pythonExe" "-DPython3_EXECUTABLE=$pythonExe"
 
       - name: Build
         run: cmake --build build --config Release -j $env:NUMBER_OF_PROCESSORS
