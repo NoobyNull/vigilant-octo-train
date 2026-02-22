@@ -7,6 +7,9 @@
 #include <unordered_set>
 #include <vector>
 
+#include "../database/cost_repository.h"
+#include "../database/cut_plan_repository.h"
+#include "../database/gcode_repository.h"
 #include "../database/material_repository.h"
 #include "../database/model_repository.h"
 #include "../database/project_repository.h"
@@ -56,7 +59,7 @@ class ProjectExportManager {
                                      ExportProgressCallback progress = nullptr);
 
     static constexpr const char* Extension = ".dwproj";
-    static constexpr int FormatVersion = 1;
+    static constexpr int FormatVersion = 2;
 
   private:
     struct ManifestModel {
@@ -75,20 +78,39 @@ class ProjectExportManager {
         std::string thumbnailInArchive; // e.g. "thumbnails/<hash>.png"
     };
 
+    struct ManifestGCode {
+        i64 id = 0;
+        std::string name;
+        std::string hash;
+        std::string fileInArchive; // "gcode/1.nc"
+        f32 estimatedTime = 0.0f;
+        std::vector<int> toolNumbers;
+    };
+
     struct Manifest {
-        int formatVersion = 1;
+        int formatVersion = 2;
         std::string appVersion;
         std::string createdAt;
         i64 projectId = 0;
         std::string projectName;
+        std::string projectNotes;
         std::vector<ManifestModel> models;
+        std::vector<ManifestGCode> gcode;
+        std::vector<CostEstimate> costEstimates;
+        std::vector<CutPlanRecord> cutPlans;
     };
 
     std::string buildManifestJson(
         const Project& project,
         const std::vector<ModelRecord>& models,
         const std::unordered_map<i64, i64>& modelIdToMaterialId,
-        const std::unordered_map<std::string, std::string>& hashToThumbnailPath);
+        const std::unordered_map<std::string, std::string>& hashToThumbnailPath,
+        const std::vector<ManifestGCode>& gcodeEntries,
+        const std::string& projectNotes,
+        bool hasCosts,
+        bool hasCutPlans);
+    std::string buildCostsJson(const std::vector<CostEstimate>& estimates);
+    std::string buildCutPlansJson(const std::vector<CutPlanRecord>& plans);
     bool parseManifest(const std::string& json, Manifest& out, std::string& error);
     std::optional<i64> getModelMaterialId(i64 modelId);
 

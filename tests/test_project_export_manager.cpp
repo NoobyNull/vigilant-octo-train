@@ -153,7 +153,7 @@ TEST_F(ProjectExportTest, ExportCreatesValidZipWithManifest) {
 
     // Parse and validate manifest
     auto j = nlohmann::json::parse(manifestStr);
-    EXPECT_EQ(j["format_version"].get<int>(), 1);
+    EXPECT_EQ(j["format_version"].get<int>(), 2);
     EXPECT_EQ(j["project_name"].get<std::string>(), "Test Export Project");
     EXPECT_TRUE(j.contains("app_version"));
     EXPECT_TRUE(j.contains("created_at"));
