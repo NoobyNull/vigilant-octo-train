@@ -89,6 +89,7 @@ if(NOT SQLite3_FOUND)
         ${sqlite3_SOURCE_DIR}/sqlite3.c
     )
     target_include_directories(sqlite3 PUBLIC ${sqlite3_SOURCE_DIR})
+    target_compile_definitions(sqlite3 PRIVATE SQLITE_ENABLE_FTS5 SQLITE_ENABLE_LOAD_EXTENSION)
     add_library(SQLite::SQLite3 ALIAS sqlite3)
 endif()
 
@@ -182,6 +183,46 @@ if(DW_BUILD_TESTS)
     set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
     set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest)
+endif()
+
+# GraphQLite - SQLite extension for Cypher graph queries
+# Downloaded as pre-built shared library, loaded at runtime via sqlite3_load_extension()
+option(DW_ENABLE_GRAPHQLITE "Download and bundle GraphQLite extension for graph queries" ON)
+if(DW_ENABLE_GRAPHQLITE)
+    set(GRAPHQLITE_VERSION "0.3.5")
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        set(GRAPHQLITE_PLATFORM "linux-x86_64")
+        set(GRAPHQLITE_LIB "graphqlite.so")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        set(GRAPHQLITE_PLATFORM "win-x86_64")
+        set(GRAPHQLITE_LIB "graphqlite.dll")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        set(GRAPHQLITE_PLATFORM "macos-x86_64")
+        set(GRAPHQLITE_LIB "graphqlite.dylib")
+    endif()
+
+    FetchContent_Declare(
+        graphqlite
+        URL https://github.com/nicholasgasior/graphqlite/releases/download/v${GRAPHQLITE_VERSION}/graphqlite-${GRAPHQLITE_PLATFORM}.tar.gz
+        DOWNLOAD_NO_EXTRACT FALSE
+    )
+    FetchContent_GetProperties(graphqlite)
+    if(NOT graphqlite_POPULATED)
+        FetchContent_Populate(graphqlite)
+    endif()
+
+    # Verify the library was actually downloaded
+    if(EXISTS "${graphqlite_SOURCE_DIR}/${GRAPHQLITE_LIB}")
+        set(DW_GRAPHQLITE_AVAILABLE TRUE)
+        set(DW_GRAPHQLITE_LIB_PATH "${graphqlite_SOURCE_DIR}/${GRAPHQLITE_LIB}" CACHE STRING "")
+        message(STATUS "GraphQLite: found at ${DW_GRAPHQLITE_LIB_PATH}")
+    else()
+        set(DW_GRAPHQLITE_AVAILABLE FALSE)
+        message(WARNING "GraphQLite: library not found after download -- graph queries disabled")
+    endif()
+else()
+    set(DW_GRAPHQLITE_AVAILABLE FALSE)
+    message(STATUS "GraphQLite: disabled via DW_ENABLE_GRAPHQLITE=OFF")
 endif()
 
 # Status message
