@@ -1,5 +1,6 @@
 #include "graph_manager.h"
 
+#include <nlohmann/json.hpp>
 #include <sqlite3.h>
 
 #include "../utils/log.h"
@@ -54,28 +55,9 @@ bool GraphManager::initializeSchema() {
         return false;
     }
 
-    std::string error;
-
-    // Create node tables for core entities
-    // Note: The exact Cypher DDL depends on GraphQLite's implementation.
-    // These use standard Cypher CREATE syntax; adapt if GraphQLite differs.
-    const char* schemaDDL[] = {
-        "CREATE NODE TABLE IF NOT EXISTS Model(id INT64, name STRING, hash STRING, PRIMARY KEY(id))",
-        "CREATE NODE TABLE IF NOT EXISTS Category(id INT64, name STRING, PRIMARY KEY(id))",
-        "CREATE NODE TABLE IF NOT EXISTS Project(id INT64, name STRING, PRIMARY KEY(id))",
-        "CREATE REL TABLE IF NOT EXISTS BELONGS_TO(FROM Model TO Category)",
-        "CREATE REL TABLE IF NOT EXISTS CONTAINS(FROM Project TO Model)",
-        "CREATE REL TABLE IF NOT EXISTS RELATED_TO(FROM Model TO Model)",
-    };
-
-    for (const auto& ddl : schemaDDL) {
-        if (!executeCypher(ddl, error)) {
-            log::warningf("GraphManager", "Schema DDL failed: %s -- %s", ddl, error.c_str());
-            return false;
-        }
-    }
-
-    log::info("GraphManager", "Graph schema initialized");
+    // GraphQLite uses implicit schema — labels are created on first use.
+    // No DDL required; nodes and edges are created via CREATE/MERGE.
+    log::info("GraphManager", "Graph schema initialized (implicit)");
     return true;
 }
 
@@ -111,7 +93,7 @@ std::optional<GraphManager::QueryResult> GraphManager::queryCypher(const std::st
         return std::nullopt;
     }
 
-    // Escape single quotes
+    // Escape single quotes for SQL embedding
     std::string escaped;
     escaped.reserve(cypher.size());
     for (char c : cypher) {
@@ -122,37 +104,43 @@ std::optional<GraphManager::QueryResult> GraphManager::queryCypher(const std::st
         }
     }
 
-    std::string sql = "SELECT * FROM cypher('" + escaped + "')";
+    // cypher() returns JSON; use json_each to iterate result rows
+    std::string sql = "SELECT value FROM json_each(cypher('" + escaped + "'))";
     auto stmt = m_db.prepare(sql);
     if (!stmt.isValid()) {
         return std::nullopt;
     }
 
     QueryResult result;
-
-    // Get column info from first step
     bool firstRow = true;
+
     while (stmt.step()) {
-        if (firstRow) {
-            int colCount = stmt.columnCount();
-            for (int i = 0; i < colCount; ++i) {
-                result.columns.push_back(stmt.columnName(i));
+        std::string jsonStr = stmt.getText(0);
+        try {
+            auto obj = nlohmann::json::parse(jsonStr);
+            if (firstRow && obj.is_object()) {
+                for (auto& [key, _] : obj.items()) {
+                    result.columns.push_back(key);
+                }
+                firstRow = false;
             }
-            firstRow = false;
-        }
-
-        std::vector<std::string> row;
-        for (int i = 0; i < stmt.columnCount(); ++i) {
-            row.push_back(stmt.getText(i));
-        }
-        result.rows.push_back(std::move(row));
-    }
-
-    // If no rows were returned, still populate columns if possible
-    if (firstRow) {
-        int colCount = stmt.columnCount();
-        for (int i = 0; i < colCount; ++i) {
-            result.columns.push_back(stmt.columnName(i));
+            std::vector<std::string> row;
+            row.reserve(result.columns.size());
+            for (const auto& col : result.columns) {
+                if (obj.contains(col)) {
+                    const auto& val = obj[col];
+                    if (val.is_string()) {
+                        row.push_back(val.get<std::string>());
+                    } else {
+                        row.push_back(val.dump());
+                    }
+                } else {
+                    row.push_back("");
+                }
+            }
+            result.rows.push_back(std::move(row));
+        } catch (const nlohmann::json::exception& e) {
+            log::warningf("GraphManager", "JSON parse error in query result: %s", e.what());
         }
     }
 
