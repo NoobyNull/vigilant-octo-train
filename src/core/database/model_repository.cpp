@@ -296,6 +296,132 @@ i64 ModelRepository::count() {
     return 0;
 }
 
+std::vector<ModelRecord> ModelRepository::searchFTS(const std::string& query) {
+    std::vector<ModelRecord> results;
+    if (query.empty()) return results;
+
+    // Add prefix wildcard for search-as-you-type if not already present
+    std::string ftsQuery = query;
+    if (!ftsQuery.empty() && ftsQuery.back() != '*') {
+        ftsQuery += '*';
+    }
+
+    auto stmt = m_db.prepare(
+        "SELECT m.* FROM models m "
+        "INNER JOIN models_fts ON models_fts.rowid = m.id "
+        "WHERE models_fts MATCH ? "
+        "ORDER BY bm25(models_fts, 10.0, 3.0) "
+        "LIMIT 500");
+    if (!stmt.isValid()) return results;
+    if (!stmt.bindText(1, ftsQuery)) return results;
+    while (stmt.step()) {
+        results.push_back(rowToModel(stmt));
+    }
+    return results;
+}
+
+bool ModelRepository::assignCategory(i64 modelId, i64 categoryId) {
+    auto stmt =
+        m_db.prepare("INSERT OR IGNORE INTO model_categories (model_id, category_id) VALUES (?, ?)");
+    if (!stmt.isValid()) return false;
+    if (!stmt.bindInt(1, modelId) || !stmt.bindInt(2, categoryId)) return false;
+    return stmt.execute();
+}
+
+bool ModelRepository::removeCategory(i64 modelId, i64 categoryId) {
+    auto stmt =
+        m_db.prepare("DELETE FROM model_categories WHERE model_id = ? AND category_id = ?");
+    if (!stmt.isValid()) return false;
+    if (!stmt.bindInt(1, modelId) || !stmt.bindInt(2, categoryId)) return false;
+    return stmt.execute();
+}
+
+std::vector<ModelRecord> ModelRepository::findByCategory(i64 categoryId) {
+    std::vector<ModelRecord> results;
+    auto stmt = m_db.prepare(
+        "SELECT m.* FROM models m "
+        "INNER JOIN model_categories mc ON mc.model_id = m.id "
+        "WHERE mc.category_id = ? "
+        "ORDER BY m.imported_at DESC");
+    if (!stmt.isValid()) return results;
+    if (!stmt.bindInt(1, categoryId)) return results;
+    while (stmt.step()) {
+        results.push_back(rowToModel(stmt));
+    }
+    return results;
+}
+
+std::optional<i64> ModelRepository::createCategory(const std::string& name,
+                                                   std::optional<i64> parentId) {
+    auto stmt = m_db.prepare("INSERT INTO categories (name, parent_id) VALUES (?, ?)");
+    if (!stmt.isValid()) return std::nullopt;
+    if (!stmt.bindText(1, name)) return std::nullopt;
+    if (parentId) {
+        if (!stmt.bindInt(2, *parentId)) return std::nullopt;
+    } else {
+        if (!stmt.bindNull(2)) return std::nullopt;
+    }
+    if (!stmt.execute()) return std::nullopt;
+    return m_db.lastInsertId();
+}
+
+bool ModelRepository::deleteCategory(i64 categoryId) {
+    auto stmt = m_db.prepare("DELETE FROM categories WHERE id = ?");
+    if (!stmt.isValid()) return false;
+    if (!stmt.bindInt(1, categoryId)) return false;
+    return stmt.execute();
+}
+
+std::vector<CategoryRecord> ModelRepository::getAllCategories() {
+    std::vector<CategoryRecord> results;
+    auto stmt = m_db.prepare("SELECT id, name, parent_id, sort_order FROM categories "
+                             "ORDER BY parent_id, sort_order, name");
+    if (!stmt.isValid()) return results;
+    while (stmt.step()) {
+        CategoryRecord cat;
+        cat.id = stmt.getInt(0);
+        cat.name = stmt.getText(1);
+        if (!stmt.isNull(2)) {
+            cat.parentId = stmt.getInt(2);
+        }
+        cat.sortOrder = static_cast<int>(stmt.getInt(3));
+        results.push_back(std::move(cat));
+    }
+    return results;
+}
+
+std::vector<CategoryRecord> ModelRepository::getChildCategories(i64 parentId) {
+    std::vector<CategoryRecord> results;
+    auto stmt = m_db.prepare("SELECT id, name, parent_id, sort_order FROM categories "
+                             "WHERE parent_id = ? ORDER BY sort_order, name");
+    if (!stmt.isValid()) return results;
+    if (!stmt.bindInt(1, parentId)) return results;
+    while (stmt.step()) {
+        CategoryRecord cat;
+        cat.id = stmt.getInt(0);
+        cat.name = stmt.getText(1);
+        cat.parentId = parentId;
+        cat.sortOrder = static_cast<int>(stmt.getInt(3));
+        results.push_back(std::move(cat));
+    }
+    return results;
+}
+
+std::vector<CategoryRecord> ModelRepository::getRootCategories() {
+    std::vector<CategoryRecord> results;
+    auto stmt = m_db.prepare("SELECT id, name, parent_id, sort_order FROM categories "
+                             "WHERE parent_id IS NULL ORDER BY sort_order, name");
+    if (!stmt.isValid()) return results;
+    while (stmt.step()) {
+        CategoryRecord cat;
+        cat.id = stmt.getInt(0);
+        cat.name = stmt.getText(1);
+        cat.sortOrder = static_cast<int>(stmt.getInt(3));
+        results.push_back(std::move(cat));
+    }
+    return results;
+}
+
 ModelRecord ModelRepository::rowToModel(Statement& stmt) {
     ModelRecord model;
     model.id = stmt.getInt(0);

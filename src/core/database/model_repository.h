@@ -10,6 +10,14 @@
 
 namespace dw {
 
+// Category record for organization hierarchy
+struct CategoryRecord {
+    i64 id = 0;
+    std::string name;
+    std::optional<i64> parentId;
+    int sortOrder = 0;
+};
+
 // Per-model camera state for persistence across sessions
 struct CameraState {
     f32 distance = 5.0f;
@@ -33,6 +41,9 @@ struct ModelRecord {
     Path thumbnailPath;
     std::string importedAt;
     std::vector<std::string> tags;
+
+    // Category names this model belongs to (populated on-demand, not by rowToModel)
+    std::vector<std::string> categories;
 
     // Orientation data (NULL = not yet computed)
     std::optional<f32> orientYaw;
@@ -68,6 +79,22 @@ class ModelRepository {
     // Delete
     bool remove(i64 id);
     bool removeByHash(std::string_view hash);
+
+    // FTS5 full-text search with BM25 ranking
+    std::vector<ModelRecord> searchFTS(const std::string& query);
+
+    // Category assignment
+    bool assignCategory(i64 modelId, i64 categoryId);
+    bool removeCategory(i64 modelId, i64 categoryId);
+    std::vector<ModelRecord> findByCategory(i64 categoryId);
+
+    // Category CRUD
+    std::optional<i64> createCategory(const std::string& name,
+                                      std::optional<i64> parentId = std::nullopt);
+    bool deleteCategory(i64 categoryId);
+    std::vector<CategoryRecord> getAllCategories();
+    std::vector<CategoryRecord> getChildCategories(i64 parentId);
+    std::vector<CategoryRecord> getRootCategories();
 
     // Utility
     bool exists(std::string_view hash);
