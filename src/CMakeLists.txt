@@ -44,6 +44,9 @@ set(DW_SOURCES
     core/database/gcode_repository.cpp
     core/database/cost_repository.cpp
 
+    # Graph
+    core/graph/graph_manager.cpp
+
     # Mesh
     core/mesh/mesh.cpp
     core/mesh/hash.cpp
@@ -168,6 +171,16 @@ set_target_properties(digital_workshop PROPERTIES
     OUTPUT_NAME "digital_workshop"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )
+
+# --- Bundle GraphQLite extension (if available) ---
+if(DW_GRAPHQLITE_AVAILABLE)
+    add_custom_command(TARGET digital_workshop POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${DW_GRAPHQLITE_LIB_PATH}"
+            "$<TARGET_FILE_DIR:digital_workshop>/${GRAPHQLITE_LIB}"
+        COMMENT "Copying GraphQLite extension to build directory"
+    )
+endif()
 
 # --- Bundle resources (materials) ---
 # Copy .dwmat files from resources/materials/ to the build output directory.
