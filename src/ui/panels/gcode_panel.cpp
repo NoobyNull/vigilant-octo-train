@@ -2,6 +2,8 @@
 
 #include <imgui.h>
 
+#include "../../core/database/gcode_repository.h"
+#include "../../core/project/project.h"
 #include "../../core/utils/file_utils.h"
 #include "../dialogs/file_dialog.h"
 #include "../icons.h"
@@ -83,6 +85,19 @@ bool GCodePanel::loadFile(const std::string& path) {
             m_currentLayer = m_maxLayer;
         }
 
+        // Look up gcode record ID by filename
+        m_currentGCodeId = -1;
+        if (m_gcodeRepo) {
+            std::string filename = path;
+            size_t pos = filename.find_last_of("/\\");
+            if (pos != std::string::npos)
+                filename = filename.substr(pos + 1);
+            auto existing = m_gcodeRepo->findByName(filename);
+            if (!existing.empty()) {
+                m_currentGCodeId = existing.front().id;
+            }
+        }
+
         return true;
     }
 
@@ -99,6 +114,7 @@ void GCodePanel::clear() {
     m_currentLayer = 0.0f;
     m_maxLayer = 100.0f;
     m_canvas.reset();
+    m_currentGCodeId = -1;
 }
 
 void GCodePanel::renderToolbar() {
@@ -135,6 +151,29 @@ void GCodePanel::renderToolbar() {
         ImGui::Checkbox("Travel", &m_showTravel);
         ImGui::SameLine();
         ImGui::Checkbox("Extrusion", &m_showExtrusion);
+
+        // "Add to Project" button
+        if (m_projectManager && m_projectManager->currentProject() && m_currentGCodeId > 0) {
+            ImGui::SameLine();
+            ImGui::Separator();
+            ImGui::SameLine();
+            bool alreadyInProject = m_gcodeRepo &&
+                m_gcodeRepo->isInProject(m_projectManager->currentProject()->id(), m_currentGCodeId);
+            if (alreadyInProject) {
+                ImGui::BeginDisabled();
+                ImGui::Button("In Project");
+                ImGui::EndDisabled();
+            } else {
+                if (ImGui::Button("Add to Project")) {
+                    if (m_gcodeRepo) {
+                        m_gcodeRepo->addToProject(
+                            m_projectManager->currentProject()->id(), m_currentGCodeId);
+                        ToastManager::instance().show(ToastType::Success,
+                            "Added", "G-code added to project");
+                    }
+                }
+            }
+        }
     }
 }
 

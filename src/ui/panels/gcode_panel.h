@@ -11,6 +11,8 @@
 namespace dw {
 
 class FileDialog;
+class GCodeRepository;
+class ProjectManager;
 
 // G-code viewer panel
 class GCodePanel : public Panel {
@@ -22,6 +24,10 @@ class GCodePanel : public Panel {
 
     // Set the file dialog used for opening G-code files
     void setFileDialog(FileDialog* dialog) { m_fileDialog = dialog; }
+
+    // Dependency injection
+    void setGCodeRepository(GCodeRepository* repo) { m_gcodeRepo = repo; }
+    void setProjectManager(ProjectManager* pm) { m_projectManager = pm; }
 
     // Load G-code from file
     bool loadFile(const std::string& path);
@@ -50,6 +56,11 @@ class GCodePanel : public Panel {
     bool m_showTravel = false;
     bool m_showExtrusion = true;
     Canvas2D m_canvas;
+
+    // Persistence
+    GCodeRepository* m_gcodeRepo = nullptr;
+    ProjectManager* m_projectManager = nullptr;
+    i64 m_currentGCodeId = -1;
 };
 
 } // namespace dw

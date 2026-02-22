@@ -18,17 +18,17 @@ See: `.planning/PROJECT.md` (updated 2026-02-22)
 ## Current Position
 
 **Milestone:** v1.5 Project Manager
-**Status:** In progress — Phase 7, Plan 1 complete
-**Current Plan:** Phase 7, Plan 2
+**Status:** In progress — Phase 7 complete, starting Phase 8
+**Current Plan:** Phase 8, Plan 1
 
 ```
 Phase 6: Schema & Data Layer (1 plan) — complete
-Phase 7: Unified Project Panel (2 plans) — 1/2 complete
+Phase 7: Unified Project Panel (2 plans) — complete
 Phase 8: Cut Plan & G-code Association (2 plans) — not started
 Phase 9: Comprehensive .dwproj Export/Import (2 plans) — not started
 ```
 
-Last activity: 2026-02-22 — 07-01 ProjectPanel asset navigator complete
+Last activity: 2026-02-22 — 07-02 Cross-panel navigation wiring complete
 
 ---
 
@@ -62,7 +62,7 @@ Last activity: 2026-02-22 — 07-01 ProjectPanel asset navigator complete
 ## Project Health
 
 **Code Quality:**
-- Application.cpp: thin coordinator (486 lines + 799 wiring)
+- Application.cpp: thin coordinator (486 lines + 800 wiring)
 - Manager architecture: UIManager, FileIOManager, ConfigManager
 - .clang-format established, CI enforces formatting
 - All files under 800 line limit

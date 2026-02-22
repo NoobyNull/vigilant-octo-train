@@ -11,6 +11,8 @@
 
 namespace dw {
 
+class ProjectManager;
+
 // 2D Cut optimizer panel
 class CutOptimizerPanel : public Panel {
   public:
@@ -25,7 +27,12 @@ class CutOptimizerPanel : public Panel {
     // Load a saved cut plan record into the panel state
     void loadCutPlan(const CutPlanRecord& record);
 
+    // Dependency injection
+    void setCutPlanRepository(CutPlanRepository* repo) { m_cutPlanRepo = repo; }
+    void setProjectManager(ProjectManager* pm) { m_projectManager = pm; }
+
   private:
+    void saveCutPlan(const char* name);
     void renderToolbar();
     void renderPartsEditor();
     void renderSheetConfig();
@@ -57,6 +64,11 @@ class CutOptimizerPanel : public Panel {
     // Visualization state
     int m_selectedSheet = 0;
     Canvas2D m_canvas; // zoomMax set in constructor
+
+    // Persistence
+    CutPlanRepository* m_cutPlanRepo = nullptr;
+    ProjectManager* m_projectManager = nullptr;
+    i64 m_loadedPlanId = -1;
 };
 
 } // namespace dw

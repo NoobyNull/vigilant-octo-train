@@ -475,7 +475,15 @@ void Application::initWiring() {
             }
         });
     }
-
+    // Wire CutOptimizerPanel and GCodePanel persistence
+    if (auto* cop = m_uiManager->cutOptimizerPanel()) {
+        cop->setCutPlanRepository(m_cutPlanRepo.get());
+        cop->setProjectManager(m_projectManager.get());
+    }
+    if (auto* gcp = m_uiManager->gcodePanel()) {
+        gcp->setGCodeRepository(m_gcodeRepo.get());
+        gcp->setProjectManager(m_projectManager.get());
+    }
     if (m_uiManager->propertiesPanel()) {
         m_uiManager->propertiesPanel()->setOnMeshModified([this]() {
             auto mesh = m_workspace->getFocusedMesh();
@@ -591,7 +599,6 @@ void Application::initWiring() {
         });
     }
 }
-
 void Application::onModelSelected(int64_t modelId) {
     if (!m_libraryManager) return;
 
@@ -674,20 +681,14 @@ void Application::onModelSelected(int64_t modelId) {
 void Application::assignMaterialToCurrentModel(int64_t materialId) {
     if (!m_materialManager || !m_workspace)
         return;
-
-    // Get the currently focused mesh
     auto mesh = m_workspace->getFocusedMesh();
     if (!mesh)
         return;
-
-    // Get material record
     auto material = m_materialManager->getMaterial(materialId);
     if (!material)
         return;
-
-    if (m_focusedModelId > 0) {
+    if (m_focusedModelId > 0)
         m_materialManager->assignMaterialToModel(materialId, m_focusedModelId);
-    }
 
     // Load and upload material texture if archive path exists
     m_activeMaterialTexture.reset();
@@ -706,12 +707,9 @@ void Application::assignMaterialToCurrentModel(int64_t materialId) {
         }
     }
 
-    // Generate UVs if needed
-    if (mesh->needsUVGeneration()) {
+    if (mesh->needsUVGeneration())
         mesh->generatePlanarUVs(material->grainDirectionDeg);
-    }
 
-    // Store active material ID
     m_activeMaterialId = materialId;
 
     // Update PropertiesPanel to show material info

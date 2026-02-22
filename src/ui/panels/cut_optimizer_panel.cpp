@@ -5,6 +5,7 @@
 
 #include <imgui.h>
 
+#include "../../core/project/project.h"
 #include "../icons.h"
 #include "../widgets/toast.h"
 
@@ -95,6 +96,9 @@ void CutOptimizerPanel::loadCutPlan(const CutPlanRecord& record) {
         m_hasResults = false;
     }
 
+    // Track loaded plan for updates
+    m_loadedPlanId = record.id;
+
     // Restore settings
     m_allowRotation = record.allowRotation;
     m_kerf = record.kerf;
@@ -124,6 +128,59 @@ void CutOptimizerPanel::renderToolbar() {
     ImGui::SameLine();
     if (ImGui::Button("Clear All")) {
         clear();
+    }
+
+    ImGui::SameLine();
+
+    // Save button — enabled when we have results and a repository
+    if (!m_hasResults || !m_cutPlanRepo) ImGui::BeginDisabled();
+    if (ImGui::Button("Save")) {
+        ImGui::OpenPopup("Save Cut Plan");
+    }
+    if (!m_hasResults || !m_cutPlanRepo) ImGui::EndDisabled();
+
+    ImGui::SameLine();
+
+    // Load button — show list of saved plans
+    if (!m_cutPlanRepo) ImGui::BeginDisabled();
+    if (ImGui::Button("Load")) {
+        ImGui::OpenPopup("Load Cut Plan");
+    }
+    if (!m_cutPlanRepo) ImGui::EndDisabled();
+
+    // Save popup
+    if (ImGui::BeginPopup("Save Cut Plan")) {
+        static char planName[128] = {};
+        ImGui::InputText("Name", planName, sizeof(planName));
+        if (ImGui::Button("Save##confirm") && planName[0] != '\0') {
+            saveCutPlan(planName);
+            planName[0] = '\0';
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    // Load popup
+    if (ImGui::BeginPopup("Load Cut Plan")) {
+        auto plans = m_cutPlanRepo ? m_cutPlanRepo->findAll() : std::vector<CutPlanRecord>{};
+        if (plans.empty()) {
+            ImGui::TextDisabled("No saved plans");
+        } else {
+            for (const auto& plan : plans) {
+                std::string label = plan.name + " (" +
+                    std::to_string(plan.sheetsUsed) + " sheets, " +
+                    std::to_string(static_cast<int>(plan.efficiency * 100)) + "%%)";
+                if (ImGui::Selectable(label.c_str())) {
+                    loadCutPlan(plan);
+                    ImGui::CloseCurrentPopup();
+                }
+            }
+        }
+        ImGui::EndPopup();
     }
 
     ImGui::SameLine();
@@ -398,6 +455,35 @@ void CutOptimizerPanel::renderVisualization() {
 
     // Handle input for pan/zoom
     m_canvas.handleInput("cut_canvas");
+}
+
+void CutOptimizerPanel::saveCutPlan(const char* name) {
+    if (!m_cutPlanRepo || !m_hasResults) return;
+
+    CutPlanRecord record;
+    record.name = name;
+    record.algorithm = (m_algorithm == optimizer::Algorithm::Guillotine)
+        ? "guillotine" : "first_fit_decreasing";
+    record.sheetConfigJson = CutPlanRepository::sheetToJson(m_sheet);
+    record.partsJson = CutPlanRepository::partsToJson(m_parts);
+    record.resultJson = CutPlanRepository::cutPlanToJson(m_result);
+    record.allowRotation = m_allowRotation;
+    record.kerf = m_kerf;
+    record.margin = m_margin;
+    record.sheetsUsed = m_result.sheetsUsed;
+    record.efficiency = m_result.overallEfficiency();
+
+    // Link to current project if one is open
+    if (m_projectManager && m_projectManager->currentProject()) {
+        record.projectId = m_projectManager->currentProject()->id();
+    }
+
+    auto id = m_cutPlanRepo->insert(record);
+    if (id) {
+        m_loadedPlanId = *id;
+        ToastManager::instance().show(ToastType::Success,
+            "Saved", "Cut plan saved");
+    }
 }
 
 void CutOptimizerPanel::runOptimization() {

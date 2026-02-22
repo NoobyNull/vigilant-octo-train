@@ -96,34 +96,23 @@ Plans:
 - [ ] 07-01-PLAN.md — Refactor ProjectPanel into asset navigator with category sections
 - [ ] 07-02-PLAN.md — Cross-panel navigation callbacks and Application wiring
 
-#### Phase 8: Cut Plan Persistence & G-code Association
-**Goal:** Cut plans can be saved/loaded and gcode files can be added to projects
+#### Phase 8: Cut Plan Persistence, G-code Association & .dwproj Export
+**Goal:** Cut plans can be saved/loaded, gcode files can be added to projects, and .dwproj archives contain ALL project assets
 **Depends on:** Phase 6 (tables exist), Phase 7 (panel shows sections)
-**Requirements:** PROJ-02, PROJ-04
+**Requirements:** PROJ-02, PROJ-04, PROJ-05, PROJ-06
 **Success Criteria** (what must be TRUE):
   1. CutOptimizerPanel has Save and Load buttons for cut plans
   2. Saved cut plans appear in the Project Panel under Cut Plans section
   3. GCodePanel or Library can "Add to Project" for gcode files
   4. G-code files appear in the Project Panel under G-code section
   5. Removing assets from the project panel updates the junction tables
+  6. Export bundles: models, thumbnails, materials, gcode files, cost estimates, cut plans, notes
+  7. Import on a clean install creates project with all assets linked
+  8. Round-trip test: export → import → export produces identical archive content
 Plans:
-- [ ] 08-01-PLAN.md — CutOptimizerPanel save/load + project association
-- [ ] 08-02-PLAN.md — G-code project association UI + context menu integration
-
-#### Phase 9: Comprehensive .dwproj Export/Import
-**Goal:** .dwproj archives contain ALL project assets and import restores everything
-**Depends on:** Phase 8 (all asset types linkable to projects)
-**Requirements:** PROJ-05, PROJ-06
-**Success Criteria** (what must be TRUE):
-  1. Export bundles: models, thumbnails, materials, gcode files, cost estimates, cut plans
-  2. Manifest v2 includes gcode, cost, and cut plan sections
-  3. Import on a clean install creates project with all assets linked
-  4. Import deduplicates models and materials (existing behavior preserved)
-  5. Imported project auto-opens (existing behavior preserved)
-  6. Round-trip test: export → import → export produces identical archive content
-Plans:
-- [ ] 09-01-PLAN.md — Export v2: add gcode, costs, cut plans to archive + manifest v2
-- [ ] 09-02-PLAN.md — Import v2: restore gcode, costs, cut plans + round-trip test
+- [ ] 08-01-PLAN.md — CutOptimizerPanel save/load + G-code project association UI
+- [ ] 08-02-PLAN.md — Extend ProjectExportManager: gcode, costs, cut plans in manifest + archive
+- [ ] 08-03-PLAN.md — Import all asset types + round-trip test
 
 ## Phase Details
 
@@ -217,10 +206,9 @@ Plans:
 | 5 Project Export | v1.1 | 4/4 | Complete | 2026-02-22 |
 | 5 Theme Modernization | v1.2 | 3/3 | Complete | 2026-02-21 |
 | AI Material UX & Fixes | v1.3 | — | Complete | 2026-02-21 |
-| 6 Schema & Data Layer | v1.5 | 0/1 | Not Started | — |
-| 7 Unified Project Panel | v1.5 | 0/2 | Not Started | — |
-| 8 Cut Plan & G-code Association | v1.5 | 0/2 | Not Started | — |
-| 9 Comprehensive .dwproj Export/Import | v1.5 | 0/2 | Not Started | — |
+| 6 Schema & Data Layer | v1.5 | 1/1 | Complete | 2026-02-22 |
+| 7 Unified Project Panel | v1.5 | 2/2 | Complete | 2026-02-22 |
+| 8 Cut Plan, G-code & .dwproj | v1.5 | 0/3 | Not Started | — |
 
 ---
 
