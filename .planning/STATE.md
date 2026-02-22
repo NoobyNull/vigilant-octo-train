@@ -1,7 +1,7 @@
 # Project State: Digital Workshop
 
 **Last Updated:** 2026-02-22
-**Current Session:** Phase 02 Plan 01 completed (StorageManager)
+**Current Session:** Phase 02 Plan 02 completed (Import Pipeline CAS wiring)
 
 ---
 
@@ -19,15 +19,15 @@ See: `.planning/PROJECT.md` (updated 2026-02-21)
 
 **Milestone:** v1.1 Library Storage & Organization
 **Phase:** 2 — Content-Addressable Storage
-**Plan:** 02-01 complete, 02-02 next
-**Status:** Phase 02 in progress
+**Plan:** 02-02 complete, phase 02 complete
+**Status:** Phase 02 complete, Phase 03 next
 
 ```
-v1.1 Progress: [=====_______________] 1/4 phases in progress
-Phase 02: Plan 1/3 complete
+v1.1 Progress: [=====_______________] 1/4 phases complete
+Phase 02: Plan 2/2 complete
 ```
 
-Last activity: 2026-02-22 — 02-01 StorageManager plan completed (2 tasks, 9 tests, 3m 5s)
+Last activity: 2026-02-22 — 02-02 Import Pipeline CAS wiring completed (2 tasks, 2m 32s)
 
 ---
 
@@ -41,12 +41,13 @@ Last activity: 2026-02-22 — 02-01 StorageManager plan completed (2 tasks, 9 te
 **Phase 01:** 6 plans, materials system (completed 2026-02-20)
 
 ### v1.1
-**Plans completed:** 1
-**Cycle time:** 3m 5s (1 plan)
+**Plans completed:** 2
+**Cycle time:** 2m 49s avg (2 plans)
 
 | Phase | Plan | Duration | Tasks | Tests |
 |-------|------|----------|-------|-------|
 | 02 | 01 - StorageManager | 3m 5s | 2 | 9 |
+| 02 | 02 - Import Pipeline CAS | 2m 32s | 2 | 0 |
 
 ---
 
@@ -57,7 +58,7 @@ Last activity: 2026-02-22 — 02-01 StorageManager plan completed (2 tasks, 9 te
 - Manager architecture: UIManager, FileIOManager, ConfigManager
 
 **Test Coverage:**
-- 500+ tests passing (1 pre-existing failure in STLLoader)
+- 534 tests passing (1 pre-existing failure in STLLoader)
 - StorageManager: 9 tests (path computation, atomic store, dedup, cleanup)
 - Infrastructure: EventBus (10), ConnectionPool (10), MainThreadQueue (10)
 - Bug regression tests: 12

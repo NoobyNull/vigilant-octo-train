@@ -10,9 +10,9 @@
 
 ### Storage (STOR)
 
-- [ ] **STOR-01**: User's imported models are stored in content-addressable blob directories (hash-based layout: `blobs/ab/cd/abcdef...ext`)
-- [ ] **STOR-02**: File writes use atomic temp+verify+rename to prevent corruption from crashes or network disconnects
-- [ ] **STOR-03**: Application cleans up orphaned temp files on startup
+- [x] **STOR-01**: User's imported models are stored in content-addressable blob directories (hash-based layout: `blobs/ab/cd/abcdef...ext`)
+- [x] **STOR-02**: File writes use atomic temp+verify+rename to prevent corruption from crashes or network disconnects
+- [x] **STOR-03**: Application cleans up orphaned temp files on startup
 - [ ] **STOR-04**: Application detects non-local filesystems (NAS, Google Drive, OneDrive, mapped drives) and auto-suggests copy instead of move
 
 ### Import (IMPORT)
@@ -55,9 +55,9 @@
 
 | REQ-ID | Phase | Plan | Status |
 |--------|-------|------|--------|
-| STOR-01 | Phase 2 | — | Pending |
-| STOR-02 | Phase 2 | — | Pending |
-| STOR-03 | Phase 2 | — | Pending |
+| STOR-01 | Phase 2 | 02-01, 02-02 | Complete |
+| STOR-02 | Phase 2 | 02-01, 02-02 | Complete |
+| STOR-03 | Phase 2 | 02-01, 02-02 | Complete |
 | STOR-04 | Phase 3 | — | Pending |
 | IMPORT-01 | Phase 3 | — | Pending |
 | IMPORT-02 | Phase 3 | — | Pending |
