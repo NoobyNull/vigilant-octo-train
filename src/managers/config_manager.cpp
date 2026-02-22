@@ -23,8 +23,10 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
-#include <shellapi.h>
 #include <windows.h>
+// clang-format off
+#include <shellapi.h>  // must follow windows.h
+// clang-format on
 #elif defined(__linux__)
 #include <unistd.h>
 #endif
