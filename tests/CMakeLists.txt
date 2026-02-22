@@ -42,6 +42,8 @@ set(DW_TEST_SOURCES
     test_material_archive.cpp
     test_material_manager.cpp
     test_mesh_uv.cpp
+    # Storage
+    test_storage_manager.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
     # Tier 3 — workspace tests (no GL/SDL required)
@@ -95,6 +97,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/config/config_watcher.cpp
     ${CMAKE_SOURCE_DIR}/src/core/config/input_binding.cpp
     ${CMAKE_SOURCE_DIR}/src/core/paths/app_paths.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/storage/storage_manager.cpp
     ${CMAKE_SOURCE_DIR}/src/render/camera.cpp
     ${CMAKE_SOURCE_DIR}/src/app/workspace.cpp
 )
