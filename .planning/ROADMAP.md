@@ -6,6 +6,7 @@
 - ✅ **v1.1 Library Storage & Organization** — Phases 2-5 (completed 2026-02-22)
 - ✅ **v1.2 UI Freshen-Up** — Phase 5 (completed 2026-02-21)
 - ✅ **v1.3 AI Material UX & Fixes** — AI-first Add dialog, descriptor integration, Gemini fixes (completed 2026-02-21)
+- 🔄 **v1.5 Project Manager** — Unified asset panel, cross-panel navigation, cut plan persistence, comprehensive .dwproj export/import
 
 ## Phases
 
@@ -62,6 +63,67 @@ See Phase Details below for full breakdown.
 See: `.planning/milestones/v1.3-ROADMAP.md` for full details.
 
 </details>
+
+### v1.5 Project Manager
+
+#### Phase 6: Schema & Data Layer
+**Goal:** Database supports all project asset types — gcode links, cut plan storage, project notes
+**Depends on:** Existing schema v8
+**Requirements:** PROJ-02, PROJ-04, PROJ-07
+**Success Criteria** (what must be TRUE):
+  1. `project_gcode` junction table exists with project_id, gcode_id, sort_order
+  2. `cut_plans` table stores algorithm, sheet config, parts, and result JSON linked to a project
+  3. `projects` table has a `notes` column
+  4. Schema migrates from v8 to v9 cleanly
+  5. GcodeRepository has methods to find gcode by project; CutPlanRepository is new
+  6. All new repository methods have unit tests
+Plans:
+- [ ] 06-01-PLAN.md — Schema v9 migration + GcodeRepository project methods + CutPlanRepository
+
+#### Phase 7: Unified Project Panel
+**Goal:** ProjectPanel shows all project assets organized by category with cross-panel navigation
+**Depends on:** Phase 6 (schema must support gcode/cut-plan links)
+**Requirements:** PROJ-01, PROJ-03, PROJ-07
+**Success Criteria** (what must be TRUE):
+  1. Project Panel shows collapsible sections: Models, G-code, Materials, Costs, Cut Plans, Notes
+  2. Each section lists associated assets with icons and summary info
+  3. Clicking a model navigates to Library Panel + Viewport
+  4. Clicking a gcode file navigates to GCode Panel
+  5. Clicking a material navigates to Materials Panel
+  6. Clicking a cost estimate navigates to Cost Panel
+  7. Notes section has inline editing with auto-save
+Plans:
+- [ ] 07-01-PLAN.md — Refactor ProjectPanel into asset navigator with category sections
+- [ ] 07-02-PLAN.md — Cross-panel navigation callbacks and Application wiring
+
+#### Phase 8: Cut Plan Persistence & G-code Association
+**Goal:** Cut plans can be saved/loaded and gcode files can be added to projects
+**Depends on:** Phase 6 (tables exist), Phase 7 (panel shows sections)
+**Requirements:** PROJ-02, PROJ-04
+**Success Criteria** (what must be TRUE):
+  1. CutOptimizerPanel has Save and Load buttons for cut plans
+  2. Saved cut plans appear in the Project Panel under Cut Plans section
+  3. GCodePanel or Library can "Add to Project" for gcode files
+  4. G-code files appear in the Project Panel under G-code section
+  5. Removing assets from the project panel updates the junction tables
+Plans:
+- [ ] 08-01-PLAN.md — CutOptimizerPanel save/load + project association
+- [ ] 08-02-PLAN.md — G-code project association UI + context menu integration
+
+#### Phase 9: Comprehensive .dwproj Export/Import
+**Goal:** .dwproj archives contain ALL project assets and import restores everything
+**Depends on:** Phase 8 (all asset types linkable to projects)
+**Requirements:** PROJ-05, PROJ-06
+**Success Criteria** (what must be TRUE):
+  1. Export bundles: models, thumbnails, materials, gcode files, cost estimates, cut plans
+  2. Manifest v2 includes gcode, cost, and cut plan sections
+  3. Import on a clean install creates project with all assets linked
+  4. Import deduplicates models and materials (existing behavior preserved)
+  5. Imported project auto-opens (existing behavior preserved)
+  6. Round-trip test: export → import → export produces identical archive content
+Plans:
+- [ ] 09-01-PLAN.md — Export v2: add gcode, costs, cut plans to archive + manifest v2
+- [ ] 09-02-PLAN.md — Import v2: restore gcode, costs, cut plans + round-trip test
 
 ## Phase Details
 
@@ -155,6 +217,10 @@ Plans:
 | 5 Project Export | v1.1 | 4/4 | Complete | 2026-02-22 |
 | 5 Theme Modernization | v1.2 | 3/3 | Complete | 2026-02-21 |
 | AI Material UX & Fixes | v1.3 | — | Complete | 2026-02-21 |
+| 6 Schema & Data Layer | v1.5 | 0/1 | Not Started | — |
+| 7 Unified Project Panel | v1.5 | 0/2 | Not Started | — |
+| 8 Cut Plan & G-code Association | v1.5 | 0/2 | Not Started | — |
+| 9 Comprehensive .dwproj Export/Import | v1.5 | 0/2 | Not Started | — |
 
 ---
 
@@ -164,3 +230,4 @@ Plans:
 *v1.1 milestone completed: 2026-02-22*
 *v1.2 milestone completed: 2026-02-21*
 *v1.3 milestone completed: 2026-02-21*
+*v1.5 milestone started: 2026-02-22*

@@ -1,30 +1,33 @@
 # Project State: Digital Workshop
 
-**Last Updated:** 2026-02-21
-**Current Session:** v1.3 milestone archived
+**Last Updated:** 2026-02-22
+**Current Session:** v1.5 Project Manager — milestone started
 
 ---
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-02-21)
+See: `.planning/PROJECT.md` (updated 2026-02-22)
 
 **Core Value:** A single focused workspace where a CNC woodworker can manage their model library, analyze toolpaths, and optimize material usage — without switching between tools.
 
-**Current Focus:** Between milestones — v1.3 shipped, next milestone TBD
+**Current Focus:** v1.5 Project Manager — unified asset panel, cross-panel navigation, comprehensive .dwproj export/import
 
 ---
 
 ## Current Position
 
-**Milestone:** v1.3 AI Material UX & Fixes (complete)
-**Status:** Archived and tagged
+**Milestone:** v1.5 Project Manager
+**Status:** Requirements written, roadmap defined, ready for planning
 
 ```
-v1.3 shipped. Ready for next milestone.
+Phase 6: Schema & Data Layer (1 plan) — not started
+Phase 7: Unified Project Panel (2 plans) — not started
+Phase 8: Cut Plan & G-code Association (2 plans) — not started
+Phase 9: Comprehensive .dwproj Export/Import (2 plans) — not started
 ```
 
-Last activity: 2026-02-21 — v1.3 archived
+Last activity: 2026-02-22 — v1.5 milestone created
 
 ---
 
@@ -49,23 +52,30 @@ Last activity: 2026-02-21 — v1.3 archived
 **Scope:** AI-first Add dialog, Gemini fixes, descriptor integration
 **Timeline:** Same day (Feb 21, 2026)
 
+### v1.4
+**Scope:** Code quality sweep — dead code removal, formatting, file splits, bug fixes
+**Timeline:** Same day (Feb 22, 2026)
+
 ---
 
 ## Project Health
 
 **Code Quality:**
-- Application.cpp: thin coordinator
+- Application.cpp: thin coordinator (486 lines + 799 wiring)
 - Manager architecture: UIManager, FileIOManager, ConfigManager
+- .clang-format established, CI enforces formatting
+- All files under 800 line limit
 
 **Test Coverage:**
-- 545 tests passing
+- 526 tests passing
 - StorageManager: 9 tests
-- Infrastructure: EventBus (10), ConnectionPool (10), MainThreadQueue (10)
+- Infrastructure: ConnectionPool (10), MainThreadQueue (10)
 - Bug regression tests: 12
 - Materials tests: Comprehensive coverage
 
 **Tech Debt:**
-- EventBus wired but unused (6 event types, zero pub/sub calls in production)
+- EventBus removed in v1.4.4 (was wired but unused)
+- DEBT-07 remaining (optional: more optimizer algorithms)
 
 ---
 
@@ -75,15 +85,22 @@ Last activity: 2026-02-21 — v1.3 archived
 
 **Key Files:**
 - Roadmap: `.planning/ROADMAP.md`
+- Requirements: `.planning/REQUIREMENTS.md`
 - Project Definition: `.planning/PROJECT.md`
 - Milestone History: `.planning/MILESTONES.md`
-- Research: `.planning/research/SUMMARY.md`
-- Gap Analysis: `.planning/TODOS.md`
 
 **Manager Architecture:**
 - UIManager: `src/managers/ui_manager.h/.cpp`
 - FileIOManager: `src/managers/file_io_manager.h/.cpp`
 - ConfigManager: `src/managers/config_manager.h/.cpp`
+
+**Existing Project Infrastructure:**
+- ProjectManager: `src/core/project/project.h/.cpp`
+- ProjectRepository: `src/core/database/project_repository.h/.cpp`
+- ProjectExportManager: `src/core/export/project_export_manager.h/.cpp`
+- ProjectPanel: `src/ui/panels/project_panel.h/.cpp`
+- CostRepository: `src/core/database/cost_repository.h/.cpp`
+- CutOptimizer: `src/core/optimizer/cut_optimizer.h/.cpp`
 
 ---
 
@@ -96,8 +113,10 @@ Last activity: 2026-02-21 — v1.3 archived
 - v1.1: Library Storage & Organization (completed 2026-02-22)
 - v1.2: UI Freshen-Up (completed 2026-02-21)
 - v1.3: AI Material UX & Fixes (completed 2026-02-21)
+- v1.4: Code Quality Sweep (completed 2026-02-22)
+- v1.5: Project Manager (in progress)
 
 ---
 
 *State initialized: 2026-02-08*
-*v1.3 milestone archived: 2026-02-21*
+*v1.5 milestone started: 2026-02-22*

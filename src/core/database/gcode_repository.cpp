@@ -333,6 +333,95 @@ bool GCodeRepository::deleteGroup(i64 groupId) {
     return stmt.execute();
 }
 
+// ===== Project association =====
+
+bool GCodeRepository::addToProject(i64 projectId, i64 gcodeId, int sortOrder) {
+    auto stmt = m_db.prepare(
+        "INSERT OR IGNORE INTO project_gcode (project_id, gcode_id, sort_order) VALUES (?, ?, ?)");
+
+    if (!stmt.isValid()) {
+        return false;
+    }
+
+    if (!stmt.bindInt(1, projectId) || !stmt.bindInt(2, gcodeId) || !stmt.bindInt(3, sortOrder)) {
+        return false;
+    }
+
+    return stmt.execute();
+}
+
+bool GCodeRepository::removeFromProject(i64 projectId, i64 gcodeId) {
+    auto stmt = m_db.prepare("DELETE FROM project_gcode WHERE project_id = ? AND gcode_id = ?");
+
+    if (!stmt.isValid()) {
+        return false;
+    }
+
+    if (!stmt.bindInt(1, projectId) || !stmt.bindInt(2, gcodeId)) {
+        return false;
+    }
+
+    return stmt.execute();
+}
+
+std::vector<GCodeRecord> GCodeRepository::findByProject(i64 projectId) {
+    std::vector<GCodeRecord> results;
+
+    auto stmt = m_db.prepare(R"(
+        SELECT gf.* FROM gcode_files gf
+        INNER JOIN project_gcode pg ON gf.id = pg.gcode_id
+        WHERE pg.project_id = ?
+        ORDER BY pg.sort_order
+    )");
+
+    if (!stmt.isValid()) {
+        return results;
+    }
+
+    if (!stmt.bindInt(1, projectId)) {
+        return results;
+    }
+
+    while (stmt.step()) {
+        results.push_back(rowToGCode(stmt));
+    }
+
+    return results;
+}
+
+std::vector<i64> GCodeRepository::getProjectsForGCode(i64 gcodeId) {
+    std::vector<i64> ids;
+
+    auto stmt = m_db.prepare("SELECT project_id FROM project_gcode WHERE gcode_id = ?");
+    if (!stmt.isValid()) {
+        return ids;
+    }
+
+    if (!stmt.bindInt(1, gcodeId)) {
+        return ids;
+    }
+
+    while (stmt.step()) {
+        ids.push_back(stmt.getInt(0));
+    }
+
+    return ids;
+}
+
+bool GCodeRepository::isInProject(i64 projectId, i64 gcodeId) {
+    auto stmt = m_db.prepare(
+        "SELECT 1 FROM project_gcode WHERE project_id = ? AND gcode_id = ? LIMIT 1");
+    if (!stmt.isValid()) {
+        return false;
+    }
+
+    if (!stmt.bindInt(1, projectId) || !stmt.bindInt(2, gcodeId)) {
+        return false;
+    }
+
+    return stmt.step();
+}
+
 // ===== Template operations =====
 
 std::vector<GCodeTemplate> GCodeRepository::getTemplates() {

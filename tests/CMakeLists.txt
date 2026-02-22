@@ -37,6 +37,8 @@ set(DW_TEST_SOURCES
     test_config_watcher.cpp
     test_app_paths.cpp
     test_cost_repository.cpp
+    test_cut_plan_repository.cpp
+    test_gcode_repository.cpp
     test_material_archive.cpp
     test_material_manager.cpp
     test_mesh_uv.cpp
@@ -84,6 +86,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/database/project_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/cost_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/gcode_repository.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/database/cut_plan_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/project/project.cpp
     ${CMAKE_SOURCE_DIR}/src/core/export/model_exporter.cpp
     ${CMAKE_SOURCE_DIR}/src/core/archive/archive.cpp

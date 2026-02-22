@@ -9,8 +9,8 @@ ProjectRepository::ProjectRepository(Database& db) : m_db(db) {}
 
 std::optional<i64> ProjectRepository::insert(const ProjectRecord& project) {
     auto stmt = m_db.prepare(R"(
-        INSERT INTO projects (name, description, file_path)
-        VALUES (?, ?, ?)
+        INSERT INTO projects (name, description, file_path, notes)
+        VALUES (?, ?, ?, ?)
     )");
 
     if (!stmt.isValid()) {
@@ -18,7 +18,7 @@ std::optional<i64> ProjectRepository::insert(const ProjectRecord& project) {
     }
 
     if (!stmt.bindText(1, project.name) || !stmt.bindText(2, project.description) ||
-        !stmt.bindText(3, project.filePath.string())) {
+        !stmt.bindText(3, project.filePath.string()) || !stmt.bindText(4, project.notes)) {
         log::error("ProjectRepo", "Failed to bind insert parameters");
         return std::nullopt;
     }
@@ -89,6 +89,7 @@ bool ProjectRepository::update(const ProjectRecord& project) {
             name = ?,
             description = ?,
             file_path = ?,
+            notes = ?,
             modified_at = CURRENT_TIMESTAMP
         WHERE id = ?
     )");
@@ -98,7 +99,8 @@ bool ProjectRepository::update(const ProjectRecord& project) {
     }
 
     if (!stmt.bindText(1, project.name) || !stmt.bindText(2, project.description) ||
-        !stmt.bindText(3, project.filePath.string()) || !stmt.bindInt(4, project.id)) {
+        !stmt.bindText(3, project.filePath.string()) || !stmt.bindText(4, project.notes) ||
+        !stmt.bindInt(5, project.id)) {
         return false;
     }
 
@@ -256,8 +258,9 @@ ProjectRecord ProjectRepository::rowToProject(Statement& stmt) {
     project.name = stmt.getText(1);
     project.description = stmt.getText(2);
     project.filePath = stmt.getText(3);
-    project.createdAt = stmt.getText(4);
-    project.modifiedAt = stmt.getText(5);
+    project.notes = stmt.getText(4);
+    project.createdAt = stmt.getText(5);
+    project.modifiedAt = stmt.getText(6);
     return project;
 }
 

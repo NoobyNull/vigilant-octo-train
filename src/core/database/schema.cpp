@@ -135,6 +135,7 @@ bool Schema::createTables(Database& db) {
             name TEXT NOT NULL,
             description TEXT DEFAULT '',
             file_path TEXT,
+            notes TEXT DEFAULT '',
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             modified_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
@@ -171,6 +172,44 @@ bool Schema::createTables(Database& db) {
             discount_amount REAL DEFAULT 0,
             total REAL DEFAULT 0,
             notes TEXT DEFAULT '',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            modified_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+        )
+    )")) {
+        return false;
+    }
+
+    // Project-GCode junction table
+    if (!db.execute(R"(
+        CREATE TABLE IF NOT EXISTS project_gcode (
+            project_id INTEGER NOT NULL,
+            gcode_id INTEGER NOT NULL,
+            sort_order INTEGER DEFAULT 0,
+            added_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (project_id, gcode_id),
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+            FOREIGN KEY (gcode_id) REFERENCES gcode_files(id) ON DELETE CASCADE
+        )
+    )")) {
+        return false;
+    }
+
+    // Cut plans table
+    if (!db.execute(R"(
+        CREATE TABLE IF NOT EXISTS cut_plans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER,
+            name TEXT NOT NULL,
+            algorithm TEXT NOT NULL,
+            sheet_config TEXT NOT NULL,
+            parts TEXT NOT NULL,
+            result TEXT NOT NULL,
+            allow_rotation INTEGER DEFAULT 1,
+            kerf REAL DEFAULT 0,
+            margin REAL DEFAULT 0,
+            sheets_used INTEGER DEFAULT 0,
+            efficiency REAL DEFAULT 0,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             modified_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
@@ -330,6 +369,12 @@ bool Schema::createTables(Database& db) {
                      "project_models(model_id)");
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_cost_estimates_project ON "
                      "cost_estimates(project_id)");
+    (void)db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_project_gcode_project ON project_gcode(project_id)");
+    (void)db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_project_gcode_gcode ON project_gcode(gcode_id)");
+    (void)db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_cut_plans_project ON cut_plans(project_id)");
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_gcode_hash ON gcode_files(hash)");
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_gcode_name ON gcode_files(name)");
     (void)db.execute(
@@ -444,6 +489,34 @@ bool Schema::migrate(Database& db, int fromVersion) {
         log::info(
             "Schema",
             "Added descriptor_title, descriptor_description, descriptor_hover columns to models");
+    }
+
+    if (fromVersion < 9) {
+        // v9: project_gcode junction, cut_plans table, notes column on projects
+        const char* v9[] = {
+            "CREATE TABLE IF NOT EXISTS project_gcode ("
+            "project_id INTEGER NOT NULL, gcode_id INTEGER NOT NULL, "
+            "sort_order INTEGER DEFAULT 0, added_at TEXT DEFAULT CURRENT_TIMESTAMP, "
+            "PRIMARY KEY (project_id, gcode_id), "
+            "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE, "
+            "FOREIGN KEY (gcode_id) REFERENCES gcode_files(id) ON DELETE CASCADE)",
+            "CREATE INDEX IF NOT EXISTS idx_project_gcode_project ON project_gcode(project_id)",
+            "CREATE INDEX IF NOT EXISTS idx_project_gcode_gcode ON project_gcode(gcode_id)",
+            "CREATE TABLE IF NOT EXISTS cut_plans ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, "
+            "name TEXT NOT NULL, algorithm TEXT NOT NULL, "
+            "sheet_config TEXT NOT NULL, parts TEXT NOT NULL, result TEXT NOT NULL, "
+            "allow_rotation INTEGER DEFAULT 1, kerf REAL DEFAULT 0, margin REAL DEFAULT 0, "
+            "sheets_used INTEGER DEFAULT 0, efficiency REAL DEFAULT 0, "
+            "created_at TEXT DEFAULT CURRENT_TIMESTAMP, modified_at TEXT DEFAULT CURRENT_TIMESTAMP, "
+            "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL)",
+            "CREATE INDEX IF NOT EXISTS idx_cut_plans_project ON cut_plans(project_id)",
+            "ALTER TABLE projects ADD COLUMN notes TEXT DEFAULT ''",
+        };
+        for (const auto* sql : v9) {
+            if (!db.execute(sql)) return false;
+        }
+        log::info("Schema", "Added project_gcode, cut_plans tables and notes column on projects");
     }
 
     if (!setVersion(db, CURRENT_VERSION)) {

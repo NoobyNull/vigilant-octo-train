@@ -16,6 +16,7 @@ struct ProjectRecord {
     std::string name;
     std::string description;
     Path filePath;
+    std::string notes;
     std::string createdAt;
     std::string modifiedAt;
 };

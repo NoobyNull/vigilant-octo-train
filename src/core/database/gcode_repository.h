@@ -67,6 +67,13 @@ class GCodeRepository {
     std::vector<GCodeRecord> getGroupMembers(i64 groupId);
     bool deleteGroup(i64 groupId);
 
+    // Project association
+    bool addToProject(i64 projectId, i64 gcodeId, int sortOrder = 0);
+    bool removeFromProject(i64 projectId, i64 gcodeId);
+    std::vector<GCodeRecord> findByProject(i64 projectId);
+    std::vector<i64> getProjectsForGCode(i64 gcodeId);
+    bool isInProject(i64 projectId, i64 gcodeId);
+
     // Template operations
     std::vector<GCodeTemplate> getTemplates();
     bool applyTemplate(i64 modelId, const std::string& templateName);

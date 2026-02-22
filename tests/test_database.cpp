@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include "core/database/database.h"
+#include "core/database/schema.h"
 
 namespace {
 
@@ -193,4 +194,62 @@ TEST_F(DatabaseTest, Statement_MoveConstruct) {
     dw::Statement stmt2(std::move(stmt1));
     EXPECT_TRUE(stmt2.isValid());
     EXPECT_FALSE(stmt1.isValid()); // NOLINT: testing moved-from state
+}
+
+// --- Schema Migration v8 to v9 ---
+
+TEST(Database, SchemaMigration_v8_to_v9) {
+    dw::Database db;
+    ASSERT_TRUE(db.open(":memory:"));
+
+    // Manually create a v8-like schema with the projects table (no notes column)
+    ASSERT_TRUE(db.execute("CREATE TABLE schema_version (version INTEGER NOT NULL)"));
+    ASSERT_TRUE(db.execute("INSERT INTO schema_version (version) VALUES (8)"));
+    ASSERT_TRUE(db.execute(R"(
+        CREATE TABLE projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            file_path TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            modified_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    )"));
+    // Need gcode_files table for FKs
+    ASSERT_TRUE(db.execute(R"(
+        CREATE TABLE gcode_files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            hash TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            file_size INTEGER DEFAULT 0,
+            bounds_min_x REAL DEFAULT 0, bounds_min_y REAL DEFAULT 0, bounds_min_z REAL DEFAULT 0,
+            bounds_max_x REAL DEFAULT 0, bounds_max_y REAL DEFAULT 0, bounds_max_z REAL DEFAULT 0,
+            total_distance REAL DEFAULT 0, estimated_time REAL DEFAULT 0,
+            feed_rates TEXT DEFAULT '[]', tool_numbers TEXT DEFAULT '[]',
+            imported_at TEXT DEFAULT CURRENT_TIMESTAMP, thumbnail_path TEXT
+        )
+    )"));
+
+    // Run schema initialization (should trigger v8->v9 migration)
+    ASSERT_TRUE(dw::Schema::initialize(db));
+
+    // Verify version is now 9
+    EXPECT_EQ(dw::Schema::getVersion(db), 9);
+
+    // Verify project_gcode table exists
+    auto stmt1 = db.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='project_gcode'");
+    EXPECT_TRUE(stmt1.step());
+
+    // Verify cut_plans table exists
+    auto stmt2 = db.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='cut_plans'");
+    EXPECT_TRUE(stmt2.step());
+
+    // Verify notes column was added to projects
+    ASSERT_TRUE(db.execute("INSERT INTO projects (name, notes) VALUES ('test', 'some notes')"));
+    auto stmt3 = db.prepare("SELECT notes FROM projects WHERE name = 'test'");
+    ASSERT_TRUE(stmt3.step());
+    EXPECT_EQ(stmt3.getText(0), "some notes");
 }
