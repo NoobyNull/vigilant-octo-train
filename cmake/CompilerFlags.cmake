@@ -37,12 +37,17 @@ function(dw_set_warning_flags target)
                 -Werror
                 -Wno-error=conversion
                 -Wno-error=sign-conversion
-                -Wno-error=duplicated-branches
                 -Wno-error=cast-qual
                 -Wno-error=double-promotion
                 -Wno-error=missing-field-initializers
                 -Wno-c++20-extensions
             )
+            # GCC-specific: suppress duplicated-branches errors from dependency headers
+            if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+                target_compile_options(${target} PRIVATE
+                    -Wno-error=duplicated-branches
+                )
+            endif()
         endif()
 
     elseif(MSVC)

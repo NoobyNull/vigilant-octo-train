@@ -70,8 +70,8 @@ jobs:
           CC: clang
           CXX: clang++
 
-      - name: Build (for generated files)
-        run: cmake --build build -j$(nproc)
+      - name: Build generated sources (glad, etc.)
+        run: cmake --build build --target glad_gl33_core -j$(nproc)
 
       - name: Run clang-tidy
         run: |
