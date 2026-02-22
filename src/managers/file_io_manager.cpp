@@ -17,6 +17,7 @@
 #include "core/utils/log.h"
 #include "render/thumbnail_generator.h"
 #include "ui/dialogs/file_dialog.h"
+#include "ui/dialogs/import_options_dialog.h"
 #include "ui/dialogs/message_dialog.h"
 #include "ui/panels/library_panel.h"
 #include "ui/panels/properties_panel.h"
@@ -57,8 +58,12 @@ void FileIOManager::importModel() {
                                             }
                                         }
 
-                                        if (!importPaths.empty() && m_importQueue) {
-                                            m_importQueue->enqueue(importPaths);
+                                        if (!importPaths.empty()) {
+                                            if (m_importOptionsDialog) {
+                                                m_importOptionsDialog->open(importPaths);
+                                            } else if (m_importQueue) {
+                                                m_importQueue->enqueue(importPaths);
+                                            }
                                         }
                                     });
     }
@@ -135,7 +140,11 @@ void FileIOManager::onFilesDropped(const std::vector<std::string>& paths) {
     }
 
     if (!importPaths.empty()) {
-        m_importQueue->enqueue(importPaths);
+        if (m_importOptionsDialog) {
+            m_importOptionsDialog->open(importPaths);
+        } else if (m_importQueue) {
+            m_importQueue->enqueue(importPaths);
+        }
     }
 }
 

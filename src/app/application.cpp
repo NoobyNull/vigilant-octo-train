@@ -39,6 +39,7 @@
 #include "managers/ui_manager.h"
 #include "render/texture.h"
 #include "render/thumbnail_generator.h"
+#include "ui/dialogs/import_options_dialog.h"
 #include "ui/dialogs/import_summary_dialog.h"
 #include "ui/dialogs/progress_dialog.h"
 #include "ui/panels/library_panel.h"
@@ -255,6 +256,17 @@ bool Application::init() {
             }
         });
     });
+
+    // Wire import options dialog into FileIOManager and set confirm callback
+    m_fileIOManager->setImportOptionsDialog(m_uiManager->importOptionsDialog());
+    if (m_uiManager->importOptionsDialog()) {
+        m_uiManager->importOptionsDialog()->setOnConfirm(
+            [this](FileHandlingMode mode, const std::vector<Path>& paths) {
+                if (m_importQueue && !paths.empty()) {
+                    m_importQueue->enqueue(paths, mode);
+                }
+            });
+    }
 
     // Wire re-import callback for duplicate review dialog
     if (m_uiManager->importSummaryDialog()) {

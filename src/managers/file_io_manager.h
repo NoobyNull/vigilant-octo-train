@@ -29,6 +29,7 @@ class Mesh;
 class ViewportPanel;
 class PropertiesPanel;
 class LibraryPanel;
+class ImportOptionsDialog;
 
 class FileIOManager {
   public:
@@ -73,6 +74,12 @@ class FileIOManager {
 
     // Optional material-aware thumbnail callback
     ThumbnailCallback m_thumbnailCallback;
+
+    // Import options dialog (owned by UIManager, nullable)
+    ImportOptionsDialog* m_importOptionsDialog = nullptr;
+
+  public:
+    void setImportOptionsDialog(ImportOptionsDialog* dialog) { m_importOptionsDialog = dialog; }
 };
 
 } // namespace dw

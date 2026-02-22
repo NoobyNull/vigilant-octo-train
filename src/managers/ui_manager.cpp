@@ -17,6 +17,7 @@
 #include "core/utils/thread_utils.h"
 #include "ui/context_menu_manager.h"
 #include "ui/dialogs/file_dialog.h"
+#include "ui/dialogs/import_options_dialog.h"
 #include "ui/dialogs/import_summary_dialog.h"
 #include "ui/dialogs/lighting_dialog.h"
 #include "ui/dialogs/message_dialog.h"
@@ -61,6 +62,7 @@ void UIManager::init(LibraryManager* libraryManager, ProjectManager* projectMana
     m_fileDialog = std::make_unique<FileDialog>();
     m_lightingDialog = std::make_unique<LightingDialog>();
     m_importSummaryDialog = std::make_unique<ImportSummaryDialog>();
+    m_importOptionsDialog = std::make_unique<ImportOptionsDialog>();
     m_progressDialog = std::make_unique<ProgressDialog>();
 
     // Create widgets
@@ -101,6 +103,7 @@ void UIManager::shutdown() {
     m_fileDialog.reset();
     m_lightingDialog.reset();
     m_importSummaryDialog.reset();
+    m_importOptionsDialog.reset();
     m_progressDialog.reset();
 
     // Destroy widgets
@@ -263,6 +266,10 @@ void UIManager::renderPanels() {
 
     if (m_importSummaryDialog) {
         m_importSummaryDialog->render();
+    }
+
+    if (m_importOptionsDialog) {
+        m_importOptionsDialog->render();
     }
 }
 

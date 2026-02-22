@@ -26,11 +26,26 @@ ImportQueue::~ImportQueue() {
     }
 }
 
+void ImportQueue::enqueue(const std::vector<Path>& paths, FileHandlingMode mode) {
+    if (paths.empty()) {
+        return;
+    }
+
+    m_batchMode = mode;
+    enqueueInternal(paths);
+}
+
 void ImportQueue::enqueue(const std::vector<Path>& paths) {
     if (paths.empty()) {
         return;
     }
 
+    // Use global config as default batch mode when called without explicit mode
+    m_batchMode = Config::instance().getFileHandlingMode();
+    enqueueInternal(paths);
+}
+
+void ImportQueue::enqueueInternal(const std::vector<Path>& paths) {
     // Reset batch summary
     {
         std::lock_guard<std::mutex> lock(m_summaryMutex);
@@ -47,9 +62,6 @@ void ImportQueue::enqueue(const std::vector<Path>& paths) {
         m_threadPool = std::make_unique<ThreadPool>(threadCount);
     }
 
-    // Warn if thread count exceeds connection pool size
-    // Note: ConnectionPool size is fixed at construction, so we can't resize it here
-    // This is a wiring concern for Application to ensure pool has adequate size
     log::infof("Import", "Starting batch import: %zu files, %zu workers", paths.size(),
                threadCount);
 
@@ -340,7 +352,7 @@ void ImportQueue::processTask(ImportTask task) {
 
     Path finalPath = task.sourcePath;
 
-    auto mode = Config::instance().getFileHandlingMode();
+    auto mode = m_batchMode;
 
     if (task.importType == ImportType::GCode) {
         // Insert G-code record

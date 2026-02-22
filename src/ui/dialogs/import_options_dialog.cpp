@@ -47,8 +47,7 @@ void ImportOptionsDialog::render() {
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     ImGui::SetNextWindowSize(ImVec2(520, 0), ImGuiCond_Appearing);
 
-    ImGuiWindowFlags flags =
-        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
 
     if (ImGui::BeginPopupModal(m_title.c_str(), &m_open, flags)) {
         // File count header
@@ -76,13 +75,11 @@ void ImportOptionsDialog::render() {
         int copyToLib = static_cast<int>(FileHandlingMode::CopyToLibrary);
         int moveToLib = static_cast<int>(FileHandlingMode::MoveToLibrary);
 
-        ImGui::RadioButton("Keep in original location", &m_selectedMode,
-                           leaveInPlace);
+        ImGui::RadioButton("Keep in original location", &m_selectedMode, leaveInPlace);
         ImGui::Indent();
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
-        ImGui::TextWrapped(
-            "Files stay where they are. Path stored as-is -- may break if "
-            "files move.");
+        ImGui::TextWrapped("Files stay where they are. Path stored as-is -- may break if "
+                           "files move.");
         ImGui::PopStyleColor();
         ImGui::Unindent();
         ImGui::Spacing();
@@ -98,8 +95,7 @@ void ImportOptionsDialog::render() {
         ImGui::RadioButton("Move to library", &m_selectedMode, moveToLib);
         ImGui::Indent();
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
-        ImGui::TextWrapped(
-            "Moves files from current location to library.");
+        ImGui::TextWrapped("Moves files from current location to library.");
         ImGui::PopStyleColor();
         ImGui::Unindent();
         ImGui::Spacing();
@@ -107,20 +103,17 @@ void ImportOptionsDialog::render() {
         // Network-specific recommendations
         if (m_detectedLocation == StorageLocation::Network) {
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
-            ImGui::TextWrapped(
-                "Recommended: Copy to library. Network files should be "
-                "copied locally for reliable access.");
+            ImGui::TextWrapped("Recommended: Copy to library. Network files should be "
+                               "copied locally for reliable access.");
             ImGui::PopStyleColor();
 
             // Extra warning if user selects Move on a network drive
             if (m_selectedMode == moveToLib) {
                 ImGui::Spacing();
-                ImGui::PushStyleColor(ImGuiCol_Text,
-                                      ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
-                ImGui::TextWrapped(
-                    "%s Moving files from a network drive is not recommended "
-                    "-- connection drops can cause data loss.",
-                    Icons::Warning);
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
+                ImGui::TextWrapped("%s Moving files from a network drive is not recommended "
+                                   "-- connection drops can cause data loss.",
+                                   Icons::Warning);
                 ImGui::PopStyleColor();
             }
         }
@@ -132,8 +125,7 @@ void ImportOptionsDialog::render() {
         // Action buttons
         if (ImGui::Button("Import", ImVec2(120, 0))) {
             if (m_onConfirm) {
-                m_onConfirm(static_cast<FileHandlingMode>(m_selectedMode),
-                            m_paths);
+                m_onConfirm(static_cast<FileHandlingMode>(m_selectedMode), m_paths);
             }
             m_open = false;
             ImGui::CloseCurrentPopup();

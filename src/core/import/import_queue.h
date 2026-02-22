@@ -6,6 +6,7 @@
 #include <mutex>
 #include <vector>
 
+#include "../config/config.h"
 #include "../database/connection_pool.h"
 #include "../threading/thread_pool.h"
 #include "import_task.h"
@@ -24,6 +25,7 @@ class ImportQueue {
 
     // Enqueue files for import (called from main thread)
     void enqueue(const std::vector<Path>& paths);
+    void enqueue(const std::vector<Path>& paths, FileHandlingMode mode);
     void enqueue(const Path& path);
 
     // Re-enqueue selected duplicates (skips duplicate check)
@@ -58,6 +60,7 @@ class ImportQueue {
 
   private:
     void processTask(ImportTask task); // Note: takes by value for move into lambda
+    void enqueueInternal(const std::vector<Path>& paths); // Shared impl for both enqueue overloads
 
     ConnectionPool& m_pool;
     LibraryManager* m_libraryManager; // Optional, for auto-detect
@@ -76,6 +79,9 @@ class ImportQueue {
     mutable std::mutex m_summaryMutex;
     ImportBatchSummary m_batchSummary;
     std::atomic<int> m_remainingTasks{0};
+
+    // Per-batch file handling mode (set by overloaded enqueue, or from Config)
+    FileHandlingMode m_batchMode = FileHandlingMode::MoveToLibrary;
 
     ImportProgress m_progress;
     ImportCallback m_onComplete;
