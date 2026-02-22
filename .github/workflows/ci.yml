@@ -176,9 +176,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Install dependencies
         run: |
           brew install sdl2
+          pip install jinja2
 
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DDW_BUILD_TESTS=ON
