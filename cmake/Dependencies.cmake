@@ -104,9 +104,15 @@ if(NOT ZLIB_FOUND)
         GIT_SHALLOW TRUE
     )
     set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-    set(CMAKE_SKIP_INSTALL_RULES ON)
+
+    # Prevent zlib from installing to system paths during CPack
+    # Since zlib is statically linked, we don't need to install its libraries
+    set(ZLIB_SKIP_INSTALL_FILES ON CACHE BOOL "" FORCE)
+    set(SKIP_INSTALL_ALL ON)
+
     FetchContent_MakeAvailable(zlib)
-    set(CMAKE_SKIP_INSTALL_RULES OFF)
+
+    set(SKIP_INSTALL_ALL OFF)
 
     # Create ZLIB::ZLIB alias if not already defined
     if(NOT TARGET ZLIB::ZLIB)
