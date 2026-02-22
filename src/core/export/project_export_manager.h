@@ -112,6 +112,8 @@ class ProjectExportManager {
     std::string buildCostsJson(const std::vector<CostEstimate>& estimates);
     std::string buildCutPlansJson(const std::vector<CutPlanRecord>& plans);
     bool parseManifest(const std::string& json, Manifest& out, std::string& error);
+    std::vector<CostEstimate> parseCostsJson(const std::string& json);
+    std::vector<CutPlanRecord> parseCutPlansJson(const std::string& json);
     std::optional<i64> getModelMaterialId(i64 modelId);
 
     Database& m_db;

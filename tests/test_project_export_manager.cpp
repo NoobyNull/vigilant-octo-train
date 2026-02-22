@@ -2,7 +2,10 @@
 
 #include <gtest/gtest.h>
 
+#include "core/database/cost_repository.h"
+#include "core/database/cut_plan_repository.h"
 #include "core/database/database.h"
+#include "core/database/gcode_repository.h"
 #include "core/database/material_repository.h"
 #include "core/database/model_repository.h"
 #include "core/database/project_repository.h"
@@ -449,4 +452,138 @@ TEST_F(ProjectExportTest, RoundTripPreservesMaterialsAndThumbnails) {
     dw::MaterialRepository matRepo2(db2);
     auto allMaterials = matRepo2.findAll();
     EXPECT_GE(allMaterials.size(), 1u) << "Should have at least one imported material";
+}
+
+// --- Test 6: Round-trip with all asset types (models, gcode, costs, cut plans, notes) ---
+
+TEST_F(ProjectExportTest, RoundTripAllAssetTypes) {
+    // 1. Create project with notes
+    dw::ProjectRepository projRepo(m_db);
+    dw::ProjectRecord projRec;
+    projRec.name = "Full Asset Project";
+    projRec.description = "Round trip test";
+    projRec.notes = "These are project notes for the round-trip test.";
+    auto projId = projRepo.insert(projRec);
+    ASSERT_TRUE(projId.has_value());
+
+    // 2. Insert a model + link
+    auto modelId = insertModelWithFile("roundtrip_hash_001", "RoundTrip Model");
+    ASSERT_TRUE(projRepo.addModel(*projId, modelId));
+
+    // 3. Create a gcode file on disk and insert record
+    dw::Path gcodeDir = m_baseDir / "gcode";
+    std::filesystem::create_directories(gcodeDir);
+    dw::Path gcodeFilePath = gcodeDir / "test_toolpath.nc";
+    std::string gcodeContent = "G0 X0 Y0\nG1 X10 Y10 F500\nM30\n";
+    ASSERT_TRUE(dw::file::writeText(gcodeFilePath, gcodeContent));
+
+    dw::GCodeRepository gcodeRepo(m_db);
+    dw::GCodeRecord gcodeRec;
+    gcodeRec.name = "test_toolpath.nc";
+    gcodeRec.hash = "gcode_hash_abc123";
+    gcodeRec.filePath = gcodeFilePath;
+    gcodeRec.fileSize = gcodeContent.size();
+    gcodeRec.estimatedTime = 120.5f;
+    gcodeRec.toolNumbers = {1, 3};
+    auto gcodeId = gcodeRepo.insert(gcodeRec);
+    ASSERT_TRUE(gcodeId.has_value());
+    ASSERT_TRUE(gcodeRepo.addToProject(*projId, *gcodeId));
+
+    // 4. Insert cost estimate
+    dw::CostRepository costRepo(m_db);
+    dw::CostEstimate costEst;
+    costEst.name = "Material Cost";
+    costEst.projectId = *projId;
+    costEst.items.push_back({0, "Plywood Sheet", dw::CostCategory::Material, 2.0, 45.0, 90.0, ""});
+    costEst.items.push_back({0, "Router Bit", dw::CostCategory::Tool, 1.0, 25.0, 25.0, ""});
+    costEst.recalculate();
+    auto costId = costRepo.insert(costEst);
+    ASSERT_TRUE(costId.has_value());
+
+    // 5. Insert cut plan
+    dw::CutPlanRepository cutPlanRepo(m_db);
+    dw::CutPlanRecord cutPlan;
+    cutPlan.name = "Main Cut Plan";
+    cutPlan.projectId = *projId;
+    cutPlan.algorithm = "guillotine";
+    cutPlan.allowRotation = true;
+    cutPlan.kerf = 3.2f;
+    cutPlan.margin = 5.0f;
+    cutPlan.sheetsUsed = 2;
+    cutPlan.efficiency = 0.85f;
+    cutPlan.sheetConfigJson = R"({"width":2440,"height":1220})";
+    cutPlan.partsJson = "[]";
+    cutPlan.resultJson = "{}";
+    auto cutPlanId = cutPlanRepo.insert(cutPlan);
+    ASSERT_TRUE(cutPlanId.has_value());
+
+    // 6. Build Project object for export
+    auto project = std::make_shared<dw::Project>();
+    project->record().id = *projId;
+    project->record().name = projRec.name;
+    project->record().notes = projRec.notes;
+    project->addModel(modelId);
+
+    // 7. Export
+    dw::ProjectExportManager exporter(m_db);
+    auto exportResult = exporter.exportProject(*project, m_archivePath);
+    ASSERT_TRUE(exportResult.success) << exportResult.error;
+
+    // 8. Import into fresh DB
+    dw::Database db2;
+    ASSERT_TRUE(db2.open(":memory:"));
+    ASSERT_TRUE(dw::Schema::initialize(db2));
+
+    dw::ProjectExportManager importer(db2);
+    auto importResult = importer.importProject(m_archivePath);
+    ASSERT_TRUE(importResult.success) << importResult.error;
+    ASSERT_TRUE(importResult.importedProjectId.has_value());
+
+    auto importedProjId = *importResult.importedProjectId;
+
+    // 9. Verify project metadata
+    dw::ProjectRepository projRepo2(db2);
+    auto importedProj = projRepo2.findById(importedProjId);
+    ASSERT_TRUE(importedProj.has_value());
+    EXPECT_EQ(importedProj->name, "Full Asset Project");
+    EXPECT_EQ(importedProj->notes, "These are project notes for the round-trip test.");
+
+    // 10. Verify models
+    auto importedModelIds = projRepo2.getModelIds(importedProjId);
+    EXPECT_EQ(importedModelIds.size(), 1u);
+
+    // 11. Verify gcode
+    dw::GCodeRepository gcodeRepo2(db2);
+    auto importedGcodes = gcodeRepo2.findByProject(importedProjId);
+    ASSERT_EQ(importedGcodes.size(), 1u);
+    EXPECT_EQ(importedGcodes[0].name, "test_toolpath.nc");
+    EXPECT_EQ(importedGcodes[0].hash, "gcode_hash_abc123");
+    EXPECT_FLOAT_EQ(importedGcodes[0].estimatedTime, 120.5f);
+    EXPECT_EQ(importedGcodes[0].toolNumbers.size(), 2u);
+    if (importedGcodes[0].toolNumbers.size() == 2) {
+        EXPECT_EQ(importedGcodes[0].toolNumbers[0], 1);
+        EXPECT_EQ(importedGcodes[0].toolNumbers[1], 3);
+    }
+
+    // 12. Verify cost estimates
+    dw::CostRepository costRepo2(db2);
+    auto importedCosts = costRepo2.findByProject(importedProjId);
+    ASSERT_EQ(importedCosts.size(), 1u);
+    EXPECT_EQ(importedCosts[0].name, "Material Cost");
+    ASSERT_EQ(importedCosts[0].items.size(), 2u);
+    EXPECT_EQ(importedCosts[0].items[0].name, "Plywood Sheet");
+    EXPECT_EQ(importedCosts[0].items[1].name, "Router Bit");
+    EXPECT_DOUBLE_EQ(importedCosts[0].items[0].quantity, 2.0);
+    EXPECT_DOUBLE_EQ(importedCosts[0].items[0].rate, 45.0);
+
+    // 13. Verify cut plans
+    dw::CutPlanRepository cutPlanRepo2(db2);
+    auto importedPlans = cutPlanRepo2.findByProject(importedProjId);
+    ASSERT_EQ(importedPlans.size(), 1u);
+    EXPECT_EQ(importedPlans[0].name, "Main Cut Plan");
+    EXPECT_EQ(importedPlans[0].algorithm, "guillotine");
+    EXPECT_EQ(importedPlans[0].sheetsUsed, 2);
+    EXPECT_FLOAT_EQ(importedPlans[0].efficiency, 0.85f);
+    EXPECT_FLOAT_EQ(importedPlans[0].kerf, 3.2f);
+    EXPECT_FALSE(importedPlans[0].sheetConfigJson.empty());
 }

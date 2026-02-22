@@ -105,6 +105,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/paths/app_paths.cpp
     ${CMAKE_SOURCE_DIR}/src/core/storage/storage_manager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/export/project_export_manager.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/export/project_import.cpp
     ${CMAKE_SOURCE_DIR}/src/render/camera.cpp
     ${CMAKE_SOURCE_DIR}/src/app/workspace.cpp
 )
