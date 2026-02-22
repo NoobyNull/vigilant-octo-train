@@ -35,6 +35,12 @@ class ProjectPanel : public Panel {
         m_saveProjectCallback = std::move(callback);
     }
 
+    // Callback when Export .dwproj button is clicked
+    using ExportProjectCallback = std::function<void()>;
+    void setExportProjectCallback(ExportProjectCallback cb) {
+        m_exportProjectCallback = std::move(cb);
+    }
+
     // Callback when a recent project is clicked
     using RecentProjectCallback = std::function<void(const Path&)>;
     void setOnOpenRecentProject(RecentProjectCallback cb) { m_onOpenRecentProject = std::move(cb); }
@@ -49,6 +55,7 @@ class ProjectPanel : public Panel {
     ModelSelectedCallback m_onModelSelected;
     OpenProjectCallback m_openProjectCallback;
     SaveProjectCallback m_saveProjectCallback;
+    ExportProjectCallback m_exportProjectCallback;
     RecentProjectCallback m_onOpenRecentProject;
 };
 

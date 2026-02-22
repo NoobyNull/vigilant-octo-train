@@ -93,6 +93,24 @@ void ProjectPanel::renderProjectInfo() {
             }
         }
 
+        // Export .dwproj button — only enabled when project has models
+        ImGui::Spacing();
+        {
+            bool hasModels = !project->modelIds().empty();
+            if (!hasModels)
+                ImGui::BeginDisabled();
+            if (ImGui::Button("Export .dwproj")) {
+                if (m_exportProjectCallback) {
+                    m_exportProjectCallback();
+                }
+            }
+            if (!hasModels)
+                ImGui::EndDisabled();
+            if (!hasModels && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+                ImGui::SetTooltip("Add models to project before exporting");
+            }
+        }
+
         // Unsaved changes confirmation dialog
         if (ImGui::BeginPopupModal("Unsaved Changes", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             ImGui::Text("Save changes before closing?");

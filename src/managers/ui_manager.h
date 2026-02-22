@@ -127,6 +127,7 @@ class UIManager {
     void setOnSaveProject(ActionCallback cb) { m_onSaveProject = std::move(cb); }
     void setOnImportModel(ActionCallback cb) { m_onImportModel = std::move(cb); }
     void setOnExportModel(ActionCallback cb) { m_onExportModel = std::move(cb); }
+    void setOnImportProjectArchive(ActionCallback cb) { m_onImportProjectArchive = std::move(cb); }
     void setOnQuit(ActionCallback cb) { m_onQuit = std::move(cb); }
     void setOnSpawnSettings(ActionCallback cb) { m_onSpawnSettings = std::move(cb); }
     void setOnShowAbout(ActionCallback cb) { m_onShowAbout = std::move(cb); }
@@ -196,6 +197,7 @@ class UIManager {
     ActionCallback m_onSaveProject;
     ActionCallback m_onImportModel;
     ActionCallback m_onExportModel;
+    ActionCallback m_onImportProjectArchive;
     ActionCallback m_onQuit;
     ActionCallback m_onSpawnSettings;
     ActionCallback m_onShowAbout;

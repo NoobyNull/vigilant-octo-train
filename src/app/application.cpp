@@ -476,6 +476,9 @@ bool Application::init() {
         m_uiManager->projectPanel()->setOnOpenRecentProject([this, hideStart](const Path& path) {
             m_fileIOManager->openRecentProject(path, hideStart);
         });
+        m_uiManager->projectPanel()->setExportProjectCallback([this]() {
+            m_fileIOManager->exportProjectArchive();
+        });
     }
 
     if (m_uiManager->propertiesPanel()) {
@@ -559,6 +562,9 @@ bool Application::init() {
     m_uiManager->setOnSaveProject([this]() { m_fileIOManager->saveProject(); });
     m_uiManager->setOnImportModel([this]() { m_fileIOManager->importModel(); });
     m_uiManager->setOnExportModel([this]() { m_fileIOManager->exportModel(); });
+    m_uiManager->setOnImportProjectArchive([this, hideStart]() {
+        m_fileIOManager->importProjectArchive(hideStart);
+    });
     m_uiManager->setOnQuit([this]() { quit(); });
     m_uiManager->setOnSpawnSettings([this]() { m_configManager->spawnSettingsApp(); });
 

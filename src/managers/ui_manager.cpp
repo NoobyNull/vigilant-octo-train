@@ -153,6 +153,10 @@ void UIManager::renderFileMenu() {
         m_onExportModel();
     }
     ImGui::Separator();
+    if (ImGui::MenuItem("Import .dwproj...") && m_onImportProjectArchive) {
+        m_onImportProjectArchive();
+    }
+    ImGui::Separator();
     if (ImGui::MenuItem("Exit", "Alt+F4") && m_onQuit) {
         m_onQuit();
     }
