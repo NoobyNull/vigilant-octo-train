@@ -187,6 +187,7 @@ jobs:
 
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DDW_BUILD_TESTS=ON
+          -DPython_EXECUTABLE=$(which python3) -DPython3_EXECUTABLE=$(which python3)
 
       - name: Build
         run: cmake --build build -j$(sysctl -n hw.ncpu)
