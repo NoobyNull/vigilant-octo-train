@@ -544,7 +544,7 @@ void LibraryPanel::renderModelList() {
         float cellBase = m_thumbnailSize + pad;
         int columns = std::max(1, static_cast<int>(availW / cellBase));
         // Spill: distribute leftover space evenly into each cell
-        float cellW = availW / columns;
+        float cellW = availW / static_cast<float>(columns);
         float thumbSize = cellW - pad;
 
         int col = 0;
@@ -927,7 +927,7 @@ void LibraryPanel::renderGCodeList() {
         float pad = 4.0f;
         float cellBase = m_thumbnailSize + pad;
         int columns = std::max(1, static_cast<int>(availW / cellBase));
-        float cellW = availW / columns;
+        float cellW = availW / static_cast<float>(columns);
         float thumbSize = cellW - pad;
 
         int col = 0;
@@ -971,7 +971,7 @@ void LibraryPanel::renderCombinedList() {
         float pad = 4.0f;
         float cellBase = m_thumbnailSize + pad;
         int columns = std::max(1, static_cast<int>(availW / cellBase));
-        float cellW = availW / columns;
+        float cellW = availW / static_cast<float>(columns);
         float thumbSize = cellW - pad;
 
         int col = 0;
