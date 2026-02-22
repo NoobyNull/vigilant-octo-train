@@ -44,13 +44,13 @@ TEST_F(StorageManagerTest, BlobPathComputation) {
     Path p = mgr->blobPath("abcdef1234567890", "stl");
     ASSERT_FALSE(p.empty());
     // Should end with ab/cd/abcdef1234567890.stl
-    std::string ps = p.string();
+    std::string ps = p.generic_string();
     EXPECT_NE(ps.find("ab/cd/abcdef1234567890.stl"), std::string::npos)
         << "Path was: " << ps;
 
     // Different hash gives different prefix dirs
     Path p2 = mgr->blobPath("1234567890abcdef", "obj");
-    std::string ps2 = p2.string();
+    std::string ps2 = p2.generic_string();
     EXPECT_NE(ps2.find("12/34/1234567890abcdef.obj"), std::string::npos)
         << "Path was: " << ps2;
 }
