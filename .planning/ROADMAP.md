@@ -32,7 +32,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
 ### v1.1 Library Storage & Organization
 
 - [x] **Phase 2: Content-Addressable Storage** — StorageManager with hash-based blob directories, atomic writes, orphan cleanup
-- [ ] **Phase 3: Import File Handling** — Filesystem detection, import dialog with keep/copy/move options
+- [x] **Phase 3: Import File Handling** — Filesystem detection, import dialog with keep/copy/move options
 - [ ] **Phase 4: Organization & Graph** — DB schema with FTS5 search, GraphQLite graph extension, categories, Cypher queries
 - [ ] **Phase 5: Project Export** — Portable .dwproj ZIP archives with manifest and embedded blobs
 
@@ -64,7 +64,7 @@ Plans:
 **Plans:** 2 plans
 Plans:
 - [x] 03-01-PLAN.md — Filesystem detector + import options dialog UI
-- [ ] 03-02-PLAN.md — Wire dialog into import flow with per-batch mode
+- [x] 03-02-PLAN.md — Wire dialog into import flow with per-batch mode
 
 ### Phase 4: Organization & Graph
 **Goal:** User can organize models into categories, search across all metadata, and traverse relationships via graph queries
@@ -109,7 +109,7 @@ Plans:
 | 2 Import Pipeline | v1.0 | 10/10 | Complete | 2026-02-09 |
 | 1 Materials System | Post-v1.0 | 6/6 | Complete | 2026-02-20 |
 | 2 Content-Addressable Storage | v1.1 | 2/2 | Complete | 2026-02-22 |
-| 3 Import File Handling | v1.1 | 1/2 | In Progress | - |
+| 3 Import File Handling | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 4 Organization & Graph | v1.1 | 0/4 | Planned | - |
 | 5 Project Export | v1.1 | 0/2 | Not started | - |
 

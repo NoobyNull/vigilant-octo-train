@@ -17,7 +17,7 @@
 
 ### Import (IMPORT)
 
-- [ ] **IMPORT-01**: User can choose organizational strategy on import: keep in place, copy to organized local store, or move to organized local store
+- [x] **IMPORT-01**: User can choose organizational strategy on import: keep in place, copy to organized local store, or move to organized local store
 - [x] **IMPORT-02**: Import dialog shows filesystem detection result and recommends copy for non-local sources
 
 ### Organization (ORG)
@@ -59,7 +59,7 @@
 | STOR-02 | Phase 2 | 02-01, 02-02 | Complete |
 | STOR-03 | Phase 2 | 02-01, 02-02 | Complete |
 | STOR-04 | Phase 3 | 03-01 | Complete |
-| IMPORT-01 | Phase 3 | — | Pending |
+| IMPORT-01 | Phase 3 | 03-02 | Complete |
 | IMPORT-02 | Phase 3 | 03-01 | Complete |
 | ORG-01 | Phase 4 | — | Pending |
 | ORG-02 | Phase 4 | — | Pending |
