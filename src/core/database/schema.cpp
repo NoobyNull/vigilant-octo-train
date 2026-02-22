@@ -245,6 +245,74 @@ bool Schema::createTables(Database& db) {
         return false;
     }
 
+    // Categories table (2-level hierarchy via parent_id)
+    if (!db.execute(R"(
+        CREATE TABLE IF NOT EXISTS categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            parent_id INTEGER DEFAULT NULL REFERENCES categories(id) ON DELETE CASCADE,
+            sort_order INTEGER DEFAULT 0,
+            UNIQUE(name, parent_id)
+        )
+    )")) {
+        return false;
+    }
+
+    // Model-categories junction table (many-to-many)
+    if (!db.execute(R"(
+        CREATE TABLE IF NOT EXISTS model_categories (
+            model_id INTEGER NOT NULL REFERENCES models(id) ON DELETE CASCADE,
+            category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+            PRIMARY KEY (model_id, category_id)
+        )
+    )")) {
+        return false;
+    }
+
+    // FTS5 virtual table (external content from models)
+    if (!db.execute(R"(
+        CREATE VIRTUAL TABLE IF NOT EXISTS models_fts USING fts5(
+            name,
+            tags,
+            content='models',
+            content_rowid='id',
+            tokenize='unicode61'
+        )
+    )")) {
+        return false;
+    }
+
+    // FTS5 triggers -- keep index in sync with models table
+    // AFTER INSERT: add to FTS
+    (void)db.execute(R"(
+        CREATE TRIGGER IF NOT EXISTS models_fts_ai AFTER INSERT ON models BEGIN
+            INSERT INTO models_fts(rowid, name, tags) VALUES (new.id, new.name, new.tags);
+        END
+    )");
+
+    // BEFORE UPDATE: delete old tokens (MUST be BEFORE, not AFTER -- see Pitfall 2)
+    (void)db.execute(R"(
+        CREATE TRIGGER IF NOT EXISTS models_fts_bu BEFORE UPDATE ON models BEGIN
+            INSERT INTO models_fts(models_fts, rowid, name, tags)
+            VALUES ('delete', old.id, old.name, old.tags);
+        END
+    )");
+
+    // AFTER UPDATE: insert new tokens
+    (void)db.execute(R"(
+        CREATE TRIGGER IF NOT EXISTS models_fts_au AFTER UPDATE ON models BEGIN
+            INSERT INTO models_fts(rowid, name, tags) VALUES (new.id, new.name, new.tags);
+        END
+    )");
+
+    // AFTER DELETE: delete tokens
+    (void)db.execute(R"(
+        CREATE TRIGGER IF NOT EXISTS models_fts_ad AFTER DELETE ON models BEGIN
+            INSERT INTO models_fts(models_fts, rowid, name, tags)
+            VALUES ('delete', old.id, old.name, old.tags);
+        END
+    )");
+
     // Create indexes for common queries (best-effort)
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_materials_name ON materials(name)");
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_materials_category ON materials(category)");
@@ -263,6 +331,12 @@ bool Schema::createTables(Database& db) {
         "CREATE INDEX IF NOT EXISTS idx_operation_groups_model ON operation_groups(model_id)");
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_gcode_group_members_group ON "
                      "gcode_group_members(group_id)");
+    (void)db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_model_categories_model ON "
+                     "model_categories(model_id)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_model_categories_category ON "
+                     "model_categories(category_id)");
 
     // Set schema version
     if (!setVersion(db, CURRENT_VERSION)) {
@@ -298,6 +372,64 @@ bool Schema::migrate(Database& db, int fromVersion) {
         (void)db.execute("ALTER TABLE models ADD COLUMN camera_target_y REAL DEFAULT NULL");
         (void)db.execute("ALTER TABLE models ADD COLUMN camera_target_z REAL DEFAULT NULL");
         log::info("Schema", "Added camera state columns to models");
+    }
+
+    if (fromVersion < 7) {
+        // v7: Categories, model_categories junction, FTS5 virtual table + triggers
+        (void)db.execute(R"(
+            CREATE TABLE IF NOT EXISTS categories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                parent_id INTEGER DEFAULT NULL REFERENCES categories(id) ON DELETE CASCADE,
+                sort_order INTEGER DEFAULT 0,
+                UNIQUE(name, parent_id)
+            )
+        )");
+        (void)db.execute(R"(
+            CREATE TABLE IF NOT EXISTS model_categories (
+                model_id INTEGER NOT NULL REFERENCES models(id) ON DELETE CASCADE,
+                category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+                PRIMARY KEY (model_id, category_id)
+            )
+        )");
+        (void)db.execute(R"(
+            CREATE VIRTUAL TABLE IF NOT EXISTS models_fts USING fts5(
+                name, tags, content='models', content_rowid='id', tokenize='unicode61'
+            )
+        )");
+        // FTS5 triggers
+        (void)db.execute(R"(
+            CREATE TRIGGER IF NOT EXISTS models_fts_ai AFTER INSERT ON models BEGIN
+                INSERT INTO models_fts(rowid, name, tags) VALUES (new.id, new.name, new.tags);
+            END
+        )");
+        (void)db.execute(R"(
+            CREATE TRIGGER IF NOT EXISTS models_fts_bu BEFORE UPDATE ON models BEGIN
+                INSERT INTO models_fts(models_fts, rowid, name, tags)
+                VALUES ('delete', old.id, old.name, old.tags);
+            END
+        )");
+        (void)db.execute(R"(
+            CREATE TRIGGER IF NOT EXISTS models_fts_au AFTER UPDATE ON models BEGIN
+                INSERT INTO models_fts(rowid, name, tags) VALUES (new.id, new.name, new.tags);
+            END
+        )");
+        (void)db.execute(R"(
+            CREATE TRIGGER IF NOT EXISTS models_fts_ad AFTER DELETE ON models BEGIN
+                INSERT INTO models_fts(models_fts, rowid, name, tags)
+                VALUES ('delete', old.id, old.name, old.tags);
+            END
+        )");
+        // Indexes
+        (void)db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id)");
+        (void)db.execute("CREATE INDEX IF NOT EXISTS idx_model_categories_model ON "
+                         "model_categories(model_id)");
+        (void)db.execute("CREATE INDEX IF NOT EXISTS idx_model_categories_category ON "
+                         "model_categories(category_id)");
+        // Rebuild FTS index for existing rows
+        (void)db.execute("INSERT INTO models_fts(models_fts) VALUES('rebuild')");
+        log::info("Schema", "Added categories, model_categories, and FTS5 index");
     }
 
     if (!setVersion(db, CURRENT_VERSION)) {
