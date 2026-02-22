@@ -153,20 +153,56 @@ jobs:
       - name: Test
         run: ./build/tests/Release/dw_tests.exe
 
-      - name: Package (ZIP)
+      - name: Package (ZIP + WiX)
         run: |
           cd build
           cpack -G ZIP -C Release
+          cpack -G WIX -C Release
+
+      - name: Upload artifact (ZIP)
+        uses: actions/upload-artifact@v4
+        with:
+          name: DigitalWorkshop-windows-zip
+          path: build/DigitalWorkshop-*.zip
+
+      - name: Upload artifact (MSI)
+        uses: actions/upload-artifact@v4
+        with:
+          name: DigitalWorkshop-windows-msi
+          path: build/DigitalWorkshop-*.msi
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          brew install sdl2
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DDW_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build -j$(sysctl -n hw.ncpu)
+
+      - name: Test
+        run: ./build/tests/dw_tests
+
+      - name: Package (DMG)
+        run: |
+          cd build
+          cpack -G DragNDrop -C Release
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DigitalWorkshop-windows
-          path: build/DigitalWorkshop-*.zip
+          name: DigitalWorkshop-macos
+          path: build/DigitalWorkshop-*.dmg
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [linux, windows, static-analysis]
+    needs: [linux, windows, macos, static-analysis]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -179,5 +215,7 @@ jobs:
         with:
           files: |
             DigitalWorkshop-linux/*.run
-            DigitalWorkshop-windows/*.zip
+            DigitalWorkshop-windows-zip/*.zip
+            DigitalWorkshop-windows-msi/*.msi
+            DigitalWorkshop-macos/*.dmg
           generate_release_notes: true

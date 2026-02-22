@@ -59,31 +59,21 @@ set(CPACK_PACKAGE_INSTALL_DIRECTORY "DigitalWorkshop")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 
 if(WIN32)
-    # NSIS installer for Windows
-    set(CPACK_GENERATOR "NSIS")
-    set(CPACK_NSIS_DISPLAY_NAME "Digital Workshop ${PROJECT_VERSION}")
-    set(CPACK_NSIS_PACKAGE_NAME "Digital Workshop")
-    set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
-    set(CPACK_NSIS_MODIFY_PATH OFF)
+    # Windows: WiX installer + ZIP portable
+    set(CPACK_GENERATOR "WIX;ZIP")
 
-    # Start menu and desktop shortcuts
-    set(CPACK_NSIS_CREATE_ICONS_EXTRA
-        "CreateShortCut '$SMPROGRAMS\\\\$STARTMENU_FOLDER\\\\Digital Workshop.lnk' '$INSTDIR\\\\bin\\\\digital_workshop.exe'"
-    )
-    set(CPACK_NSIS_DELETE_ICONS_EXTRA
-        "Delete '$SMPROGRAMS\\\\$STARTMENU_FOLDER\\\\Digital Workshop.lnk'"
-    )
+    # WiX installer settings
+    set(CPACK_WIX_UPGRADE_GUID "8F4E2A1B-3C5D-4E6F-A7B8-9C0D1E2F3A4B")
+    # set(CPACK_WIX_PRODUCT_ICON "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/icon.ico")
+    set(CPACK_WIX_PROGRAM_MENU_FOLDER "Digital Workshop")
+    set(CPACK_WIX_PROPERTY_ARPHELPLINK "https://github.com/NoobyNull/vigilant-octo-train")
 
-    # File associations for .stl, .obj, .3mf, .dwp
-    set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "
-        WriteRegStr HKCR '.dwp' '' 'DigitalWorkshop.Project'
-        WriteRegStr HKCR 'DigitalWorkshop.Project' '' 'Digital Workshop Project'
-        WriteRegStr HKCR 'DigitalWorkshop.Project\\\\shell\\\\open\\\\command' '' '\\\"$INSTDIR\\\\bin\\\\digital_workshop.exe\\\" \\\"%1\\\"'
-    ")
-    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "
-        DeleteRegKey HKCR '.dwp'
-        DeleteRegKey HKCR 'DigitalWorkshop.Project'
-    ")
+elseif(APPLE)
+    # macOS: DMG disk image
+    set(CPACK_GENERATOR "DragNDrop")
+    set(CPACK_DMG_VOLUME_NAME "Digital Workshop")
+    set(CPACK_BUNDLE_NAME "Digital Workshop")
+
 else()
     # TGZ archive for Linux
     set(CPACK_GENERATOR "TGZ")
