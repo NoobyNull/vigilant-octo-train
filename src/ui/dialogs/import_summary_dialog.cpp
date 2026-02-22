@@ -50,7 +50,8 @@ void ImportSummaryDialog::render() {
         ImGui::Text("Successfully imported: %d", m_summary.successCount);
 
         if (m_summary.duplicateCount > 0) {
-            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Duplicates found: %d",
+            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f),
+                               "Duplicates found: %d",
                                m_summary.duplicateCount);
         }
 
@@ -101,8 +102,8 @@ void ImportSummaryDialog::render() {
                     selectedCount++;
 
             // Re-import / Skip buttons
-            std::string reimportLabel =
-                "Re-import Selected (" + std::to_string(selectedCount) + ")";
+            std::string reimportLabel = "Re-import Selected (" + std::to_string(selectedCount) +
+                                        ")";
             bool hasSelection = selectedCount > 0;
 
             if (!hasSelection)

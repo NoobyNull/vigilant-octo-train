@@ -72,8 +72,8 @@ void CostPanel::renderToolbar() {
 
     ImGui::SameLine();
 
-    bool hasSelection =
-        m_selectedIndex >= 0 && m_selectedIndex < static_cast<int>(m_estimates.size());
+    bool hasSelection = m_selectedIndex >= 0 &&
+                        m_selectedIndex < static_cast<int>(m_estimates.size());
     ImGui::BeginDisabled(!hasSelection);
     if (ImGui::Button(Icons::Delete)) {
         if (hasSelection) {
@@ -146,7 +146,8 @@ void CostPanel::renderEstimateEditor() {
 
     // Line items table
     ImGui::Text("Line Items:");
-    if (ImGui::BeginTable("CostItems", 6,
+    if (ImGui::BeginTable("CostItems",
+                          6,
                           ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
                               ImGuiTableFlags_Resizable)) {
         ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch);
@@ -347,8 +348,8 @@ void CostPanel::recalculateEditBuffer() {
     }
     m_editBuffer.taxAmount = m_editBuffer.subtotal * m_editBuffer.taxRate / 100.0;
     m_editBuffer.discountAmount = m_editBuffer.subtotal * m_editBuffer.discountRate / 100.0;
-    m_editBuffer.total =
-        m_editBuffer.subtotal + m_editBuffer.taxAmount - m_editBuffer.discountAmount;
+    m_editBuffer.total = m_editBuffer.subtotal + m_editBuffer.taxAmount -
+                         m_editBuffer.discountAmount;
 }
 
 } // namespace dw

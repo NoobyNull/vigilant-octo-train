@@ -68,8 +68,15 @@ bool Texture::upload(const uint8_t* data, int width, int height, GLenum format) 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     // Upload pixel data
-    glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(format), width, height, 0, format,
-                 GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D,
+                 0,
+                 static_cast<GLint>(format),
+                 width,
+                 height,
+                 0,
+                 format,
+                 GL_UNSIGNED_BYTE,
+                 data);
 
     // Generate mipmaps
     glGenerateMipmap(GL_TEXTURE_2D);

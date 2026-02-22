@@ -60,8 +60,7 @@ TEST(ImportStageName, AllStages) {
     EXPECT_STREQ(dw::importStageName(dw::ImportStage::CheckingDuplicate), "Checking duplicates");
     EXPECT_STREQ(dw::importStageName(dw::ImportStage::Parsing), "Parsing mesh");
     EXPECT_STREQ(dw::importStageName(dw::ImportStage::Inserting), "Saving to library");
-    EXPECT_STREQ(dw::importStageName(dw::ImportStage::WaitingForThumbnail),
-                 "Generating thumbnail");
+    EXPECT_STREQ(dw::importStageName(dw::ImportStage::WaitingForThumbnail), "Generating thumbnail");
     EXPECT_STREQ(dw::importStageName(dw::ImportStage::Done), "Done");
     EXPECT_STREQ(dw::importStageName(dw::ImportStage::Failed), "Failed");
 }
@@ -82,7 +81,7 @@ TEST(ImportTask, DefaultState) {
 namespace {
 
 class ImportQueueTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         // Create temporary database file for connection pool
         m_tmpDir = std::filesystem::temp_directory_path() / "dw_test_import";
@@ -120,7 +119,7 @@ protected:
     std::filesystem::path m_tmpDir;
 };
 
-}  // namespace
+} // namespace
 
 TEST_F(ImportQueueTest, EnqueueAndProcess) {
     auto stlPath = writeMiniSTL("test_model");

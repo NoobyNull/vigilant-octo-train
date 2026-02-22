@@ -134,20 +134,24 @@ LoadResult STLLoader::loadBinary(const ByteBuffer& data) {
                 !std::isfinite(triData[off + 2])) {
                 return LoadResult{nullptr, "STL contains invalid vertex data (NaN or Inf values)"};
             }
-            vertices[base + j] =
-                Vertex{Vec3{triData[off], triData[off + 1], triData[off + 2]}, normal};
+            vertices[base + j] = Vertex{Vec3{triData[off], triData[off + 1], triData[off + 2]},
+                                        normal};
             indices[base + j] = base + j;
         }
     }
 
     auto mesh = std::make_shared<Mesh>(std::move(vertices), std::move(indices));
 
-    log::infof("STL", "Loaded binary: %u vertices, %u triangles", mesh->vertexCount(),
+    log::infof("STL",
+               "Loaded binary: %u vertices, %u triangles",
+               mesh->vertexCount(),
                mesh->triangleCount());
 
     // Validate mesh integrity (only fatal issues: NaN/Inf, OOB indices)
     if (!mesh->validateGeometry()) {
-        return LoadResult{nullptr, "Mesh validation failed: invalid NaN/Inf vertex positions or out-of-bounds indices"};
+        return LoadResult{
+            nullptr,
+            "Mesh validation failed: invalid NaN/Inf vertex positions or out-of-bounds indices"};
     }
     mesh->validate(); // Log warnings for degenerate triangles (non-fatal)
 
@@ -246,12 +250,16 @@ LoadResult STLLoader::loadAscii(const std::string& content) {
 
     mesh->recalculateBounds();
 
-    log::infof("STL", "Loaded ASCII: %u vertices, %u triangles", mesh->vertexCount(),
+    log::infof("STL",
+               "Loaded ASCII: %u vertices, %u triangles",
+               mesh->vertexCount(),
                mesh->triangleCount());
 
     // Validate mesh integrity (only fatal issues: NaN/Inf, OOB indices)
     if (!mesh->validateGeometry()) {
-        return LoadResult{nullptr, "Mesh validation failed: invalid NaN/Inf vertex positions or out-of-bounds indices"};
+        return LoadResult{
+            nullptr,
+            "Mesh validation failed: invalid NaN/Inf vertex positions or out-of-bounds indices"};
     }
     mesh->validate(); // Log warnings for degenerate triangles (non-fatal)
 

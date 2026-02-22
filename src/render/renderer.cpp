@@ -87,7 +87,8 @@ void Renderer::renderMesh(const GPUMesh& gpuMesh, const Mat4& modelMatrix) {
     renderMesh(gpuMesh, nullptr, modelMatrix);
 }
 
-void Renderer::renderMesh(const Mesh& mesh, const Texture* materialTexture,
+void Renderer::renderMesh(const Mesh& mesh,
+                          const Texture* materialTexture,
                           const Mat4& modelMatrix) {
     u64 key = hash::fromHex(hash::computeMesh(mesh));
     auto it = m_meshCache.find(key);
@@ -97,7 +98,8 @@ void Renderer::renderMesh(const Mesh& mesh, const Texture* materialTexture,
     renderMesh(it->second, materialTexture, modelMatrix);
 }
 
-void Renderer::renderMesh(const GPUMesh& gpuMesh, const Texture* materialTexture,
+void Renderer::renderMesh(const GPUMesh& gpuMesh,
+                          const Texture* materialTexture,
                           const Mat4& modelMatrix) {
     if (gpuMesh.vao == 0 || gpuMesh.indexCount == 0) {
         return;
@@ -125,8 +127,9 @@ void Renderer::renderMesh(const GPUMesh& gpuMesh, const Texture* materialTexture
     m_meshShader.setVec3("uLightDir", viewLightDir);
     m_meshShader.setVec3("uLightColor", m_settings.lightColor);
     m_meshShader.setVec3("uAmbient", m_settings.ambient);
-    m_meshShader.setVec3("uObjectColor", Vec3{m_settings.objectColor.r, m_settings.objectColor.g,
-                                              m_settings.objectColor.b});
+    m_meshShader.setVec3(
+        "uObjectColor",
+        Vec3{m_settings.objectColor.r, m_settings.objectColor.g, m_settings.objectColor.b});
     m_meshShader.setVec3("uViewPos", m_camera.position());
     m_meshShader.setFloat("uShininess", m_settings.shininess);
     m_meshShader.setBool("uIsToolpath", false);
@@ -140,8 +143,8 @@ void Renderer::renderMesh(const GPUMesh& gpuMesh, const Texture* materialTexture
     }
 
     glBindVertexArray(gpuMesh.vao);
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(gpuMesh.indexCount), GL_UNSIGNED_INT,
-                   nullptr);
+    glDrawElements(
+        GL_TRIANGLES, static_cast<GLsizei>(gpuMesh.indexCount), GL_UNSIGNED_INT, nullptr);
     glBindVertexArray(0);
 
     // Unbind texture after draw to keep state clean
@@ -197,8 +200,8 @@ void Renderer::renderToolpath(const Mesh& toolpathMesh, const Mat4& modelMatrix)
     m_meshShader.setBool("uUseTexture", false);
 
     glBindVertexArray(gpuMesh.vao);
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(gpuMesh.indexCount), GL_UNSIGNED_INT,
-                   nullptr);
+    glDrawElements(
+        GL_TRIANGLES, static_cast<GLsizei>(gpuMesh.indexCount), GL_UNSIGNED_INT, nullptr);
     glBindVertexArray(0);
 
     // Disable toolpath mode for subsequent renders
@@ -273,26 +276,40 @@ GPUMesh Renderer::uploadMesh(const Mesh& mesh) {
     GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, gpuMesh.vbo));
     GL_CHECK(glBufferData(GL_ARRAY_BUFFER,
                           static_cast<GLsizeiptr>(mesh.vertices().size() * sizeof(Vertex)),
-                          mesh.vertices().data(), GL_STATIC_DRAW));
+                          mesh.vertices().data(),
+                          GL_STATIC_DRAW));
 
     // Upload indices
     GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpuMesh.ebo));
     GL_CHECK(glBufferData(GL_ELEMENT_ARRAY_BUFFER,
                           static_cast<GLsizeiptr>(mesh.indices().size() * sizeof(u32)),
-                          mesh.indices().data(), GL_STATIC_DRAW));
+                          mesh.indices().data(),
+                          GL_STATIC_DRAW));
 
     // Position attribute
-    GL_CHECK(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+    GL_CHECK(glVertexAttribPointer(0,
+                                   3,
+                                   GL_FLOAT,
+                                   GL_FALSE,
+                                   sizeof(Vertex),
                                    reinterpret_cast<void*>(offsetof(Vertex, position))));
     GL_CHECK(glEnableVertexAttribArray(0));
 
     // Normal attribute
-    GL_CHECK(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+    GL_CHECK(glVertexAttribPointer(1,
+                                   3,
+                                   GL_FLOAT,
+                                   GL_FALSE,
+                                   sizeof(Vertex),
                                    reinterpret_cast<void*>(offsetof(Vertex, normal))));
     GL_CHECK(glEnableVertexAttribArray(1));
 
     // Texture coordinate attribute
-    GL_CHECK(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+    GL_CHECK(glVertexAttribPointer(2,
+                                   2,
+                                   GL_FLOAT,
+                                   GL_FALSE,
+                                   sizeof(Vertex),
                                    reinterpret_cast<void*>(offsetof(Vertex, texCoord))));
     GL_CHECK(glEnableVertexAttribArray(2));
 
@@ -359,12 +376,16 @@ void Renderer::createGridMesh(f32 size, f32 spacing) {
     glBindVertexArray(m_gridMesh.vao);
 
     glBindBuffer(GL_ARRAY_BUFFER, m_gridMesh.vbo);
-    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(f32)),
-                 vertices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER,
+                 static_cast<GLsizeiptr>(vertices.size() * sizeof(f32)),
+                 vertices.data(),
+                 GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_gridMesh.ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(indices.size() * sizeof(u32)),
-                 indices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                 static_cast<GLsizeiptr>(indices.size() * sizeof(u32)),
+                 indices.data(),
+                 GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(f32), nullptr);
     glEnableVertexAttribArray(0);

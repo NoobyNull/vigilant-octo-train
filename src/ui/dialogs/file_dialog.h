@@ -28,16 +28,20 @@ class FileDialog : public Dialog {
     void render() override;
 
     // Show open file dialog (single file)
-    void showOpen(const std::string& title, const std::vector<FileFilter>& filters,
+    void showOpen(const std::string& title,
+                  const std::vector<FileFilter>& filters,
                   std::function<void(const std::string&)> callback);
 
     // Show open file dialog (multi-select)
-    void showOpenMulti(const std::string& title, const std::vector<FileFilter>& filters,
+    void showOpenMulti(const std::string& title,
+                       const std::vector<FileFilter>& filters,
                        std::function<void(const std::vector<std::string>&)> callback);
 
     // Show save file dialog
-    void showSave(const std::string& title, const std::vector<FileFilter>& filters,
-                  const std::string& defaultName, std::function<void(const std::string&)> callback);
+    void showSave(const std::string& title,
+                  const std::vector<FileFilter>& filters,
+                  const std::string& defaultName,
+                  std::function<void(const std::string&)> callback);
 
     // Show folder selection dialog
     void showFolder(const std::string& title, std::function<void(const std::string&)> callback);

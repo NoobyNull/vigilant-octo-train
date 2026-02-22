@@ -42,8 +42,9 @@ bool Statement::bindDouble(int index, f64 value) {
 }
 
 bool Statement::bindText(int index, const std::string& value) {
-    return sqlite3_bind_text(m_stmt, index, value.c_str(), static_cast<int>(value.size()),
-                             SQLITE_TRANSIENT) == SQLITE_OK;
+    return sqlite3_bind_text(
+               m_stmt, index, value.c_str(), static_cast<int>(value.size()), SQLITE_TRANSIENT) ==
+           SQLITE_OK;
 }
 
 bool Statement::bindBlob(int index, const void* data, int size) {
@@ -182,7 +183,9 @@ Statement Database::prepare(const std::string& sql) {
         sqlite3_prepare_v2(m_db, sql.c_str(), static_cast<int>(sql.size()), &stmt, nullptr);
 
     if (result != SQLITE_OK) {
-        log::errorf("Database", "Failed to prepare statement: %s\nQuery: %s", sqlite3_errmsg(m_db),
+        log::errorf("Database",
+                    "Failed to prepare statement: %s\nQuery: %s",
+                    sqlite3_errmsg(m_db),
                     sql.c_str());
         return Statement();
     }

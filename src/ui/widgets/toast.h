@@ -25,7 +25,9 @@ class ToastManager {
     static ToastManager& instance();
 
     // Show a toast notification
-    void show(ToastType type, const std::string& title, const std::string& message = "",
+    void show(ToastType type,
+              const std::string& title,
+              const std::string& message = "",
               float duration = 3.0f);
 
     // Call each frame from UIManager to render active toasts

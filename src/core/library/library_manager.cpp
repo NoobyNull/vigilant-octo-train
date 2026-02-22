@@ -88,7 +88,8 @@ ImportResult LibraryManager::importModel(const Path& sourcePath) {
     // Dual-write: create graph node (non-fatal)
     if (m_graphManager && m_graphManager->isAvailable()) {
         if (!m_graphManager->addModelNode(*modelId, record.name, record.hash)) {
-            log::warningf("Library", "Failed to create graph node for model %lld",
+            log::warningf("Library",
+                          "Failed to create graph node for model %lld",
                           static_cast<long long>(*modelId));
         }
     }
@@ -96,8 +97,11 @@ ImportResult LibraryManager::importModel(const Path& sourcePath) {
     result.success = true;
     result.modelId = *modelId;
 
-    log::infof("Library", "Imported model: %s (ID: %lld, %u triangles)", record.name.c_str(),
-               static_cast<long long>(*modelId), record.triangleCount);
+    log::infof("Library",
+               "Imported model: %s (ID: %lld, %u triangles)",
+               record.name.c_str(),
+               static_cast<long long>(*modelId),
+               record.triangleCount);
 
     return result;
 }
@@ -108,14 +112,6 @@ std::vector<ModelRecord> LibraryManager::getAllModels() {
 
 std::vector<ModelRecord> LibraryManager::searchModels(const std::string& query) {
     return m_modelRepo.findByName(query);
-}
-
-std::vector<ModelRecord> LibraryManager::filterByFormat(const std::string& format) {
-    return m_modelRepo.findByFormat(format);
-}
-
-std::vector<ModelRecord> LibraryManager::filterByTag(const std::string& tag) {
-    return m_modelRepo.findByTag(tag);
 }
 
 std::optional<ModelRecord> LibraryManager::getModel(i64 modelId) {
@@ -184,8 +180,10 @@ std::string LibraryManager::computeFileHash(const Path& path) {
     return hash::computeFile(path);
 }
 
-bool LibraryManager::generateThumbnail(i64 modelId, const Mesh& mesh,
-                                       const Texture* materialTexture, float cameraPitch,
+bool LibraryManager::generateThumbnail(i64 modelId,
+                                       const Mesh& mesh,
+                                       const Texture* materialTexture,
+                                       float cameraPitch,
                                        float cameraYaw) {
     if (!m_thumbnailGen) {
         log::warning("Library", "Thumbnail generation skipped - no generator available");
@@ -209,7 +207,8 @@ bool LibraryManager::generateThumbnail(i64 modelId, const Mesh& mesh,
     settings.cameraYaw = cameraYaw;
 
     if (!m_thumbnailGen->generate(mesh, thumbnailPath, settings)) {
-        log::warningf("Library", "Failed to generate thumbnail for model %lld",
+        log::warningf("Library",
+                      "Failed to generate thumbnail for model %lld",
                       static_cast<long long>(modelId));
         return false;
     }
@@ -251,7 +250,8 @@ bool LibraryManager::deleteGCodeFile(i64 id) {
 
 // --- Hierarchy operations ---
 
-std::optional<i64> LibraryManager::createOperationGroup(i64 modelId, const std::string& name,
+std::optional<i64> LibraryManager::createOperationGroup(i64 modelId,
+                                                        const std::string& name,
                                                         int sortOrder) {
     return m_gcodeRepo.createGroup(modelId, name, sortOrder);
 }
@@ -297,10 +297,24 @@ std::optional<i64> LibraryManager::autoDetectModelMatch(const std::string& gcode
     }
 
     // Strip common G-code suffixes
-    const std::vector<std::string> suffixes = {
-        "_roughing", "_finishing",  "_profile", "_profiling", "_drill", "_drilling",
-        "_contour",  "_contouring", "_pocket",  "_pocketing", "_trace", "_tracing",
-        "_engrave",  "_engraving",  "_cut",     "_cutting",   "_mill",  "_milling"};
+    const std::vector<std::string> suffixes = {"_roughing",
+                                               "_finishing",
+                                               "_profile",
+                                               "_profiling",
+                                               "_drill",
+                                               "_drilling",
+                                               "_contour",
+                                               "_contouring",
+                                               "_pocket",
+                                               "_pocketing",
+                                               "_trace",
+                                               "_tracing",
+                                               "_engrave",
+                                               "_engraving",
+                                               "_cut",
+                                               "_cutting",
+                                               "_mill",
+                                               "_milling"};
 
     for (const auto& suffix : suffixes) {
         if (baseName.size() > suffix.size()) {
@@ -398,29 +412,10 @@ std::vector<ModelRecord> LibraryManager::searchModelsFTS(const std::string& quer
     return m_modelRepo.searchFTS(query);
 }
 
-// --- Graph queries ---
-
-std::vector<i64> LibraryManager::getRelatedModelIds(i64 modelId) {
-    if (m_graphManager && m_graphManager->isAvailable()) {
-        return m_graphManager->queryRelatedModels(modelId);
-    }
-    return {};
-}
-
-std::vector<i64> LibraryManager::getModelsInProject(i64 projectId) {
-    if (m_graphManager && m_graphManager->isAvailable()) {
-        return m_graphManager->queryModelsInProject(projectId);
-    }
-    return {};
-}
-
-bool LibraryManager::isGraphAvailable() const {
-    return m_graphManager && m_graphManager->isAvailable();
-}
-
 // --- AI Descriptor management ---
 
-bool LibraryManager::updateDescriptor(i64 modelId, const std::string& title,
+bool LibraryManager::updateDescriptor(i64 modelId,
+                                      const std::string& title,
                                       const std::string& description,
                                       const std::string& hover) {
     return m_modelRepo.updateDescriptor(modelId, title, description, hover);

@@ -10,7 +10,7 @@
 namespace {
 
 class ProjectRepoTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         ASSERT_TRUE(m_db.open(":memory:"));
         ASSERT_TRUE(dw::Schema::initialize(m_db));
@@ -41,7 +41,7 @@ protected:
     std::unique_ptr<dw::ModelRepository> m_modelRepo;
 };
 
-}  // namespace
+} // namespace
 
 // --- Insert ---
 

@@ -38,11 +38,14 @@ struct Triangle {
 
 // Hash function for Vertex (for use in unordered_map)
 namespace std {
-template <> struct hash<dw::Vertex> {
+template <>
+struct hash<dw::Vertex> {
     size_t operator()(const dw::Vertex& v) const {
         // Simple hash combining position components
         size_t h = 0;
-        auto hashFloat = [](float f) { return std::hash<float>{}(f); };
+        auto hashFloat = [](float f) {
+            return std::hash<float>{}(f);
+        };
         h ^= hashFloat(v.position.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
         h ^= hashFloat(v.position.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
         h ^= hashFloat(v.position.z) + 0x9e3779b9 + (h << 6) + (h >> 2);

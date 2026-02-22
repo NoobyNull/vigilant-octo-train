@@ -15,7 +15,8 @@ struct BindingRecorder {
 
     // Render a binding row. Returns true if the binding was changed.
     bool renderBindingRow(
-        BindAction action, InputBinding& binding,
+        BindAction action,
+        InputBinding& binding,
         const std::array<InputBinding, static_cast<int>(BindAction::COUNT)>& allBindings);
 
   private:
@@ -23,9 +24,10 @@ struct BindingRecorder {
     bool captureInput(InputBinding& out);
 
     // Check if a proposed binding conflicts with another action
-    bool
-    checkConflict(BindAction selfAction, const InputBinding& proposed,
-                  const std::array<InputBinding, static_cast<int>(BindAction::COUNT)>& allBindings);
+    bool checkConflict(
+        BindAction selfAction,
+        const InputBinding& proposed,
+        const std::array<InputBinding, static_cast<int>(BindAction::COUNT)>& allBindings);
 };
 
 } // namespace dw

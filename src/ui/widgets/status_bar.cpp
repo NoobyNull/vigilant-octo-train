@@ -53,8 +53,8 @@ void StatusBar::render(const LoadingState* loadingState) {
 
             // Align to right side
             float progressBarWidth = 200.0f;
-            float cancelButtonWidth =
-                ImGui::CalcTextSize("X").x + ImGui::GetStyle().FramePadding.x * 2;
+            float cancelButtonWidth = ImGui::CalcTextSize("X").x +
+                                      ImGui::GetStyle().FramePadding.x * 2;
             float totalWidth = progressBarWidth + cancelButtonWidth + 16; // spacing
             float windowWidth = ImGui::GetWindowWidth();
             if (windowWidth > totalWidth + 100) { // Ensure enough space
@@ -64,8 +64,8 @@ void StatusBar::render(const LoadingState* loadingState) {
             }
 
             // Progress bar
-            float fraction =
-                total > 0 ? static_cast<float>(completed) / static_cast<float>(total) : 0.0f;
+            float fraction = total > 0 ? static_cast<float>(completed) / static_cast<float>(total)
+                                       : 0.0f;
             char overlay[64];
             std::snprintf(overlay, sizeof(overlay), "%d/%d", completed, total);
             ImGui::ProgressBar(fraction, ImVec2(progressBarWidth, 0), overlay);

@@ -21,8 +21,6 @@ set(DW_TEST_SOURCES
     test_loader_factory.cpp
     test_project.cpp
     test_exporter.cpp
-    # Tier 1 — EventBus
-    test_event_bus.cpp
     # Tier 1 — ConnectionPool
     test_connection_pool.cpp
     # Tier 1 — MainThreadQueue
@@ -61,7 +59,6 @@ set(DW_TEST_SOURCES
 # Source files needed by the tests (compiled from src/)
 set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/types.cpp
-    ${CMAKE_SOURCE_DIR}/src/core/events/event_bus.cpp
     ${CMAKE_SOURCE_DIR}/src/core/threading/main_thread_queue.cpp
     ${CMAKE_SOURCE_DIR}/src/core/threading/thread_pool.cpp
     ${CMAKE_SOURCE_DIR}/src/core/utils/log.cpp

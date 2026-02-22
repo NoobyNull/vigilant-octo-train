@@ -5,6 +5,7 @@
 set(DW_SOURCES
     main.cpp
     app/application.cpp
+    app/application_wiring.cpp
     app/window.cpp
     app/workspace.cpp
 
@@ -114,7 +115,9 @@ set(DW_SOURCES
     # UI Panels
     ui/panels/viewport_panel.cpp
     ui/panels/library_panel.cpp
+    ui/panels/library_panel_items.cpp
     ui/panels/materials_panel.cpp
+    ui/panels/materials_panel_dialogs.cpp
     ui/panels/properties_panel.cpp
     ui/panels/project_panel.cpp
     ui/panels/gcode_panel.cpp

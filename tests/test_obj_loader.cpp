@@ -10,15 +10,14 @@ dw::ByteBuffer toBuffer(const std::string& str) {
     return dw::ByteBuffer(str.begin(), str.end());
 }
 
-}  // namespace
+} // namespace
 
 TEST(OBJLoader, LoadFromBuffer_SingleTriangle) {
-    std::string obj =
-        "# Simple triangle\n"
-        "v 0.0 0.0 0.0\n"
-        "v 1.0 0.0 0.0\n"
-        "v 0.0 1.0 0.0\n"
-        "f 1 2 3\n";
+    std::string obj = "# Simple triangle\n"
+                      "v 0.0 0.0 0.0\n"
+                      "v 1.0 0.0 0.0\n"
+                      "v 0.0 1.0 0.0\n"
+                      "f 1 2 3\n";
 
     dw::OBJLoader loader;
     auto result = loader.loadFromBuffer(toBuffer(obj));
@@ -42,12 +41,11 @@ TEST(OBJLoader, LoadFromBuffer_SingleTriangle) {
 
 TEST(OBJLoader, LoadFromBuffer_Quad) {
     // A quad face should be triangulated into 2 triangles
-    std::string obj =
-        "v 0.0 0.0 0.0\n"
-        "v 1.0 0.0 0.0\n"
-        "v 1.0 1.0 0.0\n"
-        "v 0.0 1.0 0.0\n"
-        "f 1 2 3 4\n";
+    std::string obj = "v 0.0 0.0 0.0\n"
+                      "v 1.0 0.0 0.0\n"
+                      "v 1.0 1.0 0.0\n"
+                      "v 0.0 1.0 0.0\n"
+                      "f 1 2 3 4\n";
 
     dw::OBJLoader loader;
     auto result = loader.loadFromBuffer(toBuffer(obj));
@@ -58,12 +56,11 @@ TEST(OBJLoader, LoadFromBuffer_Quad) {
 }
 
 TEST(OBJLoader, LoadFromBuffer_WithNormals) {
-    std::string obj =
-        "v 0.0 0.0 0.0\n"
-        "v 1.0 0.0 0.0\n"
-        "v 0.0 1.0 0.0\n"
-        "vn 0.0 0.0 1.0\n"
-        "f 1//1 2//1 3//1\n";
+    std::string obj = "v 0.0 0.0 0.0\n"
+                      "v 1.0 0.0 0.0\n"
+                      "v 0.0 1.0 0.0\n"
+                      "vn 0.0 0.0 1.0\n"
+                      "f 1//1 2//1 3//1\n";
 
     dw::OBJLoader loader;
     auto result = loader.loadFromBuffer(toBuffer(obj));
@@ -88,10 +85,9 @@ TEST(OBJLoader, LoadFromBuffer_EmptyData) {
 
 TEST(OBJLoader, LoadFromBuffer_NoFaces) {
     // Vertices but no faces should be an error
-    std::string obj =
-        "v 0.0 0.0 0.0\n"
-        "v 1.0 0.0 0.0\n"
-        "v 0.0 1.0 0.0\n";
+    std::string obj = "v 0.0 0.0 0.0\n"
+                      "v 1.0 0.0 0.0\n"
+                      "v 0.0 1.0 0.0\n";
 
     dw::OBJLoader loader;
     auto result = loader.loadFromBuffer(toBuffer(obj));
@@ -101,13 +97,12 @@ TEST(OBJLoader, LoadFromBuffer_NoFaces) {
 }
 
 TEST(OBJLoader, LoadFromBuffer_CommentsIgnored) {
-    std::string obj =
-        "# This is a comment\n"
-        "v 0.0 0.0 0.0\n"
-        "# Another comment\n"
-        "v 1.0 0.0 0.0\n"
-        "v 0.0 1.0 0.0\n"
-        "f 1 2 3\n";
+    std::string obj = "# This is a comment\n"
+                      "v 0.0 0.0 0.0\n"
+                      "# Another comment\n"
+                      "v 1.0 0.0 0.0\n"
+                      "v 0.0 1.0 0.0\n"
+                      "f 1 2 3\n";
 
     dw::OBJLoader loader;
     auto result = loader.loadFromBuffer(toBuffer(obj));

@@ -74,7 +74,8 @@ void ThumbnailGenerator::shutdown() {
     m_initialized = false;
 }
 
-bool ThumbnailGenerator::generate(const Mesh& mesh, const Path& outputPath,
+bool ThumbnailGenerator::generate(const Mesh& mesh,
+                                  const Path& outputPath,
                                   const ThumbnailSettings& settings) {
     auto pixels = generateToBuffer(mesh, settings);
     if (pixels.empty()) {

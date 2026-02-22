@@ -36,8 +36,7 @@ std::optional<std::string> StatementHelper::queryText(const std::string& query,
     return std::nullopt;
 }
 
-std::optional<i64> StatementHelper::queryInt(const std::string& query, int paramIndex,
-                                             i64 value) {
+std::optional<i64> StatementHelper::queryInt(const std::string& query, int paramIndex, i64 value) {
     auto stmt = m_db.prepare(query);
     if (!stmt.isValid()) {
         return std::nullopt;
@@ -54,7 +53,8 @@ std::optional<i64> StatementHelper::queryInt(const std::string& query, int param
     return std::nullopt;
 }
 
-std::optional<f64> StatementHelper::queryDouble(const std::string& query, int paramIndex,
+std::optional<f64> StatementHelper::queryDouble(const std::string& query,
+                                                int paramIndex,
                                                 f64 value) {
     auto stmt = m_db.prepare(query);
     if (!stmt.isValid()) {
@@ -72,8 +72,7 @@ std::optional<f64> StatementHelper::queryDouble(const std::string& query, int pa
     return std::nullopt;
 }
 
-bool StatementHelper::exists(const std::string& query, int paramIndex,
-                             const std::string& value) {
+bool StatementHelper::exists(const std::string& query, int paramIndex, const std::string& value) {
     auto stmt = m_db.prepare(query);
     if (!stmt.isValid()) {
         return false;

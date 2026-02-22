@@ -62,7 +62,8 @@ void GCodePanel::render() {
 bool GCodePanel::loadFile(const std::string& path) {
     auto content = file::readText(path);
     if (!content) {
-        ToastManager::instance().show(ToastType::Error, "File Read Error",
+        ToastManager::instance().show(ToastType::Error,
+                                      "File Read Error",
                                       "Could not read G-code file: " + path);
         return false;
     }
@@ -85,7 +86,8 @@ bool GCodePanel::loadFile(const std::string& path) {
         return true;
     }
 
-    ToastManager::instance().show(ToastType::Warning, "Empty G-code",
+    ToastManager::instance().show(ToastType::Warning,
+                                  "Empty G-code",
                                   "File contains no valid G-code commands");
     return false;
 }
@@ -102,7 +104,8 @@ void GCodePanel::clear() {
 void GCodePanel::renderToolbar() {
     if (ImGui::Button("Open")) {
         if (m_fileDialog) {
-            m_fileDialog->showOpen("Open G-code", FileDialog::gcodeFilters(),
+            m_fileDialog->showOpen("Open G-code",
+                                   FileDialog::gcodeFilters(),
                                    [this](const std::string& path) {
                                        if (!path.empty()) {
                                            loadFile(path);
@@ -235,10 +238,10 @@ void GCodePanel::renderPathView() {
     float scaleY = (area.size.y - 20) / modelHeight;
     float scale = m_canvas.effectiveScale(std::min(scaleX, scaleY));
 
-    float offsetX =
-        area.pos.x + area.size.x / 2 - (boundsMin.x + modelWidth / 2) * scale + m_canvas.panX;
-    float offsetY =
-        area.pos.y + area.size.y / 2 + (boundsMin.y + modelHeight / 2) * scale + m_canvas.panY;
+    float offsetX = area.pos.x + area.size.x / 2 - (boundsMin.x + modelWidth / 2) * scale +
+                    m_canvas.panX;
+    float offsetY = area.pos.y + area.size.y / 2 + (boundsMin.y + modelHeight / 2) * scale +
+                    m_canvas.panY;
 
     // Draw paths
     for (const auto& segment : m_program.path) {
@@ -271,7 +274,8 @@ void GCodePanel::renderPathView() {
     }
 
     // Border
-    area.drawList->AddRect(area.pos, ImVec2(area.pos.x + area.size.x, area.pos.y + area.size.y),
+    area.drawList->AddRect(area.pos,
+                           ImVec2(area.pos.x + area.size.x, area.pos.y + area.size.y),
                            IM_COL32(60, 60, 60, 255));
 
     // Handle input for pan/zoom

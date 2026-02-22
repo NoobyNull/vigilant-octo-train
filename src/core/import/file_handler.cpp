@@ -9,8 +9,10 @@
 
 namespace dw {
 
-Path FileHandler::handleImportedFile(const Path& source, FileHandlingMode mode,
-                                     const Path& libraryRoot, std::string& error) {
+Path FileHandler::handleImportedFile(const Path& source,
+                                     FileHandlingMode mode,
+                                     const Path& libraryRoot,
+                                     std::string& error) {
     error.clear();
 
     // Leave in place - just return the original path
@@ -35,23 +37,29 @@ Path FileHandler::handleImportedFile(const Path& source, FileHandlingMode mode,
         if (mode == FileHandlingMode::CopyToLibrary) {
             // Copy file to library
             std::filesystem::copy(source, dest, std::filesystem::copy_options::overwrite_existing);
-            log::infof("FileHandler", "Copied file: %s -> %s", source.string().c_str(),
+            log::infof("FileHandler",
+                       "Copied file: %s -> %s",
+                       source.string().c_str(),
                        dest.string().c_str());
             return dest;
         } else if (mode == FileHandlingMode::MoveToLibrary) {
             // Try atomic rename first (works if same filesystem)
             try {
                 std::filesystem::rename(source, dest);
-                log::infof("FileHandler", "Moved file: %s -> %s", source.string().c_str(),
+                log::infof("FileHandler",
+                           "Moved file: %s -> %s",
+                           source.string().c_str(),
                            dest.string().c_str());
                 return dest;
             } catch (const std::filesystem::filesystem_error&) {
                 // Cross-filesystem move - fallback to copy + delete
-                log::debugf("FileHandler", "Rename failed, using copy+delete for: %s",
+                log::debugf("FileHandler",
+                            "Rename failed, using copy+delete for: %s",
                             source.string().c_str());
 
                 // Copy file
-                std::filesystem::copy(source, dest,
+                std::filesystem::copy(source,
+                                      dest,
                                       std::filesystem::copy_options::overwrite_existing);
 
                 // Verify sizes match
@@ -66,8 +74,10 @@ Path FileHandler::handleImportedFile(const Path& source, FileHandlingMode mode,
 
                 // Delete source
                 std::filesystem::remove(source);
-                log::infof("FileHandler", "Moved file (cross-filesystem): %s -> %s",
-                           source.string().c_str(), dest.string().c_str());
+                log::infof("FileHandler",
+                           "Moved file (cross-filesystem): %s -> %s",
+                           source.string().c_str(),
+                           dest.string().c_str());
                 return dest;
             }
         }

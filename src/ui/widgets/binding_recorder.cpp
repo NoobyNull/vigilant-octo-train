@@ -5,7 +5,8 @@
 namespace dw {
 
 bool BindingRecorder::renderBindingRow(
-    BindAction action, InputBinding& binding,
+    BindAction action,
+    InputBinding& binding,
     const std::array<InputBinding, static_cast<int>(BindAction::COUNT)>& allBindings) {
 
     bool changed = false;
@@ -129,7 +130,8 @@ bool BindingRecorder::captureInput(InputBinding& out) {
 }
 
 bool BindingRecorder::checkConflict(
-    BindAction selfAction, const InputBinding& proposed,
+    BindAction selfAction,
+    const InputBinding& proposed,
     const std::array<InputBinding, static_cast<int>(BindAction::COUNT)>& allBindings) {
 
     for (int i = 0; i < static_cast<int>(BindAction::COUNT); i++) {

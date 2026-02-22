@@ -14,7 +14,8 @@ void MaintenanceDialog::render() {
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     ImGui::SetNextWindowSize(ImVec2(400, 0), ImGuiCond_Appearing);
 
-    if (!ImGui::Begin(m_title.c_str(), &m_open,
+    if (!ImGui::Begin(m_title.c_str(),
+                      &m_open,
                       ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::End();
         return;
@@ -63,13 +64,17 @@ void MaintenanceDialog::render() {
     case State::Done: {
         ImGui::Text("Results:");
         ImGui::Spacing();
-        ImGui::BulletText("%d compound categor%s split", m_report.categoriesSplit,
+        ImGui::BulletText("%d compound categor%s split",
+                          m_report.categoriesSplit,
                           m_report.categoriesSplit == 1 ? "y" : "ies");
-        ImGui::BulletText("%d empty categor%s removed", m_report.categoriesRemoved,
+        ImGui::BulletText("%d empty categor%s removed",
+                          m_report.categoriesRemoved,
                           m_report.categoriesRemoved == 1 ? "y" : "ies");
-        ImGui::BulletText("%d model%s had duplicate tags cleaned", m_report.tagsDeduped,
+        ImGui::BulletText("%d model%s had duplicate tags cleaned",
+                          m_report.tagsDeduped,
                           m_report.tagsDeduped == 1 ? "" : "s");
-        ImGui::BulletText("%d broken thumbnail path%s cleared", m_report.thumbnailsCleared,
+        ImGui::BulletText("%d broken thumbnail path%s cleared",
+                          m_report.thumbnailsCleared,
                           m_report.thumbnailsCleared == 1 ? "" : "s");
         if (m_report.ftsRebuilt) {
             ImGui::BulletText("Search index rebuilt");

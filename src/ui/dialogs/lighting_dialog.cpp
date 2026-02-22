@@ -52,7 +52,8 @@ void LightingDialog::render() {
 
         // Light color
         if (ImGui::CollapsingHeader("Light Color", ImGuiTreeNodeFlags_DefaultOpen)) {
-            float lightCol[3] = {m_settings->lightColor.x, m_settings->lightColor.y,
+            float lightCol[3] = {m_settings->lightColor.x,
+                                 m_settings->lightColor.y,
                                  m_settings->lightColor.z};
             if (ImGui::ColorEdit3("Light", lightCol)) {
                 m_settings->lightColor = Vec3{lightCol[0], lightCol[1], lightCol[2]};
@@ -62,9 +63,10 @@ void LightingDialog::render() {
             float intensity = std::max(
                 {m_settings->lightColor.x, m_settings->lightColor.y, m_settings->lightColor.z});
             if (ImGui::SliderFloat("Intensity", &intensity, 0.1f, 2.0f)) {
-                float scale = intensity / std::max(0.001f, std::max({m_settings->lightColor.x,
-                                                                     m_settings->lightColor.y,
-                                                                     m_settings->lightColor.z}));
+                float scale = intensity / std::max(0.001f,
+                                                   std::max({m_settings->lightColor.x,
+                                                             m_settings->lightColor.y,
+                                                             m_settings->lightColor.z}));
                 m_settings->lightColor.x *= scale;
                 m_settings->lightColor.y *= scale;
                 m_settings->lightColor.z *= scale;
@@ -73,7 +75,8 @@ void LightingDialog::render() {
 
         // Ambient light
         if (ImGui::CollapsingHeader("Ambient Light", ImGuiTreeNodeFlags_DefaultOpen)) {
-            float ambientCol[3] = {m_settings->ambient.x, m_settings->ambient.y,
+            float ambientCol[3] = {m_settings->ambient.x,
+                                   m_settings->ambient.y,
                                    m_settings->ambient.z};
             if (ImGui::ColorEdit3("Ambient", ambientCol)) {
                 m_settings->ambient = Vec3{ambientCol[0], ambientCol[1], ambientCol[2]};
@@ -88,7 +91,8 @@ void LightingDialog::render() {
 
         // Object appearance
         if (ImGui::CollapsingHeader("Object Material", ImGuiTreeNodeFlags_DefaultOpen)) {
-            float objCol[3] = {m_settings->objectColor.r, m_settings->objectColor.g,
+            float objCol[3] = {m_settings->objectColor.r,
+                               m_settings->objectColor.g,
                                m_settings->objectColor.b};
             if (ImGui::ColorEdit3("Object Color", objCol)) {
                 m_settings->objectColor = Color{objCol[0], objCol[1], objCol[2], 1.0f};

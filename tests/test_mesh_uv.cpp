@@ -57,7 +57,7 @@ dw::Mesh makeNonZeroUVMesh() {
     return dw::Mesh(std::move(verts), std::move(indices));
 }
 
-}  // namespace
+} // namespace
 
 // --- needsUVGeneration ---
 

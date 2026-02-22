@@ -12,7 +12,7 @@ namespace {
 // Build a minimal valid binary STL with the given number of triangles.
 // Binary STL format: 80-byte header + 4-byte triangle count + N * 50 bytes
 dw::ByteBuffer makeBinarySTL(dw::u32 triangleCount,
-                              const std::vector<std::array<float, 12>>& triangles = {}) {
+                             const std::vector<std::array<float, 12>>& triangles = {}) {
     dw::usize size = 80 + 4 + static_cast<dw::usize>(triangleCount) * 50;
     dw::ByteBuffer buf(size, 0);
 
@@ -26,21 +26,29 @@ dw::ByteBuffer makeBinarySTL(dw::u32 triangleCount,
             // Normal (3 floats) + 3 vertices (9 floats) = 12 floats = 48 bytes
             std::memcpy(ptr, triangles[i].data(), 12 * sizeof(float));
         }
-        ptr += 50;  // 48 bytes geometry + 2 bytes attribute
+        ptr += 50; // 48 bytes geometry + 2 bytes attribute
     }
 
     return buf;
 }
 
-}  // namespace
+} // namespace
 
 TEST(STLLoader, LoadFromBuffer_SingleTriangle) {
     // One triangle: normal=(0,0,1), v0=(0,0,0), v1=(1,0,0), v2=(0,1,0)
     std::array<float, 12> tri = {
-        0.0f, 0.0f, 1.0f,   // normal
-        0.0f, 0.0f, 0.0f,   // vertex 0
-        1.0f, 0.0f, 0.0f,   // vertex 1
-        0.0f, 1.0f, 0.0f    // vertex 2
+        0.0f,
+        0.0f,
+        1.0f, // normal
+        0.0f,
+        0.0f,
+        0.0f, // vertex 0
+        1.0f,
+        0.0f,
+        0.0f, // vertex 1
+        0.0f,
+        1.0f,
+        0.0f // vertex 2
     };
 
     auto data = makeBinarySTL(1, {tri});
@@ -95,17 +103,9 @@ TEST(STLLoader, LoadFromBuffer_TwoTrianglesWithSharedVertices) {
     // Triangle 1: (0,0,0), (1,0,0), (0,1,0)
     // Triangle 2: (1,0,0), (1,1,0), (0,1,0)  -- shares v1=(1,0,0) and v2=(0,1,0)
     std::array<float, 12> tri1 = {
-        0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, 0.0f,
-        1.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f
-    };
+        0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f};
     std::array<float, 12> tri2 = {
-        0.0f, 0.0f, 1.0f,
-        1.0f, 0.0f, 0.0f,
-        1.0f, 1.0f, 0.0f,
-        0.0f, 1.0f, 0.0f
-    };
+        0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f};
 
     auto data = makeBinarySTL(2, {tri1, tri2});
     dw::STLLoader loader;

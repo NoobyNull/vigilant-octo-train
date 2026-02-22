@@ -23,14 +23,14 @@ inline bool isMainThread() {
 // Debug-only assertion macro (disabled in release builds)
 // Follows existing GL_CHECK pattern from src/render/gl_utils.h
 #ifdef NDEBUG
-    #define ASSERT_MAIN_THREAD() ((void)0)
+#define ASSERT_MAIN_THREAD() ((void)0)
 #else
-    #define ASSERT_MAIN_THREAD()                                                                   \
-        do {                                                                                       \
-            if (!dw::threading::isMainThread()) {                                                  \
-                std::cerr << "THREADING VIOLATION: " << __FILE__ << ":" << __LINE__ << " - "       \
-                          << __func__ << " must be called from main thread\n";                     \
-                std::abort();                                                                      \
-            }                                                                                      \
-        } while (0)
+#define ASSERT_MAIN_THREAD()                                                             \
+    do {                                                                                 \
+        if (!dw::threading::isMainThread()) {                                            \
+            std::cerr << "THREADING VIOLATION: " << __FILE__ << ":" << __LINE__ << " - " \
+                      << __func__ << " must be called from main thread\n";               \
+            std::abort();                                                                \
+        }                                                                                \
+    } while (0)
 #endif

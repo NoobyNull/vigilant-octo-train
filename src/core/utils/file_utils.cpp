@@ -5,15 +5,15 @@
 #include <fstream>
 
 #ifdef _WIN32
-    #ifndef NOMINMAX
-        #define NOMINMAX
-    #endif
-    #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN
-    #endif
-    #include <windows.h>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
 #else
-    #include <unistd.h>
+#include <unistd.h>
 #endif
 
 #include "log.h"
@@ -24,24 +24,30 @@ namespace {
 
 // Helper for filesystem operations that return bool and log on failure.
 // The callable receives a std::error_code& and performs the fs operation.
-template <typename F> bool fsOp(const char* opName, const Path& path, F&& fn) {
+template <typename F>
+bool fsOp(const char* opName, const Path& path, F&& fn) {
     std::error_code ec;
     fn(ec);
     if (ec) {
-        log::errorf("FileIO", "Failed to %s: %s (%s)", opName, path.string().c_str(),
-                    ec.message().c_str());
+        log::errorf(
+            "FileIO", "Failed to %s: %s (%s)", opName, path.string().c_str(), ec.message().c_str());
         return false;
     }
     return true;
 }
 
 // Two-path variant for copy/move operations.
-template <typename F> bool fsOp2(const char* opName, const Path& from, const Path& to, F&& fn) {
+template <typename F>
+bool fsOp2(const char* opName, const Path& from, const Path& to, F&& fn) {
     std::error_code ec;
     fn(ec);
     if (ec) {
-        log::errorf("FileIO", "Failed to %s %s to %s: %s", opName, from.string().c_str(),
-                    to.string().c_str(), ec.message().c_str());
+        log::errorf("FileIO",
+                    "Failed to %s %s to %s: %s",
+                    opName,
+                    from.string().c_str(),
+                    to.string().c_str(),
+                    ec.message().c_str());
         return false;
     }
     return true;
@@ -124,15 +130,17 @@ bool isDirectory(const Path& path) {
 
 bool createDirectory(const Path& path) {
     bool result = false;
-    fsOp("create directory", path,
-         [&](std::error_code& ec) { result = fs::create_directory(path, ec); });
+    fsOp("create directory", path, [&](std::error_code& ec) {
+        result = fs::create_directory(path, ec);
+    });
     return result || file::exists(path);
 }
 
 bool createDirectories(const Path& path) {
     bool result = false;
-    fsOp("create directories", path,
-         [&](std::error_code& ec) { result = fs::create_directories(path, ec); });
+    fsOp("create directories", path, [&](std::error_code& ec) {
+        result = fs::create_directories(path, ec);
+    });
     return result || file::exists(path);
 }
 
@@ -159,18 +167,6 @@ Result<u64> getFileSize(const Path& path) {
         return std::nullopt;
     }
     return static_cast<u64>(size);
-}
-
-Result<i64> getModificationTime(const Path& path) {
-    std::error_code ec;
-    auto ftime = fs::last_write_time(path, ec);
-    if (ec) {
-        return std::nullopt;
-    }
-    // C++17 compatible conversion: use file_time_type duration
-    auto duration = ftime.time_since_epoch();
-    auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration);
-    return static_cast<i64>(seconds.count());
 }
 
 std::vector<Path> listFiles(const Path& directory) {
@@ -215,18 +211,14 @@ std::string getExtension(const Path& path) {
     if (!ext.empty() && ext[0] == '.') {
         ext = ext.substr(1);
     }
-    std::transform(ext.begin(), ext.end(), ext.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
+    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) {
+        return std::tolower(c);
+    });
     return ext;
 }
 
 std::string getStem(const Path& path) {
     return path.stem().string();
-}
-
-Path makeAbsolute(const Path& path) {
-    std::error_code ec;
-    return fs::absolute(path, ec);
 }
 
 Path getParent(const Path& path) {
@@ -284,7 +276,8 @@ void openInFileManager(const Path& path) {
     auto shell32 = LoadLibraryW(L"shell32.dll");
     if (shell32) {
         using ShellExecuteWFn = HINSTANCE(WINAPI*)(HWND, LPCWSTR, LPCWSTR, LPCWSTR, LPCWSTR, INT);
-        auto shellExecute = reinterpret_cast<ShellExecuteWFn>(GetProcAddress(shell32, "ShellExecuteW"));
+        auto shellExecute =
+            reinterpret_cast<ShellExecuteWFn>(GetProcAddress(shell32, "ShellExecuteW"));
         if (shellExecute) {
             shellExecute(nullptr, L"open", path.wstring().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
         }

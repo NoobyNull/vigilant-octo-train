@@ -34,7 +34,8 @@ void ViewportPanel::render() {
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 
-    if (ImGui::Begin(m_title.c_str(), &m_open,
+    if (ImGui::Begin(m_title.c_str(),
+                     &m_open,
                      ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
         renderToolbar();
         renderViewport();
@@ -70,7 +71,8 @@ void ViewportPanel::setMesh(MeshPtr mesh) {
     m_viewCubeCache.valid = false;
 }
 
-void ViewportPanel::setPreOrientedMesh(MeshPtr mesh, f32 orientYaw,
+void ViewportPanel::setPreOrientedMesh(MeshPtr mesh,
+                                       f32 orientYaw,
                                        std::optional<CameraState> savedCamera) {
     m_mesh = mesh;
 
@@ -186,12 +188,16 @@ void ViewportPanel::registerContextMenuEntries() {
     // Camera Controls
     ContextMenuEntry resetViewEntry;
     resetViewEntry.label = "Reset View";
-    resetViewEntry.action = [this]() { resetView(); };
+    resetViewEntry.action = [this]() {
+        resetView();
+    };
     entries.push_back(resetViewEntry);
 
     ContextMenuEntry fitEntry;
     fitEntry.label = "Fit to Model";
-    fitEntry.action = [this]() { fitToModel(); };
+    fitEntry.action = [this]() {
+        fitToModel();
+    };
     entries.push_back(fitEntry);
 
     entries.push_back(ContextMenuEntry::separator());
@@ -481,7 +487,9 @@ void ViewportPanel::renderViewport() {
     m_framebuffer.unbind();
 
     // Display framebuffer texture
-    ImGui::Image(static_cast<ImTextureID>(m_framebuffer.colorTexture()), contentSize, ImVec2(0, 1),
+    ImGui::Image(static_cast<ImTextureID>(m_framebuffer.colorTexture()),
+                 contentSize,
+                 ImVec2(0, 1),
                  ImVec2(1, 0));
     // Context menu for viewport interactions
     if (m_contextMenuManager != nullptr) {
@@ -620,7 +628,8 @@ void ViewportPanel::renderViewCube() {
                        0.25f;
             m_viewCubeCache.sortedFaces[static_cast<usize>(i)] = {i, avgZ};
         }
-        std::sort(m_viewCubeCache.sortedFaces.begin(), m_viewCubeCache.sortedFaces.end(),
+        std::sort(m_viewCubeCache.sortedFaces.begin(),
+                  m_viewCubeCache.sortedFaces.end(),
                   [](const ViewCubeCache::FaceSort& a, const ViewCubeCache::FaceSort& b) {
                       return a.avgZ < b.avgZ;
                   });
@@ -707,7 +716,8 @@ void ViewportPanel::renderViewCube() {
             };
             ImVec2 textSize = ImGui::CalcTextSize(f.label);
             drawList->AddText({center.x - textSize.x * 0.5f, center.y - textSize.y * 0.5f},
-                              kLabelColor, f.label);
+                              kLabelColor,
+                              f.label);
         }
     }
 

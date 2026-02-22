@@ -6,8 +6,8 @@
 
 #include <gtest/gtest.h>
 
-#include "core/materials/material_archive.h"
 #include "core/materials/material.h"
+#include "core/materials/material_archive.h"
 
 namespace fs = std::filesystem;
 
@@ -91,7 +91,8 @@ TEST_F(MaterialArchiveTest, Create_ReturnsExpectedFiles) {
 
 TEST_F(MaterialArchiveTest, Create_MissingTextureFails) {
     auto path = archivePath("oak");
-    auto result = dw::MaterialArchive::create(path, "/nonexistent/path/texture.png", makeMaterial());
+    auto result =
+        dw::MaterialArchive::create(path, "/nonexistent/path/texture.png", makeMaterial());
     EXPECT_FALSE(result.success);
 }
 
@@ -184,8 +185,10 @@ TEST_F(MaterialArchiveTest, List_ReturnsExpectedEntries) {
     bool hasTexture = false;
     bool hasMetadata = false;
     for (const auto& e : entries) {
-        if (e.path == "texture.png") hasTexture = true;
-        if (e.path == "metadata.json") hasMetadata = true;
+        if (e.path == "texture.png")
+            hasTexture = true;
+        if (e.path == "metadata.json")
+            hasMetadata = true;
     }
     EXPECT_TRUE(hasTexture);
     EXPECT_TRUE(hasMetadata);

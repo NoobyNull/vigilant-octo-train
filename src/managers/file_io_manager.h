@@ -16,7 +16,6 @@
 namespace dw {
 
 // Forward declarations
-class EventBus;
 class Database;
 class LibraryManager;
 class ProjectManager;
@@ -37,9 +36,13 @@ class GeminiDescriptorService;
 
 class FileIOManager {
   public:
-    FileIOManager(EventBus* eventBus, Database* database, LibraryManager* libraryManager,
-                  ProjectManager* projectManager, ImportQueue* importQueue, Workspace* workspace,
-                  FileDialog* fileDialog, ThumbnailGenerator* thumbnailGenerator,
+    FileIOManager(Database* database,
+                  LibraryManager* libraryManager,
+                  ProjectManager* projectManager,
+                  ImportQueue* importQueue,
+                  Workspace* workspace,
+                  FileDialog* fileDialog,
+                  ThumbnailGenerator* thumbnailGenerator,
                   ProjectExportManager* projectExportManager = nullptr);
     ~FileIOManager();
 
@@ -52,8 +55,10 @@ class FileIOManager {
     void importModel();
     void exportModel();
     void onFilesDropped(const std::vector<std::string>& paths);
-    void processCompletedImports(ViewportPanel* viewport, PropertiesPanel* properties,
-                                 LibraryPanel* library, std::function<void(bool)> setShowStartPage);
+    void processCompletedImports(ViewportPanel* viewport,
+                                 PropertiesPanel* properties,
+                                 LibraryPanel* library,
+                                 std::function<void(bool)> setShowStartPage);
 
     // Project operations
     void newProject(std::function<void(bool)> setShowStartPage);
@@ -74,7 +79,6 @@ class FileIOManager {
     // Recursive directory scanning helper
     void collectSupportedFiles(const Path& directory, std::vector<Path>& outPaths);
 
-    EventBus* m_eventBus;
     Database* m_database;
     LibraryManager* m_libraryManager;
     ProjectManager* m_projectManager;

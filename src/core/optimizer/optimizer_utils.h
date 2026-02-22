@@ -29,8 +29,9 @@ inline std::vector<ExpandedPart> expandParts(const std::vector<Part>& parts) {
     }
 
     // Sort by area (largest first) for best-fit-decreasing heuristic
-    std::sort(expanded.begin(), expanded.end(),
-              [](const ExpandedPart& a, const ExpandedPart& b) { return a.area > b.area; });
+    std::sort(expanded.begin(), expanded.end(), [](const ExpandedPart& a, const ExpandedPart& b) {
+        return a.area > b.area;
+    });
 
     return expanded;
 }

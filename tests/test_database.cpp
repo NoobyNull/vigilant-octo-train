@@ -8,13 +8,13 @@ namespace {
 
 // Fixture: provides an in-memory database per test
 class DatabaseTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override { ASSERT_TRUE(m_db.open(":memory:")); }
 
     dw::Database m_db;
 };
 
-}  // namespace
+} // namespace
 
 // --- Open / Close ---
 
@@ -192,5 +192,5 @@ TEST_F(DatabaseTest, Statement_MoveConstruct) {
 
     dw::Statement stmt2(std::move(stmt1));
     EXPECT_TRUE(stmt2.isValid());
-    EXPECT_FALSE(stmt1.isValid());  // NOLINT: testing moved-from state
+    EXPECT_FALSE(stmt1.isValid()); // NOLINT: testing moved-from state
 }

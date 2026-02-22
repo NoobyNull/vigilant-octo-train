@@ -17,26 +17,31 @@ const char* kGeminiApiBase = "https://generativelanguage.googleapis.com/v1beta/m
 } // anonymous namespace
 
 std::string GeminiMaterialService::fetchProperties(const std::string& prompt,
-                                                    const std::string& apiKey) {
+                                                   const std::string& apiKey) {
     std::string url = std::string(kGeminiApiBase) +
                       "gemini-3-flash-preview:generateContent?key=" + apiKey;
 
     // Build request JSON
     nlohmann::json schema;
     schema["type"] = "OBJECT";
-    schema["properties"] = {
-        {"category", {{"type", "STRING"}}},
-        {"description", {{"type", "STRING"}}},
-        {"density", {{"type", "NUMBER"}}},
-        {"hardness", {{"type", "STRING"}}},
-        {"colorHex", {{"type", "STRING"}}},
-        {"recommendedFeedRate", {{"type", "NUMBER"}}},
-        {"recommendedSpindleSpeed", {{"type", "NUMBER"}}},
-        {"recommendedDepthPerPass", {{"type", "NUMBER"}}},
-        {"recommendedToolType", {{"type", "STRING"}}}};
-    schema["required"] = nlohmann::json::array(
-        {"category", "description", "density", "hardness", "colorHex", "recommendedFeedRate",
-         "recommendedSpindleSpeed", "recommendedDepthPerPass", "recommendedToolType"});
+    schema["properties"] = {{"category", {{"type", "STRING"}}},
+                            {"description", {{"type", "STRING"}}},
+                            {"density", {{"type", "NUMBER"}}},
+                            {"hardness", {{"type", "STRING"}}},
+                            {"colorHex", {{"type", "STRING"}}},
+                            {"recommendedFeedRate", {{"type", "NUMBER"}}},
+                            {"recommendedSpindleSpeed", {{"type", "NUMBER"}}},
+                            {"recommendedDepthPerPass", {{"type", "NUMBER"}}},
+                            {"recommendedToolType", {{"type", "STRING"}}}};
+    schema["required"] = nlohmann::json::array({"category",
+                                                "description",
+                                                "density",
+                                                "hardness",
+                                                "colorHex",
+                                                "recommendedFeedRate",
+                                                "recommendedSpindleSpeed",
+                                                "recommendedDepthPerPass",
+                                                "recommendedToolType"});
 
     nlohmann::json requestBody;
     requestBody["systemInstruction"]["parts"] = nlohmann::json::array(
@@ -49,10 +54,11 @@ std::string GeminiMaterialService::fetchProperties(const std::string& prompt,
            "Always interpret ambiguous names (Cherry, Bass, Zebra, Canary) as wood timber. "
            "Return valid JSON only matching the schema."}}});
     requestBody["contents"] = nlohmann::json::array(
-        {{{"parts", nlohmann::json::array(
-                        {{{"text", "Analyze the material: \"" + prompt +
-                                       "\". Provide technical physical properties and CNC "
-                                       "machining parameters."}}})}}});
+        {{{"parts",
+           nlohmann::json::array({{{"text",
+                                    "Analyze the material: \"" + prompt +
+                                        "\". Provide technical physical properties and CNC "
+                                        "machining parameters."}}})}}});
     requestBody["generationConfig"]["responseMimeType"] = "application/json";
     requestBody["generationConfig"]["responseSchema"] = schema;
 
@@ -82,21 +88,20 @@ std::string GeminiMaterialService::fetchProperties(const std::string& prompt,
 }
 
 std::vector<uint8_t> GeminiMaterialService::fetchTexture(const std::string& prompt,
-                                                          const std::string& apiKey) {
+                                                         const std::string& apiKey) {
     std::string url = std::string(kGeminiApiBase) +
                       "gemini-2.5-flash-image:generateContent?key=" + apiKey;
 
     nlohmann::json requestBody = {
         {"contents",
          {{{"parts",
-            {{{"text", "Generate a high-resolution, seamless texture map of " + prompt +
-                           ". "
-                           "Format: Flat orthographic top-down view. "
-                           "Lighting: Uniform flat lighting, no shadows, no 3D depth. "
-                           "Subject: A raw material surface grain only."}}}}}}},
-        {"generationConfig",
-         {{"responseModalities", nlohmann::json::array({"IMAGE"})}}}};
-
+            {{{"text",
+               "Generate a high-resolution, seamless texture map of " + prompt +
+                   ". "
+                   "Format: Flat orthographic top-down view. "
+                   "Lighting: Uniform flat lighting, no shadows, no 3D depth. "
+                   "Subject: A raw material surface grain only."}}}}}}},
+        {"generationConfig", {{"responseModalities", nlohmann::json::array({"IMAGE"})}}}};
 
     std::string response = gemini::curlPost(url, requestBody.dump());
     if (response.empty()) {
@@ -111,7 +116,8 @@ std::vector<uint8_t> GeminiMaterialService::fetchTexture(const std::string& prom
                 log::error("GeminiService", "Texture request blocked by safety filter");
             } else {
                 std::string detail = response.substr(0, 500);
-                log::errorf("GeminiService", "Texture response has no candidates: %s",
+                log::errorf("GeminiService",
+                            "Texture response has no candidates: %s",
                             detail.c_str());
             }
             return {};
@@ -138,7 +144,7 @@ std::vector<uint8_t> GeminiMaterialService::fetchTexture(const std::string& prom
 // ---------------------------------------------------------------------------
 
 MaterialRecord GeminiMaterialService::parseProperties(const std::string& json,
-                                                       const std::string& name) {
+                                                      const std::string& name) {
     MaterialRecord record;
     record.name = name;
 
@@ -184,7 +190,7 @@ MaterialRecord GeminiMaterialService::parseProperties(const std::string& json,
 // ---------------------------------------------------------------------------
 
 GenerateResult GeminiMaterialService::generate(const std::string& prompt,
-                                                const std::string& apiKey) {
+                                               const std::string& apiKey) {
     GenerateResult result;
 
     log::infof("GeminiService", "Generating material: %s", prompt.c_str());

@@ -8,7 +8,8 @@
 #include "mesh.h"
 
 namespace dw {
-namespace hash {
+
+namespace {
 
 // FNV-1a constants
 constexpr u64 FNV_OFFSET_BASIS = 14695981039346656037ULL;
@@ -25,6 +26,10 @@ u64 computeBytes(const void* data, usize size) {
 
     return hash;
 }
+
+} // anonymous namespace
+
+namespace hash {
 
 std::string computeFile(const Path& path) {
     auto data = file::readBinary(path);

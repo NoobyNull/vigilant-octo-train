@@ -75,7 +75,7 @@ TEST(Camera, Orbit_PitchClamped) {
 TEST(Camera, Orbit_YawWraps) {
     dw::Camera cam;
     // Orbit a full circle
-    cam.orbit(720.0f / 0.5f, 0.0f);  // 720 degrees at 0.5 sensitivity
+    cam.orbit(720.0f / 0.5f, 0.0f); // 720 degrees at 0.5 sensitivity
     // Yaw should wrap to [0, 360)
     EXPECT_GE(cam.yaw(), 0.0f);
     EXPECT_LT(cam.yaw(), 360.0f);
@@ -86,28 +86,30 @@ TEST(Camera, Orbit_YawWraps) {
 TEST(Camera, Zoom_ReducesDistance) {
     dw::Camera cam;
     float origDist = cam.distance();
-    cam.zoom(1.0f);  // Zoom in
+    cam.zoom(1.0f); // Zoom in
     EXPECT_LT(cam.distance(), origDist);
 }
 
 TEST(Camera, Zoom_IncreasesDistance) {
     dw::Camera cam;
     float origDist = cam.distance();
-    cam.zoom(-1.0f);  // Zoom out
+    cam.zoom(-1.0f); // Zoom out
     EXPECT_GT(cam.distance(), origDist);
 }
 
 TEST(Camera, Zoom_ClampsMinDistance) {
     dw::Camera cam;
     // Zoom in a huge amount
-    for (int i = 0; i < 100; ++i) cam.zoom(10.0f);
+    for (int i = 0; i < 100; ++i)
+        cam.zoom(10.0f);
     EXPECT_GE(cam.distance(), 0.1f);
 }
 
 TEST(Camera, Zoom_ClampsMaxDistance) {
     dw::Camera cam;
     // Zoom out a huge amount
-    for (int i = 0; i < 100; ++i) cam.zoom(-10.0f);
+    for (int i = 0; i < 100; ++i)
+        cam.zoom(-10.0f);
     EXPECT_LE(cam.distance(), 10000.0f);
 }
 
@@ -162,12 +164,6 @@ TEST(Camera, Reset_RestoresDefaults) {
 
 // --- Viewport ---
 
-TEST(Camera, Viewport_AspectRatio) {
-    dw::Camera cam;
-    cam.setViewport(1920, 1080);
-    EXPECT_NEAR(cam.aspectRatio(), 1920.0f / 1080.0f, 0.001f);
-}
-
 TEST(Camera, Viewport_MinClamped) {
     dw::Camera cam;
     cam.setViewport(0, 0);
@@ -214,20 +210,13 @@ TEST(Camera, SetDistance_Clamps) {
     EXPECT_LE(cam.distance(), 10000.0f);
 }
 
-TEST(Camera, SetClipPlanes) {
-    dw::Camera cam;
-    cam.setClipPlanes(1.0f, 500.0f);
-    EXPECT_FLOAT_EQ(cam.nearPlane(), 1.0f);
-    EXPECT_FLOAT_EQ(cam.farPlane(), 500.0f);
-}
-
 // --- BUG-02 regression: fmod angle wrapping edge cases ---
 
 TEST(Camera, Orbit_NegativeYaw_WrapsToPositive) {
     dw::Camera cam;
     cam.setYaw(0.0f);
     // Orbit negative (large amount to go well below 0)
-    cam.orbit(-1000.0f / 0.5f, 0.0f);  // -1000 degrees at 0.5 sensitivity
+    cam.orbit(-1000.0f / 0.5f, 0.0f); // -1000 degrees at 0.5 sensitivity
     // Yaw should be in [0, 360)
     EXPECT_GE(cam.yaw(), 0.0f);
     EXPECT_LT(cam.yaw(), 360.0f);
@@ -244,7 +233,7 @@ TEST(Camera, Orbit_Exactly360_WrapsToZero) {
     dw::Camera cam;
     // Set yaw near 360 and push it to exactly 360
     cam.setYaw(359.0f);
-    cam.orbit(1.0f / 0.5f, 0.0f);  // +1 degree at 0.5 sensitivity = +2.0 * 0.5 = +1.0
+    cam.orbit(1.0f / 0.5f, 0.0f); // +1 degree at 0.5 sensitivity = +2.0 * 0.5 = +1.0
     // After wrapping, should be 0.0
     EXPECT_GE(cam.yaw(), 0.0f);
     EXPECT_LT(cam.yaw(), 360.0f);
@@ -254,7 +243,7 @@ TEST(Camera, Orbit_SmallNegative_WrapsCorrectly) {
     dw::Camera cam;
     cam.setYaw(1.0f);
     // Orbit -4 degrees (sensitivity 0.5, so deltaX = -4/0.5 = -8)
-    cam.orbit(-8.0f, 0.0f);  // 1.0 + (-8.0 * 0.5) = 1.0 - 4.0 = -3.0 -> wraps to 357.0
+    cam.orbit(-8.0f, 0.0f); // 1.0 + (-8.0 * 0.5) = 1.0 - 4.0 = -3.0 -> wraps to 357.0
     EXPECT_NEAR(cam.yaw(), 357.0f, 0.01f);
 }
 

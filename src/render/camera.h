@@ -29,7 +29,6 @@ class Camera {
     void setViewport(int width, int height);
     int viewportWidth() const { return m_viewportWidth; }
     int viewportHeight() const { return m_viewportHeight; }
-    f32 aspectRatio() const;
 
     // Properties
     const Vec3& target() const { return m_target; }
@@ -55,19 +54,11 @@ class Camera {
     f32 fov() const { return m_fov; }
     void setFov(f32 fov) { m_fov = fov; }
 
-    f32 nearPlane() const { return m_nearPlane; }
-    f32 farPlane() const { return m_farPlane; }
-    void setClipPlanes(f32 nearPlane, f32 farPlane);
-
     // Get camera position
     Vec3 position() const;
 
-    // Sensitivity settings
-    void setOrbitSensitivity(f32 sensitivity) { m_orbitSensitivity = sensitivity; }
-    void setPanSensitivity(f32 sensitivity) { m_panSensitivity = sensitivity; }
-    void setZoomSensitivity(f32 sensitivity) { m_zoomSensitivity = sensitivity; }
-
   private:
+    f32 aspectRatio() const;
     void updateVectors();
 
     Vec3 m_target{0.0f, 0.0f, 0.0f};

@@ -6,21 +6,21 @@
 #include "../utils/log.h"
 
 #ifdef _WIN32
-    #ifndef NOMINMAX
-        #define NOMINMAX
-    #endif
-    #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN
-    #endif
-    #include <windows.h>
-    #include <shlobj.h>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <shlobj.h>
+#include <windows.h>
 #elif defined(__APPLE__)
-    #include <pwd.h>
-    #include <unistd.h>
-    #include <mach-o/dyld.h>
+#include <mach-o/dyld.h>
+#include <pwd.h>
+#include <unistd.h>
 #else
-    #include <pwd.h>
-    #include <unistd.h>
+#include <pwd.h>
+#include <unistd.h>
 #endif
 
 namespace dw {

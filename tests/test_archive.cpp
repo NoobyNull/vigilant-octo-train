@@ -10,7 +10,7 @@
 namespace {
 
 class ArchiveTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         m_baseDir = std::filesystem::temp_directory_path() / "dw_test_archive";
         m_srcDir = (m_baseDir / "source").string();
@@ -36,7 +36,7 @@ protected:
     std::string m_archivePath;
 };
 
-}  // namespace
+} // namespace
 
 // --- Create + Extract roundtrip ---
 

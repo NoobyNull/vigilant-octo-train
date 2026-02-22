@@ -87,7 +87,9 @@ std::shared_ptr<Project> ProjectManager::open(i64 projectId) {
     }
     project->clearModified();
 
-    log::infof("Project", "Opened: %s (ID: %lld)", record->name.c_str(),
+    log::infof("Project",
+               "Opened: %s (ID: %lld)",
+               record->name.c_str(),
                static_cast<long long>(projectId));
 
     return project;

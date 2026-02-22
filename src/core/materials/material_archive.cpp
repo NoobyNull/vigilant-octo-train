@@ -73,8 +73,8 @@ ArchiveResult MaterialArchive::create(const std::string& archivePath,
     // Add texture.png from file (optional — default materials have no texture)
     std::vector<std::string> archivedFiles;
     if (!texturePath.empty()) {
-        if (!mz_zip_writer_add_file(&zip, kTextureEntry, texturePath.c_str(), nullptr, 0,
-                                    kCompressionLevel)) {
+        if (!mz_zip_writer_add_file(
+                &zip, kTextureEntry, texturePath.c_str(), nullptr, 0, kCompressionLevel)) {
             mz_zip_writer_end(&zip);
             return ArchiveResult::fail("Failed to add texture to archive: " + texturePath);
         }
@@ -83,8 +83,8 @@ ArchiveResult MaterialArchive::create(const std::string& archivePath,
 
     // Serialize metadata to JSON and add it
     std::string metaJson = metadataToJson(record);
-    if (!mz_zip_writer_add_mem(&zip, kMetadataEntry, metaJson.c_str(), metaJson.size(),
-                               kCompressionLevel)) {
+    if (!mz_zip_writer_add_mem(
+            &zip, kMetadataEntry, metaJson.c_str(), metaJson.size(), kCompressionLevel)) {
         mz_zip_writer_end(&zip);
         return ArchiveResult::fail("Failed to add metadata.json to archive");
     }
@@ -97,8 +97,8 @@ ArchiveResult MaterialArchive::create(const std::string& archivePath,
     mz_zip_writer_end(&zip);
 
     archivedFiles.push_back(kMetadataEntry);
-    log::infof("MaterialArchive", "Created: %s (%zu entries)", archivePath.c_str(),
-               archivedFiles.size());
+    log::infof(
+        "MaterialArchive", "Created: %s (%zu entries)", archivePath.c_str(), archivedFiles.size());
     return ArchiveResult::ok(std::move(archivedFiles));
 }
 
@@ -123,7 +123,8 @@ std::optional<MaterialData> MaterialArchive::load(const std::string& archivePath
     size_t metaSize = 0;
     void* metaBuf = mz_zip_reader_extract_file_to_heap(&zip, kMetadataEntry, &metaSize, 0);
     if (!metaBuf) {
-        log::errorf("MaterialArchive", "metadata.json not found in archive: %s",
+        log::errorf("MaterialArchive",
+                    "metadata.json not found in archive: %s",
                     archivePath.c_str());
         if (textureBuf) {
             mz_free(textureBuf);

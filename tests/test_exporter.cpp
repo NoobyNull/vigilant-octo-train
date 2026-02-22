@@ -12,7 +12,7 @@
 namespace {
 
 class ExporterTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         m_tmpDir = std::filesystem::temp_directory_path() / "dw_test_exporter";
         std::filesystem::create_directories(m_tmpDir);
@@ -46,7 +46,7 @@ protected:
     dw::Path m_tmpDir;
 };
 
-}  // namespace
+} // namespace
 
 // --- STL Binary export + re-import ---
 

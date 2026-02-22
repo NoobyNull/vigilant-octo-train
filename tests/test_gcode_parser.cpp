@@ -53,12 +53,10 @@ TEST(GcodeParser, ParseWithFeedRate) {
 
 TEST(GcodeParser, CommentLinesSkipped) {
     dw::gcode::Parser parser;
-    auto program = parser.parse(
-        "; This is a comment\n"
-        "G0 X10\n"
-        "; Another comment\n"
-        "(parenthetical comment)\n"
-    );
+    auto program = parser.parse("; This is a comment\n"
+                                "G0 X10\n"
+                                "; Another comment\n"
+                                "(parenthetical comment)\n");
 
     // Only G0 should be parsed; comments are ignored
     ASSERT_EQ(program.commands.size(), 1u);
@@ -75,10 +73,8 @@ TEST(GcodeParser, EmptyInputProducesEmptyResult) {
 
 TEST(GcodeParser, PathSegmentsGenerated) {
     dw::gcode::Parser parser;
-    auto program = parser.parse(
-        "G0 X10 Y0\n"
-        "G1 X20 Y10 F500\n"
-    );
+    auto program = parser.parse("G0 X10 Y0\n"
+                                "G1 X20 Y10 F500\n");
 
     ASSERT_EQ(program.commands.size(), 2u);
     ASSERT_EQ(program.path.size(), 2u);
@@ -107,11 +103,9 @@ TEST(GcodeParser, UnitSetting) {
 
 TEST(GcodeParser, AbsolutePositioning) {
     dw::gcode::Parser parser;
-    auto program = parser.parse(
-        "G90\n"
-        "G0 X10\n"
-        "G0 X20\n"
-    );
+    auto program = parser.parse("G90\n"
+                                "G0 X10\n"
+                                "G0 X20\n");
 
     EXPECT_EQ(program.positioning, dw::gcode::PositioningMode::Absolute);
     ASSERT_EQ(program.path.size(), 2u);
@@ -121,11 +115,9 @@ TEST(GcodeParser, AbsolutePositioning) {
 
 TEST(GcodeParser, RelativePositioning) {
     dw::gcode::Parser parser;
-    auto program = parser.parse(
-        "G91\n"
-        "G0 X10\n"
-        "G0 X5\n"
-    );
+    auto program = parser.parse("G91\n"
+                                "G0 X10\n"
+                                "G0 X5\n");
 
     EXPECT_EQ(program.positioning, dw::gcode::PositioningMode::Relative);
     ASSERT_EQ(program.path.size(), 2u);
@@ -135,10 +127,8 @@ TEST(GcodeParser, RelativePositioning) {
 
 TEST(GcodeParser, MCommands) {
     dw::gcode::Parser parser;
-    auto program = parser.parse(
-        "M3 S12000\n"
-        "M5\n"
-    );
+    auto program = parser.parse("M3 S12000\n"
+                                "M5\n");
 
     ASSERT_EQ(program.commands.size(), 2u);
     EXPECT_EQ(program.commands[0].type, dw::gcode::CommandType::M3);

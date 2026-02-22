@@ -34,9 +34,6 @@ bool isDirectory(const Path& path);
 // Get file size in bytes
 Result<u64> getFileSize(const Path& path);
 
-// Get file modification time
-Result<i64> getModificationTime(const Path& path);
-
 // List files in directory
 std::vector<Path> listFiles(const Path& directory);
 std::vector<Path> listFiles(const Path& directory, const std::string& extension);
@@ -46,9 +43,6 @@ std::string getExtension(const Path& path);
 
 // Get filename without extension
 std::string getStem(const Path& path);
-
-// Make path absolute
-Path makeAbsolute(const Path& path);
 
 // Get parent directory
 Path getParent(const Path& path);

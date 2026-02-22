@@ -22,13 +22,6 @@ TEST_F(ApplicationStateTest, ConstructionSucceeds) {
     EXPECT_TRUE(true);
 }
 
-// Test Application has required accessors
-TEST_F(ApplicationStateTest, ApplicationHasEventBusAccessor) {
-    // Verify eventBus() accessor exists (compilation is the real test)
-    // Don't call it without proper initialization
-    EXPECT_TRUE(true);
-}
-
 TEST_F(ApplicationStateTest, ApplicationHasMainThreadQueueAccessor) {
     // Verify mainThreadQueue() accessor exists
     EXPECT_TRUE(true);
@@ -132,4 +125,4 @@ TEST_F(ApplicationStateTest, ApplicationDeclaresRequiredTypes) {
     EXPECT_TRUE(true);
 }
 
-}  // namespace dw
+} // namespace dw

@@ -15,7 +15,8 @@
 
 namespace dw {
 
-ImportQueue::ImportQueue(ConnectionPool& pool, LibraryManager* libraryManager,
+ImportQueue::ImportQueue(ConnectionPool& pool,
+                         LibraryManager* libraryManager,
                          StorageManager* storageManager)
     : m_pool(pool), m_libraryManager(libraryManager), m_storageManager(storageManager) {}
 
@@ -62,8 +63,8 @@ void ImportQueue::enqueueInternal(const std::vector<Path>& paths) {
         m_threadPool = std::make_unique<ThreadPool>(threadCount);
     }
 
-    log::infof("Import", "Starting batch import: %zu files, %zu workers", paths.size(),
-               threadCount);
+    log::infof(
+        "Import", "Starting batch import: %zu files, %zu workers", paths.size(), threadCount);
 
     // Reset progress
     m_progress.reset();
@@ -251,8 +252,10 @@ void ImportQueue::processTask(ImportTask task) {
                 m_batchSummary.duplicates.push_back(std::move(dup));
             }
 
-            log::warningf("Import", "Duplicate found: '%s' (of '%s')",
-                          task.sourcePath.filename().string().c_str(), duplicateName.c_str());
+            log::warningf("Import",
+                          "Duplicate found: '%s' (of '%s')",
+                          task.sourcePath.filename().string().c_str(),
+                          duplicateName.c_str());
 
             // Duplicates are pending user decision, not failures — just mark completed
             m_progress.completedFiles.fetch_add(1);
@@ -382,7 +385,9 @@ void ImportQueue::processTask(ImportTask task) {
         if (!gcodeId) {
             task.stage = ImportStage::Failed;
             task.error = "Failed to insert into database";
-            log::errorf("Import", "%s for '%s'", task.error.c_str(),
+            log::errorf("Import",
+                        "%s for '%s'",
+                        task.error.c_str(),
                         task.sourcePath.filename().string().c_str());
 
             // Cleanup
@@ -414,7 +419,9 @@ void ImportQueue::processTask(ImportTask task) {
 
         task.gcodeId = *gcodeId;
 
-        log::infof("Import", "G-code '%s' inserted (id=%lld)", record.name.c_str(),
+        log::infof("Import",
+                   "G-code '%s' inserted (id=%lld)",
+                   record.name.c_str(),
                    static_cast<long long>(*gcodeId));
 
         // Auto-detect model association if LibraryManager available
@@ -434,7 +441,8 @@ void ImportQueue::processTask(ImportTask task) {
                             m_libraryManager->createOperationGroup(*matchedModelId, "Imported", 0);
                         if (newGroupId) {
                             groupId = *newGroupId;
-                            log::infof("Import", "Created 'Imported' group for model '%s'",
+                            log::infof("Import",
+                                       "Created 'Imported' group for model '%s'",
                                        modelRecord->name.c_str());
                         }
                     } else {
@@ -445,14 +453,17 @@ void ImportQueue::processTask(ImportTask task) {
                     if (groupId > 0) {
                         // Add G-code to the group
                         if (m_libraryManager->addGCodeToGroup(groupId, *gcodeId, 0)) {
-                            log::infof("Import", "Auto-associated '%s' with model '%s'",
-                                       record.name.c_str(), modelRecord->name.c_str());
+                            log::infof("Import",
+                                       "Auto-associated '%s' with model '%s'",
+                                       record.name.c_str(),
+                                       modelRecord->name.c_str());
                         }
                     }
                 }
             } else {
                 // No match or ambiguous - standalone import
-                log::infof("Import", "No model match for '%s', imported as standalone",
+                log::infof("Import",
+                           "No model match for '%s', imported as standalone",
                            record.name.c_str());
             }
         }
@@ -495,7 +506,9 @@ void ImportQueue::processTask(ImportTask task) {
         if (!modelId) {
             task.stage = ImportStage::Failed;
             task.error = "Failed to insert into database";
-            log::errorf("Import", "%s for '%s'", task.error.c_str(),
+            log::errorf("Import",
+                        "%s for '%s'",
+                        task.error.c_str(),
                         task.sourcePath.filename().string().c_str());
 
             // Update summary
@@ -523,7 +536,9 @@ void ImportQueue::processTask(ImportTask task) {
         task.record = record;
         task.record.id = *modelId;
 
-        log::infof("Import", "Mesh '%s' inserted (id=%lld)", record.name.c_str(),
+        log::infof("Import",
+                   "Mesh '%s' inserted (id=%lld)",
+                   record.name.c_str(),
                    static_cast<long long>(*modelId));
     }
 
@@ -533,17 +548,19 @@ void ImportQueue::processTask(ImportTask task) {
         std::string storageError;
         Path storedPath;
         if (mode == FileHandlingMode::CopyToLibrary) {
-            storedPath = m_storageManager->storeFile(task.sourcePath, task.fileHash, task.extension,
-                                                     storageError);
+            storedPath = m_storageManager->storeFile(
+                task.sourcePath, task.fileHash, task.extension, storageError);
         } else if (mode == FileHandlingMode::MoveToLibrary) {
-            storedPath = m_storageManager->moveFile(task.sourcePath, task.fileHash, task.extension,
-                                                    storageError);
+            storedPath = m_storageManager->moveFile(
+                task.sourcePath, task.fileHash, task.extension, storageError);
         }
 
         if (storedPath.empty()) {
             // Blob store failed -- roll back the DB insert
-            log::errorf("Import", "Blob store failed for '%s': %s",
-                        file::getStem(task.sourcePath).c_str(), storageError.c_str());
+            log::errorf("Import",
+                        "Blob store failed for '%s': %s",
+                        file::getStem(task.sourcePath).c_str(),
+                        storageError.c_str());
 
             if (task.importType == ImportType::GCode) {
                 gcodeRepo.remove(task.gcodeId);
@@ -576,7 +593,8 @@ void ImportQueue::processTask(ImportTask task) {
         }
 
         finalPath = storedPath;
-        log::infof("Import", "Stored in blob: %s -> %s",
+        log::infof("Import",
+                   "Stored in blob: %s -> %s",
                    task.sourcePath.filename().string().c_str(),
                    storedPath.filename().string().c_str());
 
@@ -592,8 +610,10 @@ void ImportQueue::processTask(ImportTask task) {
             FileHandler::handleImportedFile(task.sourcePath, mode, libraryDir, error);
 
         if (handledPath.empty()) {
-            log::warningf("Import", "File handling failed for '%s': %s",
-                          file::getStem(task.sourcePath).c_str(), error.c_str());
+            log::warningf("Import",
+                          "File handling failed for '%s': %s",
+                          file::getStem(task.sourcePath).c_str(),
+                          error.c_str());
         } else {
             finalPath = handledPath;
 
@@ -608,7 +628,8 @@ void ImportQueue::processTask(ImportTask task) {
                 modelRepo.update(task.record);
             }
 
-            log::infof("Import", "File handled: %s -> %s",
+            log::infof("Import",
+                       "File handled: %s -> %s",
                        task.sourcePath.filename().string().c_str(),
                        finalPath.filename().string().c_str());
         }
@@ -634,8 +655,10 @@ void ImportQueue::processTask(ImportTask task) {
     // Check if this was the last task - if so, fire batch complete callback
     if (m_remainingTasks.fetch_sub(1) == 1) {
         m_progress.active.store(false);
-        log::infof("Import", "Batch complete: %d successful, %d failed, %d duplicates",
-                   m_batchSummary.successCount, m_batchSummary.failedCount,
+        log::infof("Import",
+                   "Batch complete: %d successful, %d failed, %d duplicates",
+                   m_batchSummary.successCount,
+                   m_batchSummary.failedCount,
                    m_batchSummary.duplicateCount);
 
         if (m_onBatchComplete) {

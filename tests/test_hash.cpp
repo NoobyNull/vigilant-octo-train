@@ -6,7 +6,7 @@
 #include "core/types.h"
 
 TEST(Hash, ComputeBuffer_ConsistentResults) {
-    dw::ByteBuffer data = {0x48, 0x65, 0x6C, 0x6C, 0x6F};  // "Hello"
+    dw::ByteBuffer data = {0x48, 0x65, 0x6C, 0x6C, 0x6F}; // "Hello"
 
     std::string hash1 = dw::hash::computeBuffer(data);
     std::string hash2 = dw::hash::computeBuffer(data);
@@ -16,8 +16,8 @@ TEST(Hash, ComputeBuffer_ConsistentResults) {
 }
 
 TEST(Hash, ComputeBuffer_DifferentDataDifferentHash) {
-    dw::ByteBuffer data1 = {0x48, 0x65, 0x6C, 0x6C, 0x6F};  // "Hello"
-    dw::ByteBuffer data2 = {0x57, 0x6F, 0x72, 0x6C, 0x64};  // "World"
+    dw::ByteBuffer data1 = {0x48, 0x65, 0x6C, 0x6C, 0x6F}; // "Hello"
+    dw::ByteBuffer data2 = {0x57, 0x6F, 0x72, 0x6C, 0x64}; // "World"
 
     std::string hash1 = dw::hash::computeBuffer(data1);
     std::string hash2 = dw::hash::computeBuffer(data2);
@@ -65,22 +65,4 @@ TEST(Hash, FromHex_Zero) {
     dw::u64 value = dw::hash::fromHex("0000000000000000");
 
     EXPECT_EQ(value, 0u);
-}
-
-TEST(Hash, ComputeBytes_Deterministic) {
-    const char data[] = "test data";
-    dw::u64 hash1 = dw::hash::computeBytes(data, sizeof(data) - 1);
-    dw::u64 hash2 = dw::hash::computeBytes(data, sizeof(data) - 1);
-
-    EXPECT_EQ(hash1, hash2);
-    EXPECT_NE(hash1, 0u);
-}
-
-TEST(Hash, ComputeBytes_DifferentDataDifferentHash) {
-    const char data1[] = "abc";
-    const char data2[] = "xyz";
-    dw::u64 h1 = dw::hash::computeBytes(data1, 3);
-    dw::u64 h2 = dw::hash::computeBytes(data2, 3);
-
-    EXPECT_NE(h1, h2);
 }

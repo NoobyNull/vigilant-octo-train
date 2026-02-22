@@ -25,7 +25,8 @@ bool GraphManager::initialize(const Path& extensionDir) {
     if (!m_db.loadExtension(extPath.string(), error)) {
         log::warningf("GraphManager",
                       "GraphQLite extension not found at %s -- graph queries disabled (%s)",
-                      extPath.string().c_str(), error.c_str());
+                      extPath.string().c_str(),
+                      error.c_str());
         m_available = false;
 
         // Disable extension loading for security even on failure
@@ -61,14 +62,7 @@ bool GraphManager::initializeSchema() {
     return true;
 }
 
-bool GraphManager::executeCypher(const std::string& cypher, std::string& error) {
-    if (!m_available) {
-        error = "GraphQLite not available";
-        return false;
-    }
-
-    // GraphQLite exposes a cypher() SQL function.
-    // Escape single quotes in the Cypher string for SQL embedding.
+std::string GraphManager::escapeCypher(const std::string& cypher) const {
     std::string escaped;
     escaped.reserve(cypher.size());
     for (char c : cypher) {
@@ -78,8 +72,16 @@ bool GraphManager::executeCypher(const std::string& cypher, std::string& error) 
             escaped += c;
         }
     }
+    return escaped;
+}
 
-    std::string sql = "SELECT cypher('" + escaped + "')";
+bool GraphManager::executeCypher(const std::string& cypher, std::string& error) {
+    if (!m_available) {
+        error = "GraphQLite not available";
+        return false;
+    }
+
+    std::string sql = "SELECT cypher('" + escapeCypher(cypher) + "')";
     if (!m_db.execute(sql)) {
         error = m_db.lastError();
         return false;
@@ -93,19 +95,8 @@ std::optional<GraphManager::QueryResult> GraphManager::queryCypher(const std::st
         return std::nullopt;
     }
 
-    // Escape single quotes for SQL embedding
-    std::string escaped;
-    escaped.reserve(cypher.size());
-    for (char c : cypher) {
-        if (c == '\'') {
-            escaped += "''";
-        } else {
-            escaped += c;
-        }
-    }
-
     // cypher() returns JSON; use json_each to iterate result rows
-    std::string sql = "SELECT value FROM json_each(cypher('" + escaped + "'))";
+    std::string sql = "SELECT value FROM json_each(cypher('" + escapeCypher(cypher) + "'))";
     auto stmt = m_db.prepare(sql);
     if (!stmt.isValid()) {
         return std::nullopt;
@@ -150,84 +141,66 @@ std::optional<GraphManager::QueryResult> GraphManager::queryCypher(const std::st
 // --- Node operations ---
 
 bool GraphManager::addModelNode(i64 id, const std::string& name, const std::string& hash) {
-    if (!m_available) return false;
+    if (!m_available)
+        return false;
 
-    std::string cypher = "MERGE (m:Model {id: " + std::to_string(id) + "}) SET m.name = '" +
-                         name + "', m.hash = '" + hash + "'";
+    std::string cypher = "MERGE (m:Model {id: " + std::to_string(id) + "}) SET m.name = '" + name +
+                         "', m.hash = '" + hash + "'";
     std::string error;
     if (!executeCypher(cypher, error)) {
-        log::warningf("GraphManager", "addModelNode failed for id %lld: %s",
-                      static_cast<long long>(id), error.c_str());
+        log::warningf("GraphManager",
+                      "addModelNode failed for id %lld: %s",
+                      static_cast<long long>(id),
+                      error.c_str());
         return false;
     }
     return true;
 }
 
 bool GraphManager::removeModelNode(i64 id) {
-    if (!m_available) return false;
+    if (!m_available)
+        return false;
 
-    std::string cypher =
-        "MATCH (m:Model {id: " + std::to_string(id) + "}) DETACH DELETE m";
+    std::string cypher = "MATCH (m:Model {id: " + std::to_string(id) + "}) DETACH DELETE m";
     std::string error;
     if (!executeCypher(cypher, error)) {
-        log::warningf("GraphManager", "removeModelNode failed for id %lld: %s",
-                      static_cast<long long>(id), error.c_str());
+        log::warningf("GraphManager",
+                      "removeModelNode failed for id %lld: %s",
+                      static_cast<long long>(id),
+                      error.c_str());
         return false;
     }
     return true;
 }
 
 bool GraphManager::addCategoryNode(i64 id, const std::string& name) {
-    if (!m_available) return false;
+    if (!m_available)
+        return false;
 
-    std::string cypher =
-        "MERGE (c:Category {id: " + std::to_string(id) + "}) SET c.name = '" + name + "'";
+    std::string cypher = "MERGE (c:Category {id: " + std::to_string(id) + "}) SET c.name = '" +
+                         name + "'";
     std::string error;
     if (!executeCypher(cypher, error)) {
-        log::warningf("GraphManager", "addCategoryNode failed for id %lld: %s",
-                      static_cast<long long>(id), error.c_str());
+        log::warningf("GraphManager",
+                      "addCategoryNode failed for id %lld: %s",
+                      static_cast<long long>(id),
+                      error.c_str());
         return false;
     }
     return true;
 }
 
 bool GraphManager::removeCategoryNode(i64 id) {
-    if (!m_available) return false;
-
-    std::string cypher =
-        "MATCH (c:Category {id: " + std::to_string(id) + "}) DETACH DELETE c";
-    std::string error;
-    if (!executeCypher(cypher, error)) {
-        log::warningf("GraphManager", "removeCategoryNode failed for id %lld: %s",
-                      static_cast<long long>(id), error.c_str());
+    if (!m_available)
         return false;
-    }
-    return true;
-}
 
-bool GraphManager::addProjectNode(i64 id, const std::string& name) {
-    if (!m_available) return false;
-
-    std::string cypher =
-        "MERGE (p:Project {id: " + std::to_string(id) + "}) SET p.name = '" + name + "'";
+    std::string cypher = "MATCH (c:Category {id: " + std::to_string(id) + "}) DETACH DELETE c";
     std::string error;
     if (!executeCypher(cypher, error)) {
-        log::warningf("GraphManager", "addProjectNode failed for id %lld: %s",
-                      static_cast<long long>(id), error.c_str());
-        return false;
-    }
-    return true;
-}
-
-bool GraphManager::removeProjectNode(i64 id) {
-    if (!m_available) return false;
-
-    std::string cypher =
-        "MATCH (p:Project {id: " + std::to_string(id) + "}) DETACH DELETE p";
-    std::string error;
-    if (!executeCypher(cypher, error)) {
-        log::warningf("GraphManager", "removeProjectNode failed for id %lld: %s",
-                      static_cast<long long>(id), error.c_str());
+        log::warningf("GraphManager",
+                      "removeCategoryNode failed for id %lld: %s",
+                      static_cast<long long>(id),
+                      error.c_str());
         return false;
     }
     return true;
@@ -236,15 +209,18 @@ bool GraphManager::removeProjectNode(i64 id) {
 // --- Edge operations ---
 
 bool GraphManager::addBelongsToEdge(i64 modelId, i64 categoryId) {
-    if (!m_available) return false;
+    if (!m_available)
+        return false;
 
     std::string cypher = "MATCH (m:Model {id: " + std::to_string(modelId) +
                          "}), (c:Category {id: " + std::to_string(categoryId) +
                          "}) MERGE (m)-[:BELONGS_TO]->(c)";
     std::string error;
     if (!executeCypher(cypher, error)) {
-        log::warningf("GraphManager", "addBelongsToEdge failed (%lld->%lld): %s",
-                      static_cast<long long>(modelId), static_cast<long long>(categoryId),
+        log::warningf("GraphManager",
+                      "addBelongsToEdge failed (%lld->%lld): %s",
+                      static_cast<long long>(modelId),
+                      static_cast<long long>(categoryId),
                       error.c_str());
         return false;
     }
@@ -252,63 +228,18 @@ bool GraphManager::addBelongsToEdge(i64 modelId, i64 categoryId) {
 }
 
 bool GraphManager::removeBelongsToEdge(i64 modelId, i64 categoryId) {
-    if (!m_available) return false;
+    if (!m_available)
+        return false;
 
     std::string cypher = "MATCH (m:Model {id: " + std::to_string(modelId) +
                          "})-[r:BELONGS_TO]->(c:Category {id: " + std::to_string(categoryId) +
                          "}) DELETE r";
     std::string error;
     if (!executeCypher(cypher, error)) {
-        log::warningf("GraphManager", "removeBelongsToEdge failed (%lld->%lld): %s",
-                      static_cast<long long>(modelId), static_cast<long long>(categoryId),
-                      error.c_str());
-        return false;
-    }
-    return true;
-}
-
-bool GraphManager::addContainsEdge(i64 projectId, i64 modelId) {
-    if (!m_available) return false;
-
-    std::string cypher = "MATCH (p:Project {id: " + std::to_string(projectId) +
-                         "}), (m:Model {id: " + std::to_string(modelId) +
-                         "}) MERGE (p)-[:CONTAINS]->(m)";
-    std::string error;
-    if (!executeCypher(cypher, error)) {
-        log::warningf("GraphManager", "addContainsEdge failed (%lld->%lld): %s",
-                      static_cast<long long>(projectId), static_cast<long long>(modelId),
-                      error.c_str());
-        return false;
-    }
-    return true;
-}
-
-bool GraphManager::removeContainsEdge(i64 projectId, i64 modelId) {
-    if (!m_available) return false;
-
-    std::string cypher = "MATCH (p:Project {id: " + std::to_string(projectId) +
-                         "})-[r:CONTAINS]->(m:Model {id: " + std::to_string(modelId) +
-                         "}) DELETE r";
-    std::string error;
-    if (!executeCypher(cypher, error)) {
-        log::warningf("GraphManager", "removeContainsEdge failed (%lld->%lld): %s",
-                      static_cast<long long>(projectId), static_cast<long long>(modelId),
-                      error.c_str());
-        return false;
-    }
-    return true;
-}
-
-bool GraphManager::addRelatedToEdge(i64 modelId1, i64 modelId2) {
-    if (!m_available) return false;
-
-    std::string cypher = "MATCH (m1:Model {id: " + std::to_string(modelId1) +
-                         "}), (m2:Model {id: " + std::to_string(modelId2) +
-                         "}) MERGE (m1)-[:RELATED_TO]->(m2)";
-    std::string error;
-    if (!executeCypher(cypher, error)) {
-        log::warningf("GraphManager", "addRelatedToEdge failed (%lld->%lld): %s",
-                      static_cast<long long>(modelId1), static_cast<long long>(modelId2),
+        log::warningf("GraphManager",
+                      "removeBelongsToEdge failed (%lld->%lld): %s",
+                      static_cast<long long>(modelId),
+                      static_cast<long long>(categoryId),
                       error.c_str());
         return false;
     }
@@ -319,7 +250,8 @@ bool GraphManager::addRelatedToEdge(i64 modelId1, i64 modelId2) {
 
 static std::vector<i64> extractIds(const std::optional<GraphManager::QueryResult>& result) {
     std::vector<i64> ids;
-    if (!result) return ids;
+    if (!result)
+        return ids;
     for (const auto& row : result->rows) {
         if (!row.empty()) {
             try {
@@ -332,56 +264,21 @@ static std::vector<i64> extractIds(const std::optional<GraphManager::QueryResult
     return ids;
 }
 
-std::vector<i64> GraphManager::queryModelsInSameCategory(i64 modelId) {
-    if (!m_available) return {};
-
-    std::string cypher =
-        "MATCH (m:Model {id: " + std::to_string(modelId) +
-        "})-[:BELONGS_TO]->(c:Category)<-[:BELONGS_TO]-(other:Model) RETURN other.id";
-    return extractIds(queryCypher(cypher));
-}
-
 std::vector<i64> GraphManager::queryModelsInProject(i64 projectId) {
-    if (!m_available) return {};
+    if (!m_available)
+        return {};
 
-    std::string cypher =
-        "MATCH (p:Project {id: " + std::to_string(projectId) +
-        "})-[:CONTAINS]->(m:Model) RETURN m.id";
+    std::string cypher = "MATCH (p:Project {id: " + std::to_string(projectId) +
+                         "})-[:CONTAINS]->(m:Model) RETURN m.id";
     return extractIds(queryCypher(cypher));
 }
 
 std::vector<i64> GraphManager::queryRelatedModels(i64 modelId) {
-    if (!m_available) return {};
+    if (!m_available)
+        return {};
 
-    std::string cypher =
-        "MATCH (m:Model {id: " + std::to_string(modelId) +
-        "})-[:RELATED_TO]-(other:Model) RETURN other.id";
-    return extractIds(queryCypher(cypher));
-}
-
-std::vector<i64> GraphManager::queryModelCategories(i64 modelId) {
-    if (!m_available) return {};
-
-    std::string cypher =
-        "MATCH (m:Model {id: " + std::to_string(modelId) +
-        "})-[:BELONGS_TO]->(c:Category) RETURN c.id";
-    return extractIds(queryCypher(cypher));
-}
-
-std::vector<i64> GraphManager::queryModelProjects(i64 modelId) {
-    if (!m_available) return {};
-
-    std::string cypher =
-        "MATCH (m:Model {id: " + std::to_string(modelId) +
-        "})<-[:CONTAINS]-(p:Project) RETURN p.id";
-    return extractIds(queryCypher(cypher));
-}
-
-std::vector<i64> GraphManager::queryOrphanModels() {
-    if (!m_available) return {};
-
-    std::string cypher =
-        "MATCH (m:Model) WHERE NOT EXISTS { MATCH (m)<-[:CONTAINS]-(:Project) } RETURN m.id";
+    std::string cypher = "MATCH (m:Model {id: " + std::to_string(modelId) +
+                         "})-[:RELATED_TO]-(other:Model) RETURN other.id";
     return extractIds(queryCypher(cypher));
 }
 

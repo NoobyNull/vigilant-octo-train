@@ -4,8 +4,8 @@ namespace dw {
 
 namespace {
 
-MaterialRecord makeHardwood(const std::string& name, float janka, float feed, float spindle,
-                            float doc, float cost) {
+MaterialRecord makeHardwood(
+    const std::string& name, float janka, float feed, float spindle, float doc, float cost) {
     MaterialRecord r;
     r.name = name;
     r.category = MaterialCategory::Hardwood;
@@ -18,8 +18,8 @@ MaterialRecord makeHardwood(const std::string& name, float janka, float feed, fl
     return r;
 }
 
-MaterialRecord makeSoftwood(const std::string& name, float janka, float feed, float spindle,
-                            float doc, float cost) {
+MaterialRecord makeSoftwood(
+    const std::string& name, float janka, float feed, float spindle, float doc, float cost) {
     MaterialRecord r;
     r.name = name;
     r.category = MaterialCategory::Softwood;
@@ -32,8 +32,8 @@ MaterialRecord makeSoftwood(const std::string& name, float janka, float feed, fl
     return r;
 }
 
-MaterialRecord makeDomestic(const std::string& name, float janka, float feed, float spindle,
-                            float doc, float cost) {
+MaterialRecord makeDomestic(
+    const std::string& name, float janka, float feed, float spindle, float doc, float cost) {
     MaterialRecord r;
     r.name = name;
     r.category = MaterialCategory::Domestic;
@@ -46,8 +46,8 @@ MaterialRecord makeDomestic(const std::string& name, float janka, float feed, fl
     return r;
 }
 
-MaterialRecord makeComposite(const std::string& name, float feed, float spindle, float doc,
-                             float cost) {
+MaterialRecord makeComposite(
+    const std::string& name, float feed, float spindle, float doc, float cost) {
     MaterialRecord r;
     r.name = name;
     r.category = MaterialCategory::Composite;

@@ -93,11 +93,12 @@ void PropertiesPanel::renderModelRecordInfo() {
         ImGui::Spacing();
         if (ImGui::CollapsingHeader("Bounds", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Indent();
-            ImGui::TextWrapped("Min: (%.3f, %.3f, %.3f)", r.boundsMin.x, r.boundsMin.y,
-                               r.boundsMin.z);
-            ImGui::TextWrapped("Max: (%.3f, %.3f, %.3f)", r.boundsMax.x, r.boundsMax.y,
-                               r.boundsMax.z);
-            Vec3 size{r.boundsMax.x - r.boundsMin.x, r.boundsMax.y - r.boundsMin.y,
+            ImGui::TextWrapped(
+                "Min: (%.3f, %.3f, %.3f)", r.boundsMin.x, r.boundsMin.y, r.boundsMin.z);
+            ImGui::TextWrapped(
+                "Max: (%.3f, %.3f, %.3f)", r.boundsMax.x, r.boundsMax.y, r.boundsMax.z);
+            Vec3 size{r.boundsMax.x - r.boundsMin.x,
+                      r.boundsMax.y - r.boundsMin.y,
                       r.boundsMax.z - r.boundsMin.z};
             ImGui::TextWrapped("Size: %.3f x %.3f x %.3f", size.x, size.y, size.z);
             ImGui::Unindent();
@@ -288,8 +289,8 @@ void PropertiesPanel::renderTransformInfo() {
         // Translate
         ImGui::DragFloat3("Translate", m_translate, 0.1f);
         if (ImGui::Button("Apply##Translate", ImVec2(-1, 0))) {
-            Mat4 mat =
-                glm::translate(Mat4(1.0f), Vec3{m_translate[0], m_translate[1], m_translate[2]});
+            Mat4 mat = glm::translate(Mat4(1.0f),
+                                      Vec3{m_translate[0], m_translate[1], m_translate[2]});
             m_mesh->transform(mat);
             m_translate[0] = m_translate[1] = m_translate[2] = 0.0f;
             if (m_onMeshModified) {
@@ -303,14 +304,14 @@ void PropertiesPanel::renderTransformInfo() {
             constexpr float DEG2RAD = 3.14159265358979f / 180.0f;
             Mat4 mat = Mat4(1.0f);
             if (m_rotateDeg[0] != 0.0f)
-                mat =
-                    glm::rotate(Mat4(1.0f), m_rotateDeg[0] * DEG2RAD, Vec3(1.0f, 0.0f, 0.0f)) * mat;
+                mat = glm::rotate(Mat4(1.0f), m_rotateDeg[0] * DEG2RAD, Vec3(1.0f, 0.0f, 0.0f)) *
+                      mat;
             if (m_rotateDeg[1] != 0.0f)
-                mat =
-                    glm::rotate(Mat4(1.0f), m_rotateDeg[1] * DEG2RAD, Vec3(0.0f, 1.0f, 0.0f)) * mat;
+                mat = glm::rotate(Mat4(1.0f), m_rotateDeg[1] * DEG2RAD, Vec3(0.0f, 1.0f, 0.0f)) *
+                      mat;
             if (m_rotateDeg[2] != 0.0f)
-                mat =
-                    glm::rotate(Mat4(1.0f), m_rotateDeg[2] * DEG2RAD, Vec3(0.0f, 0.0f, 1.0f)) * mat;
+                mat = glm::rotate(Mat4(1.0f), m_rotateDeg[2] * DEG2RAD, Vec3(0.0f, 0.0f, 1.0f)) *
+                      mat;
             m_mesh->transform(mat);
             m_rotateDeg[0] = m_rotateDeg[1] = m_rotateDeg[2] = 0.0f;
             if (m_onMeshModified) {
@@ -402,7 +403,8 @@ void PropertiesPanel::renderMaterialInfo() {
             ImGui::Indent();
 
             float color[3] = {m_objectColor.r, m_objectColor.g, m_objectColor.b};
-            if (ImGui::ColorEdit3("Object Color", color,
+            if (ImGui::ColorEdit3("Object Color",
+                                  color,
                                   ImGuiColorEditFlags_NoInputs |
                                       ImGuiColorEditFlags_PickerHueWheel)) {
                 m_objectColor.r = color[0];
@@ -424,9 +426,14 @@ void PropertiesPanel::renderMaterialInfo() {
             };
 
             static const ColorPreset presets[] = {
-                {"Steel Blue", 0x6699CC}, {"Silver", 0xC0C0C0},    {"Gold", 0xDAA520},
-                {"Copper", 0xB87333},     {"Red", 0xCC3333},       {"Green", 0x33CC33},
-                {"White", 0xEEEEEE},      {"Dark Gray", 0x555555},
+                {"Steel Blue", 0x6699CC},
+                {"Silver", 0xC0C0C0},
+                {"Gold", 0xDAA520},
+                {"Copper", 0xB87333},
+                {"Red", 0xCC3333},
+                {"Green", 0x33CC33},
+                {"White", 0xEEEEEE},
+                {"Dark Gray", 0x555555},
             };
 
             for (int i = 0; i < 8; i++) {

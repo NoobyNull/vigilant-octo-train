@@ -9,7 +9,7 @@
 namespace {
 constexpr float PI = 3.14159265359f;
 constexpr float EPS = 1e-5f;
-}  // namespace
+} // namespace
 
 // --- Vec3 ---
 

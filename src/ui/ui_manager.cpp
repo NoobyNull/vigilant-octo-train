@@ -1,9 +1,9 @@
 #include "ui_manager.h"
 
-#include <SDL.h>
 #include <imgui.h>
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_sdl2.h>
+#include <SDL.h>
 
 #include "../core/utils/log.h"
 #include "theme.h"
@@ -101,15 +101,17 @@ void UIManager::renderMenuBar() {
                     if (item.separator) {
                         ImGui::Separator();
                     } else if (item.checked != nullptr) {
-                        if (ImGui::MenuItem(item.label.c_str(), item.shortcut.c_str(), item.checked,
+                        if (ImGui::MenuItem(item.label.c_str(),
+                                            item.shortcut.c_str(),
+                                            item.checked,
                                             item.enabled)) {
                             if (item.callback) {
                                 item.callback();
                             }
                         }
                     } else {
-                        if (ImGui::MenuItem(item.label.c_str(), item.shortcut.c_str(), false,
-                                            item.enabled)) {
+                        if (ImGui::MenuItem(
+                                item.label.c_str(), item.shortcut.c_str(), false, item.enabled)) {
                             if (item.callback) {
                                 item.callback();
                             }

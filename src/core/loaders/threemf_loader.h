@@ -24,7 +24,8 @@ class ThreeMFLoader : public MeshLoader {
 
     // Extract vertices and triangles from XML
     bool parseVertices(const std::string& verticesBlock, std::vector<Vec3>& outVertices);
-    bool parseTriangles(const std::string& trianglesBlock, const std::vector<Vec3>& vertices,
+    bool parseTriangles(const std::string& trianglesBlock,
+                        const std::vector<Vec3>& vertices,
                         Mesh& outMesh);
 
     // Simple ZIP extraction for the model file

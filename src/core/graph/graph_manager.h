@@ -23,50 +23,41 @@ class GraphManager {
     // Is GraphQLite loaded and available?
     bool isAvailable() const { return m_available; }
 
-    // Execute a Cypher query via GraphQLite's cypher() SQL function
-    // Returns true on success, error string on failure
-    bool executeCypher(const std::string& cypher, std::string& error);
-
-    // Query that returns results as vector of string vectors (rows x cols)
+    // Query result type returned by queryCypher
     struct QueryResult {
         std::vector<std::string> columns;
         std::vector<std::vector<std::string>> rows;
     };
-    std::optional<QueryResult> queryCypher(const std::string& cypher);
-
-    // Graph schema initialization (creates node/edge types)
-    bool initializeSchema();
 
     // --- Node operations (non-fatal -- all return bool, log on failure) ---
     bool addModelNode(i64 id, const std::string& name, const std::string& hash);
     bool removeModelNode(i64 id);
     bool addCategoryNode(i64 id, const std::string& name);
     bool removeCategoryNode(i64 id);
-    bool addProjectNode(i64 id, const std::string& name);
-    bool removeProjectNode(i64 id);
 
     // --- Edge operations ---
     bool addBelongsToEdge(i64 modelId, i64 categoryId);
     bool removeBelongsToEdge(i64 modelId, i64 categoryId);
-    bool addContainsEdge(i64 projectId, i64 modelId);
-    bool removeContainsEdge(i64 projectId, i64 modelId);
-    bool addRelatedToEdge(i64 modelId1, i64 modelId2);
 
     // --- Relationship queries ---
-    // Returns model IDs in the same category as the given model
-    std::vector<i64> queryModelsInSameCategory(i64 modelId);
     // Returns model IDs in a given project
     std::vector<i64> queryModelsInProject(i64 projectId);
     // Returns model IDs related to a given model (via RELATED_TO edges)
     std::vector<i64> queryRelatedModels(i64 modelId);
-    // Returns category IDs a model belongs to
-    std::vector<i64> queryModelCategories(i64 modelId);
-    // Returns project IDs containing a model
-    std::vector<i64> queryModelProjects(i64 modelId);
-    // Returns models not in any project (orphans)
-    std::vector<i64> queryOrphanModels();
 
   private:
+    // Escape single quotes in a Cypher string for safe SQL embedding
+    std::string escapeCypher(const std::string& cypher) const;
+
+    // Execute a Cypher query via GraphQLite's cypher() SQL function
+    bool executeCypher(const std::string& cypher, std::string& error);
+
+    // Query that returns results as vector of string vectors (rows x cols)
+    std::optional<QueryResult> queryCypher(const std::string& cypher);
+
+    // Graph schema initialization (creates node/edge types)
+    bool initializeSchema();
+
     Database& m_db;
     bool m_available = false;
 };

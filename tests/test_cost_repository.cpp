@@ -37,7 +37,9 @@ class CostRepoTest : public ::testing::Test {
         return est;
     }
 
-    dw::CostItem makeItem(const std::string& name, dw::CostCategory category, dw::f64 quantity,
+    dw::CostItem makeItem(const std::string& name,
+                          dw::CostCategory category,
+                          dw::f64 quantity,
                           dw::f64 rate) {
         dw::CostItem item;
         item.name = name;
@@ -53,7 +55,7 @@ class CostRepoTest : public ::testing::Test {
     std::unique_ptr<dw::ProjectRepository> m_projectRepo;
 };
 
-}  // namespace
+} // namespace
 
 // --- Insert ---
 
@@ -359,7 +361,7 @@ TEST_F(CostRepoTest, Recalculate_UpdatesItemTotals) {
     item.name = "Manual";
     item.quantity = 3.0;
     item.rate = 7.0;
-    item.total = 0.0;  // Intentionally wrong
+    item.total = 0.0; // Intentionally wrong
     est.items.push_back(item);
     est.recalculate();
 

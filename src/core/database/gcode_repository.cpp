@@ -216,7 +216,8 @@ i64 GCodeRepository::count() {
 
 // ===== Hierarchy operations =====
 
-std::optional<i64> GCodeRepository::createGroup(i64 modelId, const std::string& name,
+std::optional<i64> GCodeRepository::createGroup(i64 modelId,
+                                                const std::string& name,
                                                 int sortOrder) {
     auto stmt =
         m_db.prepare("INSERT INTO operation_groups (model_id, name, sort_order) VALUES (?, ?, ?)");
@@ -515,23 +516,6 @@ std::vector<int> GCodeRepository::jsonToToolNumbers(const std::string& json) {
     }
 
     return toolNumbers;
-}
-
-std::string GCodeRepository::groupsToJson(const std::vector<std::string>& groups) {
-    if (groups.empty()) {
-        return "[]";
-    }
-
-    std::ostringstream ss;
-    ss << "[";
-    for (size_t i = 0; i < groups.size(); ++i) {
-        if (i > 0) {
-            ss << ",";
-        }
-        ss << "\"" << str::escapeJsonString(groups[i]) << "\"";
-    }
-    ss << "]";
-    return ss.str();
 }
 
 std::vector<std::string> GCodeRepository::jsonToGroups(const std::string& json) {

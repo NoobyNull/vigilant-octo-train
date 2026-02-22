@@ -6,7 +6,9 @@
 namespace dw {
 
 ThumbnailGenerator::~ThumbnailGenerator() {}
-bool ThumbnailGenerator::initialize() { return false; }
+bool ThumbnailGenerator::initialize() {
+    return false;
+}
 void ThumbnailGenerator::shutdown() {}
 bool ThumbnailGenerator::generate(const Mesh&, const Path&, const ThumbnailSettings&) {
     return false;
@@ -15,4 +17,4 @@ ByteBuffer ThumbnailGenerator::generateToBuffer(const Mesh&, const ThumbnailSett
     return {};
 }
 
-}  // namespace dw
+} // namespace dw

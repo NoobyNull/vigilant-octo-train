@@ -38,7 +38,7 @@ class TagImageDialog : public Dialog {
     GLuint m_thumbnailTexture = 0;
 
     // Editable buffers
-    char m_title[256] = {};
+    char m_titleBuf[256] = {};
     char m_description[2048] = {};
     char m_hover[1024] = {};
     char m_keywords[512] = {};

@@ -24,7 +24,7 @@ struct DwprojExportResult {
     std::string error;
     int modelCount = 0;
     uint64_t totalBytes = 0;
-    std::optional<i64> importedProjectId;  // Set on successful import, nullopt on export or failure
+    std::optional<i64> importedProjectId; // Set on successful import, nullopt on export or failure
 
     static DwprojExportResult ok(int models = 0, uint64_t bytes = 0) {
         return {true, "", models, bytes, std::nullopt};
@@ -70,9 +70,9 @@ class ProjectExportManager {
         u32 triangleCount = 0;
         Vec3 boundsMin{0.0f};
         Vec3 boundsMax{0.0f};
-        std::optional<i64> materialId;      // material_id from models table
-        std::string materialInArchive;      // e.g. "materials/3.dwmat"
-        std::string thumbnailInArchive;     // e.g. "thumbnails/<hash>.png"
+        std::optional<i64> materialId;  // material_id from models table
+        std::string materialInArchive;  // e.g. "materials/3.dwmat"
+        std::string thumbnailInArchive; // e.g. "thumbnails/<hash>.png"
     };
 
     struct Manifest {
@@ -85,7 +85,8 @@ class ProjectExportManager {
     };
 
     std::string buildManifestJson(
-        const Project& project, const std::vector<ModelRecord>& models,
+        const Project& project,
+        const std::vector<ModelRecord>& models,
         const std::unordered_map<i64, i64>& modelIdToMaterialId,
         const std::unordered_map<std::string, std::string>& hashToThumbnailPath);
     bool parseManifest(const std::string& json, Manifest& out, std::string& error);

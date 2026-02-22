@@ -21,13 +21,17 @@ class StorageManager {
     /// Copy source into blob store via temp+verify+rename.
     /// Idempotent: no-op if blob already exists (dedup).
     /// Returns final blob path on success, empty path + sets error on failure.
-    Path storeFile(const Path& source, const std::string& hash,
-                   const std::string& ext, std::string& error);
+    Path storeFile(const Path& source,
+                   const std::string& hash,
+                   const std::string& ext,
+                   std::string& error);
 
     /// Move source into blob store. Falls back to copy+delete if
     /// cross-filesystem.
-    Path moveFile(const Path& source, const std::string& hash,
-                  const std::string& ext, std::string& error);
+    Path moveFile(const Path& source,
+                  const std::string& hash,
+                  const std::string& ext,
+                  std::string& error);
 
     /// Check if blob exists at hash path.
     bool exists(const std::string& hash, const std::string& ext) const;

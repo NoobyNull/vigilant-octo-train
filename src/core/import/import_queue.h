@@ -19,7 +19,8 @@ class StorageManager;
 
 class ImportQueue {
   public:
-    explicit ImportQueue(ConnectionPool& pool, LibraryManager* libraryManager = nullptr,
+    explicit ImportQueue(ConnectionPool& pool,
+                         LibraryManager* libraryManager = nullptr,
                          StorageManager* storageManager = nullptr);
     ~ImportQueue();
 

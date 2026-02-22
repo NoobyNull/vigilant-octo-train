@@ -11,8 +11,10 @@ namespace dw {
 struct ContextMenuEntry {
     std::string label;
     std::function<void()> action;
-    std::string icon;                                      // Empty if no icon
-    std::function<bool()> enabled = []() { return true; }; // Default: always enabled
+    std::string icon; // Empty if no icon
+    std::function<bool()> enabled = []() {
+        return true;
+    }; // Default: always enabled
     bool isSeparator = false;
     std::vector<ContextMenuEntry> submenu; // Empty if not a submenu parent
 

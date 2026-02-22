@@ -15,7 +15,7 @@ void TagImageDialog::open(const ModelRecord& record, GLuint thumbnailTexture) {
     m_error.clear();
 
     // Clear buffers
-    std::memset(m_title, 0, sizeof(m_title));
+    std::memset(m_titleBuf, 0, sizeof(m_titleBuf));
     std::memset(m_description, 0, sizeof(m_description));
     std::memset(m_hover, 0, sizeof(m_hover));
     std::memset(m_keywords, 0, sizeof(m_keywords));
@@ -41,7 +41,7 @@ void TagImageDialog::setResult(const DescriptorResult& result) {
     m_error.clear();
 
     // Populate buffers from result
-    std::strncpy(m_title, result.title.c_str(), sizeof(m_title) - 1);
+    std::strncpy(m_titleBuf, result.title.c_str(), sizeof(m_titleBuf) - 1);
     std::strncpy(m_description, result.description.c_str(), sizeof(m_description) - 1);
     std::strncpy(m_hover, result.hoverNarrative.c_str(), sizeof(m_hover) - 1);
 
@@ -66,7 +66,7 @@ void TagImageDialog::setResult(const DescriptorResult& result) {
 DescriptorResult TagImageDialog::buildResult() const {
     DescriptorResult r;
     r.success = true;
-    r.title = m_title;
+    r.title = m_titleBuf;
     r.description = m_description;
     r.hoverNarrative = m_hover;
 
@@ -123,8 +123,10 @@ void TagImageDialog::render() {
     ImGui::Spacing();
 
     if (m_thumbnailTexture != 0) {
-        ImGui::Image(static_cast<ImTextureID>(m_thumbnailTexture), ImVec2(thumbSize, thumbSize),
-                     thumbUV0, thumbUV1);
+        ImGui::Image(static_cast<ImTextureID>(m_thumbnailTexture),
+                     ImVec2(thumbSize, thumbSize),
+                     thumbUV0,
+                     thumbUV1);
     } else {
         ImGui::Dummy(ImVec2(thumbSize, thumbSize));
         ImGui::SetCursorPos(ImGui::GetCursorPos()); // no-op, placeholder
@@ -156,11 +158,11 @@ void TagImageDialog::render() {
     float fieldWidth = ImGui::GetContentRegionAvail().x;
 
     ImGui::SetNextItemWidth(fieldWidth);
-    ImGui::InputText("Title", m_title, sizeof(m_title));
+    ImGui::InputText("Title", m_titleBuf, sizeof(m_titleBuf));
 
     ImGui::SetNextItemWidth(fieldWidth);
-    ImGui::InputTextMultiline("Description", m_description, sizeof(m_description),
-                              ImVec2(fieldWidth, 60));
+    ImGui::InputTextMultiline(
+        "Description", m_description, sizeof(m_description), ImVec2(fieldWidth, 60));
 
     ImGui::SetNextItemWidth(fieldWidth);
     ImGui::InputText("Hover", m_hover, sizeof(m_hover));

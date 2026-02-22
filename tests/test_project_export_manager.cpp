@@ -37,7 +37,8 @@ class ProjectExportTest : public ::testing::Test {
     void TearDown() override { std::filesystem::remove_all(m_baseDir); }
 
     // Create a dummy model file and insert a ModelRecord
-    dw::i64 insertModelWithFile(const std::string& hash, const std::string& name,
+    dw::i64 insertModelWithFile(const std::string& hash,
+                                const std::string& name,
                                 const std::string& ext = ".stl") {
         // Write a small binary blob to disk
         dw::Path filePath = m_modelsDir / (hash + ext);
@@ -93,20 +94,20 @@ class ProjectExportTest : public ::testing::Test {
     }
 
     // Manually create a .dwproj ZIP with custom manifest JSON
-    void createArchiveWithManifest(const std::string& archivePath,
-                                   const nlohmann::json& manifest,
-                                   const std::vector<std::pair<std::string, std::string>>&
-                                       blobEntries = {}) {
+    void createArchiveWithManifest(
+        const std::string& archivePath,
+        const nlohmann::json& manifest,
+        const std::vector<std::pair<std::string, std::string>>& blobEntries = {}) {
         mz_zip_archive zip{};
         ASSERT_TRUE(mz_zip_writer_init_file(&zip, archivePath.c_str(), 0));
 
         std::string manifestStr = manifest.dump(2);
-        ASSERT_TRUE(mz_zip_writer_add_mem(&zip, "manifest.json", manifestStr.data(),
-                                          manifestStr.size(), MZ_DEFAULT_COMPRESSION));
+        ASSERT_TRUE(mz_zip_writer_add_mem(
+            &zip, "manifest.json", manifestStr.data(), manifestStr.size(), MZ_DEFAULT_COMPRESSION));
 
         for (const auto& [path, data] : blobEntries) {
-            ASSERT_TRUE(mz_zip_writer_add_mem(&zip, path.c_str(), data.data(),
-                                              data.size(), MZ_DEFAULT_COMPRESSION));
+            ASSERT_TRUE(mz_zip_writer_add_mem(
+                &zip, path.c_str(), data.data(), data.size(), MZ_DEFAULT_COMPRESSION));
         }
 
         ASSERT_TRUE(mz_zip_writer_finalize_archive(&zip));
@@ -125,8 +126,7 @@ class ProjectExportTest : public ::testing::Test {
 
 TEST_F(ProjectExportTest, ExportCreatesValidZipWithManifest) {
     auto project = createProjectWithModels(
-        "Test Export Project",
-        {{"aabbccdd1111", "Widget"}, {"eeff00112233", "Bracket"}});
+        "Test Export Project", {{"aabbccdd1111", "Widget"}, {"eeff00112233", "Bracket"}});
 
     dw::ProjectExportManager exporter(m_db);
     auto result = exporter.exportProject(*project, m_archivePath);
@@ -173,8 +173,7 @@ TEST_F(ProjectExportTest, ExportCreatesValidZipWithManifest) {
 
 TEST_F(ProjectExportTest, ImportRoundTripPreservesMetadata) {
     auto project = createProjectWithModels(
-        "Roundtrip Project",
-        {{"hash_alpha_001", "Alpha Model"}, {"hash_beta_0002", "Beta Model"}});
+        "Roundtrip Project", {{"hash_alpha_001", "Alpha Model"}, {"hash_beta_0002", "Beta Model"}});
 
     dw::ProjectExportManager exporter(m_db);
 
@@ -246,8 +245,7 @@ TEST_F(ProjectExportTest, ImportIgnoresUnknownManifestFields) {
 
     // Create archive with blob
     std::string blobContent = "FAKE_STL_BLOB";
-    createArchiveWithManifest(m_archivePath, manifest,
-                              {{"models/futurehash001.stl", blobContent}});
+    createArchiveWithManifest(m_archivePath, manifest, {{"models/futurehash001.stl", blobContent}});
 
     dw::ProjectExportManager importer(m_db);
     auto result = importer.importProject(m_archivePath);
@@ -292,7 +290,8 @@ TEST_F(ProjectExportTest, ImportDeduplicatesExistingModels) {
     manifest["models"] = nlohmann::json::array({model});
 
     std::string blobContent = "FAKE_BLOB_DEDUP";
-    createArchiveWithManifest(m_archivePath, manifest,
+    createArchiveWithManifest(m_archivePath,
+                              manifest,
                               {{"models/" + sharedHash + ".stl", blobContent}});
 
     dw::ProjectExportManager importer(m_db);
@@ -306,7 +305,8 @@ TEST_F(ProjectExportTest, ImportDeduplicatesExistingModels) {
     auto all = modelRepo.findAll();
     int hashCount = 0;
     for (const auto& m : all) {
-        if (m.hash == sharedHash) hashCount++;
+        if (m.hash == sharedHash)
+            hashCount++;
     }
     EXPECT_EQ(hashCount, 1) << "Model should not be duplicated";
 
@@ -358,8 +358,7 @@ TEST_F(ProjectExportTest, RoundTripPreservesMaterialsAndThumbnails) {
 
     // 4. Assign material to model via raw SQL
     {
-        auto stmt =
-            m_db.prepare("UPDATE models SET material_id = ? WHERE id = ?");
+        auto stmt = m_db.prepare("UPDATE models SET material_id = ? WHERE id = ?");
         ASSERT_TRUE(stmt.isValid());
         ASSERT_TRUE(stmt.bindInt(1, *matId));
         ASSERT_TRUE(stmt.bindInt(2, modelId));
@@ -388,32 +387,25 @@ TEST_F(ProjectExportTest, RoundTripPreservesMaterialsAndThumbnails) {
     // 7. Verify ZIP contents
     {
         mz_zip_archive zip{};
-        ASSERT_TRUE(
-            mz_zip_reader_init_file(&zip, m_archivePath.c_str(), 0));
+        ASSERT_TRUE(mz_zip_reader_init_file(&zip, m_archivePath.c_str(), 0));
 
         // Check materials/<matId>.dwmat exists
-        std::string matArchPath =
-            "materials/" + std::to_string(*matId) + ".dwmat";
-        int matIdx =
-            mz_zip_reader_locate_file(&zip, matArchPath.c_str(), nullptr, 0);
-        EXPECT_GE(matIdx, 0) << "Material archive entry not found: "
-                             << matArchPath;
+        std::string matArchPath = "materials/" + std::to_string(*matId) + ".dwmat";
+        int matIdx = mz_zip_reader_locate_file(&zip, matArchPath.c_str(), nullptr, 0);
+        EXPECT_GE(matIdx, 0) << "Material archive entry not found: " << matArchPath;
 
         // Check thumbnails/<hash>.png exists
         std::string thumbArchPath = "thumbnails/" + modelHash + ".png";
-        int thumbIdx = mz_zip_reader_locate_file(&zip, thumbArchPath.c_str(),
-                                                 nullptr, 0);
-        EXPECT_GE(thumbIdx, 0)
-            << "Thumbnail archive entry not found: " << thumbArchPath;
+        int thumbIdx = mz_zip_reader_locate_file(&zip, thumbArchPath.c_str(), nullptr, 0);
+        EXPECT_GE(thumbIdx, 0) << "Thumbnail archive entry not found: " << thumbArchPath;
 
         // Check manifest has the new fields
         size_t manifestSize = 0;
-        void* manifestData = mz_zip_reader_extract_file_to_heap(
-            &zip, "manifest.json", &manifestSize, 0);
+        void* manifestData =
+            mz_zip_reader_extract_file_to_heap(&zip, "manifest.json", &manifestSize, 0);
         ASSERT_NE(manifestData, nullptr);
 
-        std::string manifestStr(static_cast<const char*>(manifestData),
-                                manifestSize);
+        std::string manifestStr(static_cast<const char*>(manifestData), manifestSize);
         mz_free(manifestData);
 
         auto j = nlohmann::json::parse(manifestStr);
@@ -423,8 +415,7 @@ TEST_F(ProjectExportTest, RoundTripPreservesMaterialsAndThumbnails) {
         auto& mj = models[0];
         EXPECT_EQ(mj["material_id"].get<dw::i64>(), *matId);
         EXPECT_FALSE(mj["material_in_archive"].get<std::string>().empty());
-        EXPECT_FALSE(
-            mj["thumbnail_in_archive"].get<std::string>().empty());
+        EXPECT_FALSE(mj["thumbnail_in_archive"].get<std::string>().empty());
 
         mz_zip_reader_end(&zip);
     }
@@ -447,18 +438,15 @@ TEST_F(ProjectExportTest, RoundTripPreservesMaterialsAndThumbnails) {
 
     // 10. Verify imported model has material_id set
     {
-        auto stmt =
-            db2.prepare("SELECT material_id FROM models WHERE id = ?");
+        auto stmt = db2.prepare("SELECT material_id FROM models WHERE id = ?");
         ASSERT_TRUE(stmt.isValid());
         ASSERT_TRUE(stmt.bindInt(1, importedModel->id));
         ASSERT_TRUE(stmt.step());
-        EXPECT_FALSE(stmt.isNull(0))
-            << "Imported model should have material_id set";
+        EXPECT_FALSE(stmt.isNull(0)) << "Imported model should have material_id set";
     }
 
     // 11. Verify a MaterialRecord exists in the second DB
     dw::MaterialRepository matRepo2(db2);
     auto allMaterials = matRepo2.findAll();
-    EXPECT_GE(allMaterials.size(), 1u)
-        << "Should have at least one imported material";
+    EXPECT_GE(allMaterials.size(), 1u) << "Should have at least one imported material";
 }

@@ -15,11 +15,8 @@ class StorageManagerTest : public ::testing::Test {
 
     void SetUp() override {
         // Create a unique temp directory for each test
-        auto now = std::chrono::steady_clock::now()
-                       .time_since_epoch()
-                       .count();
-        testRoot = fs::temp_directory_path() /
-                   ("test_cas_" + std::to_string(now));
+        auto now = std::chrono::steady_clock::now().time_since_epoch().count();
+        testRoot = fs::temp_directory_path() / ("test_cas_" + std::to_string(now));
         fs::create_directories(testRoot);
         mgr = std::make_unique<StorageManager>(testRoot);
     }
@@ -30,8 +27,7 @@ class StorageManagerTest : public ::testing::Test {
     }
 
     // Helper: create a test file with given content, return its path
-    Path createTestFile(const std::string& name,
-                        const std::string& content) {
+    Path createTestFile(const std::string& name, const std::string& content) {
         Path p = testRoot / name;
         std::ofstream out(p, std::ios::binary);
         out << content;
@@ -45,14 +41,12 @@ TEST_F(StorageManagerTest, BlobPathComputation) {
     ASSERT_FALSE(p.empty());
     // Should end with ab/cd/abcdef1234567890.stl
     std::string ps = p.generic_string();
-    EXPECT_NE(ps.find("ab/cd/abcdef1234567890.stl"), std::string::npos)
-        << "Path was: " << ps;
+    EXPECT_NE(ps.find("ab/cd/abcdef1234567890.stl"), std::string::npos) << "Path was: " << ps;
 
     // Different hash gives different prefix dirs
     Path p2 = mgr->blobPath("1234567890abcdef", "obj");
     std::string ps2 = p2.generic_string();
-    EXPECT_NE(ps2.find("12/34/1234567890abcdef.obj"), std::string::npos)
-        << "Path was: " << ps2;
+    EXPECT_NE(ps2.find("12/34/1234567890abcdef.obj"), std::string::npos) << "Path was: " << ps2;
 }
 
 TEST_F(StorageManagerTest, BlobPathShortHash) {
@@ -82,8 +76,7 @@ TEST_F(StorageManagerTest, StoreFileBasic) {
     Path tmpDir = testRoot / ".tmp";
     if (fs::exists(tmpDir)) {
         int tmpCount = 0;
-        for ([[maybe_unused]] const auto& e :
-             fs::directory_iterator(tmpDir)) {
+        for ([[maybe_unused]] const auto& e : fs::directory_iterator(tmpDir)) {
             ++tmpCount;
         }
         EXPECT_EQ(tmpCount, 0) << "Temp dir should be empty after store";
@@ -115,8 +108,7 @@ TEST_F(StorageManagerTest, StoreFileHashMismatch) {
 
     EXPECT_TRUE(result.empty()) << "Should fail with wrong hash";
     EXPECT_FALSE(error.empty());
-    EXPECT_NE(error.find("Hash verification failed"), std::string::npos)
-        << "Error was: " << error;
+    EXPECT_NE(error.find("Hash verification failed"), std::string::npos) << "Error was: " << error;
 
     // No file at wrong hash path
     EXPECT_FALSE(fs::exists(mgr->blobPath(wrongHash, "stl")));
@@ -125,8 +117,7 @@ TEST_F(StorageManagerTest, StoreFileHashMismatch) {
     Path tmpDir = testRoot / ".tmp";
     if (fs::exists(tmpDir)) {
         int tmpCount = 0;
-        for ([[maybe_unused]] const auto& e :
-             fs::directory_iterator(tmpDir)) {
+        for ([[maybe_unused]] const auto& e : fs::directory_iterator(tmpDir)) {
             ++tmpCount;
         }
         EXPECT_EQ(tmpCount, 0) << "Temp file should be cleaned up";
@@ -147,16 +138,14 @@ TEST_F(StorageManagerTest, MoveFileBasic) {
 
 TEST_F(StorageManagerTest, ExistsCheck) {
     std::string fileHash = "abcdef1234567890";
-    EXPECT_FALSE(mgr->exists(fileHash, "stl"))
-        << "Should not exist before store";
+    EXPECT_FALSE(mgr->exists(fileHash, "stl")) << "Should not exist before store";
 
     Path source = createTestFile("test_exists.stl", "exists content");
     std::string realHash = hash::computeFile(source);
 
     std::string error;
     mgr->storeFile(source, realHash, "stl", error);
-    EXPECT_TRUE(mgr->exists(realHash, "stl"))
-        << "Should exist after store";
+    EXPECT_TRUE(mgr->exists(realHash, "stl")) << "Should exist after store";
 }
 
 TEST_F(StorageManagerTest, RemoveBlob) {

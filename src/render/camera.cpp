@@ -47,7 +47,8 @@ void Camera::pan(f32 deltaX, f32 deltaY) {
     f32 pitchRad = m_pitch * DEG_TO_RAD;
 
     // Calculate right and up vectors in world space
-    Vec3 forward{std::sin(yawRad) * std::cos(pitchRad), std::sin(pitchRad),
+    Vec3 forward{std::sin(yawRad) * std::cos(pitchRad),
+                 std::sin(pitchRad),
                  std::cos(yawRad) * std::cos(pitchRad)};
     Vec3 right = glm::normalize(glm::cross(Vec3{0.0f, 1.0f, 0.0f}, forward));
     Vec3 up = glm::normalize(glm::cross(forward, right));
@@ -118,11 +119,6 @@ void Camera::setDistance(f32 distance) {
     updateVectors();
 }
 
-void Camera::setClipPlanes(f32 nearPlane, f32 farPlane) {
-    m_nearPlane = nearPlane;
-    m_farPlane = farPlane;
-}
-
 Vec3 Camera::position() const {
     return m_cachedPosition;
 }
@@ -131,7 +127,8 @@ void Camera::updateVectors() {
     f32 yawRad = m_yaw * DEG_TO_RAD;
     f32 pitchRad = m_pitch * DEG_TO_RAD;
 
-    Vec3 offset{std::sin(yawRad) * std::cos(pitchRad) * m_distance, std::sin(pitchRad) * m_distance,
+    Vec3 offset{std::sin(yawRad) * std::cos(pitchRad) * m_distance,
+                std::sin(pitchRad) * m_distance,
                 std::cos(yawRad) * std::cos(pitchRad) * m_distance};
 
     m_cachedPosition = m_target + offset;

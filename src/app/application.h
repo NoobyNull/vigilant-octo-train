@@ -19,7 +19,6 @@ struct SDL_Window;
 namespace dw {
 
 // Forward declarations
-class EventBus;
 class Database;
 class ConnectionPool;
 class LibraryManager;
@@ -72,7 +71,6 @@ class Application {
     // Accessors
     auto isRunning() const -> bool { return m_running; }
     auto getWindow() const -> SDL_Window* { return m_window; }
-    auto eventBus() -> EventBus&;
     auto mainThreadQueue() -> MainThreadQueue&;
 
   private:
@@ -80,6 +78,7 @@ class Application {
     void update();
     void render();
     void shutdown();
+    void initWiring(); // Panel/callback wiring — implemented in application_wiring.cpp
 
     // Callbacks (business logic stays in Application)
     void onModelSelected(int64_t modelId);
@@ -94,7 +93,6 @@ class Application {
 
     // Core systems
     std::unique_ptr<MainThreadQueue> m_mainThreadQueue;
-    std::unique_ptr<EventBus> m_eventBus;
     std::unique_ptr<Database> m_database;
     std::unique_ptr<ConnectionPool> m_connectionPool;
     std::unique_ptr<LibraryManager> m_libraryManager;

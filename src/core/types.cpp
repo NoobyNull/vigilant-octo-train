@@ -15,7 +15,8 @@ Vec2 toSpherical(const Vec3& dir) {
 }
 
 Vec3 fromSpherical(f32 azimuth, f32 elevation) {
-    return {std::sin(azimuth) * std::cos(elevation), -std::sin(elevation),
+    return {std::sin(azimuth) * std::cos(elevation),
+            -std::sin(elevation),
             std::cos(azimuth) * std::cos(elevation)};
 }
 

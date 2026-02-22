@@ -26,14 +26,6 @@ TEST(StringUtils, Trim_NoWhitespace) {
     EXPECT_EQ(dw::str::trim("hello"), "hello");
 }
 
-TEST(StringUtils, TrimLeft_OnlyLeft) {
-    EXPECT_EQ(dw::str::trimLeft("  hello  "), "hello  ");
-}
-
-TEST(StringUtils, TrimRight_OnlyRight) {
-    EXPECT_EQ(dw::str::trimRight("  hello  "), "  hello");
-}
-
 // --- case conversion ---
 
 TEST(StringUtils, ToLower_Basic) {

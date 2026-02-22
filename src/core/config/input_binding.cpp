@@ -57,8 +57,9 @@ std::string InputBinding::serialize() const {
         const char* keyName = ImGui::GetKeyName(static_cast<ImGuiKey>(value));
         std::string name = keyName ? keyName : "unknown";
         // Lowercase for config
-        std::transform(name.begin(), name.end(), name.begin(),
-                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
         result += "key_" + name;
     }
     return result;
@@ -102,8 +103,9 @@ InputBinding InputBinding::deserialize(const std::string& s) {
             if (!name)
                 continue;
             std::string lower = name;
-            std::transform(lower.begin(), lower.end(), lower.begin(),
-                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) {
+                return static_cast<char>(std::tolower(c));
+            });
             if (lower == keyStr) {
                 binding.value = k;
                 break;

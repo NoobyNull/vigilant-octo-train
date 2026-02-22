@@ -166,7 +166,8 @@ void CutOptimizerPanel::renderPartsEditor() {
             if (availWidth < 200.0f) {
                 // Very narrow: stack everything vertically
                 ImGui::TextWrapped("%s", part.name.c_str());
-                ImGui::Text("%.0f x %.0f", static_cast<double>(part.width),
+                ImGui::Text("%.0f x %.0f",
+                            static_cast<double>(part.width),
                             static_cast<double>(part.height));
                 ImGui::Text("x%d", part.quantity);
                 if (ImGui::SmallButton("X")) {
@@ -176,7 +177,8 @@ void CutOptimizerPanel::renderPartsEditor() {
                 // Use proportional positioning for side-by-side layout
                 ImGui::TextWrapped("%s", part.name.c_str());
                 ImGui::SameLine(availWidth * 0.45f);
-                ImGui::Text("%.0f x %.0f", static_cast<double>(part.width),
+                ImGui::Text("%.0f x %.0f",
+                            static_cast<double>(part.width),
                             static_cast<double>(part.height));
                 ImGui::SameLine(availWidth * 0.7f);
                 ImGui::Text("x%d", part.quantity);
@@ -345,7 +347,8 @@ void CutOptimizerPanel::renderVisualization() {
             ImU32 color = colors[placement.partIndex % numColors];
 
             area.drawList->AddRectFilled(ImVec2(x, y), ImVec2(x + w, y + h), color);
-            area.drawList->AddRect(ImVec2(x, y), ImVec2(x + w, y + h),
+            area.drawList->AddRect(ImVec2(x, y),
+                                   ImVec2(x + w, y + h),
                                    IM_COL32(255, 255, 255, 128));
 
             // Part label
@@ -363,14 +366,16 @@ void CutOptimizerPanel::renderVisualization() {
 
 void CutOptimizerPanel::runOptimization() {
     if (m_parts.empty()) {
-        ToastManager::instance().show(ToastType::Warning, "No Parts",
+        ToastManager::instance().show(ToastType::Warning,
+                                      "No Parts",
                                       "Add parts before running optimization");
         return;
     }
 
     auto optimizer = optimizer::CutOptimizer::create(m_algorithm);
     if (!optimizer) {
-        ToastManager::instance().show(ToastType::Error, "Optimizer Error",
+        ToastManager::instance().show(ToastType::Error,
+                                      "Optimizer Error",
                                       "Failed to create optimizer");
         return;
     }
@@ -388,10 +393,12 @@ void CutOptimizerPanel::runOptimization() {
     int unplacedCount = static_cast<int>(m_result.unplacedParts.size());
 
     if (unplacedCount > 0) {
-        ToastManager::instance().show(ToastType::Warning, "Incomplete Layout",
+        ToastManager::instance().show(ToastType::Warning,
+                                      "Incomplete Layout",
                                       std::to_string(unplacedCount) + " parts could not be placed");
     } else {
-        ToastManager::instance().show(ToastType::Success, "Optimization Complete",
+        ToastManager::instance().show(ToastType::Success,
+                                      "Optimization Complete",
                                       "All parts placed successfully");
     }
 }

@@ -10,7 +10,7 @@ namespace {
 
 // RAII temp directory for test isolation
 class TempDir {
-public:
+  public:
     TempDir() {
         m_path = std::filesystem::temp_directory_path() / "dw_test_file_utils";
         std::filesystem::create_directories(m_path);
@@ -20,11 +20,11 @@ public:
     dw::Path path() const { return m_path; }
     dw::Path operator/(const std::string& name) const { return m_path / name; }
 
-private:
+  private:
     dw::Path m_path;
 };
 
-}  // namespace
+} // namespace
 
 // --- getExtension / getStem ---
 
@@ -204,11 +204,4 @@ TEST(FileUtils, ListFiles_FilteredByExtension) {
 
     auto stls = dw::file::listFiles(tmp.path(), "stl");
     EXPECT_EQ(stls.size(), 1u);
-}
-
-// --- makeAbsolute ---
-
-TEST(FileUtils, MakeAbsolute_RelativePath) {
-    auto abs = dw::file::makeAbsolute("relative/path");
-    EXPECT_TRUE(abs.is_absolute());
 }

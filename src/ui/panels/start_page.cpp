@@ -20,7 +20,8 @@ void StartPage::render() {
     ImVec2 viewportSize = ImGui::GetMainViewport()->Size;
     ImGui::SetNextWindowSize(ImVec2(790, 410), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowPos(ImVec2(viewportSize.x * 0.5f, viewportSize.y * 0.5f),
-                            ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
+                            ImGuiCond_FirstUseEver,
+                            ImVec2(0.5f, 0.5f));
 
     if (ImGui::Begin(m_title.c_str(), &m_open, flags)) {
         // Header

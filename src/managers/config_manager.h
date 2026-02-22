@@ -15,13 +15,12 @@ struct SDL_Window;
 
 namespace dw {
 
-class EventBus;
 class UIManager;
 class ConfigWatcher;
 
 class ConfigManager {
   public:
-    ConfigManager(EventBus* eventBus, UIManager* uiManager);
+    ConfigManager(UIManager* uiManager);
     ~ConfigManager();
 
     // Disable copy/move
@@ -55,7 +54,6 @@ class ConfigManager {
     void onConfigFileChanged();
     void applyConfig();
 
-    EventBus* m_eventBus;
     UIManager* m_uiManager;
     SDL_Window* m_window = nullptr;
 

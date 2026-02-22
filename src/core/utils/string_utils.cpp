@@ -10,11 +10,8 @@
 #include <sstream>
 
 namespace dw {
-namespace str {
 
-std::string trim(std::string_view s) {
-    return trimRight(trimLeft(s));
-}
+namespace {
 
 std::string trimLeft(std::string_view s) {
     auto it = std::find_if(s.begin(), s.end(), [](unsigned char c) { return !std::isspace(c); });
@@ -26,17 +23,27 @@ std::string trimRight(std::string_view s) {
     return std::string(s.begin(), it.base());
 }
 
+} // anonymous namespace
+
+namespace str {
+
+std::string trim(std::string_view s) {
+    return trimRight(trimLeft(s));
+}
+
 std::string toLower(std::string_view s) {
     std::string result(s);
-    std::transform(result.begin(), result.end(), result.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
+    std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) {
+        return std::tolower(c);
+    });
     return result;
 }
 
 std::string toUpper(std::string_view s) {
     std::string result(s);
-    std::transform(result.begin(), result.end(), result.begin(),
-                   [](unsigned char c) { return std::toupper(c); });
+    std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) {
+        return std::toupper(c);
+    });
     return result;
 }
 

@@ -11,7 +11,7 @@
 namespace {
 
 class ConfigWatcherTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         m_tmpDir = std::filesystem::temp_directory_path() / "dw_test_watcher";
         std::filesystem::create_directories(m_tmpDir);
@@ -25,13 +25,13 @@ protected:
     dw::Path m_filePath;
 };
 
-}  // namespace
+} // namespace
 
 TEST_F(ConfigWatcherTest, CallbackNotFiredBeforeInterval) {
     dw::ConfigWatcher watcher;
     int callCount = 0;
     watcher.setOnChanged([&]() { callCount++; });
-    watcher.watch(m_filePath, 1000);  // 1 second interval
+    watcher.watch(m_filePath, 1000); // 1 second interval
 
     // Poll immediately — should not fire (interval not elapsed)
     watcher.poll(0);

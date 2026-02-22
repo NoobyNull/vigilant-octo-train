@@ -65,8 +65,8 @@ std::vector<uint8_t> GeminiDescriptorService::tgaToPng(const std::string& tgaPat
     }
 
     PngWriteContext writeCtx;
-    int ok = stbi_write_png_to_func(pngWriteCallback, &writeCtx, width, height, 3, rgb.data(),
-                                    width * 3);
+    int ok = stbi_write_png_to_func(
+        pngWriteCallback, &writeCtx, width, height, 3, rgb.data(), width * 3);
     if (!ok) {
         log::error("Descriptor", "Failed to encode PNG");
         return {};
@@ -85,15 +85,14 @@ std::string GeminiDescriptorService::fetchClassification(const std::vector<uint8
     // Structured response schema for reliable JSON output
     nlohmann::json schema;
     schema["type"] = "OBJECT";
-    schema["properties"] = {
-        {"title", {{"type", "STRING"}}},
-        {"description", {{"type", "STRING"}}},
-        {"hoverNarrative", {{"type", "STRING"}}},
-        {"keywords", {{"type", "ARRAY"}, {"items", {{"type", "STRING"}}}}},
-        {"associations", {{"type", "ARRAY"}, {"items", {{"type", "STRING"}}}}},
-        {"categories", {{"type", "ARRAY"}, {"items", {{"type", "STRING"}}}}}};
-    schema["required"] = nlohmann::json::array(
-        {"title", "description", "hoverNarrative", "keywords", "categories"});
+    schema["properties"] = {{"title", {{"type", "STRING"}}},
+                            {"description", {{"type", "STRING"}}},
+                            {"hoverNarrative", {{"type", "STRING"}}},
+                            {"keywords", {{"type", "ARRAY"}, {"items", {{"type", "STRING"}}}}},
+                            {"associations", {{"type", "ARRAY"}, {"items", {{"type", "STRING"}}}}},
+                            {"categories", {{"type", "ARRAY"}, {"items", {{"type", "STRING"}}}}}};
+    schema["required"] =
+        nlohmann::json::array({"title", "description", "hoverNarrative", "keywords", "categories"});
 
     nlohmann::json requestBody;
     requestBody["systemInstruction"]["parts"] = nlohmann::json::array(
@@ -190,7 +189,7 @@ DescriptorResult GeminiDescriptorService::parseClassification(const std::string&
 }
 
 DescriptorResult GeminiDescriptorService::describe(const std::string& modelFilePath,
-                                                    const std::string& apiKey) {
+                                                   const std::string& apiKey) {
     DescriptorResult result;
 
     log::infof("DescriptorService", "Describing model: %s", modelFilePath.c_str());

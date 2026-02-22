@@ -20,9 +20,9 @@
 #include "ui/dialogs/import_options_dialog.h"
 #include "ui/dialogs/import_summary_dialog.h"
 #include "ui/dialogs/lighting_dialog.h"
+#include "ui/dialogs/maintenance_dialog.h"
 #include "ui/dialogs/message_dialog.h"
 #include "ui/dialogs/progress_dialog.h"
-#include "ui/dialogs/maintenance_dialog.h"
 #include "ui/dialogs/tag_image_dialog.h"
 #include "ui/panels/cost_panel.h"
 #include "ui/panels/cut_optimizer_panel.h"
@@ -45,8 +45,10 @@ UIManager::~UIManager() {
     shutdown();
 }
 
-void UIManager::init(LibraryManager* libraryManager, ProjectManager* projectManager,
-                     MaterialManager* materialManager, CostRepository* costRepo) {
+void UIManager::init(LibraryManager* libraryManager,
+                     ProjectManager* projectManager,
+                     MaterialManager* materialManager,
+                     CostRepository* costRepo) {
     // Create panels
     m_viewportPanel = std::make_unique<ViewportPanel>();
     m_libraryPanel = std::make_unique<LibraryPanel>(libraryManager);
@@ -306,8 +308,8 @@ void UIManager::renderPanels() {
 void UIManager::renderAboutDialog() {
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    if (ImGui::BeginPopupModal("About Digital Workshop", nullptr,
-                               ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal(
+            "About Digital Workshop", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("Digital Workshop");
         ImGui::Text("Version %s", VERSION);
         ImGui::Separator();
@@ -336,7 +338,8 @@ void UIManager::renderRestartPopup(const ActionCallback& onRelaunch) {
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
-    if (ImGui::Begin("Restart Required", &m_showRestartPopup,
+    if (ImGui::Begin("Restart Required",
+                     &m_showRestartPopup,
                      ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse)) {
         ImGui::Text("UI Scale has been changed.");
         ImGui::Text("A restart is required to apply this setting.");

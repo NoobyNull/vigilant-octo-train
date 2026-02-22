@@ -19,14 +19,15 @@ const std::string SRC_ROOT = CMAKE_SOURCE_DIR "/src";
 
 // Collect all .h and .cpp files under the given directories
 std::vector<std::string> collectFiles(const std::vector<std::string>& dirs,
-                                       const std::vector<std::string>& extensions) {
+                                      const std::vector<std::string>& extensions) {
     std::vector<std::string> result;
     for (const auto& dir : dirs) {
         std::string fullDir = SRC_ROOT + "/" + dir;
-        if (!std::filesystem::exists(fullDir)) continue;
-        for (const auto& entry :
-             std::filesystem::recursive_directory_iterator(fullDir)) {
-            if (!entry.is_regular_file()) continue;
+        if (!std::filesystem::exists(fullDir))
+            continue;
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(fullDir)) {
+            if (!entry.is_regular_file())
+                continue;
             auto ext = entry.path().extension().string();
             for (const auto& e : extensions) {
                 if (ext == e) {
@@ -41,14 +42,13 @@ std::vector<std::string> collectFiles(const std::vector<std::string>& dirs,
 
 std::string readFile(const std::string& path) {
     std::ifstream f(path);
-    return std::string(std::istreambuf_iterator<char>(f),
-                       std::istreambuf_iterator<char>());
+    return std::string(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
 }
 
 // All Tier 2 directories (GL/SDL/ImGui dependent — no functional tests)
 const std::vector<std::string> TIER2_DIRS = {"render", "ui", "app"};
 
-}  // namespace
+} // namespace
 
 // --- Header guard check: every .h must have #pragma once ---
 
@@ -88,8 +88,7 @@ TEST(LintCompliance, NoTabs) {
 
     for (const auto& path : files) {
         auto content = readFile(path);
-        EXPECT_EQ(content.find('\t'), std::string::npos)
-            << "Found tab character in: " << path;
+        EXPECT_EQ(content.find('\t'), std::string::npos) << "Found tab character in: " << path;
     }
 }
 
@@ -129,8 +128,8 @@ TEST(LintCompliance, NoLongLines) {
         while (std::getline(f, line)) {
             lineNum++;
             if (line.size() > 120) {
-                ADD_FAILURE() << "Line exceeds 120 chars (" << line.size()
-                              << ") at " << path << ":" << lineNum;
+                ADD_FAILURE() << "Line exceeds 120 chars (" << line.size() << ") at " << path << ":"
+                              << lineNum;
             }
         }
     }
@@ -169,11 +168,9 @@ TEST(LintCompliance, HeadersIncludeGuardConsistency) {
             }
             // Should find #pragma once within first 200 chars
             auto pragmaPos = content.find("#pragma once");
-            EXPECT_NE(pragmaPos, std::string::npos)
-                << "No #pragma once in: " << path;
+            EXPECT_NE(pragmaPos, std::string::npos) << "No #pragma once in: " << path;
             if (pragmaPos != std::string::npos) {
-                EXPECT_LT(pragmaPos, 200u)
-                    << "#pragma once too late in: " << path;
+                EXPECT_LT(pragmaPos, 200u) << "#pragma once too late in: " << path;
             }
         }
     }
@@ -199,7 +196,8 @@ TEST(LintCompliance, ClangFormatCompliance) {
         }
 
         std::string cmd = "clang-format --dry-run --Werror --style=file:" CMAKE_SOURCE_DIR
-                          "/.clang-format \"" + path + "\" 2>&1";
+                          "/.clang-format \"" +
+                          path + "\" 2>&1";
         int result = std::system(cmd.c_str());
         if (result != 0) {
             ADD_FAILURE() << "clang-format violation in: " << path;

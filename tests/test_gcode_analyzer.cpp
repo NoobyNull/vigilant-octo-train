@@ -60,11 +60,9 @@ TEST(GcodeAnalyzer, DiagonalMove_Length) {
 
 TEST(GcodeAnalyzer, MixedRapidAndCutting) {
     dw::gcode::Parser parser;
-    auto program = parser.parse(
-        "G0 X10\n"
-        "G1 X20 F1000\n"
-        "G0 X30\n"
-    );
+    auto program = parser.parse("G0 X10\n"
+                                "G1 X20 F1000\n"
+                                "G0 X30\n");
 
     dw::gcode::Analyzer analyzer;
     auto stats = analyzer.analyze(program);
@@ -72,7 +70,7 @@ TEST(GcodeAnalyzer, MixedRapidAndCutting) {
     EXPECT_EQ(stats.commandCount, 3);
     EXPECT_NEAR(stats.totalPathLength, 30.0f, 0.01f);
     EXPECT_NEAR(stats.rapidPathLength, 20.0f, 0.01f);   // G0: 10 + 10
-    EXPECT_NEAR(stats.cuttingPathLength, 10.0f, 0.01f);  // G1: 10
+    EXPECT_NEAR(stats.cuttingPathLength, 10.0f, 0.01f); // G1: 10
 }
 
 TEST(GcodeAnalyzer, EstimatedTime) {
@@ -101,16 +99,14 @@ TEST(GcodeAnalyzer, EstimatedTime_DefaultFeedRate) {
 
 TEST(GcodeAnalyzer, ToolChangeCount) {
     dw::gcode::Parser parser;
-    auto program = parser.parse(
-        "M3 S12000\n"
-        "G1 X10 F500\n"
-        "M5\n"
-        "M6\n"
-        "M3 S10000\n"
-        "G1 X20 F500\n"
-        "M5\n"
-        "M6\n"
-    );
+    auto program = parser.parse("M3 S12000\n"
+                                "G1 X10 F500\n"
+                                "M5\n"
+                                "M6\n"
+                                "M3 S10000\n"
+                                "G1 X20 F500\n"
+                                "M5\n"
+                                "M6\n");
 
     dw::gcode::Analyzer analyzer;
     auto stats = analyzer.analyze(program);
@@ -120,10 +116,8 @@ TEST(GcodeAnalyzer, ToolChangeCount) {
 
 TEST(GcodeAnalyzer, Bounds) {
     dw::gcode::Parser parser;
-    auto program = parser.parse(
-        "G0 X-5 Y-10\n"
-        "G1 X20 Y30 Z5 F1000\n"
-    );
+    auto program = parser.parse("G0 X-5 Y-10\n"
+                                "G1 X20 Y30 Z5 F1000\n");
 
     dw::gcode::Analyzer analyzer;
     auto stats = analyzer.analyze(program);
@@ -137,11 +131,9 @@ TEST(GcodeAnalyzer, Bounds) {
 
 TEST(GcodeAnalyzer, CommandCount_SkipsUnknown) {
     dw::gcode::Parser parser;
-    auto program = parser.parse(
-        "G0 X10\n"
-        "G1 X20 F500\n"
-        "; comment line\n"
-    );
+    auto program = parser.parse("G0 X10\n"
+                                "G1 X20 F500\n"
+                                "; comment line\n");
 
     dw::gcode::Analyzer analyzer;
     auto stats = analyzer.analyze(program);

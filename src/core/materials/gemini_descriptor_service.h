@@ -14,8 +14,8 @@ struct DescriptorResult {
     std::string description;
     std::string hoverNarrative;
     std::vector<std::string> keywords;     // 3-5
-    std::vector<std::string> associations;  // brands/logos
-    std::vector<std::string> categories;    // broad -> specific
+    std::vector<std::string> associations; // brands/logos
+    std::vector<std::string> categories;   // broad -> specific
 };
 
 // Describes models via Gemini API image classification.

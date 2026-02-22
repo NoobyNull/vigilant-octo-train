@@ -18,7 +18,8 @@ TEST(ThreeMFLoader, Extensions_Contains3MF) {
     EXPECT_FALSE(exts.empty());
     bool found = false;
     for (const auto& e : exts) {
-        if (e == "3mf") found = true;
+        if (e == "3mf")
+            found = true;
     }
     EXPECT_TRUE(found);
 }
@@ -39,7 +40,7 @@ TEST(ThreeMFLoader, LoadFromBuffer_GarbageData) {
 
 TEST(ThreeMFLoader, LoadFromBuffer_TooSmall) {
     dw::ThreeMFLoader loader;
-    dw::ByteBuffer tiny = {0x50, 0x4B};  // Just "PK" (ZIP magic, incomplete)
+    dw::ByteBuffer tiny = {0x50, 0x4B}; // Just "PK" (ZIP magic, incomplete)
     auto result = loader.loadFromBuffer(tiny);
     EXPECT_FALSE(result.success());
 }

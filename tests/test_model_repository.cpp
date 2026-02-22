@@ -10,7 +10,7 @@ namespace {
 
 // Fixture: in-memory DB with schema initialized
 class ModelRepoTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         ASSERT_TRUE(m_db.open(":memory:"));
         ASSERT_TRUE(dw::Schema::initialize(m_db));
@@ -35,7 +35,7 @@ protected:
     std::unique_ptr<dw::ModelRepository> m_repo;
 };
 
-}  // namespace
+} // namespace
 
 // --- Insert ---
 

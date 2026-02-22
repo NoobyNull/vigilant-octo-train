@@ -13,7 +13,7 @@
 namespace {
 
 class LibraryManagerTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         ASSERT_TRUE(m_db.open(":memory:"));
         ASSERT_TRUE(dw::Schema::initialize(m_db));
@@ -35,10 +35,18 @@ protected:
 
         // Write one triangle with non-degenerate vertices
         float tri[12] = {
-            0, 0, 1,    // normal
-            0, 0, 0,    // v0
-            1, 0, 0,    // v1
-            0, 1, 0     // v2
+            0,
+            0,
+            1, // normal
+            0,
+            0,
+            0, // v0
+            1,
+            0,
+            0, // v1
+            0,
+            1,
+            0 // v2
         };
         std::memcpy(buf.data() + 84, tri, sizeof(tri));
 
@@ -54,12 +62,18 @@ protected:
         dw::u32 triCount = 1;
         std::memcpy(buf.data() + 80, &triCount, sizeof(triCount));
 
-        float tri[12] = {
-            0, 0, 1,
-            0, 0, 0,
-            2, 0, 0,  // different vertex → different hash
-            0, 2, 0
-        };
+        float tri[12] = {0,
+                         0,
+                         1,
+                         0,
+                         0,
+                         0,
+                         2,
+                         0,
+                         0, // different vertex → different hash
+                         0,
+                         2,
+                         0};
         std::memcpy(buf.data() + 84, tri, sizeof(tri));
 
         EXPECT_TRUE(dw::file::writeBinary(path, buf));
@@ -71,7 +85,7 @@ protected:
     std::filesystem::path m_tmpDir;
 };
 
-}  // namespace
+} // namespace
 
 // --- Import ---
 
@@ -133,17 +147,6 @@ TEST_F(LibraryManagerTest, SearchModels) {
     auto results = m_mgr->searchModels("widget");
     EXPECT_EQ(results.size(), 1u);
     EXPECT_EQ(results[0].name, "widget_bracket");
-}
-
-TEST_F(LibraryManagerTest, FilterByFormat) {
-    auto path = writeMiniSTL("test");
-    m_mgr->importModel(path);
-
-    auto stls = m_mgr->filterByFormat("stl");
-    EXPECT_EQ(stls.size(), 1u);
-
-    auto objs = m_mgr->filterByFormat("obj");
-    EXPECT_TRUE(objs.empty());
 }
 
 TEST_F(LibraryManagerTest, GetModel_ById) {

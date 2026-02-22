@@ -25,8 +25,10 @@ bool Schema::initialize(Database& db) {
             }
             return true;
         }
-        log::warningf("Schema", "Version mismatch (have %d, want %d) - attempting table creation",
-                      version, CURRENT_VERSION);
+        log::warningf("Schema",
+                      "Version mismatch (have %d, want %d) - attempting table creation",
+                      version,
+                      CURRENT_VERSION);
     }
 
     return createTables(db);
@@ -334,8 +336,7 @@ bool Schema::createTables(Database& db) {
         "CREATE INDEX IF NOT EXISTS idx_operation_groups_model ON operation_groups(model_id)");
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_gcode_group_members_group ON "
                      "gcode_group_members(group_id)");
-    (void)db.execute(
-        "CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id)");
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_model_categories_model ON "
                      "model_categories(model_id)");
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_model_categories_category ON "
@@ -440,7 +441,9 @@ bool Schema::migrate(Database& db, int fromVersion) {
         (void)db.execute("ALTER TABLE models ADD COLUMN descriptor_title TEXT DEFAULT NULL");
         (void)db.execute("ALTER TABLE models ADD COLUMN descriptor_description TEXT DEFAULT NULL");
         (void)db.execute("ALTER TABLE models ADD COLUMN descriptor_hover TEXT DEFAULT NULL");
-        log::info("Schema", "Added descriptor_title, descriptor_description, descriptor_hover columns to models");
+        log::info(
+            "Schema",
+            "Added descriptor_title, descriptor_description, descriptor_hover columns to models");
     }
 
     if (!setVersion(db, CURRENT_VERSION)) {

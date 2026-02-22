@@ -217,12 +217,14 @@ LoadResult OBJLoader::parseContent(const std::string& content) {
 
     mesh->recalculateBounds();
 
-    log::infof("OBJ", "Loaded: %u vertices, %u triangles", mesh->vertexCount(),
-               mesh->triangleCount());
+    log::infof(
+        "OBJ", "Loaded: %u vertices, %u triangles", mesh->vertexCount(), mesh->triangleCount());
 
     // Validate mesh integrity (only fatal issues: NaN/Inf, OOB indices)
     if (!mesh->validateGeometry()) {
-        return LoadResult{nullptr, "Mesh validation failed: invalid NaN/Inf vertex positions or out-of-bounds indices"};
+        return LoadResult{
+            nullptr,
+            "Mesh validation failed: invalid NaN/Inf vertex positions or out-of-bounds indices"};
     }
     mesh->validate(); // Log warnings for degenerate triangles (non-fatal)
 

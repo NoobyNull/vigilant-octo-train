@@ -57,8 +57,8 @@ void FileDialog::render() {
                 label = std::string(Icons::File) + " " + entry.name;
             }
 
-            if (ImGui::Selectable(label.c_str(), isSelected,
-                                  ImGuiSelectableFlags_AllowDoubleClick)) {
+            if (ImGui::Selectable(
+                    label.c_str(), isSelected, ImGuiSelectableFlags_AllowDoubleClick)) {
                 if (m_multiSelect) {
                     // Ctrl+click toggles selection for both files and directories
                     if (ImGui::GetIO().KeyCtrl) {
@@ -182,7 +182,8 @@ void FileDialog::render() {
     }
 }
 
-void FileDialog::showOpen(const std::string& title, const std::vector<FileFilter>& filters,
+void FileDialog::showOpen(const std::string& title,
+                          const std::vector<FileFilter>& filters,
                           std::function<void(const std::string&)> callback) {
     m_title = title;
     m_mode = FileDialogMode::Open;
@@ -197,7 +198,8 @@ void FileDialog::showOpen(const std::string& title, const std::vector<FileFilter
     m_open = true;
 }
 
-void FileDialog::showOpenMulti(const std::string& title, const std::vector<FileFilter>& filters,
+void FileDialog::showOpenMulti(const std::string& title,
+                               const std::vector<FileFilter>& filters,
                                std::function<void(const std::vector<std::string>&)> callback) {
     m_title = title;
     m_mode = FileDialogMode::Open;
@@ -212,7 +214,8 @@ void FileDialog::showOpenMulti(const std::string& title, const std::vector<FileF
     m_open = true;
 }
 
-void FileDialog::showSave(const std::string& title, const std::vector<FileFilter>& filters,
+void FileDialog::showSave(const std::string& title,
+                          const std::vector<FileFilter>& filters,
                           const std::string& defaultName,
                           std::function<void(const std::string&)> callback) {
     m_title = title;

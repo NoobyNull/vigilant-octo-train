@@ -43,8 +43,10 @@ bool extractStoredEntry(std::istream& in, uint32_t size, std::string& out) {
 }
 
 // Decompress a raw deflate stream (ZIP compression method 8)
-bool decompressDeflate(const char* compressedData, uint32_t compressedSize,
-                       uint32_t uncompressedSize, std::string& output) {
+bool decompressDeflate(const char* compressedData,
+                       uint32_t compressedSize,
+                       uint32_t uncompressedSize,
+                       std::string& output) {
     output.resize(uncompressedSize);
 
     z_stream strm = {};
@@ -94,8 +96,8 @@ bool extractFromZip(const Path& zipPath, const std::string& targetFile, std::str
         file.seekg(header.extraFieldLength, std::ios::cur);
 
         // Check if this is our target file
-        bool isTarget =
-            (fileName == targetFile) || (fileName.find(targetFile) != std::string::npos);
+        bool isTarget = (fileName == targetFile) ||
+                        (fileName.find(targetFile) != std::string::npos);
 
         if (isTarget && header.compression == 0) {
             // Uncompressed - extract directly
@@ -108,8 +110,8 @@ bool extractFromZip(const Path& zipPath, const std::string& targetFile, std::str
                 log::errorf("3MF", "Failed to read compressed data from ZIP");
                 return false;
             }
-            return decompressDeflate(compressed.data(), header.compressedSize,
-                                     header.uncompressedSize, content);
+            return decompressDeflate(
+                compressed.data(), header.compressedSize, header.uncompressedSize, content);
         }
 
         // Skip to next entry
@@ -120,7 +122,8 @@ bool extractFromZip(const Path& zipPath, const std::string& targetFile, std::str
 }
 
 // Extract a file from a ZIP archive stored in a byte buffer
-bool extractFromZipBuffer(const ByteBuffer& zipData, const std::string& targetFile,
+bool extractFromZipBuffer(const ByteBuffer& zipData,
+                          const std::string& targetFile,
                           std::string& content) {
     const u8* ptr = zipData.data();
     const u8* end = ptr + zipData.size();
@@ -148,8 +151,8 @@ bool extractFromZipBuffer(const ByteBuffer& zipData, const std::string& targetFi
         ptr += header.extraFieldLength;
 
         // Check if this is our target file
-        bool isTarget =
-            (fileName == targetFile) || (fileName.find(targetFile) != std::string::npos);
+        bool isTarget = (fileName == targetFile) ||
+                        (fileName.find(targetFile) != std::string::npos);
 
         if (isTarget && header.compression == 0) {
             if (ptr + header.uncompressedSize > end)
@@ -159,8 +162,10 @@ bool extractFromZipBuffer(const ByteBuffer& zipData, const std::string& targetFi
         } else if (isTarget && header.compression == 8) {
             if (ptr + header.compressedSize > end)
                 break;
-            return decompressDeflate(reinterpret_cast<const char*>(ptr), header.compressedSize,
-                                     header.uncompressedSize, content);
+            return decompressDeflate(reinterpret_cast<const char*>(ptr),
+                                     header.compressedSize,
+                                     header.uncompressedSize,
+                                     content);
         }
 
         // Skip to next entry
@@ -221,8 +226,9 @@ LoadResult ThreeMFLoader::loadFromBuffer(const ByteBuffer& data) {
 
     std::string modelXml = extractModelXMLFromBuffer(data);
     if (modelXml.empty()) {
-        return LoadResult{nullptr, "3MF archive missing required model file (3D/3dmodel.model). "
-                                   "Archive may be corrupt or use unsupported compression."};
+        return LoadResult{nullptr,
+                          "3MF archive missing required model file (3D/3dmodel.model). "
+                          "Archive may be corrupt or use unsupported compression."};
     }
 
     return parseModelXML(modelXml);
@@ -242,7 +248,8 @@ std::string ThreeMFLoader::extractModelXML(const Path& zipPath) {
     std::string content;
 
     // Try common paths for the model file in 3MF archives
-    const std::vector<std::string> modelPaths = {"3D/3dmodel.model", "3dmodel.model",
+    const std::vector<std::string> modelPaths = {"3D/3dmodel.model",
+                                                 "3dmodel.model",
                                                  "3D/model.model"};
 
     for (const auto& modelPath : modelPaths) {
@@ -257,7 +264,8 @@ std::string ThreeMFLoader::extractModelXML(const Path& zipPath) {
 std::string ThreeMFLoader::extractModelXMLFromBuffer(const ByteBuffer& data) {
     std::string content;
 
-    const std::vector<std::string> modelPaths = {"3D/3dmodel.model", "3dmodel.model",
+    const std::vector<std::string> modelPaths = {"3D/3dmodel.model",
+                                                 "3dmodel.model",
                                                  "3D/model.model"};
 
     for (const auto& modelPath : modelPaths) {
@@ -317,12 +325,15 @@ LoadResult ThreeMFLoader::parseModelXML(const std::string& xmlContent) {
 
     result.mesh->recalculateBounds();
 
-    log::infof("3MF", "Loaded: %u vertices, %u triangles", result.mesh->vertexCount(),
+    log::infof("3MF",
+               "Loaded: %u vertices, %u triangles",
+               result.mesh->vertexCount(),
                result.mesh->triangleCount());
 
     // Validate mesh integrity (only fatal issues: NaN/Inf, OOB indices)
     if (!result.mesh->validateGeometry()) {
-        result.error = "Mesh validation failed: invalid NaN/Inf vertex positions or out-of-bounds indices";
+        result.error =
+            "Mesh validation failed: invalid NaN/Inf vertex positions or out-of-bounds indices";
         result.mesh.reset();
         return result;
     }
@@ -387,7 +398,8 @@ bool ThreeMFLoader::parseVertices(const std::string& verticesBlock,
 }
 
 bool ThreeMFLoader::parseTriangles(const std::string& trianglesBlock,
-                                   const std::vector<Vec3>& vertices, Mesh& outMesh) {
+                                   const std::vector<Vec3>& vertices,
+                                   Mesh& outMesh) {
     // Count triangle tags to reserve capacity and avoid repeated reallocations.
     // Each triangle creates 3 vertices (flat shading, no deduplication) and 3 indices.
     {

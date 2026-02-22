@@ -26,21 +26,21 @@ dw::Mesh makeCube() {
     for (int z = 0; z <= 1; ++z)
         for (int y = 0; y <= 1; ++y)
             for (int x = 0; x <= 1; ++x)
-                verts.emplace_back(dw::Vec3(static_cast<float>(x), static_cast<float>(y),
-                                            static_cast<float>(z)));
+                verts.emplace_back(
+                    dw::Vec3(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z)));
     // 6 faces, 2 triangles each
     std::vector<dw::u32> idx = {
-        0, 1, 3, 0, 3, 2,  // -Z
-        4, 6, 7, 4, 7, 5,  // +Z
-        0, 4, 5, 0, 5, 1,  // -Y
-        2, 3, 7, 2, 7, 6,  // +Y
-        0, 2, 6, 0, 6, 4,  // -X
-        1, 5, 7, 1, 7, 3,  // +X
+        0, 1, 3, 0, 3, 2, // -Z
+        4, 6, 7, 4, 7, 5, // +Z
+        0, 4, 5, 0, 5, 1, // -Y
+        2, 3, 7, 2, 7, 6, // +Y
+        0, 2, 6, 0, 6, 4, // -X
+        1, 5, 7, 1, 7, 3, // +X
     };
     return dw::Mesh(std::move(verts), std::move(idx));
 }
 
-}  // namespace
+} // namespace
 
 // --- Construction ---
 

@@ -44,35 +44,34 @@ TEST(Schema, TablesCreated) {
     ASSERT_TRUE(dw::Schema::initialize(db));
 
     // Verify models table exists
-    auto stmt1 = db.prepare(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='models'");
+    auto stmt1 = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='models'");
     EXPECT_TRUE(stmt1.step());
 
     // Verify projects table exists
-    auto stmt2 = db.prepare(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='projects'");
+    auto stmt2 =
+        db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='projects'");
     EXPECT_TRUE(stmt2.step());
 
     // Verify junction table exists
-    auto stmt3 = db.prepare(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='project_models'");
+    auto stmt3 =
+        db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='project_models'");
     EXPECT_TRUE(stmt3.step());
 
     // Verify G-code tables exist
-    auto stmt4 = db.prepare(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='gcode_files'");
+    auto stmt4 =
+        db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='gcode_files'");
     EXPECT_TRUE(stmt4.step());
 
-    auto stmt5 = db.prepare(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='operation_groups'");
+    auto stmt5 =
+        db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='operation_groups'");
     EXPECT_TRUE(stmt5.step());
 
     auto stmt6 = db.prepare(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='gcode_group_members'");
     EXPECT_TRUE(stmt6.step());
 
-    auto stmt7 = db.prepare(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='gcode_templates'");
+    auto stmt7 =
+        db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='gcode_templates'");
     EXPECT_TRUE(stmt7.step());
 }
 
@@ -81,7 +80,7 @@ TEST(Schema, IndexesCreated) {
     ASSERT_TRUE(db.open(":memory:"));
     ASSERT_TRUE(dw::Schema::initialize(db));
 
-    auto stmt = db.prepare(
-        "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_models_hash'");
+    auto stmt =
+        db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_models_hash'");
     EXPECT_TRUE(stmt.step());
 }

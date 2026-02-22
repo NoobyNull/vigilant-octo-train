@@ -97,7 +97,7 @@ TEST_F(MaterialRepoTest, FindAll_OrderedByName) {
 
     auto all = m_repo->findAll();
     ASSERT_EQ(all.size(), 3);
-    EXPECT_EQ(all[0].name, "Cherry");  // Alphabetical order
+    EXPECT_EQ(all[0].name, "Cherry"); // Alphabetical order
     EXPECT_EQ(all[1].name, "Pine");
     EXPECT_EQ(all[2].name, "Walnut");
 }
@@ -111,7 +111,7 @@ TEST_F(MaterialRepoTest, FindByCategory_Hardwood) {
 
     auto hardwoods = m_repo->findByCategory(dw::MaterialCategory::Hardwood);
     ASSERT_EQ(hardwoods.size(), 2);
-    EXPECT_EQ(hardwoods[0].name, "Maple");  // Alphabetical
+    EXPECT_EQ(hardwoods[0].name, "Maple"); // Alphabetical
     EXPECT_EQ(hardwoods[1].name, "Oak");
 }
 

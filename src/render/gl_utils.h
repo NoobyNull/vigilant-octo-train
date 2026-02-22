@@ -12,13 +12,13 @@ bool checkError(const char* operation);
 
 // RAII scope guard for error checking
 #ifdef NDEBUG
-    #define GL_CHECK(op) op
+#define GL_CHECK(op) op
 #else
-    #define GL_CHECK(op)                                                                           \
-        do {                                                                                       \
-            op;                                                                                    \
-            gl::checkError(#op);                                                                   \
-        } while (0)
+#define GL_CHECK(op)         \
+    do {                     \
+        op;                  \
+        gl::checkError(#op); \
+    } while (0)
 #endif
 
 // Get OpenGL version string

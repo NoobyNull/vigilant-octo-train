@@ -13,7 +13,9 @@ ToastManager& ToastManager::instance() {
     return s_instance;
 }
 
-void ToastManager::show(ToastType type, const std::string& title, const std::string& message,
+void ToastManager::show(ToastType type,
+                        const std::string& title,
+                        const std::string& message,
                         float duration) {
     // Rate limiting for error toasts
     if (type == ToastType::Error) {

@@ -19,7 +19,8 @@ MaterialManager::MaterialManager(Database& db) : m_db(db), m_repo(db) {}
 void MaterialManager::seedDefaults() {
     i64 existing = m_repo.count();
     if (existing > 0) {
-        log::debugf("MaterialManager", "seedDefaults: %lld materials already present, skipping",
+        log::debugf("MaterialManager",
+                    "seedDefaults: %lld materials already present, skipping",
                     static_cast<long long>(existing));
         return;
     }
@@ -56,7 +57,8 @@ void MaterialManager::seedDefaults() {
             if (id) {
                 ++seededBare;
             } else {
-                log::warningf("MaterialManager", "seedDefaults: failed to insert '%s'",
+                log::warningf("MaterialManager",
+                              "seedDefaults: failed to insert '%s'",
                               mat.name.c_str());
             }
         }
@@ -66,8 +68,10 @@ void MaterialManager::seedDefaults() {
         }
     }
 
-    log::infof("MaterialManager", "Seeded %d materials (%d with textures)",
-               seededWithTexture + seededBare, seededWithTexture);
+    log::infof("MaterialManager",
+               "Seeded %d materials (%d with textures)",
+               seededWithTexture + seededBare,
+               seededWithTexture);
 }
 
 // ---------------------------------------------------------------------------
@@ -76,14 +80,16 @@ void MaterialManager::seedDefaults() {
 
 std::optional<i64> MaterialManager::importMaterial(const Path& dwmatPath) {
     if (!file::isFile(dwmatPath)) {
-        log::errorf("MaterialManager", "importMaterial: source does not exist: %s",
+        log::errorf("MaterialManager",
+                    "importMaterial: source does not exist: %s",
                     dwmatPath.string().c_str());
         return std::nullopt;
     }
 
     // Validate archive before copying
     if (!MaterialArchive::isValidArchive(dwmatPath.string())) {
-        log::errorf("MaterialManager", "importMaterial: not a valid .dwmat archive: %s",
+        log::errorf("MaterialManager",
+                    "importMaterial: not a valid .dwmat archive: %s",
                     dwmatPath.string().c_str());
         return std::nullopt;
     }
@@ -93,15 +99,18 @@ std::optional<i64> MaterialManager::importMaterial(const Path& dwmatPath) {
 
     // Copy to managed directory (prevents path invalidation: Pitfall 3)
     if (!file::copy(dwmatPath, destPath)) {
-        log::errorf("MaterialManager", "importMaterial: failed to copy %s -> %s",
-                    dwmatPath.string().c_str(), destPath.string().c_str());
+        log::errorf("MaterialManager",
+                    "importMaterial: failed to copy %s -> %s",
+                    dwmatPath.string().c_str(),
+                    destPath.string().c_str());
         return std::nullopt;
     }
 
     // Load metadata from the managed copy
     auto data = MaterialArchive::load(destPath.string());
     if (!data) {
-        log::errorf("MaterialManager", "importMaterial: failed to load metadata from: %s",
+        log::errorf("MaterialManager",
+                    "importMaterial: failed to load metadata from: %s",
                     destPath.string().c_str());
         // Clean up the copy on failure
         static_cast<void>(file::remove(destPath));
@@ -115,14 +124,18 @@ std::optional<i64> MaterialManager::importMaterial(const Path& dwmatPath) {
     // Insert into database
     auto id = m_repo.insert(record);
     if (!id) {
-        log::errorf("MaterialManager", "importMaterial: database insert failed for: %s",
+        log::errorf("MaterialManager",
+                    "importMaterial: database insert failed for: %s",
                     record.name.c_str());
         static_cast<void>(file::remove(destPath));
         return std::nullopt;
     }
 
-    log::infof("MaterialManager", "Imported material '%s' (id=%lld) from %s", record.name.c_str(),
-               static_cast<long long>(*id), dwmatPath.string().c_str());
+    log::infof("MaterialManager",
+               "Imported material '%s' (id=%lld) from %s",
+               record.name.c_str(),
+               static_cast<long long>(*id),
+               dwmatPath.string().c_str());
     return id;
 }
 
@@ -133,7 +146,8 @@ std::optional<i64> MaterialManager::importMaterial(const Path& dwmatPath) {
 bool MaterialManager::exportMaterial(i64 materialId, const Path& outputPath) {
     auto matOpt = m_repo.findById(materialId);
     if (!matOpt) {
-        log::errorf("MaterialManager", "exportMaterial: material %lld not found",
+        log::errorf("MaterialManager",
+                    "exportMaterial: material %lld not found",
                     static_cast<long long>(materialId));
         return false;
     }
@@ -143,11 +157,15 @@ bool MaterialManager::exportMaterial(i64 materialId, const Path& outputPath) {
     if (!mat.archivePath.empty() && file::isFile(mat.archivePath)) {
         // Material has a managed archive — just copy it to the output path
         if (!file::copy(mat.archivePath, outputPath)) {
-            log::errorf("MaterialManager", "exportMaterial: copy failed %s -> %s",
-                        mat.archivePath.string().c_str(), outputPath.string().c_str());
+            log::errorf("MaterialManager",
+                        "exportMaterial: copy failed %s -> %s",
+                        mat.archivePath.string().c_str(),
+                        outputPath.string().c_str());
             return false;
         }
-        log::infof("MaterialManager", "Exported material '%s' to %s", mat.name.c_str(),
+        log::infof("MaterialManager",
+                   "Exported material '%s' to %s",
+                   mat.name.c_str(),
                    outputPath.string().c_str());
         return true;
     }
@@ -156,13 +174,16 @@ bool MaterialManager::exportMaterial(i64 materialId, const Path& outputPath) {
     // Pass empty texture path to create archive without texture entry.
     auto result = MaterialArchive::create(outputPath.string(), std::string{}, mat);
     if (!result.success) {
-        log::errorf("MaterialManager", "exportMaterial: create archive failed: %s",
+        log::errorf("MaterialManager",
+                    "exportMaterial: create archive failed: %s",
                     result.error.c_str());
         return false;
     }
 
-    log::infof("MaterialManager", "Exported default material '%s' as metadata-only archive to %s",
-               mat.name.c_str(), outputPath.string().c_str());
+    log::infof("MaterialManager",
+               "Exported default material '%s' as metadata-only archive to %s",
+               mat.name.c_str(),
+               outputPath.string().c_str());
     return true;
 }
 
@@ -203,7 +224,8 @@ bool MaterialManager::removeMaterial(i64 id) {
     // Delete managed .dwmat file if it exists
     if (!matOpt->archivePath.empty() && file::isFile(matOpt->archivePath)) {
         if (!file::remove(matOpt->archivePath)) {
-            log::warningf("MaterialManager", "removeMaterial: could not delete archive file: %s",
+            log::warningf("MaterialManager",
+                          "removeMaterial: could not delete archive file: %s",
                           matOpt->archivePath.string().c_str());
             // Don't abort — remove from DB regardless
         }
@@ -219,7 +241,8 @@ bool MaterialManager::removeMaterial(i64 id) {
 bool MaterialManager::assignMaterialToModel(i64 materialId, i64 modelId) {
     // Verify the material exists
     if (!m_repo.findById(materialId)) {
-        log::errorf("MaterialManager", "assignMaterialToModel: material %lld not found",
+        log::errorf("MaterialManager",
+                    "assignMaterialToModel: material %lld not found",
                     static_cast<long long>(materialId));
         return false;
     }
@@ -233,7 +256,8 @@ bool MaterialManager::assignMaterialToModel(i64 materialId, i64 modelId) {
     }
 
     if (!stmt.execute()) {
-        log::errorf("MaterialManager", "assignMaterialToModel: UPDATE failed for model %lld",
+        log::errorf("MaterialManager",
+                    "assignMaterialToModel: UPDATE failed for model %lld",
                     static_cast<long long>(modelId));
         return false;
     }

@@ -18,10 +18,14 @@ class BinPacker : public CutOptimizer {
         f32 x, y, width, height;
     };
 
-    bool tryPlace(const Part& part, int partIndex, int instanceIndex,
-                  std::vector<FreeRect>& freeRects, Placement& outPlacement);
+    bool tryPlace(const Part& part,
+                  int partIndex,
+                  int instanceIndex,
+                  std::vector<FreeRect>& freeRects,
+                  Placement& outPlacement);
 
-    void splitFreeRect(std::vector<FreeRect>& freeRects, usize rectIndex,
+    void splitFreeRect(std::vector<FreeRect>& freeRects,
+                       usize rectIndex,
                        const Placement& placement);
 };
 

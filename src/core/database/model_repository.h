@@ -80,7 +80,9 @@ class ModelRepository {
     bool updateTags(i64 id, const std::vector<std::string>& tags);
     bool updateOrient(i64 id, f32 yaw, const Mat4& matrix);
     bool updateCameraState(i64 id, const CameraState& state);
-    bool updateDescriptor(i64 id, const std::string& title, const std::string& description,
+    bool updateDescriptor(i64 id,
+                          const std::string& title,
+                          const std::string& description,
                           const std::string& hover);
 
     // Delete

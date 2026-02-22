@@ -64,7 +64,8 @@ struct Color {
 };
 
 // Common result type
-template <typename T> using Result = std::optional<T>;
+template <typename T>
+using Result = std::optional<T>;
 
 // Byte buffer
 using ByteBuffer = std::vector<u8>;

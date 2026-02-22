@@ -12,9 +12,6 @@ class Mesh;
 // Simple hash functions for content deduplication
 namespace hash {
 
-// Compute hash of raw bytes (using FNV-1a for simplicity)
-u64 computeBytes(const void* data, usize size);
-
 // Compute hash of a file
 std::string computeFile(const Path& path);
 

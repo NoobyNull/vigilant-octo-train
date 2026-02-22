@@ -71,10 +71,12 @@ void ProjectPanel::renderProjectInfo() {
             }
 
             if (success) {
-                ToastManager::instance().show(ToastType::Success, "Saved",
+                ToastManager::instance().show(ToastType::Success,
+                                              "Saved",
                                               "Project saved successfully");
             } else {
-                ToastManager::instance().show(ToastType::Error, "Save Failed",
+                ToastManager::instance().show(ToastType::Error,
+                                              "Save Failed",
                                               "Could not save project");
             }
         }
@@ -159,8 +161,8 @@ void ProjectPanel::renderModelList() {
                 ImGui::PushID(static_cast<int>(modelId));
 
                 bool isSelected = (modelId == m_selectedModelId);
-                std::string label =
-                    Icons::Model + std::string(" Model #") + std::to_string(modelId);
+                std::string label = Icons::Model + std::string(" Model #") +
+                                    std::to_string(modelId);
 
                 if (ImGui::Selectable(label.c_str(), isSelected)) {
                     m_selectedModelId = modelId;

@@ -71,8 +71,10 @@ class UIManager {
     // Initialize all panels and dialogs.
     // Does NOT wire StartPage callbacks (Application does that after
     // both UIManager and FileIOManager exist).
-    void init(LibraryManager* libraryManager, ProjectManager* projectManager,
-              MaterialManager* materialManager, CostRepository* costRepo = nullptr);
+    void init(LibraryManager* libraryManager,
+              ProjectManager* projectManager,
+              MaterialManager* materialManager,
+              CostRepository* costRepo = nullptr);
 
     // Shutdown and destroy all UI resources
     void shutdown();

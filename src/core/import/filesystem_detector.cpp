@@ -70,8 +70,8 @@ FilesystemInfo detectFilesystem(const Path& path) {
 
 #elif defined(__APPLE__)
 
-#include <sys/mount.h>
 #include <cstring>
+#include <sys/mount.h>
 
 FilesystemInfo detectFilesystem(const Path& path) {
     if (path.empty())

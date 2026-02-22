@@ -55,25 +55,29 @@ void formatAndLog(Level level, const char* module, const char* format, Args... a
 } // namespace detail
 
 // Formatted logging (printf-style)
-template <typename... Args> void debugf(const char* module, const char* format, Args... args) {
+template <typename... Args>
+void debugf(const char* module, const char* format, Args... args) {
     if (getLevel() <= Level::Debug) {
         detail::formatAndLog(Level::Debug, module, format, args...);
     }
 }
 
-template <typename... Args> void infof(const char* module, const char* format, Args... args) {
+template <typename... Args>
+void infof(const char* module, const char* format, Args... args) {
     if (getLevel() <= Level::Info) {
         detail::formatAndLog(Level::Info, module, format, args...);
     }
 }
 
-template <typename... Args> void warningf(const char* module, const char* format, Args... args) {
+template <typename... Args>
+void warningf(const char* module, const char* format, Args... args) {
     if (getLevel() <= Level::Warning) {
         detail::formatAndLog(Level::Warning, module, format, args...);
     }
 }
 
-template <typename... Args> void errorf(const char* module, const char* format, Args... args) {
+template <typename... Args>
+void errorf(const char* module, const char* format, Args... args) {
     detail::formatAndLog(Level::Error, module, format, args...);
 }
 

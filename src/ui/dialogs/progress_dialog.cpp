@@ -61,8 +61,8 @@ void ProgressDialog::render() {
         ImGui::Spacing();
 
         // Progress bar
-        float fraction =
-            total > 0 ? static_cast<float>(completed) / static_cast<float>(total) : 0.0f;
+        float fraction = total > 0 ? static_cast<float>(completed) / static_cast<float>(total)
+                                   : 0.0f;
         ImGui::ProgressBar(fraction, ImVec2(-1, 0));
         ImGui::Spacing();
 

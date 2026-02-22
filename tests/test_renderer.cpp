@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
-#include "../src/render/renderer.h"
 #include "../src/core/mesh/mesh.h"
 #include "../src/core/types.h"
+#include "../src/render/renderer.h"
 
 namespace dw {
 
@@ -91,7 +91,7 @@ TEST_F(RendererTest, RendererHasMeshRenderingMethods) {
 
     // Note: These calls will fail at runtime without OpenGL context,
     // but we're testing the interface is present
-    EXPECT_TRUE(true);  // Compilation success is the real test
+    EXPECT_TRUE(true); // Compilation success is the real test
 }
 
 // Test render settings behavior
@@ -151,7 +151,7 @@ TEST_F(RendererTest, RenderSettingsLightingParameters) {
 TEST_F(RendererTest, RenderSettingsObjectColor) {
     RenderSettings settings;
 
-    Color newColor = Color::fromHex(0xFF0000);  // Red
+    Color newColor = Color::fromHex(0xFF0000); // Red
     settings.objectColor = newColor;
 
     EXPECT_EQ(settings.objectColor.r, 1.0f);
@@ -188,4 +188,4 @@ TEST_F(RendererTest, MultipleGPUMeshes) {
     EXPECT_EQ(mesh3.indexCount, 36);
 }
 
-}  // namespace dw
+} // namespace dw

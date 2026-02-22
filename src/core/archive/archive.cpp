@@ -37,11 +37,11 @@ bool writeU64(std::ostream& out, uint64_t value) {
 }
 
 bool readU32(std::istream& in, uint32_t& value) {
-    return in.read(reinterpret_cast<char*>(&value), sizeof(value)).good();
+    return !in.read(reinterpret_cast<char*>(&value), sizeof(value)).fail();
 }
 
 bool readU64(std::istream& in, uint64_t& value) {
-    return in.read(reinterpret_cast<char*>(&value), sizeof(value)).good();
+    return !in.read(reinterpret_cast<char*>(&value), sizeof(value)).fail();
 }
 
 std::vector<std::string> collectFiles(const std::string& dir) {

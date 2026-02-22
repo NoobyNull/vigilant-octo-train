@@ -27,7 +27,9 @@ ConnectionPool::ConnectionPool(const Path& dbPath, size_t poolSize)
         m_available.push_back(std::move(db));
     }
 
-    log::infof("ConnectionPool", "Created pool with %zu connections to %s", poolSize,
+    log::infof("ConnectionPool",
+               "Created pool with %zu connections to %s",
+               poolSize,
                dbPath.string().c_str());
 }
 

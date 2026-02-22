@@ -19,8 +19,7 @@ class StatementHelper {
     // Execute a query and map results to objects
     // Returns list of objects created by mapper function
     template <typename T>
-    std::vector<T> findAll(const std::string& query,
-                           std::function<T(Statement&)> mapper) {
+    std::vector<T> findAll(const std::string& query, std::function<T(Statement&)> mapper) {
         std::vector<T> results;
         auto stmt = m_db.prepare(query);
         if (!stmt.isValid()) {
@@ -35,7 +34,8 @@ class StatementHelper {
 
     // Execute a query with one parameter
     template <typename T>
-    std::optional<T> findOne(const std::string& query, int paramIndex,
+    std::optional<T> findOne(const std::string& query,
+                             int paramIndex,
                              const std::string& value,
                              std::function<T(Statement&)> mapper) {
         auto stmt = m_db.prepare(query);
@@ -55,7 +55,9 @@ class StatementHelper {
 
     // Execute a query with one integer parameter
     template <typename T>
-    std::optional<T> findOne(const std::string& query, int paramIndex, i64 value,
+    std::optional<T> findOne(const std::string& query,
+                             int paramIndex,
+                             i64 value,
                              std::function<T(Statement&)> mapper) {
         auto stmt = m_db.prepare(query);
         if (!stmt.isValid()) {
@@ -76,7 +78,8 @@ class StatementHelper {
     i64 count(const std::string& query);
 
     // Execute a query that returns a single text value
-    std::optional<std::string> queryText(const std::string& query, int paramIndex,
+    std::optional<std::string> queryText(const std::string& query,
+                                         int paramIndex,
                                          const std::string& value);
 
     // Execute a query that returns a single integer value

@@ -6,7 +6,7 @@
 #include <string>
 
 #ifndef _WIN32
-    #include <unistd.h>
+#include <unistd.h>
 #endif
 
 #include "core/config/config.h"
@@ -17,24 +17,23 @@
 #include "ui/theme.h"
 
 #ifdef _WIN32
-    #ifndef NOMINMAX
-        #define NOMINMAX
-    #endif
-    #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN
-    #endif
-    #include <windows.h>
-    #include <shellapi.h>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <shellapi.h>
+#include <windows.h>
 #elif defined(__linux__)
-    #include <unistd.h>
+#include <unistd.h>
 #endif
 
 #include <SDL.h>
 
 namespace dw {
 
-ConfigManager::ConfigManager(EventBus* eventBus, UIManager* uiManager)
-    : m_eventBus(eventBus), m_uiManager(uiManager) {}
+ConfigManager::ConfigManager(UIManager* uiManager) : m_uiManager(uiManager) {}
 
 ConfigManager::~ConfigManager() {
     shutdown();

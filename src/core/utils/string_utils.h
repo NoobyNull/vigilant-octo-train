@@ -10,8 +10,6 @@ namespace str {
 
 // Trim whitespace
 std::string trim(std::string_view s);
-std::string trimLeft(std::string_view s);
-std::string trimRight(std::string_view s);
 
 // Case conversion
 std::string toLower(std::string_view s);

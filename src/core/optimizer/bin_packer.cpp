@@ -100,8 +100,11 @@ CutPlan BinPacker::optimize(const std::vector<Part>& parts, const std::vector<Sh
     return plan;
 }
 
-bool BinPacker::tryPlace(const Part& part, int partIndex, int instanceIndex,
-                         std::vector<FreeRect>& freeRects, Placement& outPlacement) {
+bool BinPacker::tryPlace(const Part& part,
+                         int partIndex,
+                         int instanceIndex,
+                         std::vector<FreeRect>& freeRects,
+                         Placement& outPlacement) {
     f32 partWidth = part.width + m_kerf;
     f32 partHeight = part.height + m_kerf;
 
@@ -153,7 +156,8 @@ bool BinPacker::tryPlace(const Part& part, int partIndex, int instanceIndex,
     return true;
 }
 
-void BinPacker::splitFreeRect(std::vector<FreeRect>& freeRects, usize rectIndex,
+void BinPacker::splitFreeRect(std::vector<FreeRect>& freeRects,
+                              usize rectIndex,
                               const Placement& placement) {
     FreeRect rect = freeRects[rectIndex];
 

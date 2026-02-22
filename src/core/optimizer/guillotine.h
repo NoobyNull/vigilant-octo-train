@@ -22,8 +22,11 @@ class GuillotineOptimizer : public CutOptimizer {
     };
 
     Node* insert(Node* node, f32 width, f32 height);
-    void collectPlacements(Node* node, std::vector<Placement>& placements, const Part* part,
-                           int partIndex, int instanceIndex);
+    void collectPlacements(Node* node,
+                           std::vector<Placement>& placements,
+                           const Part* part,
+                           int partIndex,
+                           int instanceIndex);
 };
 
 } // namespace optimizer

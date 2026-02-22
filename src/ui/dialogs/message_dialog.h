@@ -18,7 +18,8 @@ class MessageDialog : public Dialog {
     void render() override;
 
     // Show a message
-    void show(const std::string& title, const std::string& message,
+    void show(const std::string& title,
+              const std::string& message,
               MessageType type = MessageType::Info,
               std::function<void(DialogResult)> callback = nullptr);
 
@@ -26,7 +27,8 @@ class MessageDialog : public Dialog {
     static void info(const std::string& title, const std::string& message);
     static void warning(const std::string& title, const std::string& message);
     static void error(const std::string& title, const std::string& message);
-    static void question(const std::string& title, const std::string& message,
+    static void question(const std::string& title,
+                         const std::string& message,
                          std::function<void(DialogResult)> callback);
 
     // Render the global singleton dialog (call once per frame)
@@ -50,7 +52,8 @@ class ConfirmDialog : public Dialog {
     void render() override;
 
     // Show confirmation
-    void show(const std::string& title, const std::string& message,
+    void show(const std::string& title,
+              const std::string& message,
               std::function<void(bool)> callback);
 
   private:

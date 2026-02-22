@@ -28,7 +28,8 @@ class MaterialArchive {
   public:
     // Create a .dwmat archive from a texture file + metadata
     // texturePath must point to a PNG file
-    static ArchiveResult create(const std::string& archivePath, const std::string& texturePath,
+    static ArchiveResult create(const std::string& archivePath,
+                                const std::string& texturePath,
                                 const MaterialRecord& record);
 
     // Load a .dwmat archive — returns raw PNG bytes + parsed metadata

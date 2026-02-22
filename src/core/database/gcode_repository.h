@@ -77,7 +77,6 @@ class GCodeRepository {
     std::vector<f32> jsonToFeedRates(const std::string& json);
     std::string toolNumbersToJson(const std::vector<int>& toolNumbers);
     std::vector<int> jsonToToolNumbers(const std::string& json);
-    std::string groupsToJson(const std::vector<std::string>& groups);
     std::vector<std::string> jsonToGroups(const std::string& json);
 
     Database& m_db;

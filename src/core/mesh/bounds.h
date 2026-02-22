@@ -10,9 +10,11 @@ namespace dw {
 
 // Axis-aligned bounding box
 struct AABB {
-    Vec3 min{std::numeric_limits<f32>::max(), std::numeric_limits<f32>::max(),
+    Vec3 min{std::numeric_limits<f32>::max(),
+             std::numeric_limits<f32>::max(),
              std::numeric_limits<f32>::max()};
-    Vec3 max{std::numeric_limits<f32>::lowest(), std::numeric_limits<f32>::lowest(),
+    Vec3 max{std::numeric_limits<f32>::lowest(),
+             std::numeric_limits<f32>::lowest(),
              std::numeric_limits<f32>::lowest()};
 
     AABB() = default;
@@ -72,9 +74,11 @@ struct AABB {
 
     // Reset to invalid state
     void reset() {
-        min = Vec3{std::numeric_limits<f32>::max(), std::numeric_limits<f32>::max(),
+        min = Vec3{std::numeric_limits<f32>::max(),
+                   std::numeric_limits<f32>::max(),
                    std::numeric_limits<f32>::max()};
-        max = Vec3{std::numeric_limits<f32>::lowest(), std::numeric_limits<f32>::lowest(),
+        max = Vec3{std::numeric_limits<f32>::lowest(),
+                   std::numeric_limits<f32>::lowest(),
                    std::numeric_limits<f32>::lowest()};
     }
 };

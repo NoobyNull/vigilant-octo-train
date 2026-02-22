@@ -50,12 +50,6 @@ class LibraryManager {
     // Search models by name
     std::vector<ModelRecord> searchModels(const std::string& query);
 
-    // Filter by format
-    std::vector<ModelRecord> filterByFormat(const std::string& format);
-
-    // Filter by tag
-    std::vector<ModelRecord> filterByTag(const std::string& tag);
-
     // Get a single model record
     std::optional<ModelRecord> getModel(i64 modelId);
 
@@ -90,8 +84,11 @@ class LibraryManager {
     void setGraphManager(GraphManager* gm) { m_graphManager = gm; }
 
     // Generate thumbnail and update DB record
-    bool generateThumbnail(i64 modelId, const Mesh& mesh, const Texture* materialTexture = nullptr,
-                           float cameraPitch = 30.0f, float cameraYaw = 45.0f);
+    bool generateThumbnail(i64 modelId,
+                           const Mesh& mesh,
+                           const Texture* materialTexture = nullptr,
+                           float cameraPitch = 30.0f,
+                           float cameraYaw = 45.0f);
 
     // G-code operations
     std::vector<GCodeRecord> getAllGCodeFiles();
@@ -100,7 +97,8 @@ class LibraryManager {
     bool deleteGCodeFile(i64 id);
 
     // Hierarchy operations
-    std::optional<i64> createOperationGroup(i64 modelId, const std::string& name,
+    std::optional<i64> createOperationGroup(i64 modelId,
+                                            const std::string& name,
                                             int sortOrder = 0);
     std::vector<OperationGroup> getOperationGroups(i64 modelId);
     bool addGCodeToGroup(i64 groupId, i64 gcodeId, int sortOrder = 0);
@@ -127,7 +125,9 @@ class LibraryManager {
     std::vector<ModelRecord> filterByCategory(i64 categoryId);
 
     // --- AI Descriptor management ---
-    bool updateDescriptor(i64 modelId, const std::string& title, const std::string& description,
+    bool updateDescriptor(i64 modelId,
+                          const std::string& title,
+                          const std::string& description,
                           const std::string& hover);
     bool resolveAndAssignCategories(i64 modelId, const std::vector<std::string>& categoryChain);
 
@@ -136,11 +136,6 @@ class LibraryManager {
 
     // FTS5 search (preferred over LIKE-based searchModels for text queries)
     std::vector<ModelRecord> searchModelsFTS(const std::string& query);
-
-    // Graph queries (delegated to GraphManager)
-    std::vector<i64> getRelatedModelIds(i64 modelId);
-    std::vector<i64> getModelsInProject(i64 projectId);
-    bool isGraphAvailable() const;
 
   private:
     std::string computeFileHash(const Path& path);

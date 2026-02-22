@@ -58,9 +58,11 @@ class Renderer {
 
     // Render a mesh with an optional material texture.
     // Pass nullptr for materialTexture to use solid color (same as above overloads).
-    void renderMesh(const Mesh& mesh, const Texture* materialTexture,
+    void renderMesh(const Mesh& mesh,
+                    const Texture* materialTexture,
                     const Mat4& modelMatrix = Mat4(1.0f));
-    void renderMesh(const GPUMesh& gpuMesh, const Texture* materialTexture,
+    void renderMesh(const GPUMesh& gpuMesh,
+                    const Texture* materialTexture,
                     const Mat4& modelMatrix = Mat4(1.0f));
 
     // Render a toolpath mesh with color distinction for rapid vs cutting moves

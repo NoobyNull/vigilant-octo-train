@@ -9,18 +9,18 @@ namespace dw {
 StorageManager::StorageManager(const Path& blobRoot)
     : m_blobRoot(blobRoot), m_tempDir(blobRoot / ".tmp") {}
 
-Path StorageManager::blobPath(const std::string& hash,
-                              const std::string& ext) const {
+Path StorageManager::blobPath(const std::string& hash, const std::string& ext) const {
     if (hash.size() < 4) {
         return Path();
     }
     // hash[0..1]/hash[2..3]/hash.ext
-    return m_blobRoot / hash.substr(0, 2) / hash.substr(2, 2) /
-           (hash + "." + ext);
+    return m_blobRoot / hash.substr(0, 2) / hash.substr(2, 2) / (hash + "." + ext);
 }
 
-Path StorageManager::storeFile(const Path& source, const std::string& hash,
-                               const std::string& ext, std::string& error) {
+Path StorageManager::storeFile(const Path& source,
+                               const std::string& hash,
+                               const std::string& ext,
+                               std::string& error) {
     try {
         // Dedup: if blob already exists, return path (no-op)
         Path finalPath = blobPath(hash, ext);
@@ -39,15 +39,13 @@ Path StorageManager::storeFile(const Path& source, const std::string& hash,
         Path tmpPath = m_tempDir / ("import_" + hash + "." + ext);
 
         // Copy source to temp
-        fs::copy_file(source, tmpPath,
-                      fs::copy_options::overwrite_existing);
+        fs::copy_file(source, tmpPath, fs::copy_options::overwrite_existing);
 
         // Verify hash
         std::string computedHash = hash::computeFile(tmpPath);
         if (computedHash != hash) {
             fs::remove(tmpPath);
-            error = "Hash verification failed: expected " + hash +
-                    ", got " + computedHash;
+            error = "Hash verification failed: expected " + hash + ", got " + computedHash;
             return Path();
         }
 
@@ -65,8 +63,10 @@ Path StorageManager::storeFile(const Path& source, const std::string& hash,
     }
 }
 
-Path StorageManager::moveFile(const Path& source, const std::string& hash,
-                              const std::string& ext, std::string& error) {
+Path StorageManager::moveFile(const Path& source,
+                              const std::string& hash,
+                              const std::string& ext,
+                              std::string& error) {
     // Store first (copy to blob store)
     Path result = storeFile(source, hash, ext, error);
     if (result.empty()) {
@@ -77,16 +77,14 @@ Path StorageManager::moveFile(const Path& source, const std::string& hash,
     try {
         fs::remove(source);
     } catch (const fs::filesystem_error& e) {
-        log::warningf("StorageManager",
-                   "Could not remove source after move: %s", e.what());
+        log::warningf("StorageManager", "Could not remove source after move: %s", e.what());
         // Not a failure -- the blob is stored correctly
     }
 
     return result;
 }
 
-bool StorageManager::exists(const std::string& hash,
-                            const std::string& ext) const {
+bool StorageManager::exists(const std::string& hash, const std::string& ext) const {
     Path p = blobPath(hash, ext);
     if (p.empty()) {
         return false;
@@ -94,8 +92,7 @@ bool StorageManager::exists(const std::string& hash,
     return fs::exists(p);
 }
 
-bool StorageManager::remove(const std::string& hash,
-                            const std::string& ext) {
+bool StorageManager::remove(const std::string& hash, const std::string& ext) {
     try {
         Path p = blobPath(hash, ext);
         if (p.empty()) {
@@ -106,8 +103,7 @@ bool StorageManager::remove(const std::string& hash,
         fs::remove(p);
         return true;
     } catch (const fs::filesystem_error& e) {
-        log::errorf("StorageManager", "Failed to remove blob: %s",
-                    e.what());
+        log::errorf("StorageManager", "Failed to remove blob: %s", e.what());
         return false;
     }
 }
@@ -126,13 +122,10 @@ int StorageManager::cleanupOrphanedTempFiles() {
             }
         }
         if (count > 0) {
-            log::infof("StorageManager",
-                       "Cleaned up %d orphaned temp file(s)", count);
+            log::infof("StorageManager", "Cleaned up %d orphaned temp file(s)", count);
         }
     } catch (const fs::filesystem_error& e) {
-        log::errorf("StorageManager",
-                    "Error cleaning up orphaned temp files: %s",
-                    e.what());
+        log::errorf("StorageManager", "Error cleaning up orphaned temp files: %s", e.what());
     }
     return count;
 }

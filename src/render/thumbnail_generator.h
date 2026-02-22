@@ -33,7 +33,8 @@ class ThumbnailGenerator {
 
     // Generate thumbnail and save to file
     // Returns true if successful
-    bool generate(const Mesh& mesh, const Path& outputPath,
+    bool generate(const Mesh& mesh,
+                  const Path& outputPath,
                   const ThumbnailSettings& settings = ThumbnailSettings{});
 
     // Generate thumbnail to memory buffer (RGBA pixels)

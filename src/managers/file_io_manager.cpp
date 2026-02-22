@@ -6,7 +6,6 @@
 
 #include "app/workspace.h"
 #include "core/config/config.h"
-#include "core/events/event_bus.h"
 #include "core/export/model_exporter.h"
 #include "core/export/project_export_manager.h"
 #include "core/import/import_queue.h"
@@ -33,26 +32,24 @@
 
 namespace dw {
 
-FileIOManager::FileIOManager(EventBus* eventBus, Database* database, LibraryManager* libraryManager,
-                             ProjectManager* projectManager, ImportQueue* importQueue,
-                             Workspace* workspace, FileDialog* fileDialog,
+FileIOManager::FileIOManager(Database* database,
+                             LibraryManager* libraryManager,
+                             ProjectManager* projectManager,
+                             ImportQueue* importQueue,
+                             Workspace* workspace,
+                             FileDialog* fileDialog,
                              ThumbnailGenerator* thumbnailGenerator,
                              ProjectExportManager* projectExportManager)
-    : m_eventBus(eventBus)
-    , m_database(database)
-    , m_libraryManager(libraryManager)
-    , m_projectManager(projectManager)
-    , m_importQueue(importQueue)
-    , m_workspace(workspace)
-    , m_fileDialog(fileDialog)
-    , m_thumbnailGenerator(thumbnailGenerator)
-    , m_projectExportManager(projectExportManager) {}
+    : m_database(database), m_libraryManager(libraryManager), m_projectManager(projectManager),
+      m_importQueue(importQueue), m_workspace(workspace), m_fileDialog(fileDialog),
+      m_thumbnailGenerator(thumbnailGenerator), m_projectExportManager(projectExportManager) {}
 
 FileIOManager::~FileIOManager() = default;
 
 void FileIOManager::importModel() {
     if (m_fileDialog) {
-        m_fileDialog->showOpenMulti("Import Models", FileDialog::modelFilters(),
+        m_fileDialog->showOpenMulti("Import Models",
+                                    FileDialog::modelFilters(),
                                     [this](const std::vector<std::string>& paths) {
                                         if (paths.empty())
                                             return;
@@ -86,7 +83,9 @@ void FileIOManager::exportModel() {
     }
 
     if (m_fileDialog) {
-        m_fileDialog->showSave("Export Model", FileDialog::modelFilters(), "model.stl",
+        m_fileDialog->showSave("Export Model",
+                               FileDialog::modelFilters(),
+                               "model.stl",
                                [this, mesh](const std::string& path) {
                                    if (path.empty())
                                        return;
@@ -120,8 +119,8 @@ void FileIOManager::collectSupportedFiles(const Path& directory, std::vector<Pat
         }
     } catch (const fs::filesystem_error& e) {
         // Log warning but continue - don't crash on permission denied or broken symlinks
-        log::warningf("FileIO", "Failed to scan directory %s: %s", directory.string().c_str(),
-                      e.what());
+        log::warningf(
+            "FileIO", "Failed to scan directory %s: %s", directory.string().c_str(), e.what());
     }
 }
 
@@ -166,12 +165,14 @@ void FileIOManager::onFilesDropped(const std::vector<std::string>& paths) {
                                 }
                             }
 
-                            ToastManager::instance().show(
-                                ToastType::Success, "Project Imported",
-                                archivePath.stem().string() + " (" +
-                                    std::to_string(result.modelCount) + " models)");
+                            ToastManager::instance().show(ToastType::Success,
+                                                          "Project Imported",
+                                                          archivePath.stem().string() + " (" +
+                                                              std::to_string(result.modelCount) +
+                                                              " models)");
                         } else {
-                            ToastManager::instance().show(ToastType::Error, "Import Failed",
+                            ToastManager::instance().show(ToastType::Error,
+                                                          "Import Failed",
                                                           result.error);
                         }
                     });
@@ -204,7 +205,8 @@ void FileIOManager::onFilesDropped(const std::vector<std::string>& paths) {
     }
 }
 
-void FileIOManager::processCompletedImports(ViewportPanel* viewport, PropertiesPanel* properties,
+void FileIOManager::processCompletedImports(ViewportPanel* viewport,
+                                            PropertiesPanel* properties,
                                             LibraryPanel* library,
                                             std::function<void(bool)> setShowStartPage) {
     // viewport param kept for API compatibility; focus does not change on import (user decision)
@@ -239,7 +241,8 @@ void FileIOManager::processCompletedImports(ViewportPanel* viewport, PropertiesP
             thumbnailOk = m_libraryManager->generateThumbnail(task.modelId, *task.mesh);
         }
         if (!thumbnailOk) {
-            ToastManager::instance().show(ToastType::Warning, "Thumbnail Failed",
+            ToastManager::instance().show(ToastType::Warning,
+                                          "Thumbnail Failed",
                                           "Could not generate thumbnail for: " + task.record.name);
         }
 
@@ -262,8 +265,10 @@ void FileIOManager::processCompletedImports(ViewportPanel* viewport, PropertiesP
                         auto result = svc->describe(thumbPath, apiKey);
                         mtq->enqueue([libMgr, mtq, modelId, modelName, result]() {
                             if (result.success) {
-                                libMgr->updateDescriptor(modelId, result.title,
-                                                         result.description, result.hoverNarrative);
+                                libMgr->updateDescriptor(modelId,
+                                                         result.title,
+                                                         result.description,
+                                                         result.hoverNarrative);
                                 // Merge keywords + associations into model tags
                                 auto existing = libMgr->getModel(modelId);
                                 if (existing) {
@@ -280,11 +285,15 @@ void FileIOManager::processCompletedImports(ViewportPanel* viewport, PropertiesP
                                 if (!result.categories.empty()) {
                                     libMgr->resolveAndAssignCategories(modelId, result.categories);
                                 }
-                                log::infof("FileIO", "Classified %s as: %s", modelName.c_str(),
+                                log::infof("FileIO",
+                                           "Classified %s as: %s",
+                                           modelName.c_str(),
                                            result.title.c_str());
                             } else {
-                                log::warningf("FileIO", "Auto-describe failed for %s: %s",
-                                              modelName.c_str(), result.error.c_str());
+                                log::warningf("FileIO",
+                                              "Auto-describe failed for %s: %s",
+                                              modelName.c_str(),
+                                              result.error.c_str());
                             }
                         });
                     }).detach();
@@ -352,7 +361,8 @@ void FileIOManager::openProject(std::function<void(bool)> setShowStartPage) {
         return;
     }
 
-    m_fileDialog->showOpen("Open Project", FileDialog::projectFilters(),
+    m_fileDialog->showOpen("Open Project",
+                           FileDialog::projectFilters(),
                            [this, setShowStartPage](const std::string& path) {
                                if (path.empty())
                                    return;
@@ -398,7 +408,9 @@ void FileIOManager::saveProject() {
     if (project->filePath().empty()) {
         if (m_fileDialog) {
             std::string defaultName = project->name() + ".dwp";
-            m_fileDialog->showSave("Save Project", FileDialog::projectFilters(), defaultName,
+            m_fileDialog->showSave("Save Project",
+                                   FileDialog::projectFilters(),
+                                   defaultName,
                                    [this, project](const std::string& path) {
                                        if (path.empty())
                                            return;
@@ -471,7 +483,9 @@ void FileIOManager::exportProjectArchive() {
     std::string defaultName = project->name() + ".dwproj";
 
     m_fileDialog->showSave(
-        "Export Project Archive", FileDialog::projectFilters(), defaultName,
+        "Export Project Archive",
+        FileDialog::projectFilters(),
+        defaultName,
         [this, project](const std::string& path) {
             if (path.empty())
                 return;
@@ -493,7 +507,8 @@ void FileIOManager::exportProjectArchive() {
 
             std::thread([project, outputPath, progressDlg, exportMgr, mtq]() {
                 auto result = exportMgr->exportProject(
-                    *project, outputPath,
+                    *project,
+                    outputPath,
                     [progressDlg](int /*current*/, int /*total*/, const std::string& item) {
                         if (progressDlg)
                             progressDlg->advance(item);
@@ -504,12 +519,14 @@ void FileIOManager::exportProjectArchive() {
                         progressDlg->finish();
 
                     if (result.success) {
-                        ToastManager::instance().show(
-                            ToastType::Success, "Project Exported",
-                            outputPath.filename().string() + " (" +
-                                std::to_string(result.modelCount) + " models)");
+                        ToastManager::instance().show(ToastType::Success,
+                                                      "Project Exported",
+                                                      outputPath.filename().string() + " (" +
+                                                          std::to_string(result.modelCount) +
+                                                          " models)");
                     } else {
-                        ToastManager::instance().show(ToastType::Error, "Export Failed",
+                        ToastManager::instance().show(ToastType::Error,
+                                                      "Export Failed",
                                                       result.error);
                     }
                 });
@@ -527,7 +544,8 @@ void FileIOManager::importProjectArchive(std::function<void(bool)> setShowStartP
         return;
 
     m_fileDialog->showOpen(
-        "Import Project Archive", FileDialog::projectFilters(),
+        "Import Project Archive",
+        FileDialog::projectFilters(),
         [this, setShowStartPage](const std::string& path) {
             if (path.empty())
                 return;
@@ -564,12 +582,14 @@ void FileIOManager::importProjectArchive(std::function<void(bool)> setShowStartP
                             }
                         }
 
-                        ToastManager::instance().show(
-                            ToastType::Success, "Project Imported",
-                            archivePath.stem().string() + " (" +
-                                std::to_string(result.modelCount) + " models)");
+                        ToastManager::instance().show(ToastType::Success,
+                                                      "Project Imported",
+                                                      archivePath.stem().string() + " (" +
+                                                          std::to_string(result.modelCount) +
+                                                          " models)");
                     } else {
-                        ToastManager::instance().show(ToastType::Error, "Import Failed",
+                        ToastManager::instance().show(ToastType::Error,
+                                                      "Import Failed",
                                                       result.error);
                     }
                 });

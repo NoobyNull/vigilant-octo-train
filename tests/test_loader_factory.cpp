@@ -52,13 +52,16 @@ TEST(LoaderFactory, GetLoaderByExtension_Unknown) {
 
 TEST(LoaderFactory, SupportedExtensions_ContainsKnownFormats) {
     auto exts = dw::LoaderFactory::supportedExtensions();
-    EXPECT_GE(exts.size(), 3u);  // at least stl, obj, 3mf
+    EXPECT_GE(exts.size(), 3u); // at least stl, obj, 3mf
 
     bool hasSTL = false, hasOBJ = false, has3MF = false;
     for (const auto& e : exts) {
-        if (e == "stl") hasSTL = true;
-        if (e == "obj") hasOBJ = true;
-        if (e == "3mf") has3MF = true;
+        if (e == "stl")
+            hasSTL = true;
+        if (e == "obj")
+            hasOBJ = true;
+        if (e == "3mf")
+            has3MF = true;
     }
     EXPECT_TRUE(hasSTL);
     EXPECT_TRUE(hasOBJ);
@@ -83,7 +86,7 @@ TEST(LoaderFactory, GetLoader_ByPath_CaseInsensitive) {
 
 TEST(LoaderFactory, LoadFromBuffer_STL) {
     // Minimal binary STL with 0 triangles
-    dw::ByteBuffer stlData(84, 0);  // 80 header + 4 byte count = 0
+    dw::ByteBuffer stlData(84, 0); // 80 header + 4 byte count = 0
 
     auto result = dw::LoaderFactory::loadFromBuffer(stlData, "stl");
     // 0 triangles is likely an error, but it should dispatch to STL loader
@@ -94,11 +97,10 @@ TEST(LoaderFactory, LoadFromBuffer_STL) {
 }
 
 TEST(LoaderFactory, LoadFromBuffer_OBJ_ValidTriangle) {
-    std::string obj =
-        "v 0 0 0\n"
-        "v 1 0 0\n"
-        "v 0 1 0\n"
-        "f 1 2 3\n";
+    std::string obj = "v 0 0 0\n"
+                      "v 1 0 0\n"
+                      "v 0 1 0\n"
+                      "f 1 2 3\n";
     dw::ByteBuffer data(obj.begin(), obj.end());
 
     auto result = dw::LoaderFactory::loadFromBuffer(data, "obj");

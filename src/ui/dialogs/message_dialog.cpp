@@ -87,7 +87,9 @@ void MessageDialog::render() {
     }
 }
 
-void MessageDialog::show(const std::string& title, const std::string& message, MessageType type,
+void MessageDialog::show(const std::string& title,
+                         const std::string& message,
+                         MessageType type,
                          std::function<void(DialogResult)> callback) {
     m_title = title;
     m_message = message;
@@ -113,7 +115,8 @@ void MessageDialog::error(const std::string& title, const std::string& message) 
     instance().show(title, message, MessageType::Error);
 }
 
-void MessageDialog::question(const std::string& title, const std::string& message,
+void MessageDialog::question(const std::string& title,
+                             const std::string& message,
                              std::function<void(DialogResult)> callback) {
     instance().show(title, message, MessageType::Question, std::move(callback));
 }
@@ -173,7 +176,8 @@ void ConfirmDialog::render() {
     }
 }
 
-void ConfirmDialog::show(const std::string& title, const std::string& message,
+void ConfirmDialog::show(const std::string& title,
+                         const std::string& message,
                          std::function<void(bool)> callback) {
     m_title = title;
     m_message = message;

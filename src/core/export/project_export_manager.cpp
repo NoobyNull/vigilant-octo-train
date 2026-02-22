@@ -25,7 +25,7 @@ static constexpr const char* kLogModule = "ProjectExport";
 static std::string isoTimestamp() {
     auto now = std::chrono::system_clock::now();
     auto time = std::chrono::system_clock::to_time_t(now);
-    struct tm utc {};
+    struct tm utc{};
 #ifdef _WIN32
     gmtime_s(&utc, &time);
 #else
@@ -70,9 +70,9 @@ std::optional<i64> ProjectExportManager::getModelMaterialId(i64 modelId) {
 
 // --- Export ---
 
-DwprojExportResult
-ProjectExportManager::exportProject(const Project& project, const Path& outputPath,
-                                    ExportProgressCallback progress) {
+DwprojExportResult ProjectExportManager::exportProject(const Project& project,
+                                                       const Path& outputPath,
+                                                       ExportProgressCallback progress) {
     ModelRepository modelRepo(m_db);
     ProjectRepository projectRepo(m_db);
 
@@ -101,8 +101,7 @@ ProjectExportManager::exportProject(const Project& project, const Path& outputPa
     // Initialize ZIP writer
     mz_zip_archive zip{};
     if (!mz_zip_writer_init_file(&zip, outputPath.string().c_str(), 0)) {
-        return DwprojExportResult::fail("Failed to create archive file: " +
-                                        outputPath.string());
+        return DwprojExportResult::fail("Failed to create archive file: " + outputPath.string());
     }
 
     // Add each model blob
@@ -113,8 +112,10 @@ ProjectExportManager::exportProject(const Project& project, const Path& outputPa
     for (const auto& model : models) {
         auto blobData = file::readBinary(model.filePath);
         if (!blobData) {
-            log::warningf(kLogModule, "Skipping model '%s': cannot read file '%s'",
-                          model.name.c_str(), model.filePath.string().c_str());
+            log::warningf(kLogModule,
+                          "Skipping model '%s': cannot read file '%s'",
+                          model.name.c_str(),
+                          model.filePath.string().c_str());
             itemIndex++;
             continue;
         }
@@ -122,12 +123,14 @@ ProjectExportManager::exportProject(const Project& project, const Path& outputPa
         std::string ext = getFileExtension(model.filePath);
         std::string archPath = "models/" + model.hash + ext;
 
-        if (!mz_zip_writer_add_mem(&zip, archPath.c_str(), blobData->data(),
-                                   blobData->size(), MZ_DEFAULT_COMPRESSION)) {
+        if (!mz_zip_writer_add_mem(&zip,
+                                   archPath.c_str(),
+                                   blobData->data(),
+                                   blobData->size(),
+                                   MZ_DEFAULT_COMPRESSION)) {
             mz_zip_writer_end(&zip);
             (void)file::remove(outputPath);
-            return DwprojExportResult::fail("Failed to add model blob: " +
-                                            model.name);
+            return DwprojExportResult::fail("Failed to add model blob: " + model.name);
         }
 
         totalBytes += blobData->size();
@@ -148,13 +151,13 @@ ProjectExportManager::exportProject(const Project& project, const Path& outputPa
         if (!thumbData) {
             continue;
         }
-        std::string thumbArchPath =
-            "thumbnails/" + model.hash + ".png";
-        if (!mz_zip_writer_add_mem(&zip, thumbArchPath.c_str(),
-                                   thumbData->data(), thumbData->size(),
+        std::string thumbArchPath = "thumbnails/" + model.hash + ".png";
+        if (!mz_zip_writer_add_mem(&zip,
+                                   thumbArchPath.c_str(),
+                                   thumbData->data(),
+                                   thumbData->size(),
                                    MZ_DEFAULT_COMPRESSION)) {
-            log::warningf(kLogModule, "Failed to add thumbnail for model '%s'",
-                          model.name.c_str());
+            log::warningf(kLogModule, "Failed to add thumbnail for model '%s'", model.name.c_str());
             continue;
         }
         hashToThumbnailPath[model.hash] = thumbArchPath;
@@ -175,8 +178,7 @@ ProjectExportManager::exportProject(const Project& project, const Path& outputPa
         }
 
         auto matRec = materialRepo.findById(*matId);
-        if (!matRec || matRec->archivePath.empty() ||
-            !file::exists(matRec->archivePath)) {
+        if (!matRec || matRec->archivePath.empty() || !file::exists(matRec->archivePath)) {
             continue;
         }
 
@@ -185,13 +187,16 @@ ProjectExportManager::exportProject(const Project& project, const Path& outputPa
             continue;
         }
 
-        std::string matArchPath =
-            "materials/" + std::to_string(*matId) + ".dwmat";
-        if (!mz_zip_writer_add_mem(&zip, matArchPath.c_str(), matData->data(),
-                                   matData->size(), MZ_DEFAULT_COMPRESSION)) {
+        std::string matArchPath = "materials/" + std::to_string(*matId) + ".dwmat";
+        if (!mz_zip_writer_add_mem(&zip,
+                                   matArchPath.c_str(),
+                                   matData->data(),
+                                   matData->size(),
+                                   MZ_DEFAULT_COMPRESSION)) {
             log::warningf(kLogModule,
                           "Failed to add material %lld for model '%s'",
-                          static_cast<long long>(*matId), model.name.c_str());
+                          static_cast<long long>(*matId),
+                          model.name.c_str());
             continue;
         }
         writtenMaterialIds.insert(*matId);
@@ -199,11 +204,13 @@ ProjectExportManager::exportProject(const Project& project, const Path& outputPa
 
     // Build manifest with material/thumbnail info and add to ZIP
     std::string manifestJson =
-        buildManifestJson(project, models, modelIdToMaterialId,
-                          hashToThumbnailPath);
+        buildManifestJson(project, models, modelIdToMaterialId, hashToThumbnailPath);
 
-    if (!mz_zip_writer_add_mem(&zip, kManifestFile, manifestJson.data(),
-                               manifestJson.size(), MZ_DEFAULT_COMPRESSION)) {
+    if (!mz_zip_writer_add_mem(&zip,
+                               kManifestFile,
+                               manifestJson.data(),
+                               manifestJson.size(),
+                               MZ_DEFAULT_COMPRESSION)) {
         mz_zip_writer_end(&zip);
         (void)file::remove(outputPath);
         return DwprojExportResult::fail("Failed to write manifest to archive");
@@ -221,7 +228,8 @@ ProjectExportManager::exportProject(const Project& project, const Path& outputPa
     int modelCount = static_cast<int>(models.size());
     log::infof(kLogModule,
                "Exported project '%s' with %d models (%llu bytes) to '%s'",
-               project.name().c_str(), modelCount,
+               project.name().c_str(),
+               modelCount,
                static_cast<unsigned long long>(totalBytes),
                outputPath.string().c_str());
 
@@ -230,23 +238,20 @@ ProjectExportManager::exportProject(const Project& project, const Path& outputPa
 
 // --- Import ---
 
-DwprojExportResult
-ProjectExportManager::importProject(const Path& archivePath,
-                                    ExportProgressCallback progress) {
+DwprojExportResult ProjectExportManager::importProject(const Path& archivePath,
+                                                       ExportProgressCallback progress) {
     ModelRepository modelRepo(m_db);
     ProjectRepository projectRepo(m_db);
 
     // Open ZIP reader
     mz_zip_archive zip{};
     if (!mz_zip_reader_init_file(&zip, archivePath.string().c_str(), 0)) {
-        return DwprojExportResult::fail("Failed to open archive: " +
-                                        archivePath.string());
+        return DwprojExportResult::fail("Failed to open archive: " + archivePath.string());
     }
 
     // Extract manifest.json
     size_t manifestSize = 0;
-    void* manifestData =
-        mz_zip_reader_extract_file_to_heap(&zip, kManifestFile, &manifestSize, 0);
+    void* manifestData = mz_zip_reader_extract_file_to_heap(&zip, kManifestFile, &manifestSize, 0);
     if (!manifestData) {
         mz_zip_reader_end(&zip);
         return DwprojExportResult::fail("Archive missing manifest.json");
@@ -268,7 +273,8 @@ ProjectExportManager::importProject(const Path& archivePath,
         log::warningf(kLogModule,
                       "Archive format version %d is newer than supported version %d. "
                       "Some features may be unavailable.",
-                      manifest.formatVersion, FormatVersion);
+                      manifest.formatVersion,
+                      FormatVersion);
     }
 
     // Create project record
@@ -296,7 +302,8 @@ ProjectExportManager::importProject(const Path& archivePath,
 
         // Path traversal check
         if (containsPathTraversal(mm.fileInArchive)) {
-            log::warningf(kLogModule, "Skipping model with suspicious path: %s",
+            log::warningf(kLogModule,
+                          "Skipping model with suspicious path: %s",
                           mm.fileInArchive.c_str());
             continue;
         }
@@ -307,10 +314,11 @@ ProjectExportManager::importProject(const Path& archivePath,
         if (!alreadyExists) {
             // Extract blob from ZIP
             size_t blobSize = 0;
-            void* blobData = mz_zip_reader_extract_file_to_heap(
-                &zip, mm.fileInArchive.c_str(), &blobSize, 0);
+            void* blobData =
+                mz_zip_reader_extract_file_to_heap(&zip, mm.fileInArchive.c_str(), &blobSize, 0);
             if (!blobData) {
-                log::warningf(kLogModule, "Failed to extract model blob: %s",
+                log::warningf(kLogModule,
+                              "Failed to extract model blob: %s",
                               mm.fileInArchive.c_str());
                 continue;
             }
@@ -326,7 +334,8 @@ ProjectExportManager::importProject(const Path& archivePath,
             Path destPath = modelsDir / (mm.hash + ext);
             if (!file::writeBinary(destPath, blobData, blobSize)) {
                 mz_free(blobData);
-                log::warningf(kLogModule, "Failed to write model blob to: %s",
+                log::warningf(kLogModule,
+                              "Failed to write model blob to: %s",
                               destPath.string().c_str());
                 continue;
             }
@@ -372,14 +381,13 @@ ProjectExportManager::importProject(const Path& archivePath,
 
     for (size_t i = 0; i < manifest.models.size(); i++) {
         const auto& mm = manifest.models[i];
-        if (mm.thumbnailInArchive.empty() ||
-            containsPathTraversal(mm.thumbnailInArchive)) {
+        if (mm.thumbnailInArchive.empty() || containsPathTraversal(mm.thumbnailInArchive)) {
             continue;
         }
 
         size_t thumbSize = 0;
-        void* thumbData = mz_zip_reader_extract_file_to_heap(
-            &zip, mm.thumbnailInArchive.c_str(), &thumbSize, 0);
+        void* thumbData =
+            mz_zip_reader_extract_file_to_heap(&zip, mm.thumbnailInArchive.c_str(), &thumbSize, 0);
         if (!thumbData) {
             continue;
         }
@@ -423,14 +431,13 @@ ProjectExportManager::importProject(const Path& archivePath,
         } else {
             // Extract .dwmat from ZIP
             size_t matSize = 0;
-            void* matData = mz_zip_reader_extract_file_to_heap(
-                &zip, mm.materialInArchive.c_str(), &matSize, 0);
+            void* matData =
+                mz_zip_reader_extract_file_to_heap(&zip, mm.materialInArchive.c_str(), &matSize, 0);
             if (!matData) {
                 continue;
             }
 
-            std::string matFilename =
-                std::to_string(oldMatId) + ".dwmat";
+            std::string matFilename = std::to_string(oldMatId) + ".dwmat";
             Path matDest = materialsDir / matFilename;
             if (!file::writeBinary(matDest, matData, matSize)) {
                 mz_free(matData);
@@ -440,13 +447,11 @@ ProjectExportManager::importProject(const Path& archivePath,
 
             // Try to load metadata from the .dwmat archive
             MaterialRecord matRec;
-            auto matArchiveData =
-                MaterialArchive::load(matDest.string());
+            auto matArchiveData = MaterialArchive::load(matDest.string());
             if (matArchiveData) {
                 matRec = matArchiveData->metadata;
             } else {
-                matRec.name = "Imported Material " +
-                              std::to_string(oldMatId);
+                matRec.name = "Imported Material " + std::to_string(oldMatId);
             }
             matRec.archivePath = matDest;
 
@@ -459,18 +464,18 @@ ProjectExportManager::importProject(const Path& archivePath,
         }
 
         // Assign material to model
-        auto stmt = m_db.prepare(
-            "UPDATE models SET material_id = ? WHERE id = ?");
-        if (stmt.isValid() && stmt.bindInt(1, newMatId) &&
-            stmt.bindInt(2, imported->id)) {
+        auto stmt = m_db.prepare("UPDATE models SET material_id = ? WHERE id = ?");
+        if (stmt.isValid() && stmt.bindInt(1, newMatId) && stmt.bindInt(2, imported->id)) {
             (void)stmt.execute();
         }
     }
 
     mz_zip_reader_end(&zip);
 
-    log::infof(kLogModule, "Imported project '%s' with %d models from '%s'",
-               manifest.projectName.c_str(), importedCount,
+    log::infof(kLogModule,
+               "Imported project '%s' with %d models from '%s'",
+               manifest.projectName.c_str(),
+               importedCount,
                archivePath.string().c_str());
 
     auto result = DwprojExportResult::ok(importedCount, totalBytes);
@@ -481,7 +486,8 @@ ProjectExportManager::importProject(const Path& archivePath,
 // --- Manifest JSON ---
 
 std::string ProjectExportManager::buildManifestJson(
-    const Project& project, const std::vector<ModelRecord>& models,
+    const Project& project,
+    const std::vector<ModelRecord>& models,
     const std::unordered_map<i64, i64>& modelIdToMaterialId,
     const std::unordered_map<std::string, std::string>& hashToThumbnailPath) {
     nlohmann::json j;
@@ -512,8 +518,7 @@ std::string ProjectExportManager::buildManifestJson(
         auto matIt = modelIdToMaterialId.find(m.id);
         if (matIt != modelIdToMaterialId.end()) {
             mj["material_id"] = matIt->second;
-            mj["material_in_archive"] =
-                "materials/" + std::to_string(matIt->second) + ".dwmat";
+            mj["material_in_archive"] = "materials/" + std::to_string(matIt->second) + ".dwmat";
         } else {
             mj["material_id"] = nullptr;
             mj["material_in_archive"] = "";
@@ -534,7 +539,8 @@ std::string ProjectExportManager::buildManifestJson(
     return j.dump(2);
 }
 
-bool ProjectExportManager::parseManifest(const std::string& json, Manifest& out,
+bool ProjectExportManager::parseManifest(const std::string& json,
+                                         Manifest& out,
                                          std::string& error) {
     try {
         auto j = nlohmann::json::parse(json);
@@ -589,8 +595,7 @@ bool ProjectExportManager::parseManifest(const std::string& json, Manifest& out,
             mm.thumbnailInArchive = mj.value("thumbnail_in_archive", "");
 
             if (mm.hash.empty()) {
-                log::warningf(kLogModule,
-                              "Skipping model with missing hash in manifest");
+                log::warningf(kLogModule, "Skipping model with missing hash in manifest");
                 continue;
             }
 

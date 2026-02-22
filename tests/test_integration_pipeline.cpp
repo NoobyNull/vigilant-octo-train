@@ -2,10 +2,10 @@
 
 #include <filesystem>
 
-#include "../src/core/mesh/mesh.h"
-#include "../src/core/loaders/loader_factory.h"
-#include "../src/core/gcode/gcode_parser.h"
 #include "../src/core/gcode/gcode_analyzer.h"
+#include "../src/core/gcode/gcode_parser.h"
+#include "../src/core/loaders/loader_factory.h"
+#include "../src/core/mesh/mesh.h"
 
 namespace dw {
 namespace fs = std::filesystem;
@@ -210,4 +210,4 @@ TEST_F(IntegrationPipelineTest, GCodeStatisticsAreComputed) {
     EXPECT_GE(stats.cuttingPathLength, 0.0f);
 }
 
-}  // namespace dw
+} // namespace dw

@@ -10,16 +10,14 @@ class WorkspaceTest : public ::testing::Test {
   protected:
     Workspace workspace;
 
-    void SetUp() override {
-        threading::initMainThread();
-    }
+    void SetUp() override { threading::initMainThread(); }
 
     // Helper to create a test mesh
     std::shared_ptr<Mesh> createTestMesh(size_t vertexCount = 3) {
         auto mesh = std::make_shared<Mesh>();
         for (size_t i = 0; i < vertexCount; ++i) {
-            mesh->addVertex(Vertex(Vec3(static_cast<float>(i), 0.0f, 0.0f),
-                                   Vec3(0.0f, 1.0f, 0.0f)));
+            mesh->addVertex(
+                Vertex(Vec3(static_cast<float>(i), 0.0f, 0.0f), Vec3(0.0f, 1.0f, 0.0f)));
         }
         if (vertexCount >= 3) {
             mesh->addTriangle(0, 1, 2);
@@ -129,9 +127,9 @@ TEST_F(WorkspaceTest, ClearAllRemovesAllFocusedObjects) {
 TEST_F(WorkspaceTest, WorkspaceDoesNotHoldExtraneousReferences) {
     {
         auto mesh = createTestMesh();
-        int refCountBefore = mesh.use_count();  // mesh + this scope
+        int refCountBefore = mesh.use_count(); // mesh + this scope
         workspace.setFocusedMesh(mesh);
-        int refCountAfter = mesh.use_count();   // mesh + this scope + workspace
+        int refCountAfter = mesh.use_count(); // mesh + this scope + workspace
         EXPECT_EQ(refCountAfter, refCountBefore + 1);
 
         workspace.clearFocusedMesh();
@@ -168,4 +166,4 @@ TEST_F(WorkspaceTest, MultipleSetAndClearCycles) {
     EXPECT_FALSE(workspace.hasFocusedToolpath());
 }
 
-}  // namespace dw
+} // namespace dw

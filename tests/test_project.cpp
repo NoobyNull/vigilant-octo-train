@@ -63,7 +63,7 @@ TEST(Project, AddModel) {
 TEST(Project, AddModel_NoDuplicate) {
     dw::Project proj;
     proj.addModel(1);
-    proj.addModel(1);  // duplicate
+    proj.addModel(1); // duplicate
 
     // Should either have 1 or 2 depending on impl; just don't crash
     EXPECT_TRUE(proj.hasModel(1));
@@ -85,7 +85,7 @@ TEST(Project, RemoveModel) {
 TEST(Project, RemoveModel_NotPresent) {
     dw::Project proj;
     proj.addModel(1);
-    proj.removeModel(999);  // not present, should not crash
+    proj.removeModel(999); // not present, should not crash
     EXPECT_EQ(proj.modelCount(), 1);
 }
 

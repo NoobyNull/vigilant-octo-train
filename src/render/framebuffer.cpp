@@ -10,11 +10,8 @@ Framebuffer::~Framebuffer() {
 }
 
 Framebuffer::Framebuffer(Framebuffer&& other) noexcept
-    : m_fbo(other.m_fbo)
-    , m_colorTexture(other.m_colorTexture)
-    , m_depthTexture(other.m_depthTexture)
-    , m_width(other.m_width)
-    , m_height(other.m_height) {
+    : m_fbo(other.m_fbo), m_colorTexture(other.m_colorTexture),
+      m_depthTexture(other.m_depthTexture), m_width(other.m_width), m_height(other.m_height) {
     other.m_fbo = 0;
     other.m_colorTexture = 0;
     other.m_depthTexture = 0;
@@ -64,8 +61,15 @@ bool Framebuffer::create(int width, int height) {
     // Create depth texture
     glGenTextures(1, &m_depthTexture);
     glBindTexture(GL_TEXTURE_2D, m_depthTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, width, height, 0, GL_DEPTH_COMPONENT,
-                 GL_FLOAT, nullptr);
+    glTexImage2D(GL_TEXTURE_2D,
+                 0,
+                 GL_DEPTH_COMPONENT24,
+                 width,
+                 height,
+                 0,
+                 GL_DEPTH_COMPONENT,
+                 GL_FLOAT,
+                 nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_depthTexture, 0);
