@@ -157,6 +157,14 @@ void FileIOManager::onFilesDropped(const std::vector<std::string>& paths) {
                             progressDlg->finish();
 
                         if (result.success) {
+                            // Auto-open the imported project
+                            if (result.importedProjectId) {
+                                auto project = projMgr->open(*result.importedProjectId);
+                                if (project) {
+                                    projMgr->setCurrentProject(project);
+                                }
+                            }
+
                             ToastManager::instance().show(
                                 ToastType::Success, "Project Imported",
                                 archivePath.stem().string() + " (" +
@@ -491,12 +499,21 @@ void FileIOManager::importProjectArchive(std::function<void(bool)> setShowStartP
                             progressDlg->advance(item);
                     });
 
-                mtq->enqueue([result, progressDlg, archivePath, setShowStartPage]() {
+                mtq->enqueue([result, progressDlg, projMgr, archivePath, setShowStartPage]() {
                     if (progressDlg)
                         progressDlg->finish();
 
                     if (result.success) {
                         setShowStartPage(false);
+
+                        // Auto-open the imported project
+                        if (result.importedProjectId) {
+                            auto project = projMgr->open(*result.importedProjectId);
+                            if (project) {
+                                projMgr->setCurrentProject(project);
+                            }
+                        }
+
                         ToastManager::instance().show(
                             ToastType::Success, "Project Imported",
                             archivePath.stem().string() + " (" +
