@@ -96,7 +96,7 @@ Plans:
 - [x] 05-01-PLAN.md — ProjectExportManager core: export/import logic with miniz ZIP and nlohmann/json manifest
 - [x] 05-02-PLAN.md — UI wiring: Export button in ProjectPanel, Import via File menu, ProgressDialog integration
 - [x] 05-03-PLAN.md — Gap closure: add materials and thumbnails to .dwproj archive
-- [ ] 05-04-PLAN.md — Gap closure: auto-open imported project after import
+- [x] 05-04-PLAN.md — Gap closure: auto-open imported project after import
 
 ## Progress
 
@@ -113,7 +113,7 @@ Plans:
 | 2 Content-Addressable Storage | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 3 Import File Handling | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 4 Organization & Graph | v1.1 | 4/4 | Complete | 2026-02-22 |
-| 5 Project Export | v1.1 | 3/4 | Gap Closure | 2026-02-22 |
+| 5 Project Export | v1.1 | 4/4 | Complete | 2026-02-22 |
 
 ---
 

@@ -67,4 +67,4 @@
 | ORG-04 | Phase 4 | 04-03 | Complete |
 | ORG-05 | Phase 4 | 04-03 | Complete |
 | EXPORT-01 | Phase 5 | 05-01, 05-02, 05-03 | Complete |
-| EXPORT-02 | Phase 5 | 05-01, 05-02 | Complete |
+| EXPORT-02 | Phase 5 | 05-01, 05-02, 05-04 | Complete |

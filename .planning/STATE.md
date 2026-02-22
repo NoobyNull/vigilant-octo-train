@@ -1,7 +1,7 @@
 # Project State: Digital Workshop
 
 **Last Updated:** 2026-02-22
-**Current Session:** Phase 05 Plan 03 completed (Gap closure: materials & thumbnails in archive)
+**Current Session:** Phase 05 Plan 04 completed (Gap closure: auto-open imported project)
 
 ---
 
@@ -19,15 +19,15 @@ See: `.planning/PROJECT.md` (updated 2026-02-21)
 
 **Milestone:** v1.1 Library Storage & Organization
 **Phase:** 5 — Project Export (complete)
-**Plan:** 05-03 complete
-**Status:** Gap closure in progress
+**Plan:** 05-04 complete
+**Status:** Milestone complete
 
 ```
 v1.1 Progress: [====================] 4/4 phases complete
-Phase 05: Plan 3/4 complete (gap closure)
+Phase 05: Plan 4/4 complete
 ```
 
-Last activity: 2026-02-22 — 05-03 Gap closure: materials & thumbnails in archive (2 tasks, 3m 47s)
+Last activity: 2026-02-22 — 05-04 Gap closure: auto-open imported project (2 tasks, 1m 14s)
 
 ---
 
@@ -41,8 +41,8 @@ Last activity: 2026-02-22 — 05-03 Gap closure: materials & thumbnails in archi
 **Phase 01:** 6 plans, materials system (completed 2026-02-20)
 
 ### v1.1
-**Plans completed:** 11
-**Cycle time:** 3m 14s avg (11 plans)
+**Plans completed:** 12
+**Cycle time:** 3m 4s avg (12 plans)
 
 | Phase | Plan | Duration | Tasks | Tests |
 |-------|------|----------|-------|-------|
@@ -57,6 +57,7 @@ Last activity: 2026-02-22 — 05-03 Gap closure: materials & thumbnails in archi
 | 05 | 01 - ProjectExportManager Core | 4m 39s | 2 | 4 |
 | 05 | 02 - Export/Import UI Wiring | 4m 0s | 2 | 0 |
 | 05 | 03 - Gap: Materials & Thumbnails in Archive | 3m 47s | 2 | 5 |
+| 05 | 04 - Gap: Auto-Open Imported Project | 1m 14s | 2 | 0 |
 
 ---
 
