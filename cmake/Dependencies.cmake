@@ -73,7 +73,10 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(glm)
 
 # SQLite3
-find_package(SQLite3 QUIET)
+# macOS system SQLite disables load_extension; always use FetchContent there
+if(NOT APPLE)
+    find_package(SQLite3 QUIET)
+endif()
 if(NOT SQLite3_FOUND)
     message(STATUS "SQLite3 not found, fetching from GitHub...")
     FetchContent_Declare(
