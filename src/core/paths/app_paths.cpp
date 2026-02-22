@@ -14,6 +14,10 @@
     #endif
     #include <windows.h>
     #include <shlobj.h>
+#elif defined(__APPLE__)
+    #include <pwd.h>
+    #include <unistd.h>
+    #include <mach-o/dyld.h>
 #else
     #include <pwd.h>
     #include <unistd.h>
