@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.20)
 
 # Project definition (C needed for SQLite3)
 project(DigitalWorkshop
-    VERSION 0.1.0
+    VERSION 1.4.0
     DESCRIPTION "3D model management, G-code analysis, and 2D cut optimization"
     LANGUAGES CXX C
 )
