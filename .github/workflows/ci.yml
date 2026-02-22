@@ -198,7 +198,8 @@ jobs:
       - name: Package (DMG)
         run: |
           cd build
-          cpack -G DragNDrop -C Release
+          # hdiutil can fail with "Resource busy" on CI; retry once
+          cpack -G DragNDrop -C Release || { sleep 5 && cpack -G DragNDrop -C Release; }
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

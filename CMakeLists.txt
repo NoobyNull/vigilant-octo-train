@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.20)
 
 # Project definition (C needed for SQLite3)
 project(DigitalWorkshop
-    VERSION 1.4.1
+    VERSION 1.4.2
     DESCRIPTION "3D model management, G-code analysis, and 2D cut optimization"
     LANGUAGES CXX C
 )
@@ -71,7 +71,7 @@ if(WIN32)
 elseif(APPLE)
     # macOS: DMG disk image
     set(CPACK_GENERATOR "DragNDrop")
-    set(CPACK_DMG_VOLUME_NAME "Digital Workshop")
+    set(CPACK_DMG_VOLUME_NAME "DigitalWorkshop")
     set(CPACK_BUNDLE_NAME "Digital Workshop")
 
 else()
