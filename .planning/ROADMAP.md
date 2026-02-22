@@ -93,7 +93,7 @@ Plans:
   3. Export progress is visible and does not block the UI
 **Plans:** 2 plans
 Plans:
-- [ ] 05-01-PLAN.md — ProjectExportManager core: export/import logic with miniz ZIP and nlohmann/json manifest
+- [x] 05-01-PLAN.md — ProjectExportManager core: export/import logic with miniz ZIP and nlohmann/json manifest
 - [ ] 05-02-PLAN.md — UI wiring: Export button in ProjectPanel, Import via File menu, ProgressDialog integration
 
 ## Progress
@@ -111,7 +111,7 @@ Plans:
 | 2 Content-Addressable Storage | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 3 Import File Handling | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 4 Organization & Graph | v1.1 | 4/4 | Complete | 2026-02-22 |
-| 5 Project Export | v1.1 | 0/2 | Not started | - |
+| 5 Project Export | v1.1 | 1/2 | In progress | - |
 
 ---
 
