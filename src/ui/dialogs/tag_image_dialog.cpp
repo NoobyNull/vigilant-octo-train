@@ -49,7 +49,8 @@ void TagImageDialog::setResult(const DescriptorResult& result) {
     auto join = [](const std::vector<std::string>& v) -> std::string {
         std::string out;
         for (size_t i = 0; i < v.size(); ++i) {
-            if (i > 0) out += ", ";
+            if (i > 0)
+                out += ", ";
             out += v[i];
         }
         return out;
@@ -122,8 +123,8 @@ void TagImageDialog::render() {
     ImGui::Spacing();
 
     if (m_thumbnailTexture != 0) {
-        ImGui::Image(static_cast<ImTextureID>(m_thumbnailTexture),
-                     ImVec2(thumbSize, thumbSize), thumbUV0, thumbUV1);
+        ImGui::Image(static_cast<ImTextureID>(m_thumbnailTexture), ImVec2(thumbSize, thumbSize),
+                     thumbUV0, thumbUV1);
     } else {
         ImGui::Dummy(ImVec2(thumbSize, thumbSize));
         ImGui::SetCursorPos(ImGui::GetCursorPos()); // no-op, placeholder

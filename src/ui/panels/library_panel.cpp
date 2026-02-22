@@ -521,7 +521,7 @@ void LibraryPanel::renderCategoryAssignDialog() {
 }
 
 void LibraryPanel::renderModelList() {
-    ImGui::BeginChild("ModelList", ImVec2(0, 0), false);
+    ImGui::BeginChild("ModelList", ImVec2(0, 0), false, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
     // Ctrl+scroll to zoom thumbnails in grid view
     if (m_showThumbnails && ImGui::IsWindowHovered() && ImGui::GetIO().KeyCtrl) {
@@ -804,8 +804,7 @@ void LibraryPanel::registerContextMenuEntries() {
         {"Tag Image" + countSuffix,
          [this]() {
              if (m_onTagImage && !m_selectedModelIds.empty()) {
-                 std::vector<int64_t> ids(m_selectedModelIds.begin(),
-                                          m_selectedModelIds.end());
+                 std::vector<int64_t> ids(m_selectedModelIds.begin(), m_selectedModelIds.end());
                  m_onTagImage(ids);
              }
          }},
@@ -906,7 +905,7 @@ void LibraryPanel::registerContextMenuEntries() {
 }
 
 void LibraryPanel::renderGCodeList() {
-    ImGui::BeginChild("GCodeList", ImVec2(0, 0), false);
+    ImGui::BeginChild("GCodeList", ImVec2(0, 0), false, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
     // Ctrl+scroll to zoom thumbnails in grid view
     if (m_showThumbnails && ImGui::IsWindowHovered() && ImGui::GetIO().KeyCtrl) {
@@ -950,7 +949,8 @@ void LibraryPanel::renderGCodeList() {
 }
 
 void LibraryPanel::renderCombinedList() {
-    ImGui::BeginChild("CombinedList", ImVec2(0, 0), false);
+    ImGui::BeginChild("CombinedList", ImVec2(0, 0), false,
+                      ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
     // Ctrl+scroll to zoom thumbnails in grid view
     if (m_showThumbnails && ImGui::IsWindowHovered() && ImGui::GetIO().KeyCtrl) {

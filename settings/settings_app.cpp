@@ -120,6 +120,16 @@ bool SettingsApp::init() {
     auto& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
+    // Load Inter as primary font
+    {
+#include "ui/fonts/inter_regular.h"
+        ImFontConfig fontCfg;
+        fontCfg.OversampleH = 2;
+        fontCfg.OversampleV = 1;
+        io.Fonts->AddFontFromMemoryCompressedBase85TTF(inter_regular_compressed_data_base85, 16.0f,
+                                                       &fontCfg);
+    }
+
     applyThemePreview();
 
     ImGui_ImplSDL2_InitForOpenGL(m_window, m_glContext);

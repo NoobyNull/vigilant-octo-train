@@ -28,7 +28,7 @@ class Theme {
         static constexpr unsigned int TextDim = 0xFF808080;    // Secondary text
     };
 
-  private:
+    // Base style (spacing, rounding, borders) — called before ScaleAllSizes for DPI
     static void applyBaseStyle();
 };
 

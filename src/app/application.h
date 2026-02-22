@@ -142,6 +142,13 @@ class Application {
     LoadingState m_loadingState;
     std::thread m_loadThread;
 
+    // DPI scaling
+    void rebuildFontAtlas(float scale);
+    float detectDpiScale() const;
+    float m_dpiScale = 1.0f;
+    float m_uiScale = 1.0f; // Combined dpi * user scale
+    int m_displayIndex = 0;
+
     static constexpr int DEFAULT_WIDTH = 1280;
     static constexpr int DEFAULT_HEIGHT = 720;
     static constexpr const char* WINDOW_TITLE = "Digital Workshop";

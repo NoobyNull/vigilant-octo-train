@@ -4,6 +4,7 @@
 
 #include "app/application.h"
 
+#include <cmath>
 #include <cstdio>
 #include <filesystem>
 
@@ -28,8 +29,8 @@
 #include "core/library/library_manager.h"
 #include "core/loaders/loader_factory.h"
 #include "core/loaders/texture_loader.h"
-#include "core/materials/gemini_material_service.h"
 #include "core/materials/gemini_descriptor_service.h"
+#include "core/materials/gemini_material_service.h"
 #include "core/materials/material_archive.h"
 #include "core/materials/material_manager.h"
 #include "core/paths/app_paths.h"
@@ -45,8 +46,8 @@
 #include "render/thumbnail_generator.h"
 #include "ui/dialogs/import_options_dialog.h"
 #include "ui/dialogs/import_summary_dialog.h"
-#include "ui/dialogs/progress_dialog.h"
 #include "ui/dialogs/maintenance_dialog.h"
+#include "ui/dialogs/progress_dialog.h"
 #include "ui/dialogs/tag_image_dialog.h"
 #include "ui/panels/library_panel.h"
 #include "ui/panels/materials_panel.h"
@@ -54,6 +55,7 @@
 #include "ui/panels/properties_panel.h"
 #include "ui/panels/start_page.h"
 #include "ui/panels/viewport_panel.h"
+#include "ui/theme.h"
 #include "ui/widgets/toast.h"
 #include "version.h"
 
@@ -76,6 +78,9 @@ bool Application::init() {
     if (Config::instance().getEnableFloatingWindows()) {
         SDL_SetHint(SDL_HINT_VIDEODRIVER, "x11");
     }
+
+    // Request per-monitor DPI awareness on Windows
+    SDL_SetHint(SDL_HINT_WINDOWS_DPI_AWARENESS, "permonitorv2");
 
     // Initialize SDL2
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
@@ -140,18 +145,13 @@ bool Application::init() {
     static std::string imguiIniPath = (paths::getConfigDir() / "imgui.ini").string();
     io.IniFilename = imguiIniPath.c_str();
 
-    // Load default font, then merge FontAwesome 6 Solid icons into it
-    io.Fonts->AddFontDefault();
-    {
-#include "ui/fonts/fa_solid_900.h"
-        static const ImWchar iconRanges[] = {0xf000, 0xf8ff, 0};
-        ImFontConfig iconCfg;
-        iconCfg.MergeMode = true;
-        iconCfg.PixelSnapH = true;
-        iconCfg.GlyphMinAdvanceX = 16.0f;
-        io.Fonts->AddFontFromMemoryCompressedBase85TTF(fa_solid_900_compressed_data_base85, 16.0f,
-                                                       &iconCfg, iconRanges);
-    }
+    // Detect DPI scale and combine with user's UI scale setting
+    m_dpiScale = detectDpiScale();
+    m_uiScale = m_dpiScale * cfg.getUiScale();
+    m_displayIndex = SDL_GetWindowDisplayIndex(m_window);
+
+    // Load fonts at scaled size
+    rebuildFontAtlas(m_uiScale);
 
     ImGui_ImplSDL2_InitForOpenGL(m_window, m_glContext);
     ImGui_ImplOpenGL3_Init("#version 330");
@@ -537,62 +537,59 @@ bool Application::init() {
                 }
             }
 
-            ToastManager::instance().show(ToastType::Success, "Tagged",
-                                           result.title);
+            ToastManager::instance().show(ToastType::Success, "Tagged", result.title);
             log::infof("App", "Tagged model %lld as: %s", static_cast<long long>(modelId),
                        result.title.c_str());
         });
 
         // "Tag Image" context menu action
-        m_uiManager->libraryPanel()->setOnTagImage(
-            [this, tagDlg](const std::vector<int64_t>& modelIds) {
-                if (modelIds.empty()) {
+        m_uiManager->libraryPanel()->setOnTagImage([this,
+                                                    tagDlg](const std::vector<int64_t>& modelIds) {
+            if (modelIds.empty()) {
+                return;
+            }
+
+            // Single selection: open interactive dialog
+            if (modelIds.size() == 1) {
+                auto record = m_libraryManager->getModel(modelIds[0]);
+                if (!record) {
                     return;
                 }
+                GLuint tex = m_uiManager->libraryPanel()->getThumbnailTextureForModel(modelIds[0]);
+                tagDlg->open(*record, tex);
+                return;
+            }
 
-                // Single selection: open interactive dialog
-                if (modelIds.size() == 1) {
-                    auto record = m_libraryManager->getModel(modelIds[0]);
-                    if (!record) {
-                        return;
-                    }
-                    GLuint tex =
-                        m_uiManager->libraryPanel()->getThumbnailTextureForModel(modelIds[0]);
-                    tagDlg->open(*record, tex);
-                    return;
+            // Multi selection: fire-and-forget batch tagging
+            std::string apiKey = Config::instance().getGeminiApiKey();
+            if (apiKey.empty()) {
+                log::warning("App", "Gemini API key not configured");
+                return;
+            }
+
+            auto* svc = m_descriptorService.get();
+            auto* libMgr = m_libraryManager.get();
+            auto* mtq = m_mainThreadQueue.get();
+            auto* libPanel = m_uiManager->libraryPanel();
+            auto* propPanel = m_uiManager->propertiesPanel();
+            size_t count = modelIds.size();
+
+            for (int64_t modelId : modelIds) {
+                auto record = m_libraryManager->getModel(modelId);
+                if (!record || record->thumbnailPath.empty()) {
+                    continue;
                 }
 
-                // Multi selection: fire-and-forget batch tagging
-                std::string apiKey = Config::instance().getGeminiApiKey();
-                if (apiKey.empty()) {
-                    log::warning("App", "Gemini API key not configured");
-                    return;
-                }
+                std::string thumbPath = record->thumbnailPath.string();
+                std::string modelName = record->name;
 
-                auto* svc = m_descriptorService.get();
-                auto* libMgr = m_libraryManager.get();
-                auto* mtq = m_mainThreadQueue.get();
-                auto* libPanel = m_uiManager->libraryPanel();
-                auto* propPanel = m_uiManager->propertiesPanel();
-                size_t count = modelIds.size();
-
-                for (int64_t modelId : modelIds) {
-                    auto record = m_libraryManager->getModel(modelId);
-                    if (!record || record->thumbnailPath.empty()) {
-                        continue;
-                    }
-
-                    std::string thumbPath = record->thumbnailPath.string();
-                    std::string modelName = record->name;
-
-                    std::thread([svc, libMgr, mtq, libPanel, propPanel, modelId, modelName,
-                                 thumbPath, apiKey, count]() {
-                        auto result = svc->describe(thumbPath, apiKey);
-                        mtq->enqueue([libMgr, libPanel, propPanel, modelId, modelName, result,
-                                      count]() {
+                std::thread([svc, libMgr, mtq, libPanel, propPanel, modelId, modelName, thumbPath,
+                             apiKey, count]() {
+                    auto result = svc->describe(thumbPath, apiKey);
+                    mtq->enqueue(
+                        [libMgr, libPanel, propPanel, modelId, modelName, result, count]() {
                             if (result.success) {
-                                libMgr->updateDescriptor(modelId, result.title,
-                                                         result.description,
+                                libMgr->updateDescriptor(modelId, result.title, result.description,
                                                          result.hoverNarrative);
                                 auto existing = libMgr->getModel(modelId);
                                 if (existing) {
@@ -606,13 +603,12 @@ bool Application::init() {
                                     libMgr->updateTags(modelId, tags);
                                 }
                                 if (!result.categories.empty()) {
-                                    libMgr->resolveAndAssignCategories(modelId,
-                                                                       result.categories);
+                                    libMgr->resolveAndAssignCategories(modelId, result.categories);
                                 }
                                 libPanel->refresh();
                                 libPanel->invalidateThumbnail(modelId);
-                                ToastManager::instance().show(
-                                    ToastType::Success, "Tagged", result.title);
+                                ToastManager::instance().show(ToastType::Success, "Tagged",
+                                                              result.title);
                                 log::infof("App", "Tagged %s as: %s", modelName.c_str(),
                                            result.title.c_str());
                             } else {
@@ -620,13 +616,12 @@ bool Application::init() {
                                               modelName.c_str(), result.error.c_str());
                             }
                         });
-                    }).detach();
-                }
+                }).detach();
+            }
 
-                ToastManager::instance().show(
-                    ToastType::Info, "Tagging",
-                    "Classifying " + std::to_string(count) + " models...");
-            });
+            ToastManager::instance().show(ToastType::Info, "Tagging",
+                                          "Classifying " + std::to_string(count) + " models...");
+        });
     }
 
     if (m_uiManager->projectPanel()) {
@@ -806,6 +801,19 @@ void Application::processEvents() {
         if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE &&
             event.window.windowID == SDL_GetWindowID(m_window))
             quit();
+        // Detect monitor change for DPI scaling
+        if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_MOVED) {
+            int newDisplay = SDL_GetWindowDisplayIndex(m_window);
+            if (newDisplay != m_displayIndex) {
+                m_displayIndex = newDisplay;
+                float newDpi = detectDpiScale();
+                if (std::abs(newDpi - m_dpiScale) > 0.01f) {
+                    m_dpiScale = newDpi;
+                    float newScale = m_dpiScale * Config::instance().getUiScale();
+                    rebuildFontAtlas(newScale);
+                }
+            }
+        }
         if (event.type == SDL_DROPFILE && event.drop.file != nullptr) {
             droppedFiles.emplace_back(event.drop.file);
             SDL_free(event.drop.file);
@@ -1167,6 +1175,50 @@ void Application::shutdown() {
     }
     SDL_Quit();
     m_initialized = false;
+}
+
+float Application::detectDpiScale() const {
+    int windowW = 0, drawableW = 0;
+    SDL_GetWindowSize(m_window, &windowW, nullptr);
+    SDL_GL_GetDrawableSize(m_window, &drawableW, nullptr);
+    if (windowW > 0 && drawableW > 0) {
+        return static_cast<float>(drawableW) / static_cast<float>(windowW);
+    }
+    return 1.0f;
+}
+
+void Application::rebuildFontAtlas(float scale) {
+    auto& io = ImGui::GetIO();
+    io.Fonts->Clear();
+
+    // Load Inter at scaled size
+    {
+#include "ui/fonts/fa_solid_900.h"
+#include "ui/fonts/inter_regular.h"
+        const float fontSize = 16.0f * scale;
+        const float iconSize = 14.0f * scale;
+
+        ImFontConfig fontCfg;
+        fontCfg.OversampleH = 2;
+        fontCfg.OversampleV = 1;
+        io.Fonts->AddFontFromMemoryCompressedBase85TTF(inter_regular_compressed_data_base85,
+                                                       fontSize, &fontCfg);
+
+        static const ImWchar iconRanges[] = {0xf000, 0xf8ff, 0};
+        ImFontConfig iconCfg;
+        iconCfg.MergeMode = true;
+        iconCfg.PixelSnapH = true;
+        iconCfg.GlyphMinAdvanceX = iconSize;
+        io.Fonts->AddFontFromMemoryCompressedBase85TTF(fa_solid_900_compressed_data_base85,
+                                                       iconSize, &iconCfg, iconRanges);
+    }
+
+    // Scale style values to match font size
+    Theme::applyBaseStyle();
+    ImGui::GetStyle().ScaleAllSizes(scale);
+
+    // ImGui 1.92+ with RendererHasTextures: backend builds and uploads atlas automatically
+    m_uiScale = scale;
 }
 
 } // namespace dw
