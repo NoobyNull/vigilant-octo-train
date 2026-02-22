@@ -78,55 +78,68 @@ std::vector<uint8_t> GeminiDescriptorService::tgaToPng(const std::string& tgaPat
 std::string GeminiDescriptorService::fetchClassification(const std::vector<uint8_t>& imageData,
                                                          const std::string& apiKey) {
     std::string url = std::string(kGeminiApiBase) +
-                      "gemini-2.5-flash-vision:generateContent?key=" + apiKey;
+                      "gemini-2.5-flash:generateContent?key=" + apiKey;
 
-    // Base64 encode the image data (RGBA format from stb_image)
     std::string base64Image = gemini::base64Encode(imageData);
 
-    // Build request JSON with image
+    // Structured response schema for reliable JSON output
+    nlohmann::json schema;
+    schema["type"] = "OBJECT";
+    schema["properties"] = {
+        {"title", {{"type", "STRING"}}},
+        {"description", {{"type", "STRING"}}},
+        {"hoverNarrative", {{"type", "STRING"}}},
+        {"keywords", {{"type", "ARRAY"}, {"items", {{"type", "STRING"}}}}},
+        {"associations", {{"type", "ARRAY"}, {"items", {{"type", "STRING"}}}}},
+        {"categories", {{"type", "ARRAY"}, {"items", {{"type", "STRING"}}}}}};
+    schema["required"] = nlohmann::json::array(
+        {"title", "description", "hoverNarrative", "keywords", "categories"});
+
     nlohmann::json requestBody;
-    requestBody["contents"] = nlohmann::json::array({
-        {
-            {"parts", nlohmann::json::array({
-                {
-                    {"text", "You are an expert 3D model classifier. "
-                             "Analyze this model thumbnail image and provide JSON with: "
-                             "'title': Short name (max 50 chars), "
-                             "'description': Object type/style/category, "
-                             "'hoverNarrative': One sentence summary, "
-                             "'keywords': 3-5 searchable terms, "
-                             "'associations': Related brands/logos/artists, "
-                             "'categories': Hierarchy from broad to specific. "
-                             "Respond with ONLY valid JSON."}
-                },
-                {
-                    {"inlineData", {{"mimeType", "image/jpeg"}, {"data", base64Image}}}
-                }
-            })}
-        }
-    });
+    requestBody["systemInstruction"]["parts"] = nlohmann::json::array(
+        {{{"text",
+           "You are The Descriptor — an art historian and design taxonomist. "
+           "Analyze the depicted SUBJECT MATTER of the 3D model shown in the thumbnail, "
+           "ignoring the physical medium (it is always a 3D model). "
+           "Focus on WHAT is depicted, not HOW it is rendered. "
+           "Provide:\n"
+           "- title: A concise name for the depicted object (max 60 chars)\n"
+           "- description: 2-3 sentence description of the subject, style, and design intent\n"
+           "- hoverNarrative: A single evocative sentence for tooltip display (max 120 chars)\n"
+           "- keywords: 3-5 descriptive tags\n"
+           "- associations: Any recognizable brands, logos, or cultural references "
+           "(empty array if none)\n"
+           "- categories: A classification chain from broad to specific (2-4 levels)"}}});
+
+    requestBody["contents"] = nlohmann::json::array(
+        {{{"parts",
+           nlohmann::json::array(
+               {{{"text", "Classify this 3D model thumbnail."}},
+                {{"inlineData", {{"mimeType", "image/png"}, {"data", base64Image}}}}})}}});
+
+    requestBody["generationConfig"]["responseMimeType"] = "application/json";
+    requestBody["generationConfig"]["responseSchema"] = schema;
 
     std::string response = gemini::curlPost(url, requestBody.dump());
     if (response.empty()) {
         return {};
     }
 
-    // Extract the text content from Gemini response
     try {
         auto json = nlohmann::json::parse(response);
         auto& candidates = json["candidates"];
         if (candidates.empty()) {
-            log::error("DescriptorService", "No candidates in classification response");
+            log::error("Descriptor", "No candidates in response");
             return {};
         }
         auto& parts = candidates[0]["content"]["parts"];
         if (parts.empty()) {
-            log::error("DescriptorService", "No parts in classification response");
+            log::error("Descriptor", "No parts in response");
             return {};
         }
         return parts[0]["text"].get<std::string>();
     } catch (const nlohmann::json::exception& e) {
-        log::errorf("DescriptorService", "Failed to parse classification response: %s", e.what());
+        log::errorf("Descriptor", "Failed to parse response: %s", e.what());
         return {};
     }
 }
