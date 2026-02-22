@@ -91,10 +91,12 @@ Plans:
   1. User can export a project to a .dwproj file containing manifest, model blobs, materials, and thumbnails
   2. A .dwproj file exported on one machine can be imported on a different machine with all models and metadata intact
   3. Export progress is visible and does not block the UI
-**Plans:** 2 plans
+**Plans:** 4 plans
 Plans:
 - [x] 05-01-PLAN.md — ProjectExportManager core: export/import logic with miniz ZIP and nlohmann/json manifest
 - [x] 05-02-PLAN.md — UI wiring: Export button in ProjectPanel, Import via File menu, ProgressDialog integration
+- [ ] 05-03-PLAN.md — Gap closure: add materials and thumbnails to .dwproj archive
+- [ ] 05-04-PLAN.md — Gap closure: auto-open imported project after import
 
 ## Progress
 
@@ -111,7 +113,7 @@ Plans:
 | 2 Content-Addressable Storage | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 3 Import File Handling | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 4 Organization & Graph | v1.1 | 4/4 | Complete | 2026-02-22 |
-| 5 Project Export | v1.1 | 2/2 | Complete | 2026-02-22 |
+| 5 Project Export | v1.1 | 2/4 | Gap Closure | 2026-02-22 |
 
 ---
 
