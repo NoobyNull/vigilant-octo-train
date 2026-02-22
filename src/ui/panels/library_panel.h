@@ -79,6 +79,9 @@ class LibraryPanel : public Panel {
 
     void renderToolbar();
     void renderTabs();
+    void renderCategoryFilter();
+    void renderCategoryBreadcrumb();
+    void renderCategoryAssignDialog();
     void renderModelList();
     void renderGCodeList();
     void renderCombinedList();
@@ -134,6 +137,20 @@ class LibraryPanel : public Panel {
     float m_thumbnailSize = 96.0f;
     static constexpr float THUMB_MIN = 48.0f;
     // THUMB_MAX is computed per-frame as the available content width
+
+    // Category filter state
+    int64_t m_selectedCategoryId = -1;        // -1 = show all
+    std::string m_selectedCategoryName;       // For breadcrumb display
+    std::vector<CategoryRecord> m_categories; // Cached category list
+    bool m_showCategoryAssignDialog = false;
+    float m_searchDebounceTimer = 0.0f;
+    bool m_searchDirty = false;
+    bool m_useFTS = true; // Use FTS5 for search (true) vs LIKE (false)
+
+    // Category assign dialog state
+    std::set<int64_t> m_assignedCategoryIds; // Categories checked for current model(s)
+    char m_newCategoryName[128] = {};
+    int64_t m_newCategoryParent = -1; // -1 = root
 
     // Context menu management
     ContextMenuManager* m_contextMenuManager = nullptr;

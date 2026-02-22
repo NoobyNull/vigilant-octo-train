@@ -25,8 +25,8 @@
 - [ ] **ORG-01**: User can assign models to categories in a 2-level hierarchy (genus/species)
 - [ ] **ORG-02**: User can search models via full-text search across name, tags, filename, and category
 - [x] **ORG-03**: GraphQLite extension loaded at DB init for Cypher graph queries
-- [ ] **ORG-04**: Models, categories, and projects represented as graph nodes with relationship edges
-- [ ] **ORG-05**: User can query relationships via graph traversal (e.g., "all models in project X", "related models")
+- [x] **ORG-04**: Models, categories, and projects represented as graph nodes with relationship edges
+- [x] **ORG-05**: User can query relationships via graph traversal (e.g., "all models in project X", "related models")
 
 ### Export (EXPORT)
 
@@ -64,7 +64,7 @@
 | ORG-01 | Phase 4 | 04-01, 04-04 | In Progress |
 | ORG-02 | Phase 4 | 04-01, 04-04 | In Progress |
 | ORG-03 | Phase 4 | 04-02 | Complete |
-| ORG-04 | Phase 4 | — | Pending |
-| ORG-05 | Phase 4 | — | Pending |
+| ORG-04 | Phase 4 | 04-03 | Complete |
+| ORG-05 | Phase 4 | 04-03 | Complete |
 | EXPORT-01 | Phase 5 | — | Pending |
 | EXPORT-02 | Phase 5 | — | Pending |

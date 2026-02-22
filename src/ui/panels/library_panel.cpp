@@ -127,8 +127,14 @@ void LibraryPanel::render() {
         return;
     }
 
-    // Context menu entries are re-registered per-item in renderModelItem/renderGCodeItem
-    // to keep labels in sync with selection count
+    // Debounce timer for FTS search
+    if (m_searchDirty && m_searchDebounceTimer > 0) {
+        m_searchDebounceTimer -= ImGui::GetIO().DeltaTime;
+        if (m_searchDebounceTimer <= 0) {
+            m_searchDirty = false;
+            refresh();
+        }
+    }
 
     if (ImGui::Begin(m_title.c_str(), &m_open)) {
         renderToolbar();
@@ -136,7 +142,19 @@ void LibraryPanel::render() {
         renderTabs();
         ImGui::Separator();
 
-        // Render content based on active tab
+        // Category breadcrumb when filtering
+        renderCategoryBreadcrumb();
+
+        // Side-by-side layout: category sidebar + content
+        float availH = ImGui::GetContentRegionAvail().y;
+
+        ImGui::BeginChild("CategorySidebar", ImVec2(160, availH), true);
+        renderCategoryFilter();
+        ImGui::EndChild();
+
+        ImGui::SameLine();
+
+        ImGui::BeginChild("ContentArea", ImVec2(0, availH), false);
         switch (m_activeTab) {
         case ViewTab::Models:
             renderModelList();
@@ -148,9 +166,11 @@ void LibraryPanel::render() {
             renderCombinedList();
             break;
         }
+        ImGui::EndChild();
 
         renderRenameDialog();
         renderDeleteConfirm();
+        renderCategoryAssignDialog();
     }
     ImGui::End();
 }
@@ -165,14 +185,44 @@ void LibraryPanel::invalidateThumbnail(int64_t modelId) {
 }
 
 void LibraryPanel::refresh() {
-    if (m_library) {
-        if (m_searchQuery.empty()) {
-            m_models = m_library->getAllModels();
-            m_gcodeFiles = m_library->getAllGCodeFiles();
+    if (!m_library)
+        return;
+
+    // Refresh category cache
+    m_categories = m_library->getAllCategories();
+
+    // Determine model list based on search + category filter
+    if (!m_searchQuery.empty()) {
+        // FTS5 search with BM25 ranking (falls back to LIKE if FTS unavailable)
+        if (m_useFTS) {
+            m_models = m_library->searchModelsFTS(m_searchQuery);
         } else {
             m_models = m_library->searchModels(m_searchQuery);
-            m_gcodeFiles = m_library->searchGCodeFiles(m_searchQuery);
         }
+
+        // If also filtering by category, client-side filter the FTS results
+        if (m_selectedCategoryId > 0) {
+            auto categoryModels = m_library->filterByCategory(m_selectedCategoryId);
+            std::set<int64_t> catIds;
+            for (auto& m : categoryModels)
+                catIds.insert(m.id);
+            m_models.erase(std::remove_if(m_models.begin(), m_models.end(),
+                                          [&](const ModelRecord& m) {
+                                              return catIds.find(m.id) == catIds.end();
+                                          }),
+                           m_models.end());
+        }
+    } else if (m_selectedCategoryId > 0) {
+        m_models = m_library->filterByCategory(m_selectedCategoryId);
+    } else {
+        m_models = m_library->getAllModels();
+    }
+
+    // G-code files are not affected by category filter
+    if (!m_searchQuery.empty()) {
+        m_gcodeFiles = m_library->searchGCodeFiles(m_searchQuery);
+    } else {
+        m_gcodeFiles = m_library->getAllGCodeFiles();
     }
 }
 
@@ -212,7 +262,9 @@ void LibraryPanel::renderToolbar() {
                 return 0;
             },
             &m_searchQuery)) {
-        refresh();
+        // Debounce: reset timer on each keystroke, refresh fires when timer expires
+        m_searchDirty = true;
+        m_searchDebounceTimer = 0.2f; // 200ms debounce
     }
 
     ImGui::SameLine();
@@ -265,6 +317,195 @@ void LibraryPanel::renderTabs() {
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();
+    }
+}
+
+void LibraryPanel::renderCategoryFilter() {
+    // "All Models" button to clear filter
+    bool allSelected = (m_selectedCategoryId == -1);
+    if (ImGui::Selectable("All Models", allSelected)) {
+        m_selectedCategoryId = -1;
+        m_selectedCategoryName.clear();
+        refresh();
+    }
+
+    ImGui::Separator();
+
+    // Build category tree (2-level max)
+    // Roots: categories with no parent
+    for (auto& cat : m_categories) {
+        if (cat.parentId.has_value())
+            continue; // skip children in root loop
+
+        bool isSelected = (m_selectedCategoryId == cat.id);
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
+        if (isSelected)
+            flags |= ImGuiTreeNodeFlags_Selected;
+
+        // Check if this root has children
+        bool hasChildren = false;
+        for (auto& child : m_categories) {
+            if (child.parentId.has_value() && *child.parentId == cat.id) {
+                hasChildren = true;
+                break;
+            }
+        }
+        if (!hasChildren)
+            flags |= ImGuiTreeNodeFlags_Leaf;
+
+        bool open = ImGui::TreeNodeEx(cat.name.c_str(), flags);
+        if (ImGui::IsItemClicked()) {
+            m_selectedCategoryId = cat.id;
+            m_selectedCategoryName = cat.name;
+            refresh();
+        }
+        if (open) {
+            for (auto& child : m_categories) {
+                if (!child.parentId.has_value() || *child.parentId != cat.id)
+                    continue;
+                bool childSelected = (m_selectedCategoryId == child.id);
+                if (ImGui::Selectable(child.name.c_str(), childSelected)) {
+                    m_selectedCategoryId = child.id;
+                    m_selectedCategoryName = cat.name + " > " + child.name;
+                    refresh();
+                }
+            }
+            ImGui::TreePop();
+        }
+    }
+}
+
+void LibraryPanel::renderCategoryBreadcrumb() {
+    if (m_selectedCategoryId <= 0)
+        return;
+
+    ImGui::TextColored(ImVec4(0.6f, 0.8f, 1.0f, 1.0f), "Category: %s",
+                       m_selectedCategoryName.c_str());
+    ImGui::SameLine();
+    if (ImGui::SmallButton("x##clearCat")) {
+        m_selectedCategoryId = -1;
+        m_selectedCategoryName.clear();
+        refresh();
+    }
+    ImGui::Separator();
+}
+
+void LibraryPanel::renderCategoryAssignDialog() {
+    if (m_showCategoryAssignDialog) {
+        ImGui::OpenPopup("Assign Category");
+        m_showCategoryAssignDialog = false;
+
+        // Initialize: load which categories the selected model(s) belong to
+        m_assignedCategoryIds.clear();
+        if (m_library && m_selectedModelIds.size() == 1) {
+            int64_t modelId = *m_selectedModelIds.begin();
+            // Check each category to see if this model is in it
+            for (auto& cat : m_categories) {
+                auto models = m_library->filterByCategory(cat.id);
+                for (auto& m : models) {
+                    if (m.id == modelId) {
+                        m_assignedCategoryIds.insert(cat.id);
+                        break;
+                    }
+                }
+            }
+        }
+        m_newCategoryName[0] = '\0';
+        m_newCategoryParent = -1;
+    }
+
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_Appearing);
+
+    if (ImGui::BeginPopupModal("Assign Category", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Select categories for model:");
+        ImGui::Separator();
+
+        ImGui::BeginChild("CatList", ImVec2(0, 250), true);
+
+        // Show categories as checkable tree
+        for (auto& cat : m_categories) {
+            if (cat.parentId.has_value())
+                continue; // roots only at top level
+
+            bool checked = m_assignedCategoryIds.count(cat.id) > 0;
+            if (ImGui::Checkbox(cat.name.c_str(), &checked)) {
+                if (checked)
+                    m_assignedCategoryIds.insert(cat.id);
+                else
+                    m_assignedCategoryIds.erase(cat.id);
+            }
+
+            // Show children indented
+            ImGui::Indent(20.0f);
+            for (auto& child : m_categories) {
+                if (!child.parentId.has_value() || *child.parentId != cat.id)
+                    continue;
+                bool childChecked = m_assignedCategoryIds.count(child.id) > 0;
+                if (ImGui::Checkbox(child.name.c_str(), &childChecked)) {
+                    if (childChecked)
+                        m_assignedCategoryIds.insert(child.id);
+                    else
+                        m_assignedCategoryIds.erase(child.id);
+                }
+            }
+            ImGui::Unindent(20.0f);
+        }
+
+        ImGui::EndChild();
+
+        // Quick add new category
+        ImGui::Separator();
+        ImGui::SetNextItemWidth(200);
+        ImGui::InputTextWithHint("##NewCat", "New category name...", m_newCategoryName,
+                                 sizeof(m_newCategoryName));
+        ImGui::SameLine();
+        if (ImGui::Button("Add") && m_newCategoryName[0] != '\0') {
+            std::optional<int64_t> parentId;
+            if (m_newCategoryParent > 0)
+                parentId = m_newCategoryParent;
+            auto newId = m_library->createCategory(m_newCategoryName, parentId);
+            if (newId) {
+                m_categories = m_library->getAllCategories();
+                m_assignedCategoryIds.insert(*newId);
+            }
+            m_newCategoryName[0] = '\0';
+        }
+
+        ImGui::Separator();
+        if (ImGui::Button("Apply", ImVec2(120, 0))) {
+            // Apply category assignments for selected model(s)
+            if (m_library) {
+                for (int64_t modelId : m_selectedModelIds) {
+                    // Remove categories no longer checked
+                    for (auto& cat : m_categories) {
+                        bool wasAssigned = false;
+                        auto models = m_library->filterByCategory(cat.id);
+                        for (auto& m : models) {
+                            if (m.id == modelId) {
+                                wasAssigned = true;
+                                break;
+                            }
+                        }
+                        bool isNowAssigned = m_assignedCategoryIds.count(cat.id) > 0;
+
+                        if (wasAssigned && !isNowAssigned) {
+                            m_library->removeModelCategory(modelId, cat.id);
+                        } else if (!wasAssigned && isNowAssigned) {
+                            m_library->assignCategory(modelId, cat.id);
+                        }
+                    }
+                }
+                refresh();
+            }
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
     }
 }
 
@@ -545,6 +786,7 @@ void LibraryPanel::registerContextMenuEntries() {
             "",                                                                // icon
             [this]() { return Config::instance().getDefaultMaterialId() > 0; } // enabled
         },
+        {"Assign Category" + countSuffix, [this]() { m_showCategoryAssignDialog = true; }},
         ContextMenuEntry::separator(),
         {"Rename",
          [this]() {

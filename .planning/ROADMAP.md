@@ -80,7 +80,7 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md — Schema v7: categories tables, FTS5 virtual table + triggers, ModelRepository methods
 - [x] 04-02-PLAN.md — GraphQLite extension loading, Database extension API, GraphManager foundation
-- [ ] 04-03-PLAN.md — Graph node/edge CRUD, LibraryManager dual-write integration
+- [x] 04-03-PLAN.md — Graph node/edge CRUD, LibraryManager dual-write integration
 - [ ] 04-04-PLAN.md — Category UI, FTS5 search bar, Application wiring, human verification
 
 ### Phase 5: Project Export
@@ -110,7 +110,7 @@ Plans:
 | 1 Materials System | Post-v1.0 | 6/6 | Complete | 2026-02-20 |
 | 2 Content-Addressable Storage | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 3 Import File Handling | v1.1 | 2/2 | Complete | 2026-02-22 |
-| 4 Organization & Graph | v1.1 | 2/4 | In Progress | - |
+| 4 Organization & Graph | v1.1 | 3/4 | In Progress | - |
 | 5 Project Export | v1.1 | 0/2 | Not started | - |
 
 ---
