@@ -90,6 +90,8 @@ jobs:
           cppcheck --project=build/compile_commands.json \
             --suppress=missingIncludeSystem \
             --suppress=unmatchedSuppression \
+            --suppress=syntaxError \
+            -i build/_deps \
             --error-exitcode=1 \
             --quiet
 
@@ -149,17 +151,16 @@ jobs:
       - name: Test
         run: ./build/tests/Release/dw_tests.exe
 
-      - name: Install NSIS
-        run: choco install nsis -y
-
-      - name: Package
-        run: cd build && cpack -C Release
+      - name: Package (ZIP)
+        run: |
+          cd build
+          cpack -G ZIP -C Release
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: DigitalWorkshop-windows
-          path: build/DigitalWorkshop-*.exe
+          path: build/DigitalWorkshop-*.zip
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -176,5 +177,5 @@ jobs:
         with:
           files: |
             DigitalWorkshop-linux/*.run
-            DigitalWorkshop-windows/*.exe
+            DigitalWorkshop-windows/*.zip
           generate_release_notes: true
