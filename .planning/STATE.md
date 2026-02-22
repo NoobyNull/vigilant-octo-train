@@ -20,7 +20,7 @@ See: `.planning/PROJECT.md` (updated 2026-02-21)
 **Milestone:** v1.1 Library Storage & Organization
 **Phase:** 2 — Content-Addressable Storage
 **Plan:** 02-02 complete, phase 02 complete
-**Status:** Phase 02 complete, Phase 03 next
+**Status:** Ready to plan
 
 ```
 v1.1 Progress: [=====_______________] 1/4 phases complete
