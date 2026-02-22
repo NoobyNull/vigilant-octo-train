@@ -47,7 +47,10 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
   2. Killing the application mid-import leaves no corrupt or partial files in the blob store
   3. Orphaned temp files from prior crashes are cleaned up automatically on next startup
   4. Importing the same file twice does not create a duplicate blob (dedup by hash)
-**Plans:** TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 02-01-PLAN.md — StorageManager core component + app_paths + unit tests
+- [ ] 02-02-PLAN.md — Wire StorageManager into ImportQueue and Application lifecycle
 
 ### Phase 3: Import File Handling
 **Goal:** User understands where their files will go and the application makes smart defaults based on source filesystem
@@ -94,7 +97,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
 | 1.6 Dead Code Cleanup | v1.0 | 1/1 | Complete | 2026-02-09 |
 | 2 Import Pipeline | v1.0 | 10/10 | Complete | 2026-02-09 |
 | 1 Materials System | Post-v1.0 | 6/6 | Complete | 2026-02-20 |
-| 2 Content-Addressable Storage | v1.1 | 0/? | Not started | - |
+| 2 Content-Addressable Storage | v1.1 | 0/2 | In progress | - |
 | 3 Import File Handling | v1.1 | 0/? | Not started | - |
 | 4 Organization & Graph | v1.1 | 0/? | Not started | - |
 | 5 Project Export | v1.1 | 0/? | Not started | - |
