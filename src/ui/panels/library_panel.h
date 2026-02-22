@@ -53,6 +53,10 @@ class LibraryPanel : public Panel {
         m_onAssignDefaultMaterial = std::move(callback);
     }
 
+    // Callback when "Tag Image" is chosen (one or more model IDs)
+    using TagImageCallback = std::function<void(const std::vector<int64_t>& modelIds)>;
+    void setOnTagImage(TagImageCallback callback) { m_onTagImage = std::move(callback); }
+
     // Refresh the model and G-code lists
     void refresh();
 
@@ -70,6 +74,9 @@ class LibraryPanel : public Panel {
     const std::set<int64_t>& selectedModelIds() const { return m_selectedModelIds; }
     const std::set<int64_t>& selectedGCodeIds() const { return m_selectedGCodeIds; }
     bool isModelSelected(int64_t id) const { return m_selectedModelIds.count(id) > 0; }
+
+    // Get cached thumbnail GL texture for a model (0 if not cached)
+    GLuint getThumbnailTextureForModel(int64_t modelId) const;
 
     // Set context menu manager (must be called before first render)
     void setContextMenuManager(ContextMenuManager* mgr);
@@ -115,6 +122,7 @@ class LibraryPanel : public Panel {
     ModelSelectedCallback m_onModelOpened;
     RegenerateThumbnailCallback m_onRegenerateThumbnail;
     ModelSelectedCallback m_onAssignDefaultMaterial;
+    TagImageCallback m_onTagImage;
     GCodeSelectedCallback m_onGCodeSelected;
     GCodeSelectedCallback m_onGCodeOpened;
 

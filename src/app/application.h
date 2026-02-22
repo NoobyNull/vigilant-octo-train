@@ -33,6 +33,7 @@ class MaterialManager;
 class CostRepository;
 class GraphManager;
 class GeminiMaterialService;
+class GeminiDescriptorService;
 class ProjectExportManager;
 class Mesh;
 class Texture;
@@ -123,6 +124,9 @@ class Application {
 
     // Gemini AI material generation service
     std::unique_ptr<GeminiMaterialService> m_geminiService;
+
+    // Gemini AI model descriptor (thumbnail classification)
+    std::unique_ptr<GeminiDescriptorService> m_descriptorService;
 
     // Project export/import (.dwproj archives)
     std::unique_ptr<ProjectExportManager> m_projectExportManager;

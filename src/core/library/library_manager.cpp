@@ -426,45 +426,207 @@ bool LibraryManager::updateDescriptor(i64 modelId, const std::string& title,
     return m_modelRepo.updateDescriptor(modelId, title, description, hover);
 }
 
+// Split a category name on " & ", " and ", " / " into individual names, trimmed.
+static std::vector<std::string> splitCompoundCategory(const std::string& name) {
+    std::vector<std::string> parts;
+    std::string remaining = name;
+
+    // Try each delimiter in order
+    for (const char* delim : {" & ", " and ", " / "}) {
+        std::string delimStr(delim);
+        std::vector<std::string> next;
+        for (auto& part : (parts.empty() ? std::vector<std::string>{remaining} : parts)) {
+            size_t pos = 0;
+            size_t found;
+            while ((found = part.find(delimStr, pos)) != std::string::npos) {
+                next.push_back(part.substr(pos, found - pos));
+                pos = found + delimStr.size();
+            }
+            next.push_back(part.substr(pos));
+        }
+        parts = std::move(next);
+    }
+
+    // Trim whitespace
+    std::vector<std::string> result;
+    for (auto& p : parts) {
+        size_t start = p.find_first_not_of(" \t");
+        size_t end = p.find_last_not_of(" \t");
+        if (start != std::string::npos && end != std::string::npos) {
+            result.push_back(p.substr(start, end - start + 1));
+        }
+    }
+    return result;
+}
+
+// --- Library maintenance ---
+
+MaintenanceReport LibraryManager::runMaintenance() {
+    MaintenanceReport report;
+
+    // (a) Split compound categories
+    {
+        auto allCats = getAllCategories();
+        for (const auto& cat : allCats) {
+            auto parts = splitCompoundCategory(cat.name);
+            if (parts.size() <= 1)
+                continue;
+
+            // Get models assigned to this compound category
+            auto models = m_modelRepo.findByCategory(cat.id);
+
+            // For each part, find-or-create a category with same parent
+            for (const auto& partName : parts) {
+                auto existingId = m_modelRepo.findCategoryByNameAndParent(partName, cat.parentId);
+                i64 newCatId = 0;
+                if (existingId) {
+                    newCatId = *existingId;
+                } else {
+                    auto created = createCategory(partName, cat.parentId);
+                    if (!created)
+                        continue;
+                    newCatId = *created;
+                }
+
+                // Reassign each model to the new category
+                for (const auto& model : models) {
+                    assignCategory(model.id, newCatId);
+                }
+            }
+
+            // Delete the compound category
+            deleteCategory(cat.id);
+            report.categoriesSplit++;
+        }
+    }
+
+    // (b) Delete empty categories (leaf-first via recursive approach)
+    {
+        bool deleted = true;
+        while (deleted) {
+            deleted = false;
+            auto allCats = getAllCategories();
+            for (const auto& cat : allCats) {
+                // Check if this category has children
+                auto children = m_modelRepo.getChildCategories(cat.id);
+                if (!children.empty())
+                    continue;
+
+                // Check if any models are directly assigned
+                auto models = m_modelRepo.findByCategory(cat.id);
+                if (!models.empty())
+                    continue;
+
+                // Leaf with no models — delete it
+                deleteCategory(cat.id);
+                report.categoriesRemoved++;
+                deleted = true;
+            }
+        }
+    }
+
+    // (c) Deduplicate tags
+    {
+        auto allModels = getAllModels();
+        for (const auto& model : allModels) {
+            if (model.tags.empty())
+                continue;
+
+            std::vector<std::string> unique;
+            for (const auto& tag : model.tags) {
+                bool found = false;
+                for (const auto& u : unique) {
+                    if (u == tag) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                    unique.push_back(tag);
+            }
+
+            if (unique.size() < model.tags.size()) {
+                updateTags(model.id, unique);
+                report.tagsDeduped++;
+            }
+        }
+    }
+
+    // (d) Verify thumbnail paths
+    {
+        auto allModels = getAllModels();
+        for (const auto& model : allModels) {
+            if (model.thumbnailPath.empty())
+                continue;
+            if (!file::exists(model.thumbnailPath)) {
+                m_modelRepo.updateThumbnail(model.id, Path{});
+                report.thumbnailsCleared++;
+            }
+        }
+    }
+
+    // (e) Rebuild FTS index
+    {
+        auto stmt = m_db.prepare("INSERT INTO models_fts(models_fts) VALUES('rebuild')");
+        if (stmt.isValid() && stmt.execute()) {
+            report.ftsRebuilt = 1;
+        }
+    }
+
+    return report;
+}
+
 bool LibraryManager::resolveAndAssignCategories(i64 modelId,
                                                 const std::vector<std::string>& categoryChain) {
     if (categoryChain.empty()) {
-        return true; // Nothing to assign
+        return true;
     }
 
-    // Build category chain: create missing categories and assign to model
-    // Example: ["Character", "Fantasy", "Dragon"] creates hierarchy:
-    //   Character (root)
-    //   -> Fantasy (parent: Character)
-    //   -> Dragon (parent: Fantasy)
-    // Then assigns Dragon to the model.
+    // Expand any compound names (e.g. "Art & Decor" -> ["Art", "Decor"])
+    // at each level, creating parallel chains.
+    // Example: ["Art & Design", "Figurine"] produces:
+    //   Art > Figurine  (assigned)
+    //   Design > Figurine  (assigned)
 
-    std::optional<i64> parentId = std::nullopt;
-    i64 lastCategoryId = 0;
-
+    // Build list of expanded levels
+    std::vector<std::vector<std::string>> levels;
     for (const auto& catName : categoryChain) {
-        // Try to find existing category with this name and parent
-        auto existingId = m_modelRepo.findCategoryByNameAndParent(catName, parentId);
-
-        if (existingId) {
-            // Category exists, use it
-            lastCategoryId = *existingId;
-        } else {
-            // Create new category
-            auto newId = m_modelRepo.createCategory(catName, parentId);
-            if (!newId) {
-                log::warningf("LibraryMgr", "Failed to create category: %s", catName.c_str());
-                return false;
-            }
-            lastCategoryId = *newId;
-        }
-
-        // Next iteration searches under this category
-        parentId = lastCategoryId;
+        levels.push_back(splitCompoundCategory(catName));
     }
 
-    // Assign the leaf category (last in chain) to the model
-    return m_modelRepo.assignCategory(modelId, lastCategoryId);
+    // Resolve a single chain and assign the leaf
+    auto resolveChain = [&](const std::vector<std::string>& chain) -> bool {
+        std::optional<i64> parentId = std::nullopt;
+        i64 lastCategoryId = 0;
+
+        for (const auto& name : chain) {
+            auto existingId = m_modelRepo.findCategoryByNameAndParent(name, parentId);
+            if (existingId) {
+                lastCategoryId = *existingId;
+            } else {
+                auto newId = createCategory(name, parentId);
+                if (!newId) {
+                    log::warningf("LibraryMgr", "Failed to create category: %s", name.c_str());
+                    return false;
+                }
+                lastCategoryId = *newId;
+            }
+            parentId = lastCategoryId;
+        }
+        return assignCategory(modelId, lastCategoryId);
+    };
+
+    // Only the first level can fan out (root categories).
+    // Deeper levels stay as-is to avoid combinatorial explosion.
+    bool ok = true;
+    for (const auto& rootName : levels[0]) {
+        std::vector<std::string> chain = {rootName};
+        for (size_t i = 1; i < levels.size(); ++i) {
+            chain.push_back(levels[i][0]); // use first name at deeper levels
+        }
+        ok = resolveChain(chain) && ok;
+    }
+    return ok;
 }
 
 } // namespace dw

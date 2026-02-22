@@ -339,9 +339,15 @@ bool ModelRepository::removeCategory(i64 modelId, i64 categoryId) {
 std::vector<ModelRecord> ModelRepository::findByCategory(i64 categoryId) {
     std::vector<ModelRecord> results;
     auto stmt = m_db.prepare(
-        "SELECT m.* FROM models m "
+        "WITH RECURSIVE subtree(id) AS ("
+        "  SELECT ? "
+        "  UNION ALL "
+        "  SELECT c.id FROM categories c "
+        "  INNER JOIN subtree s ON c.parent_id = s.id"
+        ") "
+        "SELECT DISTINCT m.* FROM models m "
         "INNER JOIN model_categories mc ON mc.model_id = m.id "
-        "WHERE mc.category_id = ? "
+        "INNER JOIN subtree st ON mc.category_id = st.id "
         "ORDER BY m.imported_at DESC");
     if (!stmt.isValid()) return results;
     if (!stmt.bindInt(1, categoryId)) return results;

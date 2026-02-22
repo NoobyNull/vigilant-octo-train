@@ -109,7 +109,9 @@ std::string GeminiDescriptorService::fetchClassification(const std::vector<uint8
            "- keywords: 3-5 descriptive tags\n"
            "- associations: Any recognizable brands, logos, or cultural references "
            "(empty array if none)\n"
-           "- categories: A classification chain from broad to specific (2-4 levels)"}}});
+           "- categories: A classification chain from broad to specific (2-4 levels). "
+           "Each entry must be ONE concept only — never combine with 'and', '&', or '/'. "
+           "Example: [\"Art\", \"Sculpture\", \"Figurine\"] not [\"Art & Sculpture\"]"}}});
 
     requestBody["contents"] = nlohmann::json::array(
         {{{"parts",

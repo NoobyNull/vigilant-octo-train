@@ -33,6 +33,8 @@ class LightingDialog;
 class ImportSummaryDialog;
 class ImportOptionsDialog;
 class ProgressDialog;
+class TagImageDialog;
+class MaintenanceDialog;
 
 // Forward declarations - core
 struct LoadingState;
@@ -107,6 +109,8 @@ class UIManager {
     ImportSummaryDialog* importSummaryDialog() { return m_importSummaryDialog.get(); }
     ImportOptionsDialog* importOptionsDialog() { return m_importOptionsDialog.get(); }
     ProgressDialog* progressDialog() { return m_progressDialog.get(); }
+    TagImageDialog* tagImageDialog() { return m_tagImageDialog.get(); }
+    MaintenanceDialog* maintenanceDialog() { return m_maintenanceDialog.get(); }
     ContextMenuManager* contextMenuManager() { return m_contextMenuManager.get(); }
 
     // --- Visibility state ---
@@ -131,6 +135,7 @@ class UIManager {
     void setOnQuit(ActionCallback cb) { m_onQuit = std::move(cb); }
     void setOnSpawnSettings(ActionCallback cb) { m_onSpawnSettings = std::move(cb); }
     void setOnShowAbout(ActionCallback cb) { m_onShowAbout = std::move(cb); }
+    void setOnLibraryMaintenance(ActionCallback cb) { m_onLibraryMaintenance = std::move(cb); }
 
     // --- Import progress callbacks (Plan 02-05) ---
     void setImportProgress(const ImportProgress* progress);
@@ -172,6 +177,8 @@ class UIManager {
     std::unique_ptr<ImportSummaryDialog> m_importSummaryDialog;
     std::unique_ptr<ImportOptionsDialog> m_importOptionsDialog;
     std::unique_ptr<ProgressDialog> m_progressDialog;
+    std::unique_ptr<TagImageDialog> m_tagImageDialog;
+    std::unique_ptr<MaintenanceDialog> m_maintenanceDialog;
 
     // Widgets (Plan 02-05)
     std::unique_ptr<StatusBar> m_statusBar;
@@ -189,6 +196,7 @@ class UIManager {
     void renderFileMenu();
     void renderViewMenu();
     void renderEditMenu();
+    void renderToolsMenu();
     void renderHelpMenu();
 
     // Action callbacks (delegated to Application)
@@ -201,6 +209,7 @@ class UIManager {
     ActionCallback m_onQuit;
     ActionCallback m_onSpawnSettings;
     ActionCallback m_onShowAbout;
+    ActionCallback m_onLibraryMaintenance;
 };
 
 } // namespace dw

@@ -117,7 +117,10 @@ bool Schema::createTables(Database& db) {
             camera_yaw REAL DEFAULT NULL,
             camera_target_x REAL DEFAULT NULL,
             camera_target_y REAL DEFAULT NULL,
-            camera_target_z REAL DEFAULT NULL
+            camera_target_z REAL DEFAULT NULL,
+            descriptor_title TEXT DEFAULT NULL,
+            descriptor_description TEXT DEFAULT NULL,
+            descriptor_hover TEXT DEFAULT NULL
         )
     )")) {
         return false;

@@ -29,6 +29,7 @@
 #include "core/loaders/loader_factory.h"
 #include "core/loaders/texture_loader.h"
 #include "core/materials/gemini_material_service.h"
+#include "core/materials/gemini_descriptor_service.h"
 #include "core/materials/material_archive.h"
 #include "core/materials/material_manager.h"
 #include "core/paths/app_paths.h"
@@ -45,6 +46,8 @@
 #include "ui/dialogs/import_options_dialog.h"
 #include "ui/dialogs/import_summary_dialog.h"
 #include "ui/dialogs/progress_dialog.h"
+#include "ui/dialogs/maintenance_dialog.h"
+#include "ui/dialogs/tag_image_dialog.h"
 #include "ui/panels/library_panel.h"
 #include "ui/panels/materials_panel.h"
 #include "ui/panels/project_panel.h"
@@ -213,6 +216,7 @@ bool Application::init() {
     m_materialManager->seedDefaults();
     m_costRepo = std::make_unique<CostRepository>(*m_database);
     m_geminiService = std::make_unique<GeminiMaterialService>();
+    m_descriptorService = std::make_unique<GeminiDescriptorService>();
     m_workspace = std::make_unique<Workspace>();
 
     m_thumbnailGenerator = std::make_unique<ThumbnailGenerator>();
@@ -246,6 +250,7 @@ bool Application::init() {
         m_thumbnailGenerator.get(), m_projectExportManager.get());
     m_fileIOManager->setProgressDialog(m_uiManager->progressDialog());
     m_fileIOManager->setMainThreadQueue(m_mainThreadQueue.get());
+    m_fileIOManager->setDescriptorService(m_descriptorService.get());
 
     m_fileIOManager->setThumbnailCallback(
         [this](int64_t modelId, Mesh& mesh) { return generateMaterialThumbnail(modelId, mesh); });
@@ -463,6 +468,165 @@ bool Application::init() {
             // then assign the default material
             m_materialManager->assignMaterialToModel(defaultMatId, modelId);
         });
+
+        // Tag Image dialog: request callback — spawn async Gemini classification
+        auto* tagDlg = m_uiManager->tagImageDialog();
+        tagDlg->setOnRequest([this, tagDlg](int64_t modelId) {
+            if (!m_descriptorService || !m_mainThreadQueue) {
+                return;
+            }
+
+            std::string apiKey = Config::instance().getGeminiApiKey();
+            if (apiKey.empty()) {
+                log::warning("App", "Gemini API key not configured");
+                DescriptorResult err;
+                err.error = "Gemini API key not configured";
+                tagDlg->setResult(err);
+                return;
+            }
+
+            auto record = m_libraryManager->getModel(modelId);
+            if (!record || record->thumbnailPath.empty()) {
+                DescriptorResult err;
+                err.error = "Model has no thumbnail";
+                tagDlg->setResult(err);
+                return;
+            }
+
+            auto* svc = m_descriptorService.get();
+            auto* mtq = m_mainThreadQueue.get();
+            std::string thumbPath = record->thumbnailPath.string();
+
+            std::thread([svc, mtq, tagDlg, thumbPath, apiKey]() {
+                auto result = svc->describe(thumbPath, apiKey);
+                mtq->enqueue([tagDlg, result]() { tagDlg->setResult(result); });
+            }).detach();
+        });
+
+        // Tag Image dialog: save callback — persist edited results
+        tagDlg->setOnSave([this](int64_t modelId, const DescriptorResult& result) {
+            auto* libMgr = m_libraryManager.get();
+            libMgr->updateDescriptor(modelId, result.title, result.description,
+                                     result.hoverNarrative);
+
+            // Merge keywords + associations into tags
+            auto existing = libMgr->getModel(modelId);
+            if (existing) {
+                auto tags = existing->tags;
+                for (const auto& kw : result.keywords) {
+                    tags.push_back(kw);
+                }
+                for (const auto& assoc : result.associations) {
+                    tags.push_back(assoc);
+                }
+                libMgr->updateTags(modelId, tags);
+            }
+
+            // Resolve category chain
+            if (!result.categories.empty()) {
+                libMgr->resolveAndAssignCategories(modelId, result.categories);
+            }
+
+            // Refresh UI
+            m_uiManager->libraryPanel()->refresh();
+            m_uiManager->libraryPanel()->invalidateThumbnail(modelId);
+            if (m_uiManager->propertiesPanel()) {
+                auto updated = libMgr->getModel(modelId);
+                if (updated) {
+                    m_uiManager->propertiesPanel()->setModelRecord(*updated);
+                }
+            }
+
+            ToastManager::instance().show(ToastType::Success, "Tagged",
+                                           result.title);
+            log::infof("App", "Tagged model %lld as: %s", static_cast<long long>(modelId),
+                       result.title.c_str());
+        });
+
+        // "Tag Image" context menu action
+        m_uiManager->libraryPanel()->setOnTagImage(
+            [this, tagDlg](const std::vector<int64_t>& modelIds) {
+                if (modelIds.empty()) {
+                    return;
+                }
+
+                // Single selection: open interactive dialog
+                if (modelIds.size() == 1) {
+                    auto record = m_libraryManager->getModel(modelIds[0]);
+                    if (!record) {
+                        return;
+                    }
+                    GLuint tex =
+                        m_uiManager->libraryPanel()->getThumbnailTextureForModel(modelIds[0]);
+                    tagDlg->open(*record, tex);
+                    return;
+                }
+
+                // Multi selection: fire-and-forget batch tagging
+                std::string apiKey = Config::instance().getGeminiApiKey();
+                if (apiKey.empty()) {
+                    log::warning("App", "Gemini API key not configured");
+                    return;
+                }
+
+                auto* svc = m_descriptorService.get();
+                auto* libMgr = m_libraryManager.get();
+                auto* mtq = m_mainThreadQueue.get();
+                auto* libPanel = m_uiManager->libraryPanel();
+                auto* propPanel = m_uiManager->propertiesPanel();
+                size_t count = modelIds.size();
+
+                for (int64_t modelId : modelIds) {
+                    auto record = m_libraryManager->getModel(modelId);
+                    if (!record || record->thumbnailPath.empty()) {
+                        continue;
+                    }
+
+                    std::string thumbPath = record->thumbnailPath.string();
+                    std::string modelName = record->name;
+
+                    std::thread([svc, libMgr, mtq, libPanel, propPanel, modelId, modelName,
+                                 thumbPath, apiKey, count]() {
+                        auto result = svc->describe(thumbPath, apiKey);
+                        mtq->enqueue([libMgr, libPanel, propPanel, modelId, modelName, result,
+                                      count]() {
+                            if (result.success) {
+                                libMgr->updateDescriptor(modelId, result.title,
+                                                         result.description,
+                                                         result.hoverNarrative);
+                                auto existing = libMgr->getModel(modelId);
+                                if (existing) {
+                                    auto tags = existing->tags;
+                                    for (const auto& kw : result.keywords) {
+                                        tags.push_back(kw);
+                                    }
+                                    for (const auto& assoc : result.associations) {
+                                        tags.push_back(assoc);
+                                    }
+                                    libMgr->updateTags(modelId, tags);
+                                }
+                                if (!result.categories.empty()) {
+                                    libMgr->resolveAndAssignCategories(modelId,
+                                                                       result.categories);
+                                }
+                                libPanel->refresh();
+                                libPanel->invalidateThumbnail(modelId);
+                                ToastManager::instance().show(
+                                    ToastType::Success, "Tagged", result.title);
+                                log::infof("App", "Tagged %s as: %s", modelName.c_str(),
+                                           result.title.c_str());
+                            } else {
+                                log::warningf("App", "Descriptor failed for %s: %s",
+                                              modelName.c_str(), result.error.c_str());
+                            }
+                        });
+                    }).detach();
+                }
+
+                ToastManager::instance().show(
+                    ToastType::Info, "Tagging",
+                    "Classifying " + std::to_string(count) + " models...");
+            });
     }
 
     if (m_uiManager->projectPanel()) {
@@ -565,6 +729,29 @@ bool Application::init() {
         [this, hideStart]() { m_fileIOManager->importProjectArchive(hideStart); });
     m_uiManager->setOnQuit([this]() { quit(); });
     m_uiManager->setOnSpawnSettings([this]() { m_configManager->spawnSettingsApp(); });
+
+    // Wire Tools menu
+    m_uiManager->setOnLibraryMaintenance([this]() {
+        if (m_uiManager->maintenanceDialog())
+            m_uiManager->maintenanceDialog()->open();
+    });
+    if (m_uiManager->maintenanceDialog()) {
+        m_uiManager->maintenanceDialog()->setOnRun([this]() -> MaintenanceReport {
+            auto report = m_libraryManager->runMaintenance();
+            if (m_uiManager->libraryPanel())
+                m_uiManager->libraryPanel()->refresh();
+            int total = report.categoriesSplit + report.categoriesRemoved + report.tagsDeduped +
+                        report.thumbnailsCleared + report.ftsRebuilt;
+            if (total > 0) {
+                ToastManager::instance().show(ToastType::Success, "Maintenance Complete",
+                                              std::to_string(total) + " issue(s) fixed");
+            } else {
+                ToastManager::instance().show(ToastType::Info, "Maintenance Complete",
+                                              "No issues found");
+            }
+            return report;
+        });
+    }
 
     // Restore workspace state
     m_uiManager->restoreVisibilityFromConfig();
@@ -944,6 +1131,7 @@ void Application::shutdown() {
     m_uiManager.reset();
 
     // Destroy core systems
+    m_descriptorService.reset();
     m_geminiService.reset();
     m_costRepo.reset();
     m_importQueue.reset();

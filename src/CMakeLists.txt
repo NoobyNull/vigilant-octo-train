@@ -134,6 +134,8 @@ set(DW_SOURCES
     ui/dialogs/import_summary_dialog.cpp
     ui/dialogs/import_options_dialog.cpp
     ui/dialogs/progress_dialog.cpp
+    ui/dialogs/tag_image_dialog.cpp
+    ui/dialogs/maintenance_dialog.cpp
 )
 
 # Create executable

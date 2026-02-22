@@ -22,6 +22,8 @@
 #include "ui/dialogs/lighting_dialog.h"
 #include "ui/dialogs/message_dialog.h"
 #include "ui/dialogs/progress_dialog.h"
+#include "ui/dialogs/maintenance_dialog.h"
+#include "ui/dialogs/tag_image_dialog.h"
 #include "ui/panels/cost_panel.h"
 #include "ui/panels/cut_optimizer_panel.h"
 #include "ui/panels/gcode_panel.h"
@@ -64,6 +66,8 @@ void UIManager::init(LibraryManager* libraryManager, ProjectManager* projectMana
     m_importSummaryDialog = std::make_unique<ImportSummaryDialog>();
     m_importOptionsDialog = std::make_unique<ImportOptionsDialog>();
     m_progressDialog = std::make_unique<ProgressDialog>();
+    m_tagImageDialog = std::make_unique<TagImageDialog>();
+    m_maintenanceDialog = std::make_unique<MaintenanceDialog>();
 
     // Create widgets
     m_statusBar = std::make_unique<StatusBar>();
@@ -105,6 +109,8 @@ void UIManager::shutdown() {
     m_importSummaryDialog.reset();
     m_importOptionsDialog.reset();
     m_progressDialog.reset();
+    m_tagImageDialog.reset();
+    m_maintenanceDialog.reset();
 
     // Destroy widgets
     m_statusBar.reset();
@@ -126,6 +132,7 @@ void UIManager::renderMenuBar() {
         renderFileMenu();
         renderViewMenu();
         renderEditMenu();
+        renderToolsMenu();
         renderHelpMenu();
         ImGui::EndMainMenuBar();
     }
@@ -193,6 +200,17 @@ void UIManager::renderEditMenu() {
 
     if (ImGui::MenuItem("Settings", "Ctrl+,") && m_onSpawnSettings) {
         m_onSpawnSettings();
+    }
+    ImGui::EndMenu();
+}
+
+void UIManager::renderToolsMenu() {
+    if (!ImGui::BeginMenu("Tools")) {
+        return;
+    }
+
+    if (ImGui::MenuItem("Library Maintenance...") && m_onLibraryMaintenance) {
+        m_onLibraryMaintenance();
     }
     ImGui::EndMenu();
 }
@@ -274,6 +292,14 @@ void UIManager::renderPanels() {
 
     if (m_importOptionsDialog) {
         m_importOptionsDialog->render();
+    }
+
+    if (m_tagImageDialog) {
+        m_tagImageDialog->render();
+    }
+
+    if (m_maintenanceDialog) {
+        m_maintenanceDialog->render();
     }
 }
 

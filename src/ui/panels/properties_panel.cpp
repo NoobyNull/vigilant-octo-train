@@ -112,10 +112,50 @@ void PropertiesPanel::renderModelRecordInfo() {
         ImGui::Unindent();
     }
 
+    // AI Classification (if available)
+    renderAIClassification();
+
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
     ImGui::TextDisabled("Double-click to load into viewport");
+}
+
+void PropertiesPanel::renderAIClassification() {
+    if (!m_record) {
+        return;
+    }
+
+    const auto& r = *m_record;
+
+    // Only show section if any descriptor fields are populated
+    if (r.descriptorTitle.empty() && r.descriptorDescription.empty()) {
+        return;
+    }
+
+    ImGui::Spacing();
+    if (ImGui::CollapsingHeader("AI Classification", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Indent();
+
+        // Title with hover tooltip
+        if (!r.descriptorTitle.empty()) {
+            ImGui::Text("Title:");
+            ImGui::SameLine();
+            ImGui::TextWrapped("%s", r.descriptorTitle.c_str());
+            if (!r.descriptorHover.empty() && ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
+                ImGui::SetTooltip("%s", r.descriptorHover.c_str());
+            }
+        }
+
+        // Full description
+        if (!r.descriptorDescription.empty()) {
+            ImGui::Spacing();
+            ImGui::Text("Description:");
+            ImGui::TextWrapped("%s", r.descriptorDescription.c_str());
+        }
+
+        ImGui::Unindent();
+    }
 }
 
 void PropertiesPanel::renderMeshInfo() {

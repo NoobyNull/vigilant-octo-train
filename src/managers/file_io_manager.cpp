@@ -26,6 +26,7 @@
 #include "ui/panels/viewport_panel.h"
 #include "ui/widgets/toast.h"
 
+#include "core/materials/gemini_descriptor_service.h"
 #include "core/threading/main_thread_queue.h"
 
 #include <thread>
@@ -240,6 +241,55 @@ void FileIOManager::processCompletedImports(ViewportPanel* viewport, PropertiesP
         if (!thumbnailOk) {
             ToastManager::instance().show(ToastType::Warning, "Thumbnail Failed",
                                           "Could not generate thumbnail for: " + task.record.name);
+        }
+
+        // Auto-describe with AI after successful thumbnail generation
+        if (thumbnailOk && m_descriptorService && m_mainThreadQueue) {
+            std::string apiKey = Config::instance().getGeminiApiKey();
+            if (!apiKey.empty()) {
+                auto* svc = m_descriptorService;
+                auto* libMgr = m_libraryManager;
+                auto* mtq = m_mainThreadQueue;
+                i64 modelId = task.modelId;
+                std::string modelName = task.record.name;
+
+                // Re-read thumbnail path from DB (it was just set)
+                auto record = m_libraryManager->getModel(modelId);
+                if (record && !record->thumbnailPath.empty()) {
+                    std::string thumbPath = record->thumbnailPath.string();
+
+                    std::thread([svc, libMgr, mtq, modelId, modelName, thumbPath, apiKey]() {
+                        auto result = svc->describe(thumbPath, apiKey);
+                        mtq->enqueue([libMgr, mtq, modelId, modelName, result]() {
+                            if (result.success) {
+                                libMgr->updateDescriptor(modelId, result.title,
+                                                         result.description, result.hoverNarrative);
+                                // Merge keywords + associations into model tags
+                                auto existing = libMgr->getModel(modelId);
+                                if (existing) {
+                                    auto tags = existing->tags;
+                                    for (const auto& kw : result.keywords) {
+                                        tags.push_back(kw);
+                                    }
+                                    for (const auto& assoc : result.associations) {
+                                        tags.push_back(assoc);
+                                    }
+                                    libMgr->updateTags(modelId, tags);
+                                }
+                                // Resolve category chain
+                                if (!result.categories.empty()) {
+                                    libMgr->resolveAndAssignCategories(modelId, result.categories);
+                                }
+                                log::infof("FileIO", "Classified %s as: %s", modelName.c_str(),
+                                           result.title.c_str());
+                            } else {
+                                log::warningf("FileIO", "Auto-describe failed for %s: %s",
+                                              modelName.c_str(), result.error.c_str());
+                            }
+                        });
+                    }).detach();
+                }
+            }
         }
     }
 

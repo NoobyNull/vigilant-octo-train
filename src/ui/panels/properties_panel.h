@@ -61,6 +61,7 @@ class PropertiesPanel : public Panel {
 
   private:
     void renderModelRecordInfo();
+    void renderAIClassification();
     void renderMeshInfo();
     void renderBoundsInfo();
     void renderTransformInfo();

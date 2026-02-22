@@ -19,6 +19,15 @@ class ThumbnailGenerator;
 class Texture;
 class GraphManager;
 
+// Report returned by library maintenance operations
+struct MaintenanceReport {
+    int categoriesSplit = 0;
+    int categoriesRemoved = 0;
+    int tagsDeduped = 0;
+    int thumbnailsCleared = 0;
+    int ftsRebuilt = 0;
+};
+
 // Import result
 struct ImportResult {
     bool success = false;
@@ -121,6 +130,9 @@ class LibraryManager {
     bool updateDescriptor(i64 modelId, const std::string& title, const std::string& description,
                           const std::string& hover);
     bool resolveAndAssignCategories(i64 modelId, const std::vector<std::string>& categoryChain);
+
+    // Run all library maintenance operations (split compounds, prune empties, etc.)
+    MaintenanceReport runMaintenance();
 
     // FTS5 search (preferred over LIKE-based searchModels for text queries)
     std::vector<ModelRecord> searchModelsFTS(const std::string& query);

@@ -175,6 +175,11 @@ void LibraryPanel::render() {
     ImGui::End();
 }
 
+GLuint LibraryPanel::getThumbnailTextureForModel(int64_t modelId) const {
+    auto it = m_textureCache.find(modelId);
+    return (it != m_textureCache.end()) ? it->second : 0;
+}
+
 void LibraryPanel::invalidateThumbnail(int64_t modelId) {
     auto it = m_textureCache.find(modelId);
     if (it != m_textureCache.end()) {
@@ -321,12 +326,15 @@ void LibraryPanel::renderTabs() {
 }
 
 void LibraryPanel::renderCategoryFilter() {
+    // Defer refresh until after iteration to avoid invalidating m_categories references
+    bool needsRefresh = false;
+
     // "All Models" button to clear filter
     bool allSelected = (m_selectedCategoryId == -1);
     if (ImGui::Selectable("All Models", allSelected)) {
         m_selectedCategoryId = -1;
         m_selectedCategoryName.clear();
-        refresh();
+        needsRefresh = true;
     }
 
     ImGui::Separator();
@@ -357,7 +365,7 @@ void LibraryPanel::renderCategoryFilter() {
         if (ImGui::IsItemClicked()) {
             m_selectedCategoryId = cat.id;
             m_selectedCategoryName = cat.name;
-            refresh();
+            needsRefresh = true;
         }
         if (open) {
             for (auto& child : m_categories) {
@@ -367,12 +375,15 @@ void LibraryPanel::renderCategoryFilter() {
                 if (ImGui::Selectable(child.name.c_str(), childSelected)) {
                     m_selectedCategoryId = child.id;
                     m_selectedCategoryName = cat.name + " > " + child.name;
-                    refresh();
+                    needsRefresh = true;
                 }
             }
             ImGui::TreePop();
         }
     }
+
+    if (needsRefresh)
+        refresh();
 }
 
 void LibraryPanel::renderCategoryBreadcrumb() {
@@ -639,6 +650,9 @@ void LibraryPanel::renderModelItem(const ModelRecord& model, [[maybe_unused]] in
                 else
                     tip += "\n" + std::to_string(model.vertexCount) + " verts";
             }
+            if (!model.descriptorHover.empty()) {
+                tip += "\n\n" + model.descriptorHover;
+            }
             ImGui::SetTooltip("%s", tip.c_str());
         }
 
@@ -787,6 +801,14 @@ void LibraryPanel::registerContextMenuEntries() {
             [this]() { return Config::instance().getDefaultMaterialId() > 0; } // enabled
         },
         {"Assign Category" + countSuffix, [this]() { m_showCategoryAssignDialog = true; }},
+        {"Tag Image" + countSuffix,
+         [this]() {
+             if (m_onTagImage && !m_selectedModelIds.empty()) {
+                 std::vector<int64_t> ids(m_selectedModelIds.begin(),
+                                          m_selectedModelIds.end());
+                 m_onTagImage(ids);
+             }
+         }},
         ContextMenuEntry::separator(),
         {"Rename",
          [this]() {
