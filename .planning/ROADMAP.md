@@ -4,6 +4,7 @@
 
 - ✅ **v1.0 Foundation & Import Pipeline** — Phases 1-2 (shipped 2026-02-10)
 - ✅ **v1.1 Library Storage & Organization** — Phases 2-5 (completed 2026-02-22)
+- ✅ **v1.2 UI Freshen-Up** — Phase 5 (completed 2026-02-21)
 
 ## Phases
 
@@ -29,14 +30,26 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
 
 </details>
 
-### v1.1 Library Storage & Organization
+<details>
+<summary>✅ v1.1 Library Storage & Organization (Phases 2-5) — COMPLETED 2026-02-22</summary>
 
-- [x] **Phase 2: Content-Addressable Storage** — StorageManager with hash-based blob directories, atomic writes, orphan cleanup
-- [x] **Phase 3: Import File Handling** — Filesystem detection, import dialog with keep/copy/move options
-- [x] **Phase 4: Organization & Graph** — DB schema with FTS5 search, GraphQLite graph extension, categories, Cypher queries
-- [x] **Phase 5: Project Export** — Portable .dwproj ZIP archives with manifest and embedded blobs
+- [x] Phase 2: Content-Addressable Storage (2/2 plans) — completed 2026-02-22
+- [x] Phase 3: Import File Handling (2/2 plans) — completed 2026-02-22
+- [x] Phase 4: Organization & Graph (4/4 plans) — completed 2026-02-22
+- [x] Phase 5: Project Export (4/4 plans) — completed 2026-02-22
+
+See Phase Details below for full breakdown.
+
+</details>
+
+### v1.2 UI Freshen-Up
+
+- [x] **Phase 5: Theme Modernization** — Modern fonts, DPI scaling, refined color palettes, polished light/dark/high-contrast themes
 
 ## Phase Details
+
+<details>
+<summary>v1.1 Phase Details (completed)</summary>
 
 ### Phase 2: Content-Addressable Storage
 **Goal:** Imported models are stored in a reliable, hash-addressed blob store that survives crashes and network failures
@@ -47,7 +60,6 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
   2. Killing the application mid-import leaves no corrupt or partial files in the blob store
   3. Orphaned temp files from prior crashes are cleaned up automatically on next startup
   4. Importing the same file twice does not create a duplicate blob (dedup by hash)
-**Plans:** 2 plans
 Plans:
 - [x] 02-01-PLAN.md — StorageManager core component + app_paths + unit tests
 - [x] 02-02-PLAN.md — Wire StorageManager into ImportQueue and Application lifecycle
@@ -61,7 +73,6 @@ Plans:
   2. Importing from a NAS or cloud-synced folder auto-selects "copy" and displays a recommendation explaining why
   3. Importing from a local drive defaults to "move" (user can override)
   4. Files imported via "copy" or "move" land in the CAS blob store; "keep in place" preserves original path
-**Plans:** 2 plans
 Plans:
 - [x] 03-01-PLAN.md — Filesystem detector + import options dialog UI
 - [x] 03-02-PLAN.md — Wire dialog into import flow with per-batch mode
@@ -76,7 +87,6 @@ Plans:
   3. Models, categories, and projects exist as graph nodes with relationship edges (belongs_to, contains, related_to)
   4. User can query relationships via Cypher (e.g., "all models in project X", "models related to this model")
   5. GraphQLite extension loads at DB init; application starts cleanly with graph support enabled
-**Plans:** 4 plans
 Plans:
 - [x] 04-01-PLAN.md — Schema v7: categories tables, FTS5 virtual table + triggers, ModelRepository methods
 - [x] 04-02-PLAN.md — GraphQLite extension loading, Database extension API, GraphManager foundation
@@ -91,12 +101,29 @@ Plans:
   1. User can export a project to a .dwproj file containing manifest, model blobs, materials, and thumbnails
   2. A .dwproj file exported on one machine can be imported on a different machine with all models and metadata intact
   3. Export progress is visible and does not block the UI
-**Plans:** 4 plans
 Plans:
 - [x] 05-01-PLAN.md — ProjectExportManager core: export/import logic with miniz ZIP and nlohmann/json manifest
 - [x] 05-02-PLAN.md — UI wiring: Export button in ProjectPanel, Import via File menu, ProgressDialog integration
 - [x] 05-03-PLAN.md — Gap closure: add materials and thumbnails to .dwproj archive
 - [x] 05-04-PLAN.md — Gap closure: auto-open imported project after import
+
+</details>
+
+### Phase 5: Theme Modernization
+**Goal:** Application looks polished and contemporary on all platforms — no longer reads as a "developer tool"
+**Depends on:** None (pure UI, no functional dependencies)
+**Requirements:** FONT-01, FONT-02, FONT-03, DPI-01, DPI-02, DPI-03, THEME-01, THEME-02, THEME-03, THEME-04, VIS-01, VIS-02
+**Success Criteria** (what must be TRUE):
+  1. Application renders text using a modern proportional font (Inter or equivalent), not the ImGui default bitmap font
+  2. FontAwesome icons render correctly alongside the new font at all sizes
+  3. Moving the application window to a HiDPI display on Windows scales the UI proportionally
+  4. Light theme is fully hand-tuned with distinct colors (not `StyleColorsLight` defaults)
+  5. All panels and dialogs have consistent margins, spacing, and interactive element styling
+**Plans:** 3 plans
+Plans:
+- [x] 05-01-PLAN.md — Inter font embedding + FontAwesome merge, dead code cleanup
+- [x] 05-02-PLAN.md — DPI detection, atlas-based scaling, runtime monitor-switch handling
+- [x] 05-03-PLAN.md — Light theme full customization, dark/high-contrast refinement, visual consistency audit
 
 ## Progress
 
@@ -114,11 +141,12 @@ Plans:
 | 3 Import File Handling | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 4 Organization & Graph | v1.1 | 4/4 | Complete | 2026-02-22 |
 | 5 Project Export | v1.1 | 4/4 | Complete | 2026-02-22 |
+| 5 Theme Modernization | v1.2 | 3/3 | Complete | 2026-02-21 |
 
 ---
 
 *Roadmap created: 2026-02-08*
 *v1.0 milestone shipped: 2026-02-10*
 *v1.1 phases added: 2026-02-21*
-*Phase 3 planned: 2026-02-21*
-*Phase 4 planned: 2026-02-21*
+*v1.1 milestone completed: 2026-02-22*
+*v1.2 milestone started: 2026-02-21*

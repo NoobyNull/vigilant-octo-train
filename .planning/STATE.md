@@ -1,7 +1,7 @@
 # Project State: Digital Workshop
 
-**Last Updated:** 2026-02-22
-**Current Session:** Phase 05 Plan 04 completed (Gap closure: auto-open imported project)
+**Last Updated:** 2026-02-21
+**Current Session:** v1.2 milestone created
 
 ---
 
@@ -11,23 +11,23 @@ See: `.planning/PROJECT.md` (updated 2026-02-21)
 
 **Core Value:** A single focused workspace where a CNC woodworker can manage their model library, analyze toolpaths, and optimize material usage — without switching between tools.
 
-**Current Focus:** v1.1 Library Storage & Organization — content-addressable storage, categories, FTS5, GraphQLite graph queries, project export
+**Current Focus:** v1.2 UI Freshen-Up — modern fonts, DPI scaling, refined themes
 
 ---
 
 ## Current Position
 
-**Milestone:** v1.1 Library Storage & Organization
-**Phase:** 5 — Project Export (complete)
-**Plan:** 05-04 complete
+**Milestone:** v1.2 UI Freshen-Up
+**Phase:** 5 — Theme Modernization (complete)
+**Plan:** 05-03 complete
 **Status:** Milestone complete
 
 ```
-v1.1 Progress: [====================] 4/4 phases complete
-Phase 05: Plan 4/4 complete
+v1.2 Progress: [====================] 1/1 phases complete
+Phase 05: 3/3 plans complete
 ```
 
-Last activity: 2026-02-22 — 05-04 Gap closure: auto-open imported project (2 tasks, 1m 14s)
+Last activity: 2026-02-21 — Phase 5 complete (Inter font, DPI scaling, theme polish)
 
 ---
 
@@ -76,6 +76,7 @@ Last activity: 2026-02-22 — 05-04 Gap closure: auto-open imported project (2 t
 
 **Tech Debt:**
 - EventBus wired but unused (6 event types, zero pub/sub calls in production)
+- Font loading duplicated in application.cpp and ui_manager.cpp (to be consolidated in v1.2)
 
 ---
 
@@ -96,11 +97,11 @@ Last activity: 2026-02-22 — 05-04 Gap closure: auto-open imported project (2 t
 - FileIOManager: `src/managers/file_io_manager.h/.cpp`
 - ConfigManager: `src/managers/config_manager.h/.cpp`
 
-**Existing Infrastructure (relevant to v1.1):**
-- ConnectionPool: `src/core/database/connection_pool.h/.cpp`
-- MainThreadQueue: `src/core/threading/main_thread_queue.h/.cpp`
-- ThreadPool: `src/core/threading/thread_pool.h/.cpp`
-- miniz: Already linked (for ZIP support)
+**Theme System (v1.2 focus):**
+- Theme: `src/ui/theme.h/.cpp`
+- Font loading: `src/ui/ui_manager.cpp:41-56`, `src/app/application.cpp:143-154`
+- Icons: `src/ui/icons.h`, `src/ui/fonts/fa_solid_900.h`
+- Font scale: `UIManager::setFontScale()` in `src/ui/ui_manager.cpp:181`
 
 ---
 
@@ -110,38 +111,19 @@ Last activity: 2026-02-22 — 05-04 Gap closure: auto-open imported project (2 t
 
 - v1.0: Foundation & Import Pipeline (shipped 2026-02-10)
 - Post-v1.0 Phase 01: Materials system (completed 2026-02-20)
-- v1.1: Library Storage & Organization (roadmap created 2026-02-21, 4 phases)
+- v1.1: Library Storage & Organization (completed 2026-02-22)
+- v1.2: UI Freshen-Up (started 2026-02-21)
 
-### v1.1 Phase Structure
+### v1.2 Design Decisions (2026-02-21)
 
-| Phase | Goal | Requirements |
-|-------|------|-------------|
-| 2 - CAS Foundation | Hash-based blob store with atomic writes | STOR-01, STOR-02, STOR-03 |
-| 3 - Import File Handling | Filesystem detection + import dialog | STOR-04, IMPORT-01, IMPORT-02 |
-| 4 - Organization & Graph | Categories, FTS5 search, GraphQLite | ORG-01..05 |
-| 5 - Project Export | Portable .dwproj ZIP archives | EXPORT-01, EXPORT-02 |
-
-### v1.1 Design Decisions (2026-02-21)
-
-- **Storage:** Content-addressable with 2-byte hash prefix directories (e.g., `blobs/a7/3b/a73b4f...c821.stl`)
-- **Database:** SQLite remains sole database. GraphQLite loaded as SQLite extension for Cypher graph queries. FTS5 for full-text search. Single DB file, single connection pool.
-- **Graph DB decision:** Kuzu abandoned Oct 2025 (repo archived). GraphQLite chosen instead — MIT-licensed SQLite extension, actively maintained (v0.3.5, Feb 2026), Cypher support, 15+ graph algorithms, loaded via `sqlite3_load_extension()`.
-- **File handling:** Auto-detect source filesystem — copy from NAS/remote, move if same local drive. User picks organizational strategy (keep in place / organize locally / custom location)
-- **Categories:** Manual genus assignment by default. AI-assisted classification (Gemini Vision) deferred.
-- **Projects:** Lightweight graph links in DB, exportable as .dwproj zip (manifest + model blobs + materials + thumbnails)
-- **No migrations:** Delete and recreate DB on schema change (no user base)
-
-### Key Pitfalls to Watch (from research)
-
-1. CAS: Never write directly to final hash path — use temp + verify + rename
-2. FTS5: MUST use BEFORE UPDATE triggers (not AFTER) for delete phase
-3. WAL mode + ATTACH breaks atomicity — keep all data in single SQLite file
-4. Windows MAX_PATH: CAS paths can exceed 260 chars — need `longPathAware` manifest
-5. NAS locking unreliable: Always copy from NAS, never move
-6. Unicode filename normalization: NFC normalize before hashing
-7. GraphQLite: Must call `sqlite3_enable_load_extension()` before loading
+- **Stay on ImGui:** wxWidgets migration rejected — 1,637 ImGui calls across 31 files, would be a full rewrite
+- **Font choice:** Inter (SIL OFL licensed, designed for screens, variable weight support)
+- **DPI approach:** Detect via SDL2 `SDL_GetDisplayDPI()`, scale font size + style values proportionally
+- **Theme scope:** All three themes (dark/light/high-contrast) get full hand-tuned color palettes
+- **Phase numbering:** Single phase (Phase 5) continuing v1.1's numbering
 
 ---
 
 *State initialized: 2026-02-08*
 *v1.1 roadmap created: 2026-02-21*
+*v1.2 milestone created: 2026-02-21*

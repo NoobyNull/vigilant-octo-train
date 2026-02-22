@@ -57,40 +57,43 @@ A single focused workspace where a CNC woodworker can manage their model library
 - ✓ Multi-select in library panel with batch operations — Post-v1.0
 - ✓ Context menu system (ContextMenuManager) — Post-v1.0
 - ✓ Batch thumbnail regeneration with progress dialog — Post-v1.0
+- ✓ Modern Inter font with DPI-aware scaling — v1.2
+- ✓ Fully hand-tuned dark/light/high-contrast themes — v1.2
+- ✓ Content-addressable storage with hash-based blob directories — v1.1
+- ✓ Smart file handling (auto-detect local vs NAS) — v1.1
+- ✓ Category/genus hierarchy for model organization — v1.1
+- ✓ FTS5 full-text search across library metadata — v1.1
+- ✓ GraphQLite SQLite extension for Cypher graph queries — v1.1
+- ✓ Project export as portable .dwproj ZIP archives — v1.1
 
-## Current Milestone: v1.1 Library Storage & Organization
+## Completed Milestone: v1.2 UI Freshen-Up
 
-**Goal:** Content-addressable model storage with category-based organization, full-text search, GraphQLite graph queries via Cypher, and project export as portable archives.
+**Goal:** Modernize the Dear ImGui interface to feel polished and contemporary — eliminating the "developer tool" aesthetic that deters Windows users from adopting the application.
 
 **Target features:**
-- Content-addressable storage (iTunes-style hash foldering)
-- Smart file handling (auto-detect local vs NAS, copy/move accordingly)
-- Category/genus hierarchy for model organization
-- FTS5 full-text search across library metadata
-- GraphQLite SQLite extension for Cypher graph queries (replaces abandoned Kuzu)
-- Project links as graph edges, exportable as .dwproj zip
+- Platform-native font rendering (Inter/Segoe UI/system sans with oversampling)
+- DPI-aware scaling for Windows HiDPI displays
+- Refined color palette and spacing across all three themes
+- Polished light theme (currently bare `StyleColorsLight`)
+- Consistent visual language across all panels and dialogs
 
 ### Active
 
 ### Out of Scope
 
-- STEP/IGES CAD format support — not a CAD tool
-- AI genus classification — deferred to future milestone (Gemini Vision on thumbnails)
+- wxWidgets migration — too deep an ImGui integration (~1,637 calls across 31 files)
+- AI genus classification — deferred to future milestone
 - Cloud-based operation — fully offline desktop app
-- CAD editing — view/import only
-- Scientific precision analysis — workshop-grade accuracy
-- Mobile platforms — desktop only
-- Real-time chat/collaboration — single-user
-- Database migration system — no user base, delete and recreate per rulebook
-- Multi-project cross-optimization — deferred until project system matures
+- New functional features — this is purely visual/UX polish
+- Custom window chrome / frameless window — OS-native title bar is fine
 
 ## Context
 
-**Current state:** v1.0 shipped (19,511 LOC, 422 tests). Post-v1.0 added materials system (32 built-in species, Gemini AI generation, .dwmat archives), multi-select with batch operations, context menus, and progress dialog. 491 tests passing. Architecture remains clean — Application as thin coordinator, 3 focused managers.
+**Current state:** v1.1 complete. Content-addressable storage, FTS5 search, GraphQLite graph queries, project export all shipped. 544 tests passing. Architecture remains clean — Application as thin coordinator, 3 focused managers.
 
-**Tech stack:** C++17, SDL2, Dear ImGui (docking), OpenGL 3.3, SQLite3, GraphQLite (v1.1+), CMake 3.20+
+**Tech stack:** C++17, SDL2, Dear ImGui (docking), OpenGL 3.3, SQLite3, GraphQLite, CMake 3.20+
 
-**v1.1 storage context:** User has 3000+ models on NAS (10G connection), heavily disorganized with duplicates and meaningless filenames. Current import stores original file paths — fragile for network storage. Content-addressable storage decouples physical location from logical organization. GraphQLite adds Cypher graph queries as a SQLite extension — single DB file, single connection pool, graph + relational + FTS5 unified.
+**v1.2 UI context:** Current ImGui theme has rounding and custom colors but uses the default ProggyClean font — a monospace bitmap font that reads "programmer tool." Font loading exists in two places (application.cpp:144 and ui_manager.cpp:52) using `AddFontDefault()`. FontAwesome 6 icons are merged in. Theme system has dark/light/high-contrast variants but the light theme is barely customized (delegates to `StyleColorsLight`). DPI scaling exists via `setFontScale()` but isn't driven by platform DPI detection.
 
 **Feature gap reference:** `OBSERVATION_REPORT.md` documents 17 categories of gaps between old and new versions. Major missing subsystems include CNC machine control, cost/quoting workflow, tool database, wood species database, undo/redo, and advanced search.
 
@@ -130,9 +133,11 @@ A single focused workspace where a CNC woodworker can manage their model library
 | ThreadPool with lazy init | Zero overhead when imports unused, parallel workers on demand | ✓ Good |
 | Per-frame import completion throttling | Prevents UI blocking during large batch imports | ✓ Good |
 | G-code toolpath as extruded quads | Reuses existing mesh renderer, color-coded cutting vs rapid | ✓ Good |
-| Content-addressable storage | Hash-based file store decouples physical location from logical org | — Pending |
-| GraphQLite over Kuzu | Kuzu abandoned Oct 2025; GraphQLite is a SQLite extension — single DB, Cypher queries, MIT license | — Pending |
-| Auto-detect copy vs move on import | Copy from NAS, move if local same filesystem — user picks strategy not mechanics | — Pending |
+| Content-addressable storage | Hash-based file store decouples physical location from logical org | ✓ Good |
+| GraphQLite over Kuzu | Kuzu abandoned Oct 2025; GraphQLite is a SQLite extension — single DB, Cypher queries, MIT license | ✓ Good |
+| Auto-detect copy vs move on import | Copy from NAS, move if local same filesystem — user picks strategy not mechanics | ✓ Good |
+| Inter font over ProggyClean | Modern proportional font replaces monospace bitmap — biggest single visual improvement | ✓ Good |
+| Stay on ImGui over wxWidgets | 1,637 ImGui calls across 31 files; wxWidgets would be a full rewrite for marginal gain | ✓ Good |
 
 ---
-*Last updated: 2026-02-21 after v1.1 milestone start*
+*Last updated: 2026-02-21 after v1.2 milestone start*

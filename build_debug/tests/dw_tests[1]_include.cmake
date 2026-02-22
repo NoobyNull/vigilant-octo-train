@@ -1,5 +1,0 @@
-if(EXISTS "/data/DW/build_debug/tests/dw_tests[1]_tests.cmake")
-  include("/data/DW/build_debug/tests/dw_tests[1]_tests.cmake")
-else()
-  add_test(dw_tests_NOT_BUILT dw_tests_NOT_BUILT)
-endif()

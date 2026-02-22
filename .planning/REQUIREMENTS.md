@@ -1,53 +1,51 @@
-# Requirements: v1.1 Library Storage & Organization
+# Requirements: v1.2 UI Freshen-Up
 
-**Milestone:** v1.1
+**Milestone:** v1.2
 **Created:** 2026-02-21
 **Status:** Approved
 
 ---
 
-## v1.1 Requirements
+## v1.2 Requirements
 
-### Storage (STOR)
+### Typography (FONT)
 
-- [x] **STOR-01**: User's imported models are stored in content-addressable blob directories (hash-based layout: `blobs/ab/cd/abcdef...ext`)
-- [x] **STOR-02**: File writes use atomic temp+verify+rename to prevent corruption from crashes or network disconnects
-- [x] **STOR-03**: Application cleans up orphaned temp files on startup
-- [x] **STOR-04**: Application detects non-local filesystems (NAS, Google Drive, OneDrive, mapped drives) and auto-suggests copy instead of move
+- [ ] **FONT-01**: Application uses a modern proportional sans-serif font (Inter or equivalent) instead of the default ImGui bitmap font
+- [ ] **FONT-02**: FontAwesome 6 icons remain merged and render correctly at all font sizes
+- [ ] **FONT-03**: Font atlas uses oversampling (2x or 3x) for crisp rendering at non-integer scales
 
-### Import (IMPORT)
+### Scaling (DPI)
 
-- [x] **IMPORT-01**: User can choose organizational strategy on import: keep in place, copy to organized local store, or move to organized local store
-- [x] **IMPORT-02**: Import dialog shows filesystem detection result and recommends copy for non-local sources
+- [ ] **DPI-01**: Application detects display DPI on startup and scales UI elements accordingly
+- [ ] **DPI-02**: Font size, padding, spacing, and rounding values scale proportionally with DPI
+- [ ] **DPI-03**: Application handles DPI changes at runtime (e.g., moving window between monitors on Windows)
 
-### Organization (ORG)
+### Theme Polish (THEME)
 
-- [x] **ORG-01**: User can assign models to categories in a 2-level hierarchy (genus/species)
-- [x] **ORG-02**: User can search models via full-text search across name, tags, filename, and category
-- [x] **ORG-03**: GraphQLite extension loaded at DB init for Cypher graph queries
-- [x] **ORG-04**: Models, categories, and projects represented as graph nodes with relationship edges
-- [x] **ORG-05**: User can query relationships via graph traversal (e.g., "all models in project X", "related models")
+- [ ] **THEME-01**: Dark theme uses a refined, cohesive color palette with clear visual hierarchy
+- [ ] **THEME-02**: Light theme is fully customized (not delegating to ImGui's default `StyleColorsLight`)
+- [ ] **THEME-03**: High contrast theme updated to match new spacing/font conventions
+- [ ] **THEME-04**: All three themes share consistent spacing, padding, and rounding values (via `applyBaseStyle`)
 
-### Export (EXPORT)
+### Visual Consistency (VIS)
 
-- [x] **EXPORT-01**: User can export a project as .dwproj ZIP archive containing manifest + model blobs + materials + thumbnails
-- [x] **EXPORT-02**: .dwproj archive is portable and self-contained (can be imported on another machine)
+- [ ] **VIS-01**: Panels and dialogs have consistent margins, header styling, and section spacing
+- [ ] **VIS-02**: Buttons, inputs, and interactive elements have visually distinct hover/active states across all themes
 
 ---
 
 ## Future Requirements (Deferred)
 
-- AI genus classification via Gemini Vision on thumbnails
-- Multi-project cross-optimization
-- Cloud sync / collaborative features
+- Custom window chrome / frameless title bar
+- Platform-adaptive accent colors (Windows accent color API)
+- Font ligature support
+- Icon font upgrade to FontAwesome 6 Pro (licensing)
 
 ## Out of Scope
 
-- STEP/IGES CAD format support — not a CAD tool
-- Cloud-based operation — fully offline desktop app
-- CAD editing — view/import only
-- Database migration system — no user base, delete and recreate per rulebook
-- Real-time chat/collaboration — single-user
+- wxWidgets migration — too deep an ImGui integration
+- New functional features — this milestone is purely visual/UX
+- Animation/transition effects — ImGui doesn't support them natively
 
 ---
 
@@ -55,16 +53,15 @@
 
 | REQ-ID | Phase | Plan | Status |
 |--------|-------|------|--------|
-| STOR-01 | Phase 2 | 02-01, 02-02 | Complete |
-| STOR-02 | Phase 2 | 02-01, 02-02 | Complete |
-| STOR-03 | Phase 2 | 02-01, 02-02 | Complete |
-| STOR-04 | Phase 3 | 03-01 | Complete |
-| IMPORT-01 | Phase 3 | 03-02 | Complete |
-| IMPORT-02 | Phase 3 | 03-01 | Complete |
-| ORG-01 | Phase 4 | 04-01, 04-04 | Complete |
-| ORG-02 | Phase 4 | 04-01, 04-04 | Complete |
-| ORG-03 | Phase 4 | 04-02 | Complete |
-| ORG-04 | Phase 4 | 04-03 | Complete |
-| ORG-05 | Phase 4 | 04-03 | Complete |
-| EXPORT-01 | Phase 5 | 05-01, 05-02, 05-03 | Complete |
-| EXPORT-02 | Phase 5 | 05-01, 05-02, 05-04 | Complete |
+| FONT-01 | Phase 5 | — | Pending |
+| FONT-02 | Phase 5 | — | Pending |
+| FONT-03 | Phase 5 | — | Pending |
+| DPI-01 | Phase 5 | — | Pending |
+| DPI-02 | Phase 5 | — | Pending |
+| DPI-03 | Phase 5 | — | Pending |
+| THEME-01 | Phase 5 | — | Pending |
+| THEME-02 | Phase 5 | — | Pending |
+| THEME-03 | Phase 5 | — | Pending |
+| THEME-04 | Phase 5 | — | Pending |
+| VIS-01 | Phase 5 | — | Pending |
+| VIS-02 | Phase 5 | — | Pending |
