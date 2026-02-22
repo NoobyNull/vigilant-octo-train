@@ -1,6 +1,7 @@
 #include "library_manager.h"
 
 #include "../../render/thumbnail_generator.h"
+#include "../graph/graph_manager.h"
 #include "../loaders/loader_factory.h"
 #include "../mesh/hash.h"
 #include "../paths/app_paths.h"
@@ -84,6 +85,14 @@ ImportResult LibraryManager::importModel(const Path& sourcePath) {
     // Generate thumbnail (best effort)
     generateThumbnail(*modelId, *mesh);
 
+    // Dual-write: create graph node (non-fatal)
+    if (m_graphManager && m_graphManager->isAvailable()) {
+        if (!m_graphManager->addModelNode(*modelId, record.name, record.hash)) {
+            log::warningf("Library", "Failed to create graph node for model %lld",
+                          static_cast<long long>(*modelId));
+        }
+    }
+
     result.success = true;
     result.modelId = *modelId;
 
@@ -153,6 +162,11 @@ bool LibraryManager::removeModel(i64 modelId) {
     // Remove thumbnail if exists (best-effort cleanup)
     if (!record->thumbnailPath.empty() && file::exists(record->thumbnailPath)) {
         (void)file::remove(record->thumbnailPath);
+    }
+
+    // Dual-write: remove graph node (non-fatal)
+    if (m_graphManager && m_graphManager->isAvailable()) {
+        m_graphManager->removeModelNode(modelId);
     }
 
     return m_modelRepo.remove(modelId);
@@ -308,6 +322,96 @@ std::optional<i64> LibraryManager::autoDetectModelMatch(const std::string& gcode
 
     // Zero or multiple matches: ambiguous, return nullopt
     return std::nullopt;
+}
+
+// --- Category management (dual-write to SQLite + graph) ---
+
+bool LibraryManager::assignCategory(i64 modelId, i64 categoryId) {
+    // SQLite is source of truth
+    bool ok = m_modelRepo.assignCategory(modelId, categoryId);
+    if (!ok) return false;
+
+    // Dual-write: graph edge (non-fatal)
+    if (m_graphManager && m_graphManager->isAvailable()) {
+        m_graphManager->addBelongsToEdge(modelId, categoryId);
+    }
+    return true;
+}
+
+bool LibraryManager::removeModelCategory(i64 modelId, i64 categoryId) {
+    bool ok = m_modelRepo.removeCategory(modelId, categoryId);
+    if (!ok) return false;
+
+    // Dual-write: remove graph edge (non-fatal)
+    if (m_graphManager && m_graphManager->isAvailable()) {
+        m_graphManager->removeBelongsToEdge(modelId, categoryId);
+    }
+    return true;
+}
+
+std::optional<i64> LibraryManager::createCategory(const std::string& name,
+                                                   std::optional<i64> parentId) {
+    auto catId = m_modelRepo.createCategory(name, parentId);
+    if (!catId) return std::nullopt;
+
+    // Dual-write: create graph node (non-fatal)
+    if (m_graphManager && m_graphManager->isAvailable()) {
+        m_graphManager->addCategoryNode(*catId, name);
+    }
+    return catId;
+}
+
+bool LibraryManager::deleteCategory(i64 categoryId) {
+    bool ok = m_modelRepo.deleteCategory(categoryId);
+    if (!ok) return false;
+
+    // Dual-write: remove graph node (non-fatal)
+    if (m_graphManager && m_graphManager->isAvailable()) {
+        m_graphManager->removeCategoryNode(categoryId);
+    }
+    return true;
+}
+
+std::vector<CategoryRecord> LibraryManager::getAllCategories() {
+    return m_modelRepo.getAllCategories();
+}
+
+std::vector<CategoryRecord> LibraryManager::getRootCategories() {
+    return m_modelRepo.getRootCategories();
+}
+
+std::vector<CategoryRecord> LibraryManager::getChildCategories(i64 parentId) {
+    return m_modelRepo.getChildCategories(parentId);
+}
+
+std::vector<ModelRecord> LibraryManager::filterByCategory(i64 categoryId) {
+    return m_modelRepo.findByCategory(categoryId);
+}
+
+// --- FTS5 search ---
+
+std::vector<ModelRecord> LibraryManager::searchModelsFTS(const std::string& query) {
+    return m_modelRepo.searchFTS(query);
+}
+
+// --- Graph queries ---
+
+std::vector<i64> LibraryManager::getRelatedModelIds(i64 modelId) {
+    if (m_graphManager && m_graphManager->isAvailable()) {
+        return m_graphManager->queryRelatedModels(modelId);
+    }
+    return {};
+}
+
+std::vector<i64> LibraryManager::getModelsInProject(i64 projectId) {
+    if (m_graphManager && m_graphManager->isAvailable()) {
+        return m_graphManager->queryModelsInProject(projectId);
+    }
+    return {};
+}
+
+bool LibraryManager::isGraphAvailable() const {
+    return m_graphManager && m_graphManager->isAvailable();
 }
 
 } // namespace dw

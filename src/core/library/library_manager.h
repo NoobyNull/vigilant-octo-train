@@ -17,6 +17,7 @@ namespace dw {
 // Forward declarations
 class ThumbnailGenerator;
 class Texture;
+class GraphManager;
 
 // Import result
 struct ImportResult {
@@ -76,6 +77,9 @@ class LibraryManager {
     // Set thumbnail generator (optional, owned externally)
     void setThumbnailGenerator(ThumbnailGenerator* generator) { m_thumbnailGen = generator; }
 
+    // Set graph manager for dual-write (optional, owned externally)
+    void setGraphManager(GraphManager* gm) { m_graphManager = gm; }
+
     // Generate thumbnail and update DB record
     bool generateThumbnail(i64 modelId, const Mesh& mesh, const Texture* materialTexture = nullptr,
                            float cameraPitch = 30.0f, float cameraYaw = 45.0f);
@@ -102,6 +106,25 @@ class LibraryManager {
     // Auto-detect: try to match G-code filename to model name
     std::optional<i64> autoDetectModelMatch(const std::string& gcodeFilename);
 
+    // --- Category management (delegates to ModelRepository + graph dual-write) ---
+    bool assignCategory(i64 modelId, i64 categoryId);
+    bool removeModelCategory(i64 modelId, i64 categoryId);
+    std::optional<i64> createCategory(const std::string& name,
+                                      std::optional<i64> parentId = std::nullopt);
+    bool deleteCategory(i64 categoryId);
+    std::vector<CategoryRecord> getAllCategories();
+    std::vector<CategoryRecord> getRootCategories();
+    std::vector<CategoryRecord> getChildCategories(i64 parentId);
+    std::vector<ModelRecord> filterByCategory(i64 categoryId);
+
+    // FTS5 search (preferred over LIKE-based searchModels for text queries)
+    std::vector<ModelRecord> searchModelsFTS(const std::string& query);
+
+    // Graph queries (delegated to GraphManager)
+    std::vector<i64> getRelatedModelIds(i64 modelId);
+    std::vector<i64> getModelsInProject(i64 projectId);
+    bool isGraphAvailable() const;
+
   private:
     std::string computeFileHash(const Path& path);
 
@@ -110,6 +133,7 @@ class LibraryManager {
     GCodeRepository m_gcodeRepo;
     DuplicateHandler m_duplicateHandler;
     ThumbnailGenerator* m_thumbnailGen = nullptr;
+    GraphManager* m_graphManager = nullptr;
 };
 
 } // namespace dw

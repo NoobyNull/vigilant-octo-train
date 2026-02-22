@@ -31,6 +31,7 @@ class MainThreadQueue;
 class StorageManager;
 class MaterialManager;
 class CostRepository;
+class GraphManager;
 class GeminiMaterialService;
 class Mesh;
 class Texture;
@@ -115,6 +116,9 @@ class Application {
 
     // Cost estimation repository
     std::unique_ptr<CostRepository> m_costRepo;
+
+    // Graph query engine (Cypher via GraphQLite extension)
+    std::unique_ptr<GraphManager> m_graphManager;
 
     // Gemini AI material generation service
     std::unique_ptr<GeminiMaterialService> m_geminiService;

@@ -5,6 +5,7 @@
 #include "app/application.h"
 
 #include <cstdio>
+#include <filesystem>
 
 #include <SDL.h>
 #include <glad/gl.h>
@@ -21,6 +22,7 @@
 #include "core/database/model_repository.h"
 #include "core/database/schema.h"
 #include "core/events/event_bus.h"
+#include "core/graph/graph_manager.h"
 #include "core/import/import_queue.h"
 #include "core/library/library_manager.h"
 #include "core/loaders/loader_factory.h"
@@ -183,7 +185,28 @@ bool Application::init() {
     size_t poolSize = std::max(static_cast<size_t>(4), maxWorkers + 2);
     m_connectionPool = std::make_unique<ConnectionPool>(paths::getDatabasePath(), poolSize);
 
+    // Initialize GraphQLite extension for Cypher graph queries (ORG-03/04/05)
+    m_graphManager = std::make_unique<GraphManager>(*m_database);
+    {
+        // Resolve extension directory relative to the running executable
+        std::error_code ec;
+        Path exeDir;
+#ifdef __linux__
+        Path exePath = std::filesystem::read_symlink("/proc/self/exe", ec);
+        if (!ec)
+            exeDir = exePath.parent_path();
+#endif
+        if (exeDir.empty())
+            exeDir = std::filesystem::current_path();
+
+        if (!m_graphManager->initialize(exeDir)) {
+            log::warning("Application",
+                         "GraphQLite extension not available -- graph queries disabled");
+        }
+    }
+
     m_libraryManager = std::make_unique<LibraryManager>(*m_database);
+    m_libraryManager->setGraphManager(m_graphManager.get());
     m_projectManager = std::make_unique<ProjectManager>(*m_database);
     m_materialManager = std::make_unique<MaterialManager>(*m_database);
     m_materialManager->seedDefaults();
@@ -922,6 +945,7 @@ void Application::shutdown() {
     m_thumbnailGenerator.reset();
     m_projectManager.reset();
     m_libraryManager.reset();
+    m_graphManager.reset(); // Must be destroyed before m_database
     m_database.reset();
     m_eventBus.reset();
 
