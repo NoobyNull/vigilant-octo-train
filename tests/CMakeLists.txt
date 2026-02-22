@@ -44,6 +44,8 @@ set(DW_TEST_SOURCES
     test_mesh_uv.cpp
     # Storage
     test_storage_manager.cpp
+    # Import - Filesystem detection
+    test_filesystem_detector.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
     # Tier 3 — workspace tests (no GL/SDL required)
@@ -93,6 +95,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/library/library_manager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/import/import_queue.cpp
     ${CMAKE_SOURCE_DIR}/src/core/import/file_handler.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/import/filesystem_detector.cpp
     ${CMAKE_SOURCE_DIR}/src/core/config/config.cpp
     ${CMAKE_SOURCE_DIR}/src/core/config/config_watcher.cpp
     ${CMAKE_SOURCE_DIR}/src/core/config/input_binding.cpp

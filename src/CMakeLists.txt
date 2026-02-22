@@ -65,6 +65,7 @@ set(DW_SOURCES
     # Import
     core/import/import_queue.cpp
     core/import/file_handler.cpp
+    core/import/filesystem_detector.cpp
 
     # Library
     core/library/library_manager.cpp
