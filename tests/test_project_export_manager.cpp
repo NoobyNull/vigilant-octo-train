@@ -3,10 +3,12 @@
 #include <gtest/gtest.h>
 
 #include "core/database/database.h"
+#include "core/database/material_repository.h"
 #include "core/database/model_repository.h"
 #include "core/database/project_repository.h"
 #include "core/database/schema.h"
 #include "core/export/project_export_manager.h"
+#include "core/paths/app_paths.h"
 #include "core/project/project.h"
 #include "core/utils/file_utils.h"
 
@@ -321,4 +323,142 @@ TEST_F(ProjectExportTest, ImportDeduplicatesExistingModels) {
         }
     }
     EXPECT_TRUE(found) << "Imported project should exist";
+}
+
+// --- Test 5: Export/import round-trip preserves materials and thumbnails ---
+
+TEST_F(ProjectExportTest, RoundTripPreservesMaterialsAndThumbnails) {
+    // 1. Insert a material
+    dw::MaterialRepository matRepo(m_db);
+    dw::MaterialRecord matRec;
+    matRec.name = "Red Oak";
+    matRec.category = dw::MaterialCategory::Hardwood;
+
+    // Create a fake .dwmat file on disk
+    dw::Path matArchivePath = m_baseDir / "red_oak.dwmat";
+    std::string matContent = "FAKE_DWMAT_ARCHIVE_BYTES";
+    ASSERT_TRUE(dw::file::writeText(matArchivePath, matContent));
+    matRec.archivePath = matArchivePath;
+
+    auto matId = matRepo.insert(matRec);
+    ASSERT_TRUE(matId.has_value());
+
+    // 2. Insert a model
+    const std::string modelHash = "mat_thumb_test_hash";
+    auto modelId = insertModelWithFile(modelHash, "Oak Widget");
+
+    // 3. Write a small thumbnail PNG and assign it
+    dw::Path thumbPath = m_baseDir / "thumbnails" / (modelHash + ".png");
+    std::filesystem::create_directories(m_baseDir / "thumbnails");
+    std::string thumbContent = "FAKEPNGDATA_1x1";
+    ASSERT_TRUE(dw::file::writeText(thumbPath, thumbContent));
+
+    dw::ModelRepository modelRepo(m_db);
+    ASSERT_TRUE(modelRepo.updateThumbnail(modelId, thumbPath));
+
+    // 4. Assign material to model via raw SQL
+    {
+        auto stmt =
+            m_db.prepare("UPDATE models SET material_id = ? WHERE id = ?");
+        ASSERT_TRUE(stmt.isValid());
+        ASSERT_TRUE(stmt.bindInt(1, *matId));
+        ASSERT_TRUE(stmt.bindInt(2, modelId));
+        ASSERT_TRUE(stmt.execute());
+    }
+
+    // 5. Create project and link model
+    dw::ProjectRepository projRepo(m_db);
+    dw::ProjectRecord projRec;
+    projRec.name = "Material Thumbnail Project";
+    projRec.description = "Test";
+    auto projId = projRepo.insert(projRec);
+    ASSERT_TRUE(projId.has_value());
+    ASSERT_TRUE(projRepo.addModel(*projId, modelId));
+
+    auto project = std::make_shared<dw::Project>();
+    project->record().id = *projId;
+    project->record().name = "Material Thumbnail Project";
+    project->addModel(modelId);
+
+    // 6. Export
+    dw::ProjectExportManager exporter(m_db);
+    auto exportResult = exporter.exportProject(*project, m_archivePath);
+    ASSERT_TRUE(exportResult.success) << exportResult.error;
+
+    // 7. Verify ZIP contents
+    {
+        mz_zip_archive zip{};
+        ASSERT_TRUE(
+            mz_zip_reader_init_file(&zip, m_archivePath.c_str(), 0));
+
+        // Check materials/<matId>.dwmat exists
+        std::string matArchPath =
+            "materials/" + std::to_string(*matId) + ".dwmat";
+        int matIdx =
+            mz_zip_reader_locate_file(&zip, matArchPath.c_str(), nullptr, 0);
+        EXPECT_GE(matIdx, 0) << "Material archive entry not found: "
+                             << matArchPath;
+
+        // Check thumbnails/<hash>.png exists
+        std::string thumbArchPath = "thumbnails/" + modelHash + ".png";
+        int thumbIdx = mz_zip_reader_locate_file(&zip, thumbArchPath.c_str(),
+                                                 nullptr, 0);
+        EXPECT_GE(thumbIdx, 0)
+            << "Thumbnail archive entry not found: " << thumbArchPath;
+
+        // Check manifest has the new fields
+        size_t manifestSize = 0;
+        void* manifestData = mz_zip_reader_extract_file_to_heap(
+            &zip, "manifest.json", &manifestSize, 0);
+        ASSERT_NE(manifestData, nullptr);
+
+        std::string manifestStr(static_cast<const char*>(manifestData),
+                                manifestSize);
+        mz_free(manifestData);
+
+        auto j = nlohmann::json::parse(manifestStr);
+        auto& models = j["models"];
+        ASSERT_EQ(models.size(), 1u);
+
+        auto& mj = models[0];
+        EXPECT_EQ(mj["material_id"].get<dw::i64>(), *matId);
+        EXPECT_FALSE(mj["material_in_archive"].get<std::string>().empty());
+        EXPECT_FALSE(
+            mj["thumbnail_in_archive"].get<std::string>().empty());
+
+        mz_zip_reader_end(&zip);
+    }
+
+    // 8. Import into a second database
+    dw::Database db2;
+    ASSERT_TRUE(db2.open(":memory:"));
+    ASSERT_TRUE(dw::Schema::initialize(db2));
+
+    dw::ProjectExportManager importer(db2);
+    auto importResult = importer.importProject(m_archivePath);
+    ASSERT_TRUE(importResult.success) << importResult.error;
+
+    // 9. Verify imported model has thumbnail
+    dw::ModelRepository modelRepo2(db2);
+    auto importedModel = modelRepo2.findByHash(modelHash);
+    ASSERT_TRUE(importedModel.has_value());
+    EXPECT_FALSE(importedModel->thumbnailPath.empty());
+    EXPECT_TRUE(dw::file::exists(importedModel->thumbnailPath));
+
+    // 10. Verify imported model has material_id set
+    {
+        auto stmt =
+            db2.prepare("SELECT material_id FROM models WHERE id = ?");
+        ASSERT_TRUE(stmt.isValid());
+        ASSERT_TRUE(stmt.bindInt(1, importedModel->id));
+        ASSERT_TRUE(stmt.step());
+        EXPECT_FALSE(stmt.isNull(0))
+            << "Imported model should have material_id set";
+    }
+
+    // 11. Verify a MaterialRecord exists in the second DB
+    dw::MaterialRepository matRepo2(db2);
+    auto allMaterials = matRepo2.findAll();
+    EXPECT_GE(allMaterials.size(), 1u)
+        << "Should have at least one imported material";
 }
