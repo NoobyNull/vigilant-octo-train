@@ -5,8 +5,8 @@
 #include <fstream>
 
 #ifdef _WIN32
-    #include <shellapi.h>
     #include <windows.h>
+    #include <shellapi.h>
 #else
     #include <unistd.h>
 #endif
