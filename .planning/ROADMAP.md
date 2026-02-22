@@ -33,7 +33,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
 
 - [x] **Phase 2: Content-Addressable Storage** — StorageManager with hash-based blob directories, atomic writes, orphan cleanup
 - [x] **Phase 3: Import File Handling** — Filesystem detection, import dialog with keep/copy/move options
-- [ ] **Phase 4: Organization & Graph** — DB schema with FTS5 search, GraphQLite graph extension, categories, Cypher queries
+- [x] **Phase 4: Organization & Graph** — DB schema with FTS5 search, GraphQLite graph extension, categories, Cypher queries
 - [ ] **Phase 5: Project Export** — Portable .dwproj ZIP archives with manifest and embedded blobs
 
 ## Phase Details
@@ -81,7 +81,7 @@ Plans:
 - [x] 04-01-PLAN.md — Schema v7: categories tables, FTS5 virtual table + triggers, ModelRepository methods
 - [x] 04-02-PLAN.md — GraphQLite extension loading, Database extension API, GraphManager foundation
 - [x] 04-03-PLAN.md — Graph node/edge CRUD, LibraryManager dual-write integration
-- [ ] 04-04-PLAN.md — Category UI, FTS5 search bar, Application wiring, human verification
+- [x] 04-04-PLAN.md — Category UI, FTS5 search bar, Application wiring, human verification
 
 ### Phase 5: Project Export
 **Goal:** User can share a project as a portable, self-contained archive that works on another machine
@@ -110,7 +110,7 @@ Plans:
 | 1 Materials System | Post-v1.0 | 6/6 | Complete | 2026-02-20 |
 | 2 Content-Addressable Storage | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 3 Import File Handling | v1.1 | 2/2 | Complete | 2026-02-22 |
-| 4 Organization & Graph | v1.1 | 3/4 | In Progress | - |
+| 4 Organization & Graph | v1.1 | 4/4 | Complete | 2026-02-22 |
 | 5 Project Export | v1.1 | 0/2 | Not started | - |
 
 ---
