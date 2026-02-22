@@ -26,7 +26,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsdl2-dev libgl-dev zlib1g-dev clang-format-18 makeself
+          sudo apt-get install -y libsdl2-dev libgl-dev zlib1g-dev libcurl4-openssl-dev clang-format-18 makeself
           if [ "${{ matrix.compiler }}" = "clang" ]; then
             sudo apt-get install -y clang
           fi
@@ -62,7 +62,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsdl2-dev libgl-dev zlib1g-dev clang-tidy cppcheck
+          sudo apt-get install -y libsdl2-dev libgl-dev zlib1g-dev libcurl4-openssl-dev clang-tidy cppcheck
 
       - name: Configure (for compile_commands.json)
         run: cmake -B build -DCMAKE_BUILD_TYPE=Debug -DDW_BUILD_TESTS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
@@ -89,7 +89,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsdl2-dev libgl-dev zlib1g-dev lcov
+          sudo apt-get install -y libsdl2-dev libgl-dev zlib1g-dev libcurl4-openssl-dev lcov
 
       - name: Configure with coverage
         run: cmake -B build -DCMAKE_BUILD_TYPE=Debug -DDW_BUILD_TESTS=ON

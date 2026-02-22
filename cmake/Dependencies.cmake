@@ -79,7 +79,7 @@ if(NOT SQLite3_FOUND)
     FetchContent_Declare(
         sqlite3
         GIT_REPOSITORY https://github.com/azadkuh/sqlite-amalgamation.git
-        GIT_TAG 3.45.0
+        GIT_TAG 3.38.2
         GIT_SHALLOW TRUE
     )
     FetchContent_MakeAvailable(sqlite3)
@@ -158,7 +158,27 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(stb)
 
 # libcurl - HTTP client (needed for Gemini API)
-find_package(CURL REQUIRED)
+find_package(CURL QUIET)
+if(NOT CURL_FOUND)
+    message(STATUS "CURL not found, fetching from GitHub...")
+    FetchContent_Declare(
+        curl
+        GIT_REPOSITORY https://github.com/curl/curl.git
+        GIT_TAG curl-8_5_0
+        GIT_SHALLOW TRUE
+    )
+    set(BUILD_CURL_EXE OFF CACHE BOOL "" FORCE)
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    set(CURL_USE_OPENSSL OFF CACHE BOOL "" FORCE)
+    set(CURL_USE_SCHANNEL ON CACHE BOOL "" FORCE)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    set(HTTP_ONLY ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(curl)
+    # Create the CURL::libcurl target alias if needed
+    if(NOT TARGET CURL::libcurl)
+        add_library(CURL::libcurl ALIAS libcurl)
+    endif()
+endif()
 
 # nlohmann/json - JSON library
 FetchContent_Declare(
@@ -235,7 +255,7 @@ message(STATUS "  SDL2:     ${SDL2_VERSION}")
 message(STATUS "  ImGui:    docking branch")
 message(STATUS "  OpenGL:   ${OPENGL_gl_LIBRARY}")
 message(STATUS "  GLM:      1.0.1")
-message(STATUS "  SQLite3:  3.45.0")
+message(STATUS "  SQLite3:  3.38.2")
 message(STATUS "  zlib:     ${ZLIB_VERSION_STRING}${zlib_VERSION}")
 message(STATUS "  miniz:    3.0.2")
 message(STATUS "  stb:      master (header-only)")
