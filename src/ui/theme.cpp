@@ -18,15 +18,15 @@ void Theme::applyBaseStyle() {
     style.ScrollbarSize = 14.0f;
     style.GrabMinSize = 12.0f;
 
-    // Rounded corners
+    // Rounded corners — modernized for consistency
     style.WindowRounding = 6.0f;
-    style.ChildRounding = 4.0f;
-    style.FrameRounding = 4.0f;
-    style.PopupRounding = 4.0f;
+    style.ChildRounding = 5.0f;
+    style.FrameRounding = 5.0f;     // Increased from 4.0f for button/input consistency
+    style.PopupRounding = 5.0f;
     style.ScrollbarRounding = 6.0f;
-    style.GrabRounding = 3.0f;
+    style.GrabRounding = 4.0f;      // Increased from 3.0f for visual harmony
     style.LogSliderDeadzone = 4.0f;
-    style.TabRounding = 4.0f;
+    style.TabRounding = 5.0f;       // Increased from 4.0f for consistency
 
     // Subtle borders
     style.WindowBorderSize = 1.0f;
@@ -95,14 +95,14 @@ void Theme::applyDark() {
     colors[ImGuiCol_ButtonHovered] = ImVec4(0.280f, 0.400f, 0.560f, 1.0f);
     colors[ImGuiCol_ButtonActive] = ImVec4(0.400f, 0.600f, 0.800f, 1.0f);
 
-    // Headers (collapsible, selectable)
+    // Headers (collapsible, selectable) — enhanced hover visibility
     colors[ImGuiCol_Header] = ImVec4(0.200f, 0.212f, 0.228f, 1.0f);
-    colors[ImGuiCol_HeaderHovered] = ImVec4(0.280f, 0.400f, 0.560f, 0.8f);
+    colors[ImGuiCol_HeaderHovered] = ImVec4(0.280f, 0.400f, 0.560f, 0.95f);  // Increased from 0.8f
     colors[ImGuiCol_HeaderActive] = ImVec4(0.400f, 0.600f, 0.800f, 1.0f);
 
-    // Separator
-    colors[ImGuiCol_Separator] = ImVec4(0.227f, 0.239f, 0.255f, 1.0f);
-    colors[ImGuiCol_SeparatorHovered] = ImVec4(0.400f, 0.600f, 0.800f, 0.8f);
+    // Separator — enhanced clarity for panel hierarchy
+    colors[ImGuiCol_Separator] = ImVec4(0.275f, 0.290f, 0.306f, 1.0f);   // Slightly brighter for visibility
+    colors[ImGuiCol_SeparatorHovered] = ImVec4(0.400f, 0.600f, 0.800f, 0.95f);
     colors[ImGuiCol_SeparatorActive] = ImVec4(0.400f, 0.600f, 0.800f, 1.0f);
 
     // Resize grip
@@ -196,9 +196,9 @@ void Theme::applyLight() {
     colors[ImGuiCol_ButtonHovered] = ImVec4(0.750f, 0.830f, 0.930f, 1.0f);
     colors[ImGuiCol_ButtonActive] = ImVec4(0.200f, 0.400f, 0.700f, 1.0f);
 
-    // Headers
+    // Headers — enhanced hover visibility
     colors[ImGuiCol_Header] = ImVec4(0.910f, 0.918f, 0.930f, 1.0f);
-    colors[ImGuiCol_HeaderHovered] = ImVec4(0.750f, 0.830f, 0.930f, 0.8f);
+    colors[ImGuiCol_HeaderHovered] = ImVec4(0.750f, 0.830f, 0.930f, 0.95f);  // Increased from 0.8f
     colors[ImGuiCol_HeaderActive] = ImVec4(0.200f, 0.400f, 0.700f, 1.0f);
 
     // Separator
@@ -297,9 +297,9 @@ void Theme::applyHighContrast() {
     colors[ImGuiCol_ButtonHovered] = ImVec4(0.5f, 0.7f, 1.0f, 1.0f);
     colors[ImGuiCol_ButtonActive] = ImVec4(0.3f, 0.5f, 0.9f, 1.0f);
 
-    // Headers
+    // Headers — maximum contrast for accessibility
     colors[ImGuiCol_Header] = ImVec4(0.15f, 0.15f, 0.15f, 1.0f);
-    colors[ImGuiCol_HeaderHovered] = ImVec4(0.4f, 0.6f, 0.9f, 0.8f);
+    colors[ImGuiCol_HeaderHovered] = ImVec4(0.4f, 0.6f, 0.9f, 1.0f);   // Increased from 0.8f for full opacity
     colors[ImGuiCol_HeaderActive] = ImVec4(0.4f, 0.7f, 1.0f, 1.0f);
 
     // Separator

@@ -1,7 +1,7 @@
 # Project State: Digital Workshop
 
 **Last Updated:** 2026-02-22
-**Current Session:** v1.5 Project Manager — milestone started
+**Current Session:** v1.5 Project Manager — Phase 8 complete
 
 ---
 
@@ -18,17 +18,17 @@ See: `.planning/PROJECT.md` (updated 2026-02-22)
 ## Current Position
 
 **Milestone:** v1.5 Project Manager
-**Status:** In progress — Phase 7 complete, starting Phase 8
-**Current Plan:** Phase 8, Plan 1
+**Status:** In progress — Phase 8 complete
+**Current Plan:** Phase 9, Plan 1
 
 ```
 Phase 6: Schema & Data Layer (1 plan) — complete
 Phase 7: Unified Project Panel (2 plans) — complete
-Phase 8: Cut Plan & G-code Association (2 plans) — not started
+Phase 8: Cut Plan & G-code Association (3 plans) — 3/3 complete
 Phase 9: Comprehensive .dwproj Export/Import (2 plans) — not started
 ```
 
-Last activity: 2026-02-22 — 07-02 Cross-panel navigation wiring complete
+Last activity: 2026-02-22 — 08-03 Import all asset types from .dwproj + round-trip test (539 tests)
 
 ---
 
@@ -62,17 +62,18 @@ Last activity: 2026-02-22 — 07-02 Cross-panel navigation wiring complete
 ## Project Health
 
 **Code Quality:**
-- Application.cpp: thin coordinator (486 lines + 800 wiring)
+- Application.cpp: thin coordinator (486 lines + 798 wiring)
 - Manager architecture: UIManager, FileIOManager, ConfigManager
 - .clang-format established, CI enforces formatting
 - All files under 800 line limit
 
 **Test Coverage:**
-- 538 tests passing
+- 539 tests passing (Phase 8: full .dwproj round-trip test added)
 - StorageManager: 9 tests
 - Infrastructure: ConnectionPool (10), MainThreadQueue (10)
 - Bug regression tests: 12
 - Materials tests: Comprehensive coverage
+- Database Layer: CutPlanRepository (7 tests), schema migration tests
 
 **Tech Debt:**
 - EventBus removed in v1.4.4 (was wired but unused)
