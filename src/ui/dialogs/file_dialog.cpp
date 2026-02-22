@@ -85,9 +85,10 @@ void FileDialog::render() {
                 if (ImGui::IsMouseDoubleClicked(0)) {
                     if (entry.isDirectory) {
                         m_currentPath = m_currentPath + "/" + entry.name;
-                        refreshDirectory();
                         m_selectedFile.clear();
                         m_selectedFiles.clear();
+                        refreshDirectory();
+                        break;
                     } else if (m_mode == FileDialogMode::Open && !m_multiSelect) {
                         std::string fullPath = m_currentPath + "/" + m_selectedFile;
                         m_open = false;

@@ -346,8 +346,8 @@ void PropertiesPanel::renderMaterialInfo() {
 
             // Category badge
             ImGui::Spacing();
-            const char* categoryStr = materialCategoryToString(mat.category).c_str();
-            ImGui::Text("Category: %s", categoryStr);
+            auto categoryStr = materialCategoryToString(mat.category);
+            ImGui::Text("Category: %s", categoryStr.c_str());
 
             // Read-only material properties
             ImGui::Spacing();

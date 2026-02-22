@@ -91,6 +91,8 @@ jobs:
             --suppress=missingIncludeSystem \
             --suppress=unmatchedSuppression \
             --suppress=syntaxError \
+            --suppress='*:build/_deps/*' \
+            --suppress='*:*/_deps/*' \
             -i build/_deps \
             --error-exitcode=1 \
             --quiet
