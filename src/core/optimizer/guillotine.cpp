@@ -60,7 +60,7 @@ CutPlan GuillotineOptimizer::optimize(const std::vector<Part>& parts,
             // Try to insert (with optional rotation)
             Node* node = insert(root.get(), partWidth, partHeight);
 
-            if (!node && m_allowRotation) {
+            if (!node && m_allowRotation && ep.part->canRotate) {
                 node = insert(root.get(), partHeight, partWidth);
                 if (node) {
                     // Mark as rotated

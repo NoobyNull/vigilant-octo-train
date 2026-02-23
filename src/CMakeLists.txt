@@ -87,6 +87,7 @@ set(DW_SOURCES
 
     # Optimizer
     core/optimizer/cut_optimizer.cpp
+    core/optimizer/cut_list_file.cpp
     core/optimizer/bin_packer.cpp
     core/optimizer/guillotine.cpp
 

@@ -37,6 +37,7 @@ class CutPlanRepository;
 class GeminiMaterialService;
 class GeminiDescriptorService;
 class ProjectExportManager;
+class CutListFile;
 class Mesh;
 class Texture;
 
@@ -121,6 +122,9 @@ class Application {
     std::unique_ptr<ModelRepository> m_modelRepo;
     std::unique_ptr<GCodeRepository> m_gcodeRepo;
     std::unique_ptr<CutPlanRepository> m_cutPlanRepo;
+
+    // File-based cut list persistence
+    std::unique_ptr<CutListFile> m_cutListFile;
 
     // Cost estimation repository
     std::unique_ptr<CostRepository> m_costRepo;

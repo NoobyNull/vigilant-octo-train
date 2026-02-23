@@ -1,9 +1,11 @@
 #pragma once
 
+#include <functional>
 #include <memory>
+#include <string>
 #include <vector>
 
-#include "../../core/database/cut_plan_repository.h"
+#include "../../core/optimizer/cut_list_file.h"
 #include "../../core/optimizer/cut_optimizer.h"
 #include "../../core/optimizer/sheet.h"
 #include "../widgets/canvas_2d.h"
@@ -11,9 +13,19 @@
 
 namespace dw {
 
+class ModelRepository;
 class ProjectManager;
+class CostRepository;
 
-// 2D Cut optimizer panel
+// Stock sheet preset (material + dimensions + cost)
+struct StockPreset {
+    const char* name;
+    float width;
+    float height;
+    float cost;
+};
+
+// 2D Cut optimizer panel — CutListMachine-style 3-column layout
 class CutOptimizerPanel : public Panel {
   public:
     CutOptimizerPanel();
@@ -24,20 +36,45 @@ class CutOptimizerPanel : public Panel {
     // Clear all data
     void clear();
 
-    // Load a saved cut plan record into the panel state
-    void loadCutPlan(const CutPlanRecord& record);
+    // Load from a CutListFile::LoadResult
+    void loadCutPlan(const CutListFile::LoadResult& lr);
 
     // Dependency injection
-    void setCutPlanRepository(CutPlanRepository* repo) { m_cutPlanRepo = repo; }
+    void setCutListFile(CutListFile* clf) { m_cutListFile = clf; }
     void setProjectManager(ProjectManager* pm) { m_projectManager = pm; }
+    void setModelRepository(ModelRepository* repo) { m_modelRepo = repo; }
+
+    // Cost integration callback
+    using AddToCostCallback = std::function<void(const std::string& name,
+                                                  int sheetsUsed,
+                                                  float costPerSheet,
+                                                  float totalCost)>;
+    void setOnAddToCost(AddToCostCallback cb) { m_onAddToCost = std::move(cb); }
 
   private:
     void saveCutPlan(const char* name);
+    std::string nextPartLabel() const;
+
+    // Toolbar
     void renderToolbar();
-    void renderPartsEditor();
-    void renderSheetConfig();
-    void renderResults();
+
+    // Left column
+    void renderCutListTable();
+    void renderStockSheets();
+    void renderSettings();
+
+    // Center column
     void renderVisualization();
+
+    // Right column
+    void renderLayoutsSidebar();
+    void renderResultsPanel();
+
+    // Bottom
+    void renderStatusBar();
+
+    // Popups
+    void renderImportPopup();
 
     void runOptimization();
 
@@ -56,19 +93,38 @@ class CutOptimizerPanel : public Panel {
     bool m_hasResults = false;
 
     // Editor state
+    int m_editPartIdx = -1; // Which part row is being inline-edited (-1 = none)
+    char m_newPartName[64] = "";
     float m_newPartWidth = 100.0f;
     float m_newPartHeight = 100.0f;
     int m_newPartQuantity = 1;
-    char m_newPartName[64] = "";
 
     // Visualization state
     int m_selectedSheet = 0;
-    Canvas2D m_canvas; // zoomMax set in constructor
+    Canvas2D m_canvas;
+
+    // Stock sheet name buffer
+    char m_sheetName[64] = "Plywood";
 
     // Persistence
-    CutPlanRepository* m_cutPlanRepo = nullptr;
+    CutListFile* m_cutListFile = nullptr;
     ProjectManager* m_projectManager = nullptr;
-    i64 m_loadedPlanId = -1;
+    Path m_loadedPlanPath;
+
+    // Model import
+    ModelRepository* m_modelRepo = nullptr;
+    bool m_importPopupOpen = false;
+    std::vector<char> m_importSelection; // per-model checkbox state (char to avoid vector<bool> proxy)
+
+    // Cost integration
+    AddToCostCallback m_onAddToCost;
+
+    // Stock presets
+    static constexpr StockPreset kPresets[] = {
+        {"Plywood", 2440.0f, 1220.0f, 45.0f},
+        {"MDF", 2440.0f, 1220.0f, 35.0f},
+        {"Baltic Birch", 1524.0f, 1524.0f, 85.0f},
+    };
 };
 
 } // namespace dw

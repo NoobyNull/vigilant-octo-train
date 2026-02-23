@@ -22,6 +22,7 @@
 #include "core/database/connection_pool.h"
 #include "core/database/cost_repository.h"
 #include "core/database/cut_plan_repository.h"
+#include "core/optimizer/cut_list_file.h"
 #include "core/database/database.h"
 #include "core/database/gcode_repository.h"
 #include "core/database/model_repository.h"
@@ -211,6 +212,8 @@ bool Application::init() {
     m_modelRepo = std::make_unique<ModelRepository>(*m_database);
     m_gcodeRepo = std::make_unique<GCodeRepository>(*m_database);
     m_cutPlanRepo = std::make_unique<CutPlanRepository>(*m_database);
+    m_cutListFile = std::make_unique<CutListFile>();
+    m_cutListFile->setDirectory(paths::getDataDir() / "cutlists");
     m_costRepo = std::make_unique<CostRepository>(*m_database);
     m_geminiService = std::make_unique<GeminiMaterialService>();
     m_descriptorService = std::make_unique<GeminiDescriptorService>();
@@ -411,6 +414,7 @@ void Application::shutdown() {
     m_geminiService.reset();
     m_costRepo.reset();
     m_cutPlanRepo.reset();
+    m_cutListFile.reset();
     m_gcodeRepo.reset();
     m_modelRepo.reset();
     m_importQueue.reset();

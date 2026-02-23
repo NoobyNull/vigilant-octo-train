@@ -127,8 +127,9 @@ bool BinPacker::tryPlace(const Part& part,
             }
         }
 
-        // Try rotated orientation
-        if (m_allowRotation && partHeight <= rect.width + PLACEMENT_EPSILON &&
+        // Try rotated orientation (respects per-part canRotate for grain direction)
+        if (m_allowRotation && part.canRotate &&
+            partHeight <= rect.width + PLACEMENT_EPSILON &&
             partWidth <= rect.height + PLACEMENT_EPSILON) {
             f32 score = rect.width * rect.height - partHeight * partWidth;
             if (score < bestScore) {

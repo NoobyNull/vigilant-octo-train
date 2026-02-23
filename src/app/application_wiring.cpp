@@ -11,6 +11,7 @@
 #include "core/database/connection_pool.h"
 #include "core/database/model_repository.h"
 #include "core/database/cut_plan_repository.h"
+#include "core/optimizer/cut_list_file.h"
 #include "core/database/gcode_repository.h"
 #include "core/export/project_export_manager.h"
 #include "core/import/import_queue.h"
@@ -467,18 +468,49 @@ void Application::initWiring() {
             }
         });
         m_uiManager->projectPanel()->setOnCutPlanSelected([this](i64 planId) {
-            if (!m_cutPlanRepo) return;
+            if (!m_cutPlanRepo || !m_cutListFile) return;
             auto rec = m_cutPlanRepo->findById(planId);
             if (rec && m_uiManager->cutOptimizerPanel()) {
+                // Convert DB record to CutListFile::LoadResult for the panel
+                CutListFile::LoadResult lr;
+                lr.name = rec->name;
+                lr.algorithm = rec->algorithm;
+                lr.allowRotation = rec->allowRotation;
+                lr.kerf = rec->kerf;
+                lr.margin = rec->margin;
+                if (!rec->sheetConfigJson.empty())
+                    lr.sheet = CutPlanRepository::jsonToSheet(rec->sheetConfigJson);
+                if (!rec->partsJson.empty())
+                    lr.parts = CutPlanRepository::jsonToParts(rec->partsJson);
+                if (!rec->resultJson.empty())
+                    lr.result = CutPlanRepository::jsonToCutPlan(rec->resultJson);
                 m_uiManager->cutOptimizerPanel()->setOpen(true);
-                m_uiManager->cutOptimizerPanel()->loadCutPlan(*rec);
+                m_uiManager->cutOptimizerPanel()->loadCutPlan(lr);
             }
         });
     }
     // Wire CutOptimizerPanel and GCodePanel persistence
     if (auto* cop = m_uiManager->cutOptimizerPanel()) {
-        cop->setCutPlanRepository(m_cutPlanRepo.get());
+        cop->setCutListFile(m_cutListFile.get());
         cop->setProjectManager(m_projectManager.get());
+        cop->setModelRepository(m_modelRepo.get());
+        cop->setOnAddToCost([this](const std::string& name, int qty, float rate, float total) {
+            if (!m_costRepo) return;
+            // Create a new cost estimate with the cut plan material cost
+            CostEstimate estimate;
+            estimate.name = "Cut Plan — " + name;
+            if (m_projectManager && m_projectManager->currentProject())
+                estimate.projectId = m_projectManager->currentProject()->id();
+            CostItem item;
+            item.name = name + " sheets";
+            item.category = CostCategory::Material;
+            item.quantity = static_cast<f64>(qty);
+            item.rate = static_cast<f64>(rate);
+            item.total = static_cast<f64>(total);
+            estimate.items.push_back(item);
+            estimate.recalculate();
+            m_costRepo->insert(estimate);
+        });
     }
     if (auto* gcp = m_uiManager->gcodePanel()) {
         gcp->setGCodeRepository(m_gcodeRepo.get());

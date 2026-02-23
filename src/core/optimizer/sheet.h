@@ -14,7 +14,8 @@ struct Part {
     std::string name;
     f32 width = 0.0f;  // X dimension
     f32 height = 0.0f; // Y dimension
-    int quantity = 1;  // How many needed
+    int quantity = 1;   // How many needed
+    bool canRotate = true; // Per-part rotation toggle
 
     Part() = default;
     Part(f32 w, f32 h, int qty = 1) : width(w), height(h), quantity(qty) {}
@@ -31,6 +32,7 @@ struct Sheet {
     f32 cost = 0.0f;  // Optional cost per sheet
     int quantity = 0; // Available quantity (0 = unlimited)
     std::string name; // e.g., "4x8 Plywood"
+    bool grainHorizontal = true; // Grain runs along width (horizontal)
 
     Sheet() = default;
     Sheet(f32 w, f32 h) : width(w), height(h) {}
