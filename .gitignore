@@ -71,7 +71,16 @@ settings.json
 *.tmp
 *.temp
 
-# Claude/Ralph directories (keep in git)
+# Claude/Ralph directories
 !.claude/
 !.ralph/
+
+# Planning artifacts (GSD phases, research, session state)
 .planning/
+.session-summary.md
+CHECKPOINT.md
+PHASE_01_SUMMARY.md
+PHASE_01_VERIFICATION.md
+
+# Clangd index cache
+.cache/
