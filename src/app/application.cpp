@@ -26,6 +26,7 @@
 #include "core/database/database.h"
 #include "core/database/gcode_repository.h"
 #include "core/database/model_repository.h"
+#include "core/database/cnc_tool_repository.h"
 #include "core/database/schema.h"
 #include "core/export/project_export_manager.h"
 #include "core/cnc/cnc_controller.h"
@@ -242,6 +243,9 @@ bool Application::init() {
     // Project export/import manager (.dwproj archives) (EXPORT-01/02)
     m_projectExportManager = std::make_unique<ProjectExportManager>(*m_database);
 
+    // CNC tool database
+    m_toolRepo = std::make_unique<CncToolRepository>(*m_database);
+
     // CNC controller (multi-firmware support: GRBL, grblHAL, FluidNC, Smoothieware)
     m_cncController = std::make_unique<CncController>(m_mainThreadQueue.get());
 
@@ -456,6 +460,7 @@ void Application::shutdown() {
     m_importLog.reset();
 
     // Destroy core systems
+    m_toolRepo.reset();
     m_cncController.reset();
     m_descriptorService.reset();
     m_geminiService.reset();

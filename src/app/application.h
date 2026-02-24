@@ -39,6 +39,7 @@ class GeminiDescriptorService;
 class ProjectExportManager;
 class CutListFile;
 class CncController;
+class CncToolRepository;
 class BackgroundTagger;
 class ImportLog;
 class Mesh;
@@ -145,6 +146,9 @@ class Application {
 
     // Project export/import (.dwproj archives)
     std::unique_ptr<ProjectExportManager> m_projectExportManager;
+
+    // CNC tool database (router bits + per-material feeds/speeds)
+    std::unique_ptr<CncToolRepository> m_toolRepo;
 
     // CNC controller (multi-firmware support: GRBL, grblHAL, FluidNC, Smoothieware)
     std::unique_ptr<CncController> m_cncController;
