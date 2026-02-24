@@ -74,18 +74,23 @@ TEST(GcodeAnalyzer, MixedRapidAndCutting) {
 }
 
 TEST(GcodeAnalyzer, EstimatedTime) {
-    // G1 X1000 F1000 → 1000mm at 1000mm/min = 1 minute
+    // G1 X1000 F1000 — trapezoidal time is slightly longer than naive (1.0 min)
+    // because of accel/decel phases, but close for a long move
     dw::gcode::Parser parser;
     auto program = parser.parse("G1 X1000 F1000\n");
 
     dw::gcode::Analyzer analyzer;
     auto stats = analyzer.analyze(program);
 
-    EXPECT_NEAR(stats.estimatedTime, 1.0f, 0.01f);
+    // Must be >= naive time of 1.0 min
+    EXPECT_GE(stats.estimatedTime, 1.0f);
+    // But within 5% for a long move
+    EXPECT_LT(stats.estimatedTime, 1.05f);
 }
 
 TEST(GcodeAnalyzer, EstimatedTime_DefaultFeedRate) {
-    // G1 without F uses default feed rate (1000 mm/min)
+    // G1 without F uses default feed rate (500 mm/min set below)
+    // Trapezoidal time >= naive time of 0.2 min
     dw::gcode::Parser parser;
     auto program = parser.parse("G1 X100\n");
 
@@ -93,8 +98,9 @@ TEST(GcodeAnalyzer, EstimatedTime_DefaultFeedRate) {
     analyzer.setDefaultFeedRate(500.0f);
     auto stats = analyzer.analyze(program);
 
-    // 100mm at 500mm/min = 0.2 minutes
-    EXPECT_NEAR(stats.estimatedTime, 0.2f, 0.01f);
+    // 100mm at 500mm/min naive = 0.2 min; trapezoidal slightly more
+    EXPECT_GE(stats.estimatedTime, 0.2f);
+    EXPECT_LT(stats.estimatedTime, 0.25f);
 }
 
 TEST(GcodeAnalyzer, ToolChangeCount) {

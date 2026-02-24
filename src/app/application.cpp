@@ -28,6 +28,7 @@
 #include "core/database/model_repository.h"
 #include "core/database/schema.h"
 #include "core/export/project_export_manager.h"
+#include "core/cnc/cnc_controller.h"
 #include "core/graph/graph_manager.h"
 #include "core/import/background_tagger.h"
 #include "core/import/import_log.h"
@@ -241,6 +242,9 @@ bool Application::init() {
     // Project export/import manager (.dwproj archives) (EXPORT-01/02)
     m_projectExportManager = std::make_unique<ProjectExportManager>(*m_database);
 
+    // CNC controller (multi-firmware support: GRBL, grblHAL, FluidNC, Smoothieware)
+    m_cncController = std::make_unique<CncController>(m_mainThreadQueue.get());
+
     m_importQueue = std::make_unique<ImportQueue>(*m_connectionPool,
                                                   m_libraryManager.get(),
                                                   m_storageManager.get());
@@ -378,6 +382,10 @@ void Application::update() {
                                              [this](bool show) {
                                                  m_uiManager->showStartPage() = show;
                                              });
+    // Update simulation in gcode panel each frame
+    if (m_uiManager && m_uiManager->gcodePanel())
+        m_uiManager->gcodePanel()->updateSimulation(ImGui::GetIO().DeltaTime);
+
     m_configManager->poll(SDL_GetTicks64());
 }
 
@@ -448,6 +456,7 @@ void Application::shutdown() {
     m_importLog.reset();
 
     // Destroy core systems
+    m_cncController.reset();
     m_descriptorService.reset();
     m_geminiService.reset();
     m_costRepo.reset();

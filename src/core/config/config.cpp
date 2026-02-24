@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <optional>
 #include <sstream>
 
 #include "../paths/app_paths.h"
@@ -15,6 +16,11 @@ namespace dw {
 
 Config::Config() : m_parallelismTier(ParallelismTier::Auto) {
     initDefaultBindings();
+    m_machineProfiles = {
+        gcode::MachineProfile::defaultProfile(),
+        gcode::MachineProfile::shapeoko4(),
+        gcode::MachineProfile::longmillMK2(),
+    };
 }
 
 Config& Config::instance() {
@@ -43,6 +49,7 @@ bool Config::load() {
     std::istringstream stream(*content);
     std::string line;
     std::string section;
+    std::optional<std::vector<gcode::MachineProfile>> loadedMachineProfiles;
 
     while (std::getline(stream, line)) {
         line = str::trim(line);
@@ -214,7 +221,27 @@ bool Config::load() {
                     m_recentProjects.push_back(value);
                 }
             }
+        } else if (section == "machine_profiles") {
+            if (key == "active_profile") {
+                str::parseInt(value, m_activeMachineProfileIndex);
+            } else if (str::startsWith(key, "profile")) {
+                auto profile = gcode::MachineProfile::fromJsonString(value);
+                if (!profile.name.empty()) {
+                    if (!loadedMachineProfiles)
+                        loadedMachineProfiles = std::vector<gcode::MachineProfile>{};
+                    loadedMachineProfiles->push_back(std::move(profile));
+                }
+            }
         }
+    }
+
+    // Replace defaults with loaded profiles if any were found
+    if (loadedMachineProfiles && !loadedMachineProfiles->empty()) {
+        m_machineProfiles = std::move(*loadedMachineProfiles);
+    }
+    if (m_activeMachineProfileIndex < 0 ||
+        m_activeMachineProfileIndex >= static_cast<int>(m_machineProfiles.size())) {
+        m_activeMachineProfileIndex = 0;
     }
 
     log::infof("Config", "Loaded from %s", configPath.string().c_str());
@@ -362,6 +389,13 @@ bool Config::save() {
     }
     ss << "\n";
 
+    // Machine profiles section
+    ss << "[machine_profiles]\n";
+    ss << "active_profile=" << m_activeMachineProfileIndex << "\n";
+    for (size_t i = 0; i < m_machineProfiles.size(); ++i) {
+        ss << "profile" << i << "=" << m_machineProfiles[i].toJsonString() << "\n";
+    }
+
     // Atomic save: write to temp file, then rename
     Path tempPath = configPath.string() + ".tmp";
     if (!file::writeText(tempPath, ss.str())) {
@@ -421,6 +455,34 @@ void Config::setBinding(BindAction action, const InputBinding& binding) {
     if (idx >= 0 && idx < static_cast<int>(BindAction::COUNT)) {
         m_bindings[static_cast<size_t>(idx)] = binding;
     }
+}
+
+void Config::setActiveMachineProfileIndex(int index) {
+    if (index >= 0 && index < static_cast<int>(m_machineProfiles.size()))
+        m_activeMachineProfileIndex = index;
+}
+
+const gcode::MachineProfile& Config::getActiveMachineProfile() const {
+    return m_machineProfiles[static_cast<size_t>(m_activeMachineProfileIndex)];
+}
+
+void Config::addMachineProfile(const gcode::MachineProfile& profile) {
+    m_machineProfiles.push_back(profile);
+}
+
+void Config::removeMachineProfile(int index) {
+    if (index < 0 || index >= static_cast<int>(m_machineProfiles.size()))
+        return;
+    if (m_machineProfiles[static_cast<size_t>(index)].builtIn)
+        return;
+    m_machineProfiles.erase(m_machineProfiles.begin() + index);
+    if (m_activeMachineProfileIndex >= static_cast<int>(m_machineProfiles.size()))
+        m_activeMachineProfileIndex = static_cast<int>(m_machineProfiles.size()) - 1;
+}
+
+void Config::updateMachineProfile(int index, const gcode::MachineProfile& profile) {
+    if (index >= 0 && index < static_cast<int>(m_machineProfiles.size()))
+        m_machineProfiles[static_cast<size_t>(index)] = profile;
 }
 
 Path Config::getModelsDir() const {

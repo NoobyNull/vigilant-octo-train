@@ -13,6 +13,7 @@
 #include "core/database/cut_plan_repository.h"
 #include "core/optimizer/cut_list_file.h"
 #include "core/database/gcode_repository.h"
+#include "core/cnc/cnc_controller.h"
 #include "core/export/project_export_manager.h"
 #include "core/import/background_tagger.h"
 #include "core/import/import_queue.h"
@@ -530,6 +531,32 @@ void Application::initWiring() {
     if (auto* gcp = m_uiManager->gcodePanel()) {
         gcp->setGCodeRepository(m_gcodeRepo.get());
         gcp->setProjectManager(m_projectManager.get());
+        gcp->setCncController(m_cncController.get());
+
+        // Wire CNC callbacks to update the gcode panel on the main thread
+        CncCallbacks cncCb;
+        cncCb.onConnectionChanged = [gcp](bool connected, const std::string& version) {
+            gcp->onGrblConnected(connected, version);
+        };
+        cncCb.onStatusUpdate = [gcp](const MachineStatus& status) {
+            gcp->onGrblStatus(status);
+        };
+        cncCb.onLineAcked = [gcp](const LineAck& ack) {
+            gcp->onGrblLineAcked(ack);
+        };
+        cncCb.onProgressUpdate = [gcp](const StreamProgress& progress) {
+            gcp->onGrblProgress(progress);
+        };
+        cncCb.onAlarm = [gcp](int code, const std::string& desc) {
+            gcp->onGrblAlarm(code, desc);
+        };
+        cncCb.onError = [gcp](const std::string& message) {
+            gcp->onGrblError(message);
+        };
+        cncCb.onRawLine = [gcp](const std::string& line, bool isSent) {
+            gcp->onGrblRawLine(line, isSent);
+        };
+        m_cncController->setCallbacks(cncCb);
     }
     if (m_uiManager->propertiesPanel()) {
         m_uiManager->propertiesPanel()->setOnMeshModified([this]() {

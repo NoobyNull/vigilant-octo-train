@@ -49,9 +49,14 @@ set(DW_TEST_SOURCES
     test_filesystem_detector.cpp
     # Export - Project export/import
     test_project_export_manager.cpp
+    # Motion planner
+    test_motion_planner.cpp
     # Import log + tagger
     test_import_log.cpp
     test_background_tagger.cpp
+    # CNC Controller (multi-firmware support)
+    test_serial_port.cpp
+    test_cnc_controller.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
     # Tier 3 — workspace tests (no GL/SDL required)
@@ -79,6 +84,9 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/loaders/loader_factory.cpp
     ${CMAKE_SOURCE_DIR}/src/core/gcode/gcode_parser.cpp
     ${CMAKE_SOURCE_DIR}/src/core/gcode/gcode_analyzer.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/gcode/machine_profile.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/cnc/serial_port.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/cnc/cnc_controller.cpp
     ${CMAKE_SOURCE_DIR}/src/core/optimizer/cut_optimizer.cpp
     ${CMAKE_SOURCE_DIR}/src/core/optimizer/bin_packer.cpp
     ${CMAKE_SOURCE_DIR}/src/core/optimizer/guillotine.cpp
