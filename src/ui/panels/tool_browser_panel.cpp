@@ -7,6 +7,7 @@
 #include <imgui.h>
 
 #include "core/database/tool_database.h"
+#include "core/materials/material_manager.h"
 #include "core/utils/log.h"
 #include "ui/dialogs/file_dialog.h"
 #include "ui/icons.h"
@@ -365,6 +366,12 @@ void ToolBrowserPanel::renderToolDetail() {
         }
         log::info("ToolBrowser", "Tool changes saved");
     }
+
+    // Calculator section
+    renderCalculator();
+
+    // Machine editor section
+    renderMachineEditor();
 }
 
 void ToolBrowserPanel::renderAddToolPopup() {
@@ -543,6 +550,219 @@ void ToolBrowserPanel::selectTool(const std::string& geometryId) {
         m_editCuttingData = {};
         m_hasCuttingData = false;
     }
+}
+
+static const char* driveTypeName(DriveType dt) {
+    switch (dt) {
+    case DriveType::Belt: return "Belt";
+    case DriveType::LeadScrew: return "Lead Screw";
+    case DriveType::BallScrew: return "Ball Screw";
+    case DriveType::RackPinion: return "Rack & Pinion";
+    }
+    return "Unknown";
+}
+
+static const char* hardnessBandName(HardnessBand band) {
+    switch (band) {
+    case HardnessBand::Soft: return "Soft Wood";
+    case HardnessBand::Medium: return "Medium Wood";
+    case HardnessBand::Hard: return "Hard Wood";
+    case HardnessBand::VeryHard: return "Very Hard Wood";
+    case HardnessBand::Composite: return "Composite";
+    case HardnessBand::Metal: return "Metal";
+    case HardnessBand::Plastic: return "Plastic";
+    }
+    return "Unknown";
+}
+
+void ToolBrowserPanel::renderCalculator() {
+    if (m_selectedGeometryId.empty()) return;
+
+    ImGui::Spacing();
+    ImGui::SeparatorText("Feeds & Speeds Calculator");
+
+    // Material source: pick from MaterialManager or enter Janka manually
+    if (m_materialManager) {
+        auto allMats = m_materialManager->getAllMaterials();
+        if (ImGui::BeginCombo("Workpiece Material", m_calcMaterialName.empty()
+                                                        ? "(Select material)"
+                                                        : m_calcMaterialName.c_str())) {
+            for (const auto& mat : allMats) {
+                if (ImGui::Selectable(mat.name.c_str(), mat.name == m_calcMaterialName)) {
+                    m_calcMaterialName = mat.name;
+                    m_calcJanka = mat.jankaHardness;
+                }
+            }
+            ImGui::EndCombo();
+        }
+    }
+
+    ImGui::InputFloat("Janka Hardness (lbf)", &m_calcJanka, 10.0f, 100.0f, "%.0f");
+
+    // Machine selector for calculator
+    std::string machLabel = "(No machine selected)";
+    VtdbMachine selectedMach;
+    bool hasMachine = false;
+    if (!m_selectedMachineId.empty()) {
+        for (const auto& mach : m_machines) {
+            if (mach.id == m_selectedMachineId) {
+                selectedMach = mach;
+                machLabel = mach.name;
+                hasMachine = true;
+                break;
+            }
+        }
+    }
+    ImGui::Text("Machine: %s", machLabel.c_str());
+    if (hasMachine) {
+        ImGui::SameLine();
+        ImGui::TextDisabled("(%s, %d RPM, %.0fW)",
+                            driveTypeName(selectedMach.drive_type),
+                            selectedMach.max_rpm,
+                            selectedMach.spindle_power_watts);
+    }
+
+    // Calculate button
+    char calcBtnLabel[64];
+    std::snprintf(calcBtnLabel, sizeof(calcBtnLabel), "%s Calculate", Icons::Settings);
+    if (ImGui::Button(calcBtnLabel, ImVec2(150, 0))) {
+        runCalculation();
+    }
+
+    // Show results
+    if (m_hasCalcResult) {
+        ImGui::Spacing();
+        ImGui::Indent();
+
+        ImGui::TextColored(ImVec4(0.5f, 0.8f, 1.0f, 1.0f), "Classification: %s",
+                           hardnessBandName(m_calcResult.hardness_band));
+        ImGui::TextColored(ImVec4(0.5f, 0.8f, 1.0f, 1.0f), "Rigidity Factor: %.0f%%",
+                           m_calcResult.rigidity_factor * 100.0);
+
+        ImGui::Spacing();
+
+        const char* unit = (m_editGeometry.units == VtdbUnits::Metric) ? "mm" : "in";
+        const char* feedUnit = (m_editGeometry.units == VtdbUnits::Metric) ? "mm/min" : "in/min";
+
+        ImGui::Text("RPM:         %d", m_calcResult.rpm);
+        ImGui::Text("Feed Rate:   %.1f %s", m_calcResult.feed_rate, feedUnit);
+        ImGui::Text("Plunge Rate: %.1f %s", m_calcResult.plunge_rate, feedUnit);
+        ImGui::Text("Stepdown:    %.4f %s", m_calcResult.stepdown, unit);
+        ImGui::Text("Stepover:    %.4f %s", m_calcResult.stepover, unit);
+        ImGui::Text("Chip Load:   %.4f %s/tooth", m_calcResult.chip_load, unit);
+
+        if (m_calcResult.power_required > 0.0) {
+            ImGui::Text("Power:       %.0f W", m_calcResult.power_required);
+            if (m_calcResult.power_limited) {
+                ImGui::SameLine();
+                ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "(power limited)");
+            }
+        }
+
+        ImGui::Unindent();
+        ImGui::Spacing();
+
+        // Apply button — writes calculated values into the cutting data editor
+        char applyLabel[64];
+        std::snprintf(applyLabel, sizeof(applyLabel), "%s Apply to Cutting Data", Icons::Save);
+        if (ImGui::Button(applyLabel)) {
+            m_editCuttingData.spindle_speed = m_calcResult.rpm;
+            m_editCuttingData.feed_rate = m_calcResult.feed_rate;
+            m_editCuttingData.plunge_rate = m_calcResult.plunge_rate;
+            m_editCuttingData.stepdown = m_calcResult.stepdown;
+            m_editCuttingData.stepover = m_calcResult.stepover;
+
+            // If no cutting data existed, create one
+            if (!m_hasCuttingData) {
+                VtdbCuttingData cd;
+                cd.spindle_speed = m_calcResult.rpm;
+                cd.feed_rate = m_calcResult.feed_rate;
+                cd.plunge_rate = m_calcResult.plunge_rate;
+                cd.stepdown = m_calcResult.stepdown;
+                cd.stepover = m_calcResult.stepover;
+                m_toolDatabase->insertCuttingData(cd);
+
+                VtdbToolEntity entity;
+                entity.tool_geometry_id = m_selectedGeometryId;
+                entity.material_id = m_selectedMaterialId;
+                entity.machine_id = m_selectedMachineId;
+                entity.tool_cutting_data_id = cd.id;
+                m_toolDatabase->insertEntity(entity);
+
+                selectTool(m_selectedGeometryId);
+            }
+        }
+    }
+}
+
+void ToolBrowserPanel::renderMachineEditor() {
+    ImGui::Spacing();
+    ImGui::SeparatorText("Machine Setup");
+
+    if (m_selectedMachineId.empty()) {
+        ImGui::TextDisabled("Select a machine above to configure");
+        return;
+    }
+
+    // Find the selected machine
+    VtdbMachine* mach = nullptr;
+    for (auto& m : m_machines) {
+        if (m.id == m_selectedMachineId) {
+            mach = &m;
+            break;
+        }
+    }
+    if (!mach) return;
+
+    bool changed = false;
+
+    float power = static_cast<float>(mach->spindle_power_watts);
+    if (ImGui::InputFloat("Spindle Power (W)", &power, 10.0f, 100.0f, "%.0f")) {
+        mach->spindle_power_watts = power;
+        changed = true;
+    }
+
+    int rpm = mach->max_rpm;
+    if (ImGui::InputInt("Max RPM", &rpm, 500, 1000)) {
+        mach->max_rpm = std::max(1000, rpm);
+        changed = true;
+    }
+
+    int driveIdx = static_cast<int>(mach->drive_type);
+    const char* driveLabels[] = {"Belt", "Lead Screw", "Ball Screw", "Rack & Pinion"};
+    if (ImGui::Combo("Drive Type", &driveIdx, driveLabels, 4)) {
+        mach->drive_type = static_cast<DriveType>(driveIdx);
+        changed = true;
+    }
+
+    ImGui::TextDisabled("Rigidity: %.0f%%", ToolCalculator::rigidityFactor(mach->drive_type) * 100.0);
+
+    if (changed) {
+        m_toolDatabase->updateMachine(*mach);
+    }
+}
+
+void ToolBrowserPanel::runCalculation() {
+    CalcInput input;
+    input.diameter = m_editGeometry.diameter;
+    input.num_flutes = m_editGeometry.num_flutes;
+    input.tool_type = m_editGeometry.tool_type;
+    input.units = m_editGeometry.units;
+    input.janka_hardness = m_calcJanka;
+    input.material_name = m_calcMaterialName;
+
+    // Get machine params
+    for (const auto& mach : m_machines) {
+        if (mach.id == m_selectedMachineId) {
+            input.spindle_power_watts = mach.spindle_power_watts;
+            input.max_rpm = mach.max_rpm;
+            input.drive_type = mach.drive_type;
+            break;
+        }
+    }
+
+    m_calcResult = ToolCalculator::calculate(input);
+    m_hasCalcResult = true;
 }
 
 void ToolBrowserPanel::deleteSelected() {

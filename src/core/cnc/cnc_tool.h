@@ -27,6 +27,14 @@ enum class VtdbUnits : int {
     Imperial = 1
 };
 
+// Drive type for rigidity derating
+enum class DriveType : int {
+    Belt = 0,
+    LeadScrew = 1,
+    BallScrew = 2,
+    RackPinion = 3
+};
+
 // Maps 1:1 to tool_geometry table in .vtdb
 struct VtdbToolGeometry {
     std::string id;
@@ -101,7 +109,7 @@ struct VtdbMaterial {
     std::string name;
 };
 
-// Maps 1:1 to machine table in .vtdb
+// Maps 1:1 to machine table in .vtdb (extended with DW-specific fields)
 struct VtdbMachine {
     std::string id;
     std::string name;
@@ -114,6 +122,11 @@ struct VtdbMachine {
     int support_rotary = 0;
     int support_tool_change = 0;
     int has_laser_head = 0;
+
+    // DW extensions for tool calculations
+    f64 spindle_power_watts = 0.0;   // Spindle power in watts (e.g. 800W trim router)
+    int max_rpm = 24000;             // Maximum spindle RPM
+    DriveType drive_type = DriveType::Belt;
 };
 
 // Convenience: assembled tool view with all related data

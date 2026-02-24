@@ -93,6 +93,7 @@ set(DW_SOURCES
     # CNC Controller (multi-firmware support)
     core/cnc/serial_port.cpp
     core/cnc/cnc_controller.cpp
+    core/cnc/tool_calculator.cpp
 
     # Optimizer
     core/optimizer/cut_optimizer.cpp

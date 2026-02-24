@@ -4,11 +4,13 @@
 #include <vector>
 
 #include "../../core/cnc/cnc_tool.h"
+#include "../../core/cnc/tool_calculator.h"
 #include "panel.h"
 
 namespace dw {
 
 class ToolDatabase;
+class MaterialManager;
 class FileDialog;
 
 class ToolBrowserPanel : public Panel {
@@ -19,6 +21,7 @@ class ToolBrowserPanel : public Panel {
     void render() override;
 
     void setToolDatabase(ToolDatabase* db) { m_toolDatabase = db; }
+    void setMaterialManager(MaterialManager* mgr) { m_materialManager = mgr; }
     void setFileDialog(FileDialog* dlg) { m_fileDialog = dlg; }
     void refresh();
 
@@ -26,14 +29,18 @@ class ToolBrowserPanel : public Panel {
     void renderToolbar();
     void renderTree();
     void renderToolDetail();
+    void renderCalculator();
+    void renderMachineEditor();
     void renderAddToolPopup();
     void renderAddGroupPopup();
 
     void loadData();
     void selectTool(const std::string& geometryId);
     void deleteSelected();
+    void runCalculation();
 
     ToolDatabase* m_toolDatabase = nullptr;
+    MaterialManager* m_materialManager = nullptr;
     FileDialog* m_fileDialog = nullptr;
 
     // Cached data
@@ -52,6 +59,12 @@ class ToolBrowserPanel : public Panel {
     VtdbToolGeometry m_editGeometry;
     VtdbCuttingData m_editCuttingData;
     bool m_hasCuttingData = false;
+
+    // Calculator state
+    CalcResult m_calcResult;
+    bool m_hasCalcResult = false;
+    float m_calcJanka = 0.0f;
+    std::string m_calcMaterialName;
 
     // Add Tool popup state
     bool m_showAddTool = false;

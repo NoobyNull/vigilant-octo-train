@@ -29,6 +29,7 @@ class ToolDatabase {
 
     // --- Machine CRUD ---
     bool insertMachine(const VtdbMachine& m);
+    bool updateMachine(const VtdbMachine& m);
     std::vector<VtdbMachine> findAllMachines();
     std::optional<VtdbMachine> findMachineById(const std::string& id);
 

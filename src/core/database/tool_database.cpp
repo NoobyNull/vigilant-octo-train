@@ -78,7 +78,10 @@ bool ToolDatabase::initializeSchema(Database& db) {
             "max_height"          REAL,
             "support_rotary"      INTEGER,
             "support_tool_change" INTEGER,
-            "has_laser_head"      INTEGER
+            "has_laser_head"      INTEGER,
+            "spindle_power_watts" REAL DEFAULT 0,
+            "max_rpm"             INTEGER DEFAULT 24000,
+            "drive_type"          INTEGER DEFAULT 0
         )
     )"))
         return false;
@@ -199,8 +202,9 @@ bool ToolDatabase::insertMachine(const VtdbMachine& m) {
     auto stmt = m_db.prepare(R"(
         INSERT OR IGNORE INTO machine
             (id, name, make, model, controller_type, dimensions_units,
-             max_width, max_height, support_rotary, support_tool_change, has_laser_head)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             max_width, max_height, support_rotary, support_tool_change, has_laser_head,
+             spindle_power_watts, max_rpm, drive_type)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
     if (!stmt.isValid()) return false;
     stmt.bindText(1, id);
@@ -214,41 +218,39 @@ bool ToolDatabase::insertMachine(const VtdbMachine& m) {
     stmt.bindInt(9, m.support_rotary);
     stmt.bindInt(10, m.support_tool_change);
     stmt.bindInt(11, m.has_laser_head);
+    stmt.bindDouble(12, m.spindle_power_watts);
+    stmt.bindInt(13, m.max_rpm);
+    stmt.bindInt(14, static_cast<int>(m.drive_type));
     return stmt.execute();
 }
 
-std::vector<VtdbMachine> ToolDatabase::findAllMachines() {
-    std::vector<VtdbMachine> result;
-    auto stmt = m_db.prepare(
-        "SELECT id, name, make, model, controller_type, dimensions_units, "
-        "max_width, max_height, support_rotary, support_tool_change, has_laser_head "
-        "FROM machine ORDER BY name");
-    if (!stmt.isValid()) return result;
-    while (stmt.step()) {
-        VtdbMachine m;
-        m.id = stmt.getText(0);
-        m.name = stmt.getText(1);
-        m.make = stmt.getText(2);
-        m.model = stmt.getText(3);
-        m.controller_type = stmt.getText(4);
-        m.dimensions_units = static_cast<int>(stmt.getInt(5));
-        m.max_width = stmt.getDouble(6);
-        m.max_height = stmt.getDouble(7);
-        m.support_rotary = static_cast<int>(stmt.getInt(8));
-        m.support_tool_change = static_cast<int>(stmt.getInt(9));
-        m.has_laser_head = static_cast<int>(stmt.getInt(10));
-        result.push_back(m);
-    }
-    return result;
+bool ToolDatabase::updateMachine(const VtdbMachine& m) {
+    auto stmt = m_db.prepare(R"(
+        UPDATE machine SET
+            name=?, make=?, model=?, controller_type=?, dimensions_units=?,
+            max_width=?, max_height=?, support_rotary=?, support_tool_change=?,
+            has_laser_head=?, spindle_power_watts=?, max_rpm=?, drive_type=?
+        WHERE id=?
+    )");
+    if (!stmt.isValid()) return false;
+    stmt.bindText(1, m.name);
+    stmt.bindText(2, m.make);
+    stmt.bindText(3, m.model);
+    stmt.bindText(4, m.controller_type);
+    stmt.bindInt(5, m.dimensions_units);
+    stmt.bindDouble(6, m.max_width);
+    stmt.bindDouble(7, m.max_height);
+    stmt.bindInt(8, m.support_rotary);
+    stmt.bindInt(9, m.support_tool_change);
+    stmt.bindInt(10, m.has_laser_head);
+    stmt.bindDouble(11, m.spindle_power_watts);
+    stmt.bindInt(12, m.max_rpm);
+    stmt.bindInt(13, static_cast<int>(m.drive_type));
+    stmt.bindText(14, m.id);
+    return stmt.execute();
 }
 
-std::optional<VtdbMachine> ToolDatabase::findMachineById(const std::string& id) {
-    auto stmt = m_db.prepare(
-        "SELECT id, name, make, model, controller_type, dimensions_units, "
-        "max_width, max_height, support_rotary, support_tool_change, has_laser_head "
-        "FROM machine WHERE id = ?");
-    if (!stmt.isValid() || !stmt.bindText(1, id) || !stmt.step())
-        return std::nullopt;
+static VtdbMachine rowToMachine(Statement& stmt) {
     VtdbMachine m;
     m.id = stmt.getText(0);
     m.name = stmt.getText(1);
@@ -261,7 +263,32 @@ std::optional<VtdbMachine> ToolDatabase::findMachineById(const std::string& id) 
     m.support_rotary = static_cast<int>(stmt.getInt(8));
     m.support_tool_change = static_cast<int>(stmt.getInt(9));
     m.has_laser_head = static_cast<int>(stmt.getInt(10));
+    m.spindle_power_watts = stmt.getDouble(11);
+    m.max_rpm = static_cast<int>(stmt.getInt(12));
+    m.drive_type = static_cast<DriveType>(stmt.getInt(13));
     return m;
+}
+
+static constexpr const char* kMachineSelect =
+    "SELECT id, name, make, model, controller_type, dimensions_units, "
+    "max_width, max_height, support_rotary, support_tool_change, has_laser_head, "
+    "spindle_power_watts, max_rpm, drive_type FROM machine";
+
+std::vector<VtdbMachine> ToolDatabase::findAllMachines() {
+    std::vector<VtdbMachine> result;
+    auto stmt = m_db.prepare(std::string(kMachineSelect) + " ORDER BY name");
+    if (!stmt.isValid()) return result;
+    while (stmt.step()) {
+        result.push_back(rowToMachine(stmt));
+    }
+    return result;
+}
+
+std::optional<VtdbMachine> ToolDatabase::findMachineById(const std::string& id) {
+    auto stmt = m_db.prepare(std::string(kMachineSelect) + " WHERE id = ?");
+    if (!stmt.isValid() || !stmt.bindText(1, id) || !stmt.step())
+        return std::nullopt;
+    return rowToMachine(stmt);
 }
 
 // --- Material CRUD ---
@@ -824,10 +851,19 @@ int ToolDatabase::importFromVtdb(const Path& externalPath) {
 
     // 2. Machines
     {
-        auto s = extDb.prepare(
+        // Check if external DB has our extended columns
+        auto colCheck = extDb.prepare(
+            "SELECT COUNT(*) FROM pragma_table_info('machine') WHERE name='spindle_power_watts'");
+        bool hasExtended = colCheck.step() && colCheck.getInt(0) > 0;
+
+        std::string machQuery =
             "SELECT id, name, make, model, controller_type, dimensions_units, "
-            "max_width, max_height, support_rotary, support_tool_change, has_laser_head "
-            "FROM machine");
+            "max_width, max_height, support_rotary, support_tool_change, has_laser_head";
+        if (hasExtended)
+            machQuery += ", spindle_power_watts, max_rpm, drive_type";
+        machQuery += " FROM machine";
+
+        auto s = extDb.prepare(machQuery);
         while (s.step()) {
             VtdbMachine m;
             m.id = s.getText(0);
@@ -841,6 +877,11 @@ int ToolDatabase::importFromVtdb(const Path& externalPath) {
             m.support_rotary = static_cast<int>(s.getInt(8));
             m.support_tool_change = static_cast<int>(s.getInt(9));
             m.has_laser_head = static_cast<int>(s.getInt(10));
+            if (hasExtended) {
+                m.spindle_power_watts = s.getDouble(11);
+                m.max_rpm = static_cast<int>(s.getInt(12));
+                m.drive_type = static_cast<DriveType>(s.getInt(13));
+            }
             insertMachine(m);
         }
     }

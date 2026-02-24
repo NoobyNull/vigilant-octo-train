@@ -563,6 +563,7 @@ void Application::initWiring() {
     }
     if (auto* tbp = m_uiManager->toolBrowserPanel()) {
         tbp->setToolDatabase(m_toolDatabase.get());
+        tbp->setMaterialManager(m_materialManager.get());
         tbp->setFileDialog(m_uiManager->fileDialog());
     }
     if (m_uiManager->propertiesPanel()) {
