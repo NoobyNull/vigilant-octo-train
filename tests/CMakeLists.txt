@@ -57,7 +57,7 @@ set(DW_TEST_SOURCES
     # CNC Controller (multi-firmware support)
     test_serial_port.cpp
     test_cnc_controller.cpp
-    test_cnc_tool_repository.cpp
+    test_tool_database.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
     # Tier 3 — workspace tests (no GL/SDL required)
@@ -100,7 +100,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/database/cost_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/gcode_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/cut_plan_repository.cpp
-    ${CMAKE_SOURCE_DIR}/src/core/database/cnc_tool_repository.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/database/tool_database.cpp
     ${CMAKE_SOURCE_DIR}/src/core/project/project.cpp
     ${CMAKE_SOURCE_DIR}/src/core/export/model_exporter.cpp
     ${CMAKE_SOURCE_DIR}/src/core/archive/archive.cpp

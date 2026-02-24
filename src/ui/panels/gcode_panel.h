@@ -23,7 +23,7 @@ class FileDialog;
 class GCodeRepository;
 class ProjectManager;
 class CncController;
-class CncToolRepository;
+class ToolDatabase;
 
 // Panel mode — View (with optional simulation overlay), Send (real CNC)
 enum class GCodePanelMode { View, Send };
@@ -50,7 +50,7 @@ class GCodePanel : public Panel {
     void setGCodeRepository(GCodeRepository* repo) { m_gcodeRepo = repo; }
     void setProjectManager(ProjectManager* pm) { m_projectManager = pm; }
     void setCncController(CncController* ctrl) { m_cnc = ctrl; }
-    void setCncToolRepository(CncToolRepository* repo) { m_toolRepo = repo; }
+    void setToolDatabase(ToolDatabase* db) { m_toolDatabase = db; }
 
     // Load G-code from file
     bool loadFile(const std::string& path);
@@ -148,7 +148,7 @@ class GCodePanel : public Panel {
     GCodePanelMode m_mode = GCodePanelMode::View;
 
     // Tool database
-    CncToolRepository* m_toolRepo = nullptr;
+    ToolDatabase* m_toolDatabase = nullptr;
 
     // --- Sender state ---
     CncController* m_cnc = nullptr;

@@ -359,41 +359,6 @@ bool Schema::createTables(Database& db) {
         END
     )");
 
-    // CNC tools table — router bit definitions
-    if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS cnc_tools (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            type TEXT NOT NULL DEFAULT 'flat_end_mill',
-            diameter REAL DEFAULT 0,
-            flute_count INTEGER DEFAULT 2,
-            max_rpm REAL DEFAULT 24000,
-            max_doc REAL DEFAULT 0,
-            shank_diameter REAL DEFAULT 0.25,
-            notes TEXT DEFAULT '',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    )")) {
-        return false;
-    }
-
-    // Per-tool-per-material cutting parameters
-    if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS tool_material_params (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tool_id INTEGER NOT NULL,
-            material_id INTEGER NOT NULL,
-            feed_rate REAL DEFAULT 0,
-            spindle_speed REAL DEFAULT 0,
-            depth_of_cut REAL DEFAULT 0,
-            chip_load REAL DEFAULT 0,
-            UNIQUE(tool_id, material_id),
-            FOREIGN KEY (tool_id) REFERENCES cnc_tools(id) ON DELETE CASCADE,
-            FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE
-        )
-    )")) {
-        return false;
-    }
 
     // Create indexes for common queries (best-effort)
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_materials_name ON materials(name)");
@@ -426,12 +391,6 @@ bool Schema::createTables(Database& db) {
                      "model_categories(category_id)");
     (void)db.execute(
         "CREATE INDEX IF NOT EXISTS idx_models_tag_status ON models(tag_status)");
-    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_cnc_tools_name ON cnc_tools(name)");
-    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_cnc_tools_type ON cnc_tools(type)");
-    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_tool_material_tool ON "
-                     "tool_material_params(tool_id)");
-    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_tool_material_material ON "
-                     "tool_material_params(material_id)");
 
     // Set schema version
     if (!setVersion(db, CURRENT_VERSION)) {
@@ -616,47 +575,6 @@ bool Schema::migrate(Database& db, int fromVersion) {
         (void)db.execute(
             "CREATE INDEX IF NOT EXISTS idx_models_tag_status ON models(tag_status)");
         log::info("Schema", "v11: Added tag_status column to models");
-    }
-
-    if (fromVersion < 12) {
-        // v12: CNC tools and per-tool-per-material cutting parameters
-        if (!db.execute(R"(
-            CREATE TABLE IF NOT EXISTS cnc_tools (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                type TEXT NOT NULL DEFAULT 'flat_end_mill',
-                diameter REAL DEFAULT 0,
-                flute_count INTEGER DEFAULT 2,
-                max_rpm REAL DEFAULT 24000,
-                max_doc REAL DEFAULT 0,
-                shank_diameter REAL DEFAULT 0.25,
-                notes TEXT DEFAULT '',
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )
-        )"))
-            return false;
-        if (!db.execute(R"(
-            CREATE TABLE IF NOT EXISTS tool_material_params (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                tool_id INTEGER NOT NULL,
-                material_id INTEGER NOT NULL,
-                feed_rate REAL DEFAULT 0,
-                spindle_speed REAL DEFAULT 0,
-                depth_of_cut REAL DEFAULT 0,
-                chip_load REAL DEFAULT 0,
-                UNIQUE(tool_id, material_id),
-                FOREIGN KEY (tool_id) REFERENCES cnc_tools(id) ON DELETE CASCADE,
-                FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE
-            )
-        )"))
-            return false;
-        (void)db.execute("CREATE INDEX IF NOT EXISTS idx_cnc_tools_name ON cnc_tools(name)");
-        (void)db.execute("CREATE INDEX IF NOT EXISTS idx_cnc_tools_type ON cnc_tools(type)");
-        (void)db.execute("CREATE INDEX IF NOT EXISTS idx_tool_material_tool ON "
-                         "tool_material_params(tool_id)");
-        (void)db.execute("CREATE INDEX IF NOT EXISTS idx_tool_material_material ON "
-                         "tool_material_params(material_id)");
-        log::info("Schema", "v12: Added cnc_tools and tool_material_params tables");
     }
 
     if (!setVersion(db, CURRENT_VERSION)) {

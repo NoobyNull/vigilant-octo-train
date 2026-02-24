@@ -234,8 +234,8 @@ TEST(Database, SchemaMigration_v8_to_v9) {
     // Run schema initialization (should trigger v8->v9 migration)
     ASSERT_TRUE(dw::Schema::initialize(db));
 
-    // Verify version is now 12 (includes CNC tool database)
-    EXPECT_EQ(dw::Schema::getVersion(db), 12);
+    // Verify version is now 11
+    EXPECT_EQ(dw::Schema::getVersion(db), 11);
 
     // Verify project_gcode table exists
     auto stmt1 = db.prepare(

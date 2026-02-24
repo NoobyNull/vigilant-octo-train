@@ -28,6 +28,9 @@ Path getThumbnailDir();
 // Database file path
 Path getDatabasePath();
 
+// Tool database file path (.vtdb format)
+Path getToolDatabasePath();
+
 // Log file path
 Path getLogPath();
 

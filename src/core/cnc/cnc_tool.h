@@ -1,70 +1,128 @@
 #pragma once
 
 #include <string>
-#include <string_view>
+#include <vector>
 
 #include "../types.h"
 
 namespace dw {
 
-// CNC router bit types
-enum class CncToolType {
-    FlatEndMill,
-    BallNose,
-    VBit,
-    SurfacingBit
+// Vectric tool type enum (matching .vtdb tool_geometry.tool_type values)
+enum class VtdbToolType : int {
+    BallNose = 0,
+    EndMill = 1,
+    Radiused = 2,
+    VBit = 3,
+    // 4 unused
+    TaperedBallNose = 5,
+    Drill = 6,
+    ThreadMill = 7,
+    FormTool = 8,
+    DiamondDrag = 9
 };
 
-inline std::string cncToolTypeToString(CncToolType type) {
-    switch (type) {
-    case CncToolType::FlatEndMill:
-        return "flat_end_mill";
-    case CncToolType::BallNose:
-        return "ball_nose";
-    case CncToolType::VBit:
-        return "v_bit";
-    case CncToolType::SurfacingBit:
-        return "surfacing_bit";
-    default:
-        return "flat_end_mill";
-    }
-}
+// Units (matching .vtdb units column)
+enum class VtdbUnits : int {
+    Metric = 0,
+    Imperial = 1
+};
 
-inline CncToolType stringToCncToolType(std::string_view str) {
-    if (str == "flat_end_mill")
-        return CncToolType::FlatEndMill;
-    if (str == "ball_nose")
-        return CncToolType::BallNose;
-    if (str == "v_bit")
-        return CncToolType::VBit;
-    if (str == "surfacing_bit")
-        return CncToolType::SurfacingBit;
-    return CncToolType::FlatEndMill;
-}
-
-// CNC tool record (stored in cnc_tools table)
-struct CncToolRecord {
-    i64 id = 0;
-    std::string name;
-    CncToolType type = CncToolType::FlatEndMill;
-    f64 diameter = 0.0;
-    int fluteCount = 2;
-    f64 maxRPM = 24000.0;
-    f64 maxDOC = 0.0;
-    f64 shankDiameter = 0.25;
+// Maps 1:1 to tool_geometry table in .vtdb
+struct VtdbToolGeometry {
+    std::string id;
+    std::string name_format;
     std::string notes;
-    std::string createdAt;
+    VtdbToolType tool_type = VtdbToolType::EndMill;
+    VtdbUnits units = VtdbUnits::Imperial;
+    f64 diameter = 0.0;
+    f64 included_angle = 0.0;
+    f64 flat_diameter = 0.0;
+    int num_flutes = 2;
+    f64 flute_length = 0.0;
+    f64 thread_pitch = 0.0;
+    std::vector<u8> outline;
+    f64 tip_radius = 0.0;
+    int laser_watt = 0;
+    std::string custom_attributes;
+    f64 tooth_size = 0.0;
+    f64 tooth_offset = 0.0;
+    f64 neck_length = 0.0;
+    f64 tooth_height = 0.0;
+    f64 threaded_length = 0.0;
 };
 
-// Per-tool-per-material cutting parameters (stored in tool_material_params table)
-struct ToolMaterialParams {
-    i64 id = 0;
-    i64 toolId = 0;
-    i64 materialId = 0;
-    f64 feedRate = 0.0;
-    f64 spindleSpeed = 0.0;
-    f64 depthOfCut = 0.0;
-    f64 chipLoad = 0.0;
+// Maps 1:1 to tool_cutting_data table in .vtdb
+struct VtdbCuttingData {
+    std::string id;
+    int rate_units = 4;
+    f64 feed_rate = 0.0;
+    f64 plunge_rate = 0.0;
+    int spindle_speed = 0;
+    int spindle_dir = 0;
+    f64 stepdown = 0.0;
+    f64 stepover = 0.0;
+    f64 clear_stepover = 0.0;
+    f64 thread_depth = 0.0;
+    f64 thread_step_in = 0.0;
+    f64 laser_power = 0.0;
+    int laser_passes = 0;
+    f64 laser_burn_rate = 0.0;
+    f64 line_width = 0.0;
+    int length_units = 0;
+    int tool_number = 0;
+    int laser_kerf = 0;
+    std::string notes;
+};
+
+// Maps 1:1 to tool_entity junction table in .vtdb
+// Links tool_geometry + material + machine -> tool_cutting_data
+struct VtdbToolEntity {
+    std::string id;
+    std::string material_id;          // Empty/null for "all materials"
+    std::string machine_id;
+    std::string tool_geometry_id;
+    std::string tool_cutting_data_id;
+};
+
+// Maps 1:1 to tool_tree_entry table in .vtdb
+struct VtdbTreeEntry {
+    std::string id;
+    std::string parent_group_id;      // Empty string for root entries
+    int sibling_order = 0;
+    std::string tool_geometry_id;     // Empty for group/folder entries
+    std::string name;
+    std::string notes;
+    int expanded = 0;
+};
+
+// Maps 1:1 to material table in .vtdb
+struct VtdbMaterial {
+    std::string id;
+    std::string name;
+};
+
+// Maps 1:1 to machine table in .vtdb
+struct VtdbMachine {
+    std::string id;
+    std::string name;
+    std::string make;
+    std::string model;
+    std::string controller_type;
+    int dimensions_units = 1;
+    f64 max_width = 0.0;
+    f64 max_height = 0.0;
+    int support_rotary = 0;
+    int support_tool_change = 0;
+    int has_laser_head = 0;
+};
+
+// Convenience: assembled tool view with all related data
+struct VtdbToolView {
+    VtdbTreeEntry tree_entry;
+    VtdbToolGeometry geometry;
+    VtdbCuttingData cutting_data;
+    VtdbMaterial material;
+    VtdbMachine machine;
 };
 
 } // namespace dw

@@ -136,6 +136,10 @@ Path getDatabasePath() {
     return getDataDir() / "library.db";
 }
 
+Path getToolDatabasePath() {
+    return getDataDir() / "tools.vtdb";
+}
+
 Path getLogPath() {
     return getDataDir() / "digital_workshop.log";
 }

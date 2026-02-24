@@ -10,7 +10,7 @@
 #include "core/config/config.h"
 #include "core/database/connection_pool.h"
 #include "core/database/model_repository.h"
-#include "core/database/cnc_tool_repository.h"
+#include "core/database/tool_database.h"
 #include "core/database/cut_plan_repository.h"
 #include "core/optimizer/cut_list_file.h"
 #include "core/database/gcode_repository.h"
@@ -533,7 +533,7 @@ void Application::initWiring() {
         gcp->setGCodeRepository(m_gcodeRepo.get());
         gcp->setProjectManager(m_projectManager.get());
         gcp->setCncController(m_cncController.get());
-        gcp->setCncToolRepository(m_toolRepo.get());
+        gcp->setToolDatabase(m_toolDatabase.get());
 
         // Wire CNC callbacks to update the gcode panel on the main thread
         CncCallbacks cncCb;

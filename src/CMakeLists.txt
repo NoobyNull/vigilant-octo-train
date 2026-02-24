@@ -47,7 +47,7 @@ set(DW_SOURCES
     core/database/gcode_repository.cpp
     core/database/cost_repository.cpp
     core/database/cut_plan_repository.cpp
-    core/database/cnc_tool_repository.cpp
+    core/database/tool_database.cpp
 
     # Graph
     core/graph/graph_manager.cpp
