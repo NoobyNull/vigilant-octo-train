@@ -36,8 +36,10 @@ It's also fully offline and open source. Your files stay on your machine, the da
 - Color-coded 3D toolpath rendering as extruded quads
 
 ### Materials System
-- 31 built-in material archives covering hardwoods, softwoods, composites, metals, and plastics
+- 32 built-in material archives covering hardwoods, softwoods, composites, metals, and plastics
+- Two-source loading: user materials override bundled defaults, bundled materials load directly from the install directory
 - Material properties: Janka hardness, feed rate, spindle speed, depth of cut, cost per board-foot, grain direction
+- Bundled materials can be hidden but not deleted; user materials are fully removable
 - `.dwmat` archive format for sharing materials between users
 - Optional AI-assisted material generation via Google Gemini API
 
@@ -52,6 +54,20 @@ It's also fully offline and open source. Your files stay on your machine, the da
 - Collapsible asset navigator with cross-panel navigation
 - Export projects as portable `.dwproj` ZIP archives with all assets included
 - Full round-trip: export on one machine, import on another with deduplication
+
+### CNC Tool Database
+- Vectric-compatible `.vtdb` format — tools can be shared with Aspire/VCarve
+- Hierarchical tool tree with groups and drag-and-drop organization
+- Tool geometries: end mill, ball nose, V-bit, drill, radiused, tapered, and more
+- Per-material, per-machine cutting data (feed rate, plunge rate, spindle speed, stepdown, stepover)
+- Import tools from existing `.vtdb` files
+
+### Feeds & Speeds Calculator
+- Beginner-safe conservative calculations based on Janka hardness, tool geometry, and machine specs
+- 7 material classifications: soft/medium/hard/very-hard wood, composite, metal, plastic
+- Machine rigidity derating by drive type: belt (80%), lead screw (90%), ball screw/rack & pinion (100%)
+- Automatic power limiting — reduces depth of cut when spindle wattage is exceeded
+- One-click "Apply to Cutting Data" writes calculated values directly to the tool database
 
 ### GRBL CNC Controller
 - Serial port communication with RX buffer accounting (128-byte buffer)
@@ -140,7 +156,7 @@ Or use the packaging scripts to create a distributable installer:
 ./build/tests/dw_tests
 ```
 
-539 tests covering loaders, parsers, database repositories, the optimizer, import/export pipelines, and more.
+655 tests covering loaders, parsers, database repositories, the optimizer, tool calculator, import/export pipelines, and more.
 
 ### CMake Options
 
@@ -161,23 +177,23 @@ src/
     config/     Configuration, input bindings, config hot-reload
     database/   SQLite (WAL mode), connection pool, schema, repositories
     export/     .dwproj export/import
+    cnc/        CNC controller, tool calculator, serial port
     gcode/      G-code parser, analyzer, machine profiles
     graph/      Cypher queries via GraphQLite
-    grbl/       GRBL serial controller
     import/     Background import queue with thread pool
     library/    Library manager
     loaders/    STL, OBJ, 3MF, G-code, texture loaders
     materials/  Material types, manager, archives, AI generation
     mesh/       Mesh data structures, content hashing
     optimizer/  Bin packing + guillotine cut optimization
-    serial/     Cross-platform serial port
+    paths/      Application paths, path resolver
     storage/    Content-addressable blob store
     threading/  Thread pool, main-thread dispatch queue
     utils/      Logging, file utilities, string utilities
   render/       OpenGL 3.3 renderer, camera, shaders, framebuffers
   ui/
     dialogs/    File, message, lighting, machine profile dialogs
-    panels/     Viewport, library, materials, properties, project, G-code, cost, cut optimizer
+    panels/     Viewport, library, materials, properties, project, G-code, cost, cut optimizer, tool browser
     widgets/    Status bar, toast notifications, binding recorder
 ```
 
