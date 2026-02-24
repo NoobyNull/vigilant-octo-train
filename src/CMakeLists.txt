@@ -136,6 +136,7 @@ set(DW_SOURCES
     ui/panels/cost_panel.cpp
     ui/panels/cut_optimizer_panel.cpp
     ui/panels/start_page.cpp
+    ui/panels/tool_browser_panel.cpp
 
     # UI Widgets
     ui/widgets/binding_recorder.cpp

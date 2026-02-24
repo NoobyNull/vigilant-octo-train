@@ -46,6 +46,7 @@
 #include "ui/panels/project_panel.h"
 #include "ui/panels/properties_panel.h"
 #include "ui/panels/start_page.h"
+#include "ui/panels/tool_browser_panel.h"
 #include "ui/panels/viewport_panel.h"
 #include "ui/widgets/toast.h"
 
@@ -559,6 +560,10 @@ void Application::initWiring() {
             gcp->onGrblRawLine(line, isSent);
         };
         m_cncController->setCallbacks(cncCb);
+    }
+    if (auto* tbp = m_uiManager->toolBrowserPanel()) {
+        tbp->setToolDatabase(m_toolDatabase.get());
+        tbp->setFileDialog(m_uiManager->fileDialog());
     }
     if (m_uiManager->propertiesPanel()) {
         m_uiManager->propertiesPanel()->setOnMeshModified([this]() {

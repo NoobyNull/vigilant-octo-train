@@ -256,6 +256,19 @@ void MaterialsPanel::registerContextMenuEntries() {
              }
          }},
         ContextMenuEntry::separator(),
+        {"Hide",
+         [this]() {
+             if (m_currentContextMenuMaterial && m_materialManager) {
+                 m_materialManager->setMaterialHidden(m_currentContextMenuMaterial->id, true);
+                 refresh();
+             }
+         },
+         {},  // icon
+         []() { return true; },  // enabled
+         [this]() {
+             return m_currentContextMenuMaterial && m_currentContextMenuMaterial->isBundled &&
+                    !m_currentContextMenuMaterial->isHidden;
+         }},
         {"Delete",
          [this]() {
              if (m_currentContextMenuMaterial) {
@@ -263,6 +276,11 @@ void MaterialsPanel::registerContextMenuEntries() {
                  m_deleteName = m_currentContextMenuMaterial->name;
                  m_showDeleteConfirm = true;
              }
+         },
+         {},  // icon
+         []() { return true; },  // enabled
+         [this]() {
+             return m_currentContextMenuMaterial && !m_currentContextMenuMaterial->isBundled;
          }},
     };
     m_contextMenuManager->registerEntries("MaterialsPanel_MaterialContext", materialEntries);

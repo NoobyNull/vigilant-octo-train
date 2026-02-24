@@ -33,6 +33,7 @@
 #include "ui/panels/project_panel.h"
 #include "ui/panels/properties_panel.h"
 #include "ui/panels/start_page.h"
+#include "ui/panels/tool_browser_panel.h"
 #include "ui/panels/viewport_panel.h"
 #include "ui/widgets/status_bar.h"
 #include "ui/widgets/toast.h"
@@ -66,6 +67,7 @@ void UIManager::init(LibraryManager* libraryManager,
         m_costPanel = std::make_unique<CostPanel>(costRepo);
     }
     m_startPage = std::make_unique<StartPage>();
+    m_toolBrowserPanel = std::make_unique<ToolBrowserPanel>();
 
     // Create dialogs
     m_fileDialog = std::make_unique<FileDialog>();
@@ -133,6 +135,7 @@ void UIManager::shutdown() {
     m_cutOptimizerPanel.reset();
     m_costPanel.reset();
     m_materialsPanel.reset();
+    m_toolBrowserPanel.reset();
     m_startPage.reset();
 }
 
@@ -195,6 +198,7 @@ void UIManager::renderViewMenu() {
     ImGui::MenuItem("Cut Optimizer", nullptr, &m_showCutOptimizer);
     ImGui::MenuItem("Cost Estimator", nullptr, &m_showCostEstimator);
     ImGui::MenuItem("Materials", nullptr, &m_showMaterials);
+    ImGui::MenuItem("Tool Browser", nullptr, &m_showToolBrowser);
     ImGui::Separator();
     if (ImGui::MenuItem("Lighting Settings", "Ctrl+L") && m_lightingDialog) {
         m_lightingDialog->open();
@@ -283,6 +287,14 @@ void UIManager::renderPanels() {
         if (!m_materialsPanel->isOpen()) {
             m_showMaterials = false;
             m_materialsPanel->setOpen(true); // reset for next View menu toggle
+        }
+    }
+
+    if (m_showToolBrowser && m_toolBrowserPanel) {
+        m_toolBrowserPanel->render();
+        if (!m_toolBrowserPanel->isOpen()) {
+            m_showToolBrowser = false;
+            m_toolBrowserPanel->setOpen(true);
         }
     }
 
@@ -448,6 +460,7 @@ void UIManager::restoreVisibilityFromConfig() {
     m_showGCode = cfg.getShowGCode();
     m_showCutOptimizer = cfg.getShowCutOptimizer();
     m_showCostEstimator = cfg.getShowCostEstimator();
+    m_showToolBrowser = cfg.getShowToolBrowser();
     m_showStartPage = cfg.getShowStartPage();
 }
 
@@ -461,6 +474,7 @@ void UIManager::saveVisibilityToConfig() {
     cfg.setShowGCode(m_showGCode);
     cfg.setShowCutOptimizer(m_showCutOptimizer);
     cfg.setShowCostEstimator(m_showCostEstimator);
+    cfg.setShowToolBrowser(m_showToolBrowser);
     cfg.setShowStartPage(m_showStartPage);
 }
 

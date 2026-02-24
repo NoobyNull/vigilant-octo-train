@@ -13,8 +13,8 @@ std::optional<i64> MaterialRepository::insert(const MaterialRecord& material) {
             name, category, archive_path,
             janka_hardness, feed_rate, spindle_speed,
             depth_of_cut, cost_per_board_foot, grain_direction_deg,
-            thumbnail_path
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            thumbnail_path, is_bundled, is_hidden
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     if (!stmt.isValid()) {
@@ -30,7 +30,9 @@ std::optional<i64> MaterialRepository::insert(const MaterialRecord& material) {
         !stmt.bindDouble(7, static_cast<f64>(material.depthOfCut)) ||
         !stmt.bindDouble(8, static_cast<f64>(material.costPerBoardFoot)) ||
         !stmt.bindDouble(9, static_cast<f64>(material.grainDirectionDeg)) ||
-        !stmt.bindText(10, material.thumbnailPath.string())) {
+        !stmt.bindText(10, material.thumbnailPath.string()) ||
+        !stmt.bindInt(11, material.isBundled ? 1 : 0) ||
+        !stmt.bindInt(12, material.isHidden ? 1 : 0)) {
         log::error("MaterialRepo", "Failed to bind insert parameters");
         return std::nullopt;
     }
@@ -63,7 +65,7 @@ std::optional<MaterialRecord> MaterialRepository::findById(i64 id) {
 std::vector<MaterialRecord> MaterialRepository::findAll() {
     std::vector<MaterialRecord> results;
 
-    auto stmt = m_db.prepare("SELECT * FROM materials ORDER BY name ASC");
+    auto stmt = m_db.prepare("SELECT * FROM materials WHERE is_hidden = 0 ORDER BY name ASC");
     if (!stmt.isValid()) {
         return results;
     }
@@ -78,7 +80,7 @@ std::vector<MaterialRecord> MaterialRepository::findAll() {
 std::vector<MaterialRecord> MaterialRepository::findByCategory(MaterialCategory category) {
     std::vector<MaterialRecord> results;
 
-    auto stmt = m_db.prepare("SELECT * FROM materials WHERE category = ? ORDER BY name ASC");
+    auto stmt = m_db.prepare("SELECT * FROM materials WHERE category = ? AND is_hidden = 0 ORDER BY name ASC");
     if (!stmt.isValid()) {
         return results;
     }
@@ -114,6 +116,20 @@ std::vector<MaterialRecord> MaterialRepository::findByName(std::string_view sear
     return results;
 }
 
+std::optional<MaterialRecord> MaterialRepository::findByExactName(const std::string& name) {
+    auto stmt = m_db.prepare("SELECT * FROM materials WHERE name = ? LIMIT 1");
+    if (!stmt.isValid()) {
+        return std::nullopt;
+    }
+    if (!stmt.bindText(1, name)) {
+        return std::nullopt;
+    }
+    if (stmt.step()) {
+        return rowToMaterial(stmt);
+    }
+    return std::nullopt;
+}
+
 bool MaterialRepository::update(const MaterialRecord& material) {
     auto stmt = m_db.prepare(R"(
         UPDATE materials SET
@@ -126,7 +142,9 @@ bool MaterialRepository::update(const MaterialRecord& material) {
             depth_of_cut = ?,
             cost_per_board_foot = ?,
             grain_direction_deg = ?,
-            thumbnail_path = ?
+            thumbnail_path = ?,
+            is_bundled = ?,
+            is_hidden = ?
         WHERE id = ?
     )");
 
@@ -143,7 +161,10 @@ bool MaterialRepository::update(const MaterialRecord& material) {
         !stmt.bindDouble(7, static_cast<f64>(material.depthOfCut)) ||
         !stmt.bindDouble(8, static_cast<f64>(material.costPerBoardFoot)) ||
         !stmt.bindDouble(9, static_cast<f64>(material.grainDirectionDeg)) ||
-        !stmt.bindText(10, material.thumbnailPath.string()) || !stmt.bindInt(11, material.id)) {
+        !stmt.bindText(10, material.thumbnailPath.string()) ||
+        !stmt.bindInt(11, material.isBundled ? 1 : 0) ||
+        !stmt.bindInt(12, material.isHidden ? 1 : 0) ||
+        !stmt.bindInt(13, material.id)) {
         log::error("MaterialRepo", "Failed to bind update parameters");
         return false;
     }
@@ -195,6 +216,8 @@ MaterialRecord MaterialRepository::rowToMaterial(Statement& stmt) {
     material.grainDirectionDeg = static_cast<f32>(stmt.getDouble(9));
     material.thumbnailPath = Path(stmt.getText(10));
     material.importedAt = stmt.getText(11);
+    material.isBundled = stmt.getInt(12) != 0;
+    material.isHidden = stmt.getInt(13) != 0;
     return material;
 }
 

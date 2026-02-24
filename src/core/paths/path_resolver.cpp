@@ -30,7 +30,17 @@ Path resolve(const Path& storedPath, PathCategory cat) {
     if (storedPath.is_absolute()) {
         return storedPath;
     }
-    return categoryRoot(cat) / storedPath;
+    Path resolved = categoryRoot(cat) / storedPath;
+
+    // Materials live in two directories: user dir and bundled dir.
+    // Check user dir first so user overrides take priority.
+    if (cat == PathCategory::Materials && !std::filesystem::exists(resolved)) {
+        Path bundled = paths::getBundledMaterialsDir() / storedPath;
+        if (std::filesystem::exists(bundled)) {
+            return bundled;
+        }
+    }
+    return resolved;
 }
 
 Path makeStorable(const Path& absolutePath, PathCategory cat) {

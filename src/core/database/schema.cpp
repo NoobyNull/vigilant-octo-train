@@ -86,7 +86,9 @@ bool Schema::createTables(Database& db) {
             cost_per_board_foot REAL DEFAULT 0,
             grain_direction_deg REAL DEFAULT 0,
             thumbnail_path TEXT,
-            imported_at TEXT DEFAULT CURRENT_TIMESTAMP
+            imported_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            is_bundled INTEGER DEFAULT 0,
+            is_hidden INTEGER DEFAULT 0
         )
     )")) {
         return false;
@@ -575,6 +577,12 @@ bool Schema::migrate(Database& db, int fromVersion) {
         (void)db.execute(
             "CREATE INDEX IF NOT EXISTS idx_models_tag_status ON models(tag_status)");
         log::info("Schema", "v11: Added tag_status column to models");
+    }
+
+    if (fromVersion < 12) {
+        (void)db.execute("ALTER TABLE materials ADD COLUMN is_bundled INTEGER DEFAULT 0");
+        (void)db.execute("ALTER TABLE materials ADD COLUMN is_hidden INTEGER DEFAULT 0");
+        log::info("Schema", "v12: Added is_bundled and is_hidden columns to materials");
     }
 
     if (!setVersion(db, CURRENT_VERSION)) {

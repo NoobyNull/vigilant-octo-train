@@ -44,6 +44,11 @@ void ContextMenuManager::clearEntries(const std::string& popupId) {
 
 void ContextMenuManager::renderEntries(const std::vector<ContextMenuEntry>& entries) {
     for (const auto& entry : entries) {
+        // Skip invisible entries
+        if (!entry.visible()) {
+            continue;
+        }
+
         // Render separator
         if (entry.isSeparator) {
             ImGui::Separator();

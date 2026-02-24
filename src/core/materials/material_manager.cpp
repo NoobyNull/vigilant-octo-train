@@ -34,15 +34,24 @@ void MaterialManager::seedDefaults() {
     int seededWithTexture = 0;
     int seededBare = 0;
 
-    // Phase 1: Try to import bundled .dwmat files (have textures)
+    // Phase 1: Load bundled .dwmat files in-place (no copy to managed dir)
     Path bundledDir = paths::getBundledMaterialsDir();
     if (file::isDirectory(bundledDir)) {
         auto dwmatFiles = file::listFiles(bundledDir, "dwmat");
         for (const auto& dwmatPath : dwmatFiles) {
-            auto id = importMaterial(dwmatPath);
+            auto data = MaterialArchive::load(dwmatPath.string());
+            if (!data) {
+                log::warningf("MaterialManager",
+                              "seedDefaults: failed to load bundled archive: %s",
+                              dwmatPath.string().c_str());
+                continue;
+            }
+            MaterialRecord record = data->metadata;
+            record.archivePath = dwmatPath.filename();
+            record.isBundled = true;
+            auto id = m_repo.insert(record);
             if (id) {
-                std::string name = file::getStem(dwmatPath);
-                seededNames.insert(name);
+                seededNames.insert(record.name);
                 ++seededWithTexture;
             }
         }
@@ -55,7 +64,9 @@ void MaterialManager::seedDefaults() {
             if (seededNames.count(mat.name) > 0) {
                 continue; // Already imported from .dwmat
             }
-            auto id = m_repo.insert(mat);
+            MaterialRecord bundledMat = mat;
+            bundledMat.isBundled = true;
+            auto id = m_repo.insert(bundledMat);
             if (id) {
                 ++seededBare;
             } else {
@@ -96,10 +107,21 @@ std::optional<i64> MaterialManager::importMaterial(const Path& dwmatPath) {
         return std::nullopt;
     }
 
-    // Determine destination path in app-managed materials directory
-    Path destPath = uniqueArchivePath(dwmatPath.filename().string());
+    // Load metadata from source
+    auto data = MaterialArchive::load(dwmatPath.string());
+    if (!data) {
+        log::errorf("MaterialManager",
+                    "importMaterial: failed to load metadata from: %s",
+                    dwmatPath.string().c_str());
+        return std::nullopt;
+    }
 
-    // Copy to managed directory (prevents path invalidation: Pitfall 3)
+    // Copy to user materials directory using original filename.
+    // This overwrites any existing file, letting user imports take priority
+    // over bundled defaults with the same name.
+    Path materialsDir = Config::instance().getMaterialsDir();
+    static_cast<void>(file::createDirectories(materialsDir));
+    Path destPath = materialsDir / dwmatPath.filename().string();
     if (!file::copy(dwmatPath, destPath)) {
         log::errorf("MaterialManager",
                     "importMaterial: failed to copy %s -> %s",
@@ -108,22 +130,24 @@ std::optional<i64> MaterialManager::importMaterial(const Path& dwmatPath) {
         return std::nullopt;
     }
 
-    // Load metadata from the managed copy
-    auto data = MaterialArchive::load(destPath.string());
-    if (!data) {
-        log::errorf("MaterialManager",
-                    "importMaterial: failed to load metadata from: %s",
-                    destPath.string().c_str());
-        // Clean up the copy on failure
-        static_cast<void>(file::remove(destPath));
-        return std::nullopt;
+    // Build record — store just the filename (resolved via user dir / bundled dir)
+    MaterialRecord record = data->metadata;
+    record.archivePath = destPath.filename();
+
+    // If a material with the same name already exists, update it
+    auto existing = m_repo.findByExactName(record.name);
+    if (existing) {
+        record.id = existing->id;
+        if (!m_repo.update(record)) {
+            log::errorf("MaterialManager",
+                        "importMaterial: database update failed for: %s",
+                        record.name.c_str());
+            return std::nullopt;
+        }
+        return record.id;
     }
 
-    // Build record from archive metadata, pointing to managed copy (stored as relative)
-    MaterialRecord record = data->metadata;
-    record.archivePath = PathResolver::makeStorable(destPath, PathCategory::Materials);
-
-    // Insert into database
+    // Otherwise insert new
     auto id = m_repo.insert(record);
     if (!id) {
         log::errorf("MaterialManager",
@@ -223,18 +247,33 @@ bool MaterialManager::removeMaterial(i64 id) {
         return false;
     }
 
-    // Delete managed .dwmat file if it exists
-    Path resolvedArchive = PathResolver::resolve(matOpt->archivePath, PathCategory::Materials);
-    if (!resolvedArchive.empty() && file::isFile(resolvedArchive)) {
-        if (!file::remove(resolvedArchive)) {
-            log::warningf("MaterialManager",
-                          "removeMaterial: could not delete archive file: %s",
-                          matOpt->archivePath.string().c_str());
-            // Don't abort — remove from DB regardless
+    // Bundled materials are hidden, not deleted
+    if (matOpt->isBundled) {
+        return setMaterialHidden(id, true);
+    }
+
+    // Delete the user's copy if it exists — never touch the bundled directory
+    if (!matOpt->archivePath.empty()) {
+        Path userCopy = Config::instance().getMaterialsDir() / matOpt->archivePath;
+        if (file::isFile(userCopy)) {
+            if (!file::remove(userCopy)) {
+                log::warningf("MaterialManager",
+                              "removeMaterial: could not delete archive file: %s",
+                              userCopy.string().c_str());
+            }
         }
     }
 
     return m_repo.remove(id);
+}
+
+bool MaterialManager::setMaterialHidden(i64 id, bool hidden) {
+    auto matOpt = m_repo.findById(id);
+    if (!matOpt) {
+        return false;
+    }
+    matOpt->isHidden = hidden;
+    return m_repo.update(*matOpt);
 }
 
 // ---------------------------------------------------------------------------

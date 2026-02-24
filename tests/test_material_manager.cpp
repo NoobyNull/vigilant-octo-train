@@ -223,14 +223,30 @@ TEST_F(MaterialManagerTest, Update_ChangesFields) {
 // removeMaterial
 // ============================================================================
 
-TEST_F(MaterialManagerTest, Remove_DeletesFromDatabase) {
+TEST_F(MaterialManagerTest, Remove_DeletesUserMaterialFromDatabase) {
+    // User-added (non-bundled) materials are truly deleted
+    dw::MaterialRecord userMat;
+    userMat.name = "User Custom Wood";
+    userMat.category = dw::MaterialCategory::Hardwood;
+    auto id = m_manager->addMaterial(userMat);
+    ASSERT_TRUE(id.has_value());
+
+    EXPECT_TRUE(m_manager->removeMaterial(*id));
+    EXPECT_FALSE(m_manager->getMaterial(*id).has_value());
+}
+
+TEST_F(MaterialManagerTest, Remove_HidesBundledMaterial) {
+    // Bundled materials are hidden, not deleted
     m_manager->seedDefaults();
     auto all = m_manager->getAllMaterials();
     ASSERT_FALSE(all.empty());
 
-    dw::i64 idToRemove = all[0].id;
-    EXPECT_TRUE(m_manager->removeMaterial(idToRemove));
-    EXPECT_FALSE(m_manager->getMaterial(idToRemove).has_value());
+    dw::i64 idToHide = all[0].id;
+    EXPECT_TRUE(all[0].isBundled);
+    EXPECT_TRUE(m_manager->removeMaterial(idToHide));
+    // Still exists in DB but hidden from getAllMaterials
+    EXPECT_TRUE(m_manager->getMaterial(idToHide).has_value());
+    EXPECT_TRUE(m_manager->getMaterial(idToHide)->isHidden);
 }
 
 TEST_F(MaterialManagerTest, Remove_ReturnsFalseForNonExistent) {

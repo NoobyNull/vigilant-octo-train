@@ -62,6 +62,8 @@ struct MaterialRecord {
     f32 grainDirectionDeg = 0.0f; // Grain direction (0-360 degrees)
     Path thumbnailPath;
     std::string importedAt;
+    bool isBundled = false;
+    bool isHidden = false;
 };
 
 } // namespace dw

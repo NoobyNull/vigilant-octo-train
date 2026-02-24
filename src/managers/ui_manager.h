@@ -26,6 +26,7 @@ class CostPanel;
 class CutOptimizerPanel;
 class MaterialsPanel;
 class StartPage;
+class ToolBrowserPanel;
 
 // Forward declarations - dialogs
 class FileDialog;
@@ -114,6 +115,7 @@ class UIManager {
     MaterialsPanel* materialsPanel() { return m_materialsPanel.get(); }
     CostPanel* costPanel() { return m_costPanel.get(); }
     StartPage* startPage() { return m_startPage.get(); }
+    ToolBrowserPanel* toolBrowserPanel() { return m_toolBrowserPanel.get(); }
     FileDialog* fileDialog() { return m_fileDialog.get(); }
     LightingDialog* lightingDialog() { return m_lightingDialog.get(); }
     ImportSummaryDialog* importSummaryDialog() { return m_importSummaryDialog.get(); }
@@ -133,6 +135,7 @@ class UIManager {
     bool& showCutOptimizer() { return m_showCutOptimizer; }
     bool& showCostEstimator() { return m_showCostEstimator; }
     bool& showMaterials() { return m_showMaterials; }
+    bool& showToolBrowser() { return m_showToolBrowser; }
     bool& showStartPage() { return m_showStartPage; }
     bool& showRestartPopup() { return m_showRestartPopup; }
 
@@ -173,6 +176,7 @@ class UIManager {
     std::unique_ptr<MaterialsPanel> m_materialsPanel;
     std::unique_ptr<CostPanel> m_costPanel;
     std::unique_ptr<StartPage> m_startPage;
+    std::unique_ptr<ToolBrowserPanel> m_toolBrowserPanel;
 
     // Panel visibility
     bool m_showViewport = true;
@@ -183,6 +187,7 @@ class UIManager {
     bool m_showCutOptimizer = false;
     bool m_showCostEstimator = false;
     bool m_showMaterials = false;
+    bool m_showToolBrowser = false;
     bool m_showStartPage = true;
 
     // Dialogs

@@ -50,9 +50,12 @@ class MaterialManager {
     // Update all editable fields of a material record
     bool updateMaterial(const MaterialRecord& record);
 
-    // Remove a material from the database.
-    // Also deletes the managed .dwmat file from getMaterialsDir() if archivePath is set.
+    // Remove a material. Bundled materials are hidden instead of deleted.
+    // User materials are deleted from the DB and their .dwmat file is removed.
     bool removeMaterial(i64 id);
+
+    // Hide/unhide a bundled material
+    bool setMaterialHidden(i64 id, bool hidden);
 
     // --- Material-to-model assignment ---
 

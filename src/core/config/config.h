@@ -143,6 +143,9 @@ class Config {
     bool getShowCostEstimator() const { return m_wsShowCostEstimator; }
     void setShowCostEstimator(bool v) { m_wsShowCostEstimator = v; }
 
+    bool getShowToolBrowser() const { return m_wsShowToolBrowser; }
+    void setShowToolBrowser(bool v) { m_wsShowToolBrowser = v; }
+
     bool getShowStartPage() const { return m_wsShowStartPage; }
     void setShowStartPage(bool v) { m_wsShowStartPage = v; }
 
@@ -257,6 +260,7 @@ class Config {
     bool m_wsShowGCode = false;
     bool m_wsShowCutOptimizer = false;
     bool m_wsShowCostEstimator = false;
+    bool m_wsShowToolBrowser = false;
     bool m_wsShowStartPage = true;
     i64 m_wsLastSelectedModelId = -1;
     f32 m_wsLibraryThumbSize = 96.0f;

@@ -24,6 +24,7 @@ class MaterialRepository {
     std::vector<MaterialRecord> findAll();
     std::vector<MaterialRecord> findByCategory(MaterialCategory category);
     std::vector<MaterialRecord> findByName(std::string_view searchTerm);
+    std::optional<MaterialRecord> findByExactName(const std::string& name);
 
     // Update
     bool update(const MaterialRecord& material);
