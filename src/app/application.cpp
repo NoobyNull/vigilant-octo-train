@@ -29,6 +29,8 @@
 #include "core/database/schema.h"
 #include "core/export/project_export_manager.h"
 #include "core/graph/graph_manager.h"
+#include "core/import/background_tagger.h"
+#include "core/import/import_log.h"
 #include "core/import/import_queue.h"
 #include "core/library/library_manager.h"
 #include "core/materials/gemini_descriptor_service.h"
@@ -45,6 +47,7 @@
 #include "managers/file_io_manager.h"
 #include "managers/ui_manager.h"
 #include "render/thumbnail_generator.h"
+#include "ui/panels/gcode_panel.h"
 #include "ui/panels/library_panel.h"
 #include "ui/panels/viewport_panel.h"
 #include "ui/theme.h"
@@ -52,7 +55,8 @@
 
 namespace dw {
 
-Application::Application() = default;
+// Explicit destructors needed for unique_ptr of incomplete types
+Application::Application() {}
 Application::~Application() {
     shutdown();
 }
@@ -225,7 +229,8 @@ bool Application::init() {
     }
 
     // Content-addressable blob store (STOR-01/02/03)
-    m_storageManager = std::make_unique<StorageManager>(StorageManager::defaultBlobRoot());
+    m_storageManager = std::make_unique<StorageManager>(
+        Config::instance().getSupportDir() / "blobs");
 
     // Clean up orphaned temp files from prior crashes (STOR-03)
     int orphansCleaned = m_storageManager->cleanupOrphanedTempFiles();
@@ -239,6 +244,12 @@ bool Application::init() {
     m_importQueue = std::make_unique<ImportQueue>(*m_connectionPool,
                                                   m_libraryManager.get(),
                                                   m_storageManager.get());
+
+    m_importLog = std::make_unique<ImportLog>(Config::instance().getSupportDir() / ".import-log");
+    m_importQueue->setImportLog(m_importLog.get());
+
+    m_backgroundTagger = std::make_unique<BackgroundTagger>(
+        *m_connectionPool, m_libraryManager.get(), m_descriptorService.get());
 
     // Initialize managers
     m_uiManager = std::make_unique<UIManager>();
@@ -261,6 +272,13 @@ bool Application::init() {
     m_fileIOManager->setThumbnailCallback(
         [this](int64_t modelId, Mesh& mesh) { return generateMaterialThumbnail(modelId, mesh); });
 
+    m_fileIOManager->setGCodeCallback([this](const std::string& path) {
+        if (auto* gcp = m_uiManager->gcodePanel()) {
+            gcp->setOpen(true);
+            gcp->loadFile(path);
+        }
+    });
+
     m_configManager = std::make_unique<ConfigManager>(m_uiManager.get());
     m_configManager->init(m_window);
     m_configManager->setQuitCallback([this]() { quit(); });
@@ -278,6 +296,13 @@ bool Application::init() {
             if (m_uiManager->libraryPanel())
                 m_uiManager->libraryPanel()->setSelectedModelId(lastModelId);
         }
+    }
+
+    // Detect incomplete import from prior session
+    if (m_importLog->exists()) {
+        m_mainThreadQueue->enqueue([]() {
+            log::info("App", "Previous import log found — resume available from library panel");
+        });
     }
 
     m_initialized = true;
@@ -300,6 +325,11 @@ int Application::run() {
 }
 
 void Application::quit() {
+    if (m_backgroundTagger && m_backgroundTagger->isActive()) {
+        m_backgroundTagger->stop();
+        m_uiManager->showTaggerShutdownDialog(&m_backgroundTagger->progress());
+        return;
+    }
     m_running = false;
 }
 
@@ -408,6 +438,14 @@ void Application::shutdown() {
     m_configManager.reset();
     m_fileIOManager.reset();
     m_uiManager.reset();
+
+    // Stop background tagger cleanly
+    if (m_backgroundTagger) {
+        m_backgroundTagger->stop();
+        m_backgroundTagger->join();
+    }
+    m_backgroundTagger.reset();
+    m_importLog.reset();
 
     // Destroy core systems
     m_descriptorService.reset();

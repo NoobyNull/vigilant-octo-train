@@ -14,6 +14,7 @@
 namespace dw {
 
 // Forward declarations
+class ImportLog;
 class LibraryManager;
 class StorageManager;
 
@@ -59,6 +60,13 @@ class ImportQueue {
     using SummaryCallback = std::function<void(const ImportBatchSummary&)>;
     void setOnBatchComplete(SummaryCallback callback);
 
+    // Import log for resume/revert support
+    void setImportLog(ImportLog* log);
+
+    // Tag queueing mode
+    void setQueueForTagging(bool enabled);
+    bool queueForTagging() const;
+
   private:
     void processTask(ImportTask task); // Note: takes by value for move into lambda
     void enqueueInternal(const std::vector<Path>& paths); // Shared impl for both enqueue overloads
@@ -87,6 +95,9 @@ class ImportQueue {
     ImportProgress m_progress;
     ImportCallback m_onComplete;
     SummaryCallback m_onBatchComplete;
+
+    ImportLog* m_importLog = nullptr;
+    bool m_queueForTagging = false;
 };
 
 } // namespace dw

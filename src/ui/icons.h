@@ -55,6 +55,14 @@ constexpr const char* ICON_ASSIGN = "\xef\x87\x87";     // f1c7 link (chain)
 constexpr const char* ICON_WAND = "\xef\x83\x90";       // f0d0 wand-magic-sparkles
 constexpr const char* ICON_PAINTBRUSH = "\xef\x87\xbc"; // f1fc paintbrush
 
+// Playback / sender
+constexpr const char* ICON_PLAY = "\xef\x81\x8b";       // f04b play
+constexpr const char* ICON_PAUSE = "\xef\x81\x8c";      // f04c pause
+constexpr const char* ICON_STOP = "\xef\x81\x8d";       // f04d stop
+constexpr const char* ICON_PLUG = "\xef\x87\xa6";       // f1e6 plug
+constexpr const char* ICON_TERMINAL = "\xef\x84\xa0";   // f120 terminal
+constexpr const char* ICON_UNLINK = "\xef\x84\xa7";     // f127 link-slash
+
 } // namespace icons
 
 // Convenience struct for simpler access: Icons::Model instead of icons::ICON_MODEL
@@ -92,6 +100,12 @@ struct Icons {
     static constexpr const char* Assign = icons::ICON_ASSIGN;
     static constexpr const char* Wand = icons::ICON_WAND;
     static constexpr const char* Paintbrush = icons::ICON_PAINTBRUSH;
+    static constexpr const char* Play = icons::ICON_PLAY;
+    static constexpr const char* Pause = icons::ICON_PAUSE;
+    static constexpr const char* Stop = icons::ICON_STOP;
+    static constexpr const char* Plug = icons::ICON_PLUG;
+    static constexpr const char* Terminal = icons::ICON_TERMINAL;
+    static constexpr const char* Unlink = icons::ICON_UNLINK;
 };
 
 } // namespace dw

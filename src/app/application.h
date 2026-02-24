@@ -38,6 +38,8 @@ class GeminiMaterialService;
 class GeminiDescriptorService;
 class ProjectExportManager;
 class CutListFile;
+class BackgroundTagger;
+class ImportLog;
 class Mesh;
 class Texture;
 
@@ -104,6 +106,8 @@ class Application {
     std::unique_ptr<Workspace> m_workspace;
     std::unique_ptr<ThumbnailGenerator> m_thumbnailGenerator;
     std::unique_ptr<ImportQueue> m_importQueue;
+    std::unique_ptr<ImportLog> m_importLog;
+    std::unique_ptr<BackgroundTagger> m_backgroundTagger;
     std::unique_ptr<StorageManager> m_storageManager;
 
     // UI Manager - owns all panels, dialogs, visibility state

@@ -2,6 +2,7 @@
 
 #include <imgui.h>
 
+#include "../../core/paths/path_resolver.h"
 #include "../../core/utils/string_utils.h"
 #include "../icons.h"
 
@@ -109,7 +110,7 @@ void PropertiesPanel::renderModelRecordInfo() {
     ImGui::Spacing();
     if (ImGui::CollapsingHeader("File")) {
         ImGui::Indent();
-        ImGui::TextWrapped("%s", r.filePath.string().c_str());
+        ImGui::TextWrapped("%s", PathResolver::resolve(r.filePath, PathCategory::Support).string().c_str());
         ImGui::Unindent();
     }
 

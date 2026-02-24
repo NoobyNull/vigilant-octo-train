@@ -164,6 +164,22 @@ class Config {
     Path getLibraryDir() const { return m_libraryDir; }
     void setLibraryDir(const Path& path) { m_libraryDir = path; }
 
+    // Category directories (empty means use default from app_paths)
+    Path getModelsDir() const;
+    void setModelsDir(const Path& path) { m_modelsDir = path; }
+
+    Path getProjectsDir() const;
+    void setProjectsDir(const Path& path) { m_projectsDir = path; }
+
+    Path getMaterialsDir() const;
+    void setMaterialsDir(const Path& path) { m_materialsDir = path; }
+
+    Path getGCodeDir() const;
+    void setGCodeDir(const Path& path) { m_gcodeDir = path; }
+
+    Path getSupportDir() const;
+    void setSupportDir(const Path& path) { m_supportDir = path; }
+
     bool getShowImportErrorToasts() const { return m_showImportErrorToasts; }
     void setShowImportErrorToasts(bool show) { m_showImportErrorToasts = show; }
 
@@ -242,6 +258,13 @@ class Config {
     ParallelismTier m_parallelismTier;
     FileHandlingMode m_fileHandlingMode = FileHandlingMode::LeaveInPlace;
     Path m_libraryDir; // Empty means default (app data dir / "library")
+
+    // Category directories (empty = default from app_paths)
+    Path m_modelsDir;
+    Path m_projectsDir;
+    Path m_materialsDir;
+    Path m_gcodeDir;
+    Path m_supportDir;
     bool m_showImportErrorToasts = true;
     bool m_enableFloatingWindows = false;
 

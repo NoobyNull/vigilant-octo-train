@@ -10,6 +10,7 @@
 
 #include "../../core/config/config.h"
 #include "../../core/loaders/texture_loader.h"
+#include "../../core/paths/path_resolver.h"
 #include "../../core/materials/material_archive.h"
 #include "../../core/utils/log.h"
 #include "../context_menu_manager.h"
@@ -558,7 +559,8 @@ GLuint MaterialsPanel::getThumbnailTexture(const MaterialRecord& material) {
 
     // Try extracting texture from .dwmat archive
     if (tex == 0 && !material.archivePath.empty()) {
-        auto data = MaterialArchive::load(material.archivePath.string());
+        auto data = MaterialArchive::load(
+            PathResolver::resolve(material.archivePath, PathCategory::Materials).string());
         if (data && !data->textureData.empty()) {
             tex = loadPNGTexture(data->textureData.data(), data->textureData.size());
         }

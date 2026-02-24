@@ -15,6 +15,7 @@
 #include "core/project/project.h"
 #include "core/utils/file_utils.h"
 #include "core/utils/log.h"
+#include "core/utils/string_utils.h"
 #include "render/thumbnail_generator.h"
 #include "ui/dialogs/file_dialog.h"
 #include "ui/dialogs/import_options_dialog.h"
@@ -189,6 +190,14 @@ void FileIOManager::onFilesDropped(const std::vector<std::string>& paths) {
             auto ext = path.extension().string();
             if (!ext.empty() && ext[0] == '.')
                 ext = ext.substr(1);
+
+            // Route G-code files directly to G-code panel (not import pipeline)
+            std::string lower = str::toLower(ext);
+            if ((lower == "gcode" || lower == "nc" || lower == "ngc" || lower == "tap") &&
+                m_gcodeCallback) {
+                m_gcodeCallback(p);
+                continue;
+            }
 
             if (LoaderFactory::isSupported(ext)) {
                 importPaths.push_back(path);

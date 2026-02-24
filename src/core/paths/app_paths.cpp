@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 
+#include "../config/config.h"
 #include "../utils/file_utils.h"
 #include "../utils/log.h"
 
@@ -110,22 +111,7 @@ Path getDataDir() {
 }
 
 Path getDefaultProjectsDir() {
-#ifdef _WIN32
-    Path documents = getWindowsKnownFolder(FOLDERID_Documents);
-    if (documents.empty()) {
-        documents = getHomeDir() / "Documents";
-    }
-    return documents / APP_DISPLAY_NAME;
-#elif defined(__APPLE__)
-    return getHomeDir() / "Documents" / APP_DISPLAY_NAME;
-#else
-    // Linux - XDG User Directory or fallback
-    const char* xdgDocuments = std::getenv("XDG_DOCUMENTS_DIR");
-    if (xdgDocuments && xdgDocuments[0] != '\0') {
-        return Path(xdgDocuments) / APP_DISPLAY_NAME;
-    }
-    return getHomeDir() / "Documents" / APP_DISPLAY_NAME;
-#endif
+    return getUserRoot() / "Projects";
 }
 
 Path getCacheDir() {
@@ -193,6 +179,26 @@ Path getBundledMaterialsDir() {
     return Path("resources") / "materials";
 }
 
+Path getUserRoot() {
+    return getHomeDir() / APP_DISPLAY_NAME;
+}
+
+Path getDefaultModelsDir() {
+    return getUserRoot() / "Models";
+}
+
+Path getDefaultGCodeDir() {
+    return getUserRoot() / "GCode";
+}
+
+Path getDefaultMaterialsDir() {
+    return getUserRoot() / "Materials";
+}
+
+Path getDefaultSupportDir() {
+    return getUserRoot() / "Support";
+}
+
 bool ensureDirectoriesExist() {
     bool success = true;
 
@@ -205,14 +211,23 @@ bool ensureDirectoriesExist() {
         }
     };
 
+    // Internal directories (XDG locations)
     ensureDir(getConfigDir(), "config");
     ensureDir(getDataDir(), "data");
     ensureDir(getCacheDir(), "cache");
     ensureDir(getThumbnailDir(), "thumbnail");
-    ensureDir(getDefaultProjectsDir(), "projects");
-    ensureDir(getMaterialsDir(), "materials");
     ensureDir(getBlobStoreDir(), "blob store");
     ensureDir(getTempStoreDir(), "temp store");
+
+    // User-visible directories (from Config, defaults to ~/DigitalWorkshop/*)
+    auto& cfg = Config::instance();
+    ensureDir(cfg.getModelsDir(), "models");
+    ensureDir(cfg.getProjectsDir(), "projects");
+    ensureDir(cfg.getMaterialsDir(), "materials");
+    ensureDir(cfg.getGCodeDir(), "gcode");
+    ensureDir(cfg.getSupportDir(), "support");
+    ensureDir(cfg.getSupportDir() / "blobs", "support blobs");
+    ensureDir(cfg.getSupportDir() / "blobs" / ".tmp", "support blobs tmp");
 
     return success;
 }

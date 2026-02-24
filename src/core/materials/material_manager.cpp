@@ -2,7 +2,9 @@
 
 #include <set>
 
+#include "../config/config.h"
 #include "../paths/app_paths.h"
+#include "../paths/path_resolver.h"
 #include "../utils/file_utils.h"
 #include "../utils/log.h"
 #include "default_materials.h"
@@ -117,9 +119,9 @@ std::optional<i64> MaterialManager::importMaterial(const Path& dwmatPath) {
         return std::nullopt;
     }
 
-    // Build record from archive metadata, pointing to managed copy
+    // Build record from archive metadata, pointing to managed copy (stored as relative)
     MaterialRecord record = data->metadata;
-    record.archivePath = destPath;
+    record.archivePath = PathResolver::makeStorable(destPath, PathCategory::Materials);
 
     // Insert into database
     auto id = m_repo.insert(record);
@@ -222,8 +224,9 @@ bool MaterialManager::removeMaterial(i64 id) {
     }
 
     // Delete managed .dwmat file if it exists
-    if (!matOpt->archivePath.empty() && file::isFile(matOpt->archivePath)) {
-        if (!file::remove(matOpt->archivePath)) {
+    Path resolvedArchive = PathResolver::resolve(matOpt->archivePath, PathCategory::Materials);
+    if (!resolvedArchive.empty() && file::isFile(resolvedArchive)) {
+        if (!file::remove(resolvedArchive)) {
             log::warningf("MaterialManager",
                           "removeMaterial: could not delete archive file: %s",
                           matOpt->archivePath.string().c_str());
@@ -300,7 +303,7 @@ std::optional<MaterialRecord> MaterialManager::getModelMaterial(i64 modelId) {
 // ---------------------------------------------------------------------------
 
 Path MaterialManager::uniqueArchivePath(const std::string& originalFilename) const {
-    Path materialsDir = paths::getMaterialsDir();
+    Path materialsDir = Config::instance().getMaterialsDir();
 
     // Ensure directory exists
     static_cast<void>(file::createDirectories(materialsDir));

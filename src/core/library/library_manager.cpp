@@ -5,6 +5,7 @@
 #include "../loaders/loader_factory.h"
 #include "../mesh/hash.h"
 #include "../paths/app_paths.h"
+#include "../paths/path_resolver.h"
 #include "../utils/file_utils.h"
 #include "../utils/log.h"
 
@@ -63,7 +64,7 @@ ImportResult LibraryManager::importModel(const Path& sourcePath) {
     ModelRecord record;
     record.hash = fileHash;
     record.name = file::getStem(sourcePath);
-    record.filePath = sourcePath;
+    record.filePath = PathResolver::makeStorable(sourcePath, PathCategory::Support);
     record.fileFormat = file::getExtension(sourcePath);
 
     auto fileSize = file::getFileSize(sourcePath);
@@ -131,7 +132,7 @@ MeshPtr LibraryManager::loadMesh(i64 modelId) {
 }
 
 MeshPtr LibraryManager::loadMesh(const ModelRecord& record) {
-    auto loadResult = LoaderFactory::load(record.filePath);
+    auto loadResult = LoaderFactory::load(PathResolver::resolve(record.filePath, PathCategory::Support));
     if (!loadResult) {
         log::errorf("Library", "Failed to load mesh: %s", loadResult.error.c_str());
         return nullptr;

@@ -24,6 +24,7 @@
 #include "ui/dialogs/message_dialog.h"
 #include "ui/dialogs/progress_dialog.h"
 #include "ui/dialogs/tag_image_dialog.h"
+#include "ui/dialogs/tagger_shutdown_dialog.h"
 #include "ui/panels/cost_panel.h"
 #include "ui/panels/cut_optimizer_panel.h"
 #include "ui/panels/gcode_panel.h"
@@ -74,6 +75,7 @@ void UIManager::init(LibraryManager* libraryManager,
     m_progressDialog = std::make_unique<ProgressDialog>();
     m_tagImageDialog = std::make_unique<TagImageDialog>();
     m_maintenanceDialog = std::make_unique<MaintenanceDialog>();
+    m_taggerShutdownDialog = std::make_unique<TaggerShutdownDialog>();
 
     // Create widgets
     m_statusBar = std::make_unique<StatusBar>();
@@ -116,6 +118,7 @@ void UIManager::shutdown() {
     m_importOptionsDialog.reset();
     m_progressDialog.reset();
     m_tagImageDialog.reset();
+    m_taggerShutdownDialog.reset();
     m_maintenanceDialog.reset();
 
     // Destroy widgets
@@ -304,6 +307,9 @@ void UIManager::renderPanels() {
         m_tagImageDialog->render();
     }
 
+    if (m_taggerShutdownDialog) {
+        m_taggerShutdownDialog->render();
+    }
     if (m_maintenanceDialog) {
         m_maintenanceDialog->render();
     }
@@ -520,6 +526,11 @@ void UIManager::setImportCancelCallback(std::function<void()> callback) {
     if (m_statusBar) {
         m_statusBar->setOnCancel(std::move(callback));
     }
+}
+
+void UIManager::showTaggerShutdownDialog(const TaggerProgress* progress) {
+    if (m_taggerShutdownDialog)
+        m_taggerShutdownDialog->open(progress);
 }
 
 } // namespace dw

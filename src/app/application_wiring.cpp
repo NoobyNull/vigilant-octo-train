@@ -14,9 +14,11 @@
 #include "core/optimizer/cut_list_file.h"
 #include "core/database/gcode_repository.h"
 #include "core/export/project_export_manager.h"
+#include "core/import/background_tagger.h"
 #include "core/import/import_queue.h"
 #include "core/library/library_manager.h"
 #include "core/loaders/loader_factory.h"
+#include "core/paths/path_resolver.h"
 #include "core/loaders/texture_loader.h"
 #include "core/materials/gemini_descriptor_service.h"
 #include "core/materials/gemini_material_service.h"
@@ -33,6 +35,7 @@
 #include "ui/dialogs/maintenance_dialog.h"
 #include "ui/dialogs/progress_dialog.h"
 #include "ui/dialogs/tag_image_dialog.h"
+#include "ui/dialogs/tagger_shutdown_dialog.h"
 #include "ui/panels/cost_panel.h"
 #include "ui/panels/cut_optimizer_panel.h"
 #include "ui/panels/gcode_panel.h"
@@ -70,6 +73,14 @@ void Application::initWiring() {
             }
             if (summary.duplicateCount > 0)
                 m_uiManager->showImportSummary(summary);
+
+            // Start background tagger if "manage + tag" mode was selected
+            if (m_importQueue->queueForTagging() && m_backgroundTagger &&
+                !m_backgroundTagger->isActive()) {
+                auto apiKey = Config::instance().getGeminiApiKey();
+                if (!apiKey.empty())
+                    m_backgroundTagger->start(apiKey);
+            }
         });
     });
 
@@ -77,9 +88,11 @@ void Application::initWiring() {
     m_fileIOManager->setImportOptionsDialog(m_uiManager->importOptionsDialog());
     if (m_uiManager->importOptionsDialog()) {
         m_uiManager->importOptionsDialog()->setOnConfirm(
-            [this](FileHandlingMode mode, const std::vector<Path>& paths) {
-                if (m_importQueue && !paths.empty())
+            [this](FileHandlingMode mode, bool tagAfterImport, const std::vector<Path>& paths) {
+                if (m_importQueue && !paths.empty()) {
+                    m_importQueue->setQueueForTagging(tagAfterImport);
                     m_importQueue->enqueue(paths, mode);
+                }
             });
     }
 
@@ -147,7 +160,7 @@ void Application::initWiring() {
                                                       "Model not found in database");
                         return;
                     }
-                    Path filePath = record->filePath;
+                    Path filePath = PathResolver::resolve(record->filePath, PathCategory::Support);
                     std::string modelName = record->name;
                     ToastManager::instance().show(ToastType::Info,
                                                   "Regenerating Thumbnail",
@@ -201,7 +214,8 @@ void Application::initWiring() {
                 for (int64_t id : modelIds) {
                     auto record = m_libraryManager->getModel(id);
                     if (record) {
-                        items->push_back({id, record->filePath, record->name});
+                        auto resolved = PathResolver::resolve(record->filePath, PathCategory::Support);
+                        items->push_back({id, resolved, record->name});
                     }
                 }
                 if (items->empty())
@@ -452,7 +466,8 @@ void Application::initWiring() {
             auto rec = m_gcodeRepo->findById(gcodeId);
             if (rec && m_uiManager->gcodePanel()) {
                 m_uiManager->gcodePanel()->setOpen(true);
-                m_uiManager->gcodePanel()->loadFile(rec->filePath.string());
+                m_uiManager->gcodePanel()->loadFile(
+                    PathResolver::resolve(rec->filePath, PathCategory::GCode).string());
             }
         });
         m_uiManager->projectPanel()->setOnMaterialSelected([this](i64 materialId) {
@@ -630,6 +645,11 @@ void Application::initWiring() {
             return report;
         });
     }
+
+    // Wire tagger shutdown dialog
+    if (m_uiManager->taggerShutdownDialog()) {
+        m_uiManager->taggerShutdownDialog()->setOnQuit([this]() { m_running = false; });
+    }
 }
 void Application::onModelSelected(int64_t modelId) {
     if (!m_libraryManager) return;
@@ -672,7 +692,7 @@ void Application::onModelSelected(int64_t modelId) {
     m_loadingState.set(record->name);
     if (m_loadThread.joinable()) m_loadThread.join();
 
-    Path filePath = record->filePath;
+    Path filePath = PathResolver::resolve(record->filePath, PathCategory::Support);
     std::string name = record->name;
     auto storedOrientYaw = record->orientYaw;
     auto storedOrientMatrix = record->orientMatrix;
@@ -725,7 +745,8 @@ void Application::assignMaterialToCurrentModel(int64_t materialId) {
     // Load and upload material texture if archive path exists
     m_activeMaterialTexture.reset();
     if (!material->archivePath.empty()) {
-        auto matData = MaterialArchive::load(material->archivePath.string());
+        Path archPath = PathResolver::resolve(material->archivePath, PathCategory::Materials);
+        auto matData = MaterialArchive::load(archPath.string());
         if (matData && !matData->textureData.empty()) {
             // Decode texture PNG from memory
             auto textureOpt = TextureLoader::loadPNGFromMemory(matData->textureData.data(),
@@ -774,7 +795,8 @@ void Application::loadMaterialTextureForModel(int64_t modelId) {
     m_activeMaterialTexture.reset();
 
     if (!material->archivePath.empty()) {
-        auto matData = MaterialArchive::load(material->archivePath.string());
+        Path archPath = PathResolver::resolve(material->archivePath, PathCategory::Materials);
+        auto matData = MaterialArchive::load(archPath.string());
         if (matData && !matData->textureData.empty()) {
             auto textureOpt = TextureLoader::loadPNGFromMemory(matData->textureData.data(),
                                                                matData->textureData.size());

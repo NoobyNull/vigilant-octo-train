@@ -40,6 +40,15 @@ Path getTempStoreDir();
 // Materials directory (app-managed .dwmat files)
 Path getMaterialsDir();
 
+// User root directory (~/DigitalWorkshop)
+Path getUserRoot();
+
+// Default category directories under user root
+Path getDefaultModelsDir();
+Path getDefaultGCodeDir();
+Path getDefaultMaterialsDir();
+Path getDefaultSupportDir();
+
 // Bundled materials directory (shipped .dwmat files next to the executable)
 // Returns <exe_dir>/resources/materials/
 Path getBundledMaterialsDir();

@@ -16,7 +16,7 @@ namespace dw {
 class ImportOptionsDialog : public Dialog {
   public:
     using ResultCallback =
-        std::function<void(FileHandlingMode mode, const std::vector<Path>& paths)>;
+        std::function<void(FileHandlingMode mode, bool tagAfterImport, const std::vector<Path>& paths)>;
 
     ImportOptionsDialog();
     ~ImportOptionsDialog() override = default;
@@ -34,6 +34,7 @@ class ImportOptionsDialog : public Dialog {
     std::vector<Path> m_paths;
     StorageLocation m_detectedLocation = StorageLocation::Unknown;
     int m_selectedMode = 0; // maps to FileHandlingMode
+    bool m_queueForTagging = false;
     ResultCallback m_onConfirm;
 };
 

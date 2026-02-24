@@ -29,6 +29,7 @@ set(DW_SOURCES
 
     # Core paths
     core/paths/app_paths.cpp
+    core/paths/path_resolver.cpp
 
     # Core config
     core/config/config.cpp
@@ -70,6 +71,8 @@ set(DW_SOURCES
 
     # Import
     core/import/import_queue.cpp
+    core/import/import_log.cpp
+    core/import/background_tagger.cpp
     core/import/file_handler.cpp
     core/import/filesystem_detector.cpp
 
@@ -142,6 +145,7 @@ set(DW_SOURCES
     ui/dialogs/progress_dialog.cpp
     ui/dialogs/tag_image_dialog.cpp
     ui/dialogs/maintenance_dialog.cpp
+    ui/dialogs/tagger_shutdown_dialog.cpp
 )
 
 # Create executable

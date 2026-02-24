@@ -12,6 +12,7 @@
 #include "core/database/schema.h"
 #include "core/export/project_export_manager.h"
 #include "core/paths/app_paths.h"
+#include "core/paths/path_resolver.h"
 #include "core/project/project.h"
 #include "core/utils/file_utils.h"
 
@@ -214,8 +215,9 @@ TEST_F(ProjectExportTest, ImportRoundTripPreservesMetadata) {
         EXPECT_FALSE(model->name.empty());
         EXPECT_EQ(model->vertexCount, 100u);
         EXPECT_EQ(model->triangleCount, 50u);
-        // Verify blob file exists on disk
-        EXPECT_TRUE(dw::file::exists(model->filePath));
+        // Verify blob file exists on disk (filePath may be relative after v10 migration)
+        EXPECT_TRUE(dw::file::exists(
+            dw::PathResolver::resolve(model->filePath, dw::PathCategory::Models)));
     }
 }
 

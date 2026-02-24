@@ -5,6 +5,7 @@
 #include <sstream>
 
 #include "../paths/app_paths.h"
+#include "../paths/path_resolver.h"
 #include "../threading/thread_pool.h"
 #include "../utils/file_utils.h"
 #include "../utils/log.h"
@@ -171,6 +172,18 @@ bool Config::load() {
                 m_bindings[static_cast<int>(BindAction::LightIntensityDrag)] =
                     InputBinding::deserialize(value);
             }
+        } else if (section == "dirs") {
+            if (key == "models") {
+                m_modelsDir = value;
+            } else if (key == "projects") {
+                m_projectsDir = value;
+            } else if (key == "materials") {
+                m_materialsDir = value;
+            } else if (key == "gcode") {
+                m_gcodeDir = value;
+            } else if (key == "support") {
+                m_supportDir = value;
+            }
         } else if (section == "import") {
             if (key == "parallelism_tier") {
                 int tier = 0;
@@ -301,6 +314,25 @@ bool Config::save() {
        << m_bindings[static_cast<int>(BindAction::LightIntensityDrag)].serialize() << "\n";
     ss << "\n";
 
+    // Dirs section (user-visible category directories)
+    ss << "[dirs]\n";
+    if (!m_modelsDir.empty()) {
+        ss << "models=" << m_modelsDir.string() << "\n";
+    }
+    if (!m_projectsDir.empty()) {
+        ss << "projects=" << m_projectsDir.string() << "\n";
+    }
+    if (!m_materialsDir.empty()) {
+        ss << "materials=" << m_materialsDir.string() << "\n";
+    }
+    if (!m_gcodeDir.empty()) {
+        ss << "gcode=" << m_gcodeDir.string() << "\n";
+    }
+    if (!m_supportDir.empty()) {
+        ss << "support=" << m_supportDir.string() << "\n";
+    }
+    ss << "\n";
+
     // Import section
     ss << "[import]\n";
     ss << "parallelism_tier=" << static_cast<int>(m_parallelismTier) << "\n";
@@ -328,6 +360,7 @@ bool Config::save() {
     for (size_t i = 0; i < m_recentProjects.size(); ++i) {
         ss << "project" << i << "=" << m_recentProjects[i].string() << "\n";
     }
+    ss << "\n";
 
     // Atomic save: write to temp file, then rename
     Path tempPath = configPath.string() + ".tmp";
@@ -388,6 +421,26 @@ void Config::setBinding(BindAction action, const InputBinding& binding) {
     if (idx >= 0 && idx < static_cast<int>(BindAction::COUNT)) {
         m_bindings[static_cast<size_t>(idx)] = binding;
     }
+}
+
+Path Config::getModelsDir() const {
+    return m_modelsDir.empty() ? paths::getDefaultModelsDir() : m_modelsDir;
+}
+
+Path Config::getProjectsDir() const {
+    return m_projectsDir.empty() ? paths::getDefaultProjectsDir() : m_projectsDir;
+}
+
+Path Config::getMaterialsDir() const {
+    return m_materialsDir.empty() ? paths::getDefaultMaterialsDir() : m_materialsDir;
+}
+
+Path Config::getGCodeDir() const {
+    return m_gcodeDir.empty() ? paths::getDefaultGCodeDir() : m_gcodeDir;
+}
+
+Path Config::getSupportDir() const {
+    return m_supportDir.empty() ? paths::getDefaultSupportDir() : m_supportDir;
 }
 
 } // namespace dw

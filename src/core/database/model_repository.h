@@ -56,6 +56,8 @@ struct ModelRecord {
     std::string descriptorTitle;       // AI-generated short title
     std::string descriptorDescription; // Detailed AI classification
     std::string descriptorHover;       // One-line hover text
+
+    int tagStatus = 0; // 0=untagged, 1=queued, 2=tagged, 3=failed
 };
 
 // Repository for model CRUD operations
@@ -84,6 +86,11 @@ class ModelRepository {
                           const std::string& title,
                           const std::string& description,
                           const std::string& hover);
+    bool updateTagStatus(i64 id, int status);
+
+    // Tag status queries
+    std::optional<ModelRecord> findNextUntagged();
+    int countByTagStatus(int status);
 
     // Delete
     bool remove(i64 id);

@@ -1,5 +1,6 @@
 #include "schema.h"
 
+#include "../paths/app_paths.h"
 #include "../utils/log.h"
 
 namespace dw {
@@ -122,7 +123,8 @@ bool Schema::createTables(Database& db) {
             camera_target_z REAL DEFAULT NULL,
             descriptor_title TEXT DEFAULT NULL,
             descriptor_description TEXT DEFAULT NULL,
-            descriptor_hover TEXT DEFAULT NULL
+            descriptor_hover TEXT DEFAULT NULL,
+            tag_status INTEGER DEFAULT 0
         )
     )")) {
         return false;
@@ -386,6 +388,8 @@ bool Schema::createTables(Database& db) {
                      "model_categories(model_id)");
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_model_categories_category ON "
                      "model_categories(category_id)");
+    (void)db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_models_tag_status ON models(tag_status)");
 
     // Set schema version
     if (!setVersion(db, CURRENT_VERSION)) {
@@ -517,6 +521,59 @@ bool Schema::migrate(Database& db, int fromVersion) {
             if (!db.execute(sql)) return false;
         }
         log::info("Schema", "Added project_gcode, cut_plans tables and notes column on projects");
+    }
+
+    if (fromVersion < 10) {
+        // v10: Rewrite absolute paths to relative (strip known prefixes)
+        // This allows category directories to be relocatable.
+        auto stripPrefix = [&db](const char* table,
+                                  const char* column,
+                                  const std::string& prefix) {
+            if (prefix.empty())
+                return;
+            // Ensure prefix ends with /
+            std::string pfx = prefix;
+            if (pfx.back() != '/')
+                pfx += '/';
+
+            // UPDATE table SET column = SUBSTR(column, len+1)
+            // WHERE column LIKE 'prefix/%' AND column NOT LIKE '/%' -- already relative? skip
+            std::string sql = "UPDATE ";
+            sql += table;
+            sql += " SET ";
+            sql += column;
+            sql += " = SUBSTR(";
+            sql += column;
+            sql += ", ";
+            sql += std::to_string(pfx.size() + 1);
+            sql += ") WHERE ";
+            sql += column;
+            sql += " LIKE '";
+            sql += pfx;
+            sql += "%'";
+
+            (void)db.execute(sql);
+        };
+
+        // Strip blob store prefix from models.file_path
+        std::string blobDir = paths::getBlobStoreDir().string();
+        std::string dataDir = paths::getDataDir().string();
+
+        stripPrefix("models", "file_path", blobDir);
+        stripPrefix("models", "file_path", dataDir + "/models");
+        stripPrefix("gcode_files", "file_path", blobDir);
+        stripPrefix("gcode_files", "file_path", dataDir + "/gcode");
+        stripPrefix("materials", "archive_path", dataDir + "/materials");
+
+        log::info("Schema",
+                  "v10: Rewrote absolute paths to relative for models, gcode_files, materials");
+    }
+
+    if (fromVersion < 11) {
+        (void)db.execute("ALTER TABLE models ADD COLUMN tag_status INTEGER DEFAULT 0");
+        (void)db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_models_tag_status ON models(tag_status)");
+        log::info("Schema", "v11: Added tag_status column to models");
     }
 
     if (!setVersion(db, CURRENT_VERSION)) {
