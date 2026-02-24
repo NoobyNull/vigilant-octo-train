@@ -20,6 +20,7 @@ Program Parser::parse(const std::string& content) {
 
     Vec3 currentPos{0.0f, 0.0f, 0.0f};
     f32 currentFeedRate = 0.0f;
+    CommandType modalMotion = CommandType::G0; // G-code modal group 1 (motion)
 
     while (std::getline(stream, line)) {
         lineNumber++;
@@ -39,6 +40,19 @@ Program Parser::parse(const std::string& content) {
 
         Command cmd = parseLine(line, lineNumber);
         cmd.raw = line;
+
+        // Modal motion: if line has coordinates but no explicit G/M command,
+        // inherit the last motion command (standard G-code modal behavior)
+        if (cmd.type == CommandType::Unknown &&
+            (cmd.hasX() || cmd.hasY() || cmd.hasZ())) {
+            cmd.type = modalMotion;
+        }
+
+        // Track modal motion state
+        if (cmd.type == CommandType::G0 || cmd.type == CommandType::G1 ||
+            cmd.type == CommandType::G2 || cmd.type == CommandType::G3) {
+            modalMotion = cmd.type;
+        }
 
         // Handle unit changes
         if (cmd.type == CommandType::G20) {

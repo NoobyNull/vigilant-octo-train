@@ -87,6 +87,11 @@ set(DW_SOURCES
     # G-code
     core/gcode/gcode_parser.cpp
     core/gcode/gcode_analyzer.cpp
+    core/gcode/machine_profile.cpp
+
+    # CNC Controller (multi-firmware support)
+    core/cnc/serial_port.cpp
+    core/cnc/cnc_controller.cpp
 
     # Optimizer
     core/optimizer/cut_optimizer.cpp
@@ -140,6 +145,7 @@ set(DW_SOURCES
     ui/dialogs/message_dialog.cpp
     ui/dialogs/file_dialog.cpp
     ui/dialogs/lighting_dialog.cpp
+    ui/dialogs/machine_profile_dialog.cpp
     ui/dialogs/import_summary_dialog.cpp
     ui/dialogs/import_options_dialog.cpp
     ui/dialogs/progress_dialog.cpp

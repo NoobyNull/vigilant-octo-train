@@ -121,6 +121,9 @@ struct Statistics {
     int commandCount = 0;
     Vec3 boundsMin;
     Vec3 boundsMax;
+
+    // Per-segment time in seconds (parallel to Program::path)
+    std::vector<f32> segmentTimes;
 };
 
 } // namespace gcode

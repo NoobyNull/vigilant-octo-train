@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "../gcode/machine_profile.h"
 #include "../types.h"
 #include "input_binding.h"
 
@@ -194,6 +195,16 @@ class Config {
     const std::string& getGeminiApiKey() const { return m_geminiApiKey; }
     void setGeminiApiKey(const std::string& key) { m_geminiApiKey = key; }
 
+    // Machine profiles
+    const std::vector<gcode::MachineProfile>& getMachineProfiles() const { return m_machineProfiles; }
+    void setMachineProfiles(const std::vector<gcode::MachineProfile>& profiles) { m_machineProfiles = profiles; }
+    int getActiveMachineProfileIndex() const { return m_activeMachineProfileIndex; }
+    void setActiveMachineProfileIndex(int index);
+    const gcode::MachineProfile& getActiveMachineProfile() const;
+    void addMachineProfile(const gcode::MachineProfile& profile);
+    void removeMachineProfile(int index);
+    void updateMachineProfile(int index, const gcode::MachineProfile& profile);
+
   private:
     Config();
     void initDefaultBindings();
@@ -273,6 +284,10 @@ class Config {
 
     // API keys
     std::string m_geminiApiKey;
+
+    // Machine profiles
+    std::vector<gcode::MachineProfile> m_machineProfiles;
+    int m_activeMachineProfileIndex = 0;
 };
 
 } // namespace dw

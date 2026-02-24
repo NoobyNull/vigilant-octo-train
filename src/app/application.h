@@ -38,6 +38,7 @@ class GeminiMaterialService;
 class GeminiDescriptorService;
 class ProjectExportManager;
 class CutListFile;
+class CncController;
 class BackgroundTagger;
 class ImportLog;
 class Mesh;
@@ -144,6 +145,9 @@ class Application {
 
     // Project export/import (.dwproj archives)
     std::unique_ptr<ProjectExportManager> m_projectExportManager;
+
+    // CNC controller (multi-firmware support: GRBL, grblHAL, FluidNC, Smoothieware)
+    std::unique_ptr<CncController> m_cncController;
 
     // Currently focused model ID (for material assignment)
     int64_t m_focusedModelId = -1;
