@@ -2,10 +2,15 @@
 
 #include <chrono>
 #include <cstdio>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 
+#ifdef _WIN32
+#include <io.h>
+#else
 #include <unistd.h>
+#endif
 
 namespace dw {
 
@@ -26,7 +31,11 @@ void ImportLog::appendLine(const std::string& status,
     auto now = std::chrono::system_clock::now();
     auto time = std::chrono::system_clock::to_time_t(now);
     std::tm tm{};
+#ifdef _WIN32
+    gmtime_s(&tm, &time);
+#else
     gmtime_r(&time, &tm);
+#endif
 
     char timeBuf[32];
     std::strftime(timeBuf, sizeof(timeBuf), "%Y-%m-%dT%H:%M:%SZ", &tm);
@@ -38,9 +47,15 @@ void ImportLog::appendLine(const std::string& status,
     std::fprintf(fp, "%s %s %s %s\n", timeBuf, status.c_str(), sourcePath.c_str(), hash.c_str());
     std::fflush(fp);
     // fsync for durability
+#ifdef _WIN32
+    int fd = _fileno(fp);
+    if (fd >= 0)
+        _commit(fd);
+#else
     int fd = fileno(fp);
     if (fd >= 0)
         fsync(fd);
+#endif
     std::fclose(fp);
 }
 

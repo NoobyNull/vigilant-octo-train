@@ -4,16 +4,21 @@
 #include <cstring>
 #include <filesystem>
 
-#include <errno.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <cerrno>
 #include <fcntl.h>
 #include <poll.h>
 #include <termios.h>
 #include <unistd.h>
+#endif
 
 #include "../utils/log.h"
 
 namespace dw {
 
+#ifndef _WIN32
 namespace {
 
 speed_t toBaudConstant(int baudRate) {
@@ -24,13 +29,22 @@ speed_t toBaudConstant(int baudRate) {
     case 57600: return B57600;
     case 115200: return B115200;
     case 230400: return B230400;
+#ifdef B460800
     case 460800: return B460800;
+#endif
+#ifdef B921600
     case 921600: return B921600;
+#endif
     default: return B115200;
     }
 }
 
 } // namespace
+#endif // !_WIN32
+
+// ── POSIX implementation ──────────────────────────────────────────────
+
+#ifndef _WIN32
 
 SerialPort::~SerialPort() {
     close();
@@ -221,5 +235,36 @@ std::vector<std::string> listSerialPorts() {
     std::sort(ports.begin(), ports.end());
     return ports;
 }
+
+// ── Windows stubs (serial not yet implemented) ───────────────────────
+
+#else // _WIN32
+
+SerialPort::~SerialPort() { close(); }
+SerialPort::SerialPort(SerialPort&& other) noexcept
+    : m_fd(other.m_fd), m_device(std::move(other.m_device)),
+      m_readBuffer(std::move(other.m_readBuffer)) { other.m_fd = -1; }
+SerialPort& SerialPort::operator=(SerialPort&& other) noexcept {
+    if (this != &other) { close(); m_fd = other.m_fd; m_device = std::move(other.m_device);
+        m_readBuffer = std::move(other.m_readBuffer); other.m_fd = -1; }
+    return *this;
+}
+
+bool SerialPort::open(const std::string& device, int /*baudRate*/) {
+    log::errorf("Serial", "Serial port not yet implemented on Windows: %s", device.c_str());
+    return false;
+}
+void SerialPort::close() { m_fd = -1; m_readBuffer.clear(); }
+bool SerialPort::write(const std::string& /*data*/) { return false; }
+bool SerialPort::writeByte(u8 /*byte*/) { return false; }
+std::optional<std::string> SerialPort::readLine(int /*timeoutMs*/) { return std::nullopt; }
+void SerialPort::drain() { m_readBuffer.clear(); }
+
+std::vector<std::string> listSerialPorts() {
+    // TODO: enumerate COM ports via SetupAPI/WMI
+    return {};
+}
+
+#endif // _WIN32
 
 } // namespace dw
