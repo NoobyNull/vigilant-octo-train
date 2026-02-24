@@ -80,6 +80,9 @@ class Renderer {
     // Mesh cache management
     void clearMeshCache();
 
+    // Access flat shader for custom line drawing (position-only VAO + uMVP + uColor)
+    Shader& flatShader() { return m_flatShader; }
+
     // Settings
     RenderSettings& settings() { return m_settings; }
     const RenderSettings& settings() const { return m_settings; }

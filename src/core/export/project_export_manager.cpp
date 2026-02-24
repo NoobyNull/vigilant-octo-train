@@ -6,6 +6,7 @@
 
 #include "../materials/material_archive.h"
 #include "../paths/app_paths.h"
+#include "../paths/path_resolver.h"
 #include "../project/project.h"
 #include "../utils/file_utils.h"
 #include "../utils/log.h"
@@ -106,7 +107,7 @@ DwprojExportResult ProjectExportManager::exportProject(const Project& project,
     int totalItems = static_cast<int>(models.size());
 
     for (const auto& model : models) {
-        auto blobData = file::readBinary(model.filePath);
+        auto blobData = file::readBinary(PathResolver::resolve(model.filePath, PathCategory::Support));
         if (!blobData) {
             log::warningf(kLogModule,
                           "Skipping model '%s': cannot read file '%s'",
@@ -203,9 +204,10 @@ DwprojExportResult ProjectExportManager::exportProject(const Project& project,
     auto gcodeFiles = gcodeRepo.findByProject(project.id());
     std::vector<ManifestGCode> gcodeEntries;
     for (const auto& gc : gcodeFiles) {
+        Path resolvedGcPath = PathResolver::resolve(gc.filePath, PathCategory::GCode);
         std::string archivePath =
-            "gcode/" + std::to_string(gc.id) + getFileExtension(gc.filePath);
-        auto fileData = file::readBinary(gc.filePath);
+            "gcode/" + std::to_string(gc.id) + getFileExtension(resolvedGcPath);
+        auto fileData = file::readBinary(resolvedGcPath);
         if (!fileData) {
             log::warningf(
                 kLogModule, "Skipping gcode '%s': cannot read file", gc.name.c_str());

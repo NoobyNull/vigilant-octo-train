@@ -19,7 +19,7 @@ TEST(Schema, GetVersion_AfterInit) {
     ASSERT_TRUE(db.open(":memory:"));
     ASSERT_TRUE(dw::Schema::initialize(db));
 
-    EXPECT_EQ(dw::Schema::getVersion(db), 9);
+    EXPECT_EQ(dw::Schema::getVersion(db), 11);
 }
 
 TEST(Schema, GetVersion_BeforeInit) {
@@ -35,7 +35,7 @@ TEST(Schema, DoubleInit_Idempotent) {
 
     EXPECT_TRUE(dw::Schema::initialize(db));
     EXPECT_TRUE(dw::Schema::initialize(db));
-    EXPECT_EQ(dw::Schema::getVersion(db), 9);
+    EXPECT_EQ(dw::Schema::getVersion(db), 11);
 }
 
 TEST(Schema, TablesCreated) {
@@ -82,5 +82,29 @@ TEST(Schema, IndexesCreated) {
 
     auto stmt =
         db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_models_hash'");
+    EXPECT_TRUE(stmt.step());
+}
+
+TEST(Schema, TagStatusColumn_Exists) {
+    dw::Database db;
+    ASSERT_TRUE(db.open(":memory:"));
+    ASSERT_TRUE(dw::Schema::initialize(db));
+
+    // Verify tag_status column exists with default 0
+    ASSERT_TRUE(db.execute(
+        "INSERT INTO models (hash, name, file_path, file_format) "
+        "VALUES ('abc123', 'test', '/tmp/test.stl', 'stl')"));
+    auto stmt = db.prepare("SELECT tag_status FROM models WHERE hash = 'abc123'");
+    ASSERT_TRUE(stmt.step());
+    EXPECT_EQ(stmt.getInt(0), 0);
+}
+
+TEST(Schema, TagStatusIndex_Exists) {
+    dw::Database db;
+    ASSERT_TRUE(db.open(":memory:"));
+    ASSERT_TRUE(dw::Schema::initialize(db));
+
+    auto stmt = db.prepare(
+        "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_models_tag_status'");
     EXPECT_TRUE(stmt.step());
 }

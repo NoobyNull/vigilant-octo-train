@@ -10,7 +10,7 @@
 namespace dw {
 
 FileDialog::FileDialog() : Dialog("File Dialog") {
-    m_currentPath = file::currentDirectory().string();
+    m_currentPath = file::homeDirectory().string();
 }
 
 void FileDialog::render() {

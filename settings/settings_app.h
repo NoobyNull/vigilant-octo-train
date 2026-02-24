@@ -77,6 +77,13 @@ class SettingsApp {
     bool m_showImportErrorToasts = true;
     bool m_libraryDirValid = true; // Validation state for library directory
 
+    // Category directories
+    char m_modelsDir[512]{};
+    char m_projectsDir[512]{};
+    char m_materialsDir[512]{};
+    char m_gcodeDir[512]{};
+    char m_supportDir[512]{};
+
     // API keys
     char m_geminiApiKey[256]{};
 

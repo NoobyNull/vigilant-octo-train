@@ -9,9 +9,11 @@
 #include "../loaders/gcode_loader.h"
 #include "../loaders/loader_factory.h"
 #include "../mesh/hash.h"
+#include "../paths/path_resolver.h"
 #include "../storage/storage_manager.h"
 #include "../utils/file_utils.h"
 #include "../utils/log.h"
+#include "import_log.h"
 
 namespace dw {
 
@@ -136,6 +138,18 @@ void ImportQueue::setOnBatchComplete(SummaryCallback callback) {
     m_onBatchComplete = std::move(callback);
 }
 
+void ImportQueue::setImportLog(ImportLog* log) {
+    m_importLog = log;
+}
+
+void ImportQueue::setQueueForTagging(bool enabled) {
+    m_queueForTagging = enabled;
+}
+
+bool ImportQueue::queueForTagging() const {
+    return m_queueForTagging;
+}
+
 // --- Worker task processing (runs on ThreadPool worker) ---
 
 void ImportQueue::processTask(ImportTask task) {
@@ -252,6 +266,9 @@ void ImportQueue::processTask(ImportTask task) {
                 m_batchSummary.duplicates.push_back(std::move(dup));
             }
 
+            if (m_importLog)
+                m_importLog->appendDup(task.sourcePath, task.fileHash);
+
             log::warningf("Import",
                           "Duplicate found: '%s' (of '%s')",
                           task.sourcePath.filename().string().c_str(),
@@ -363,11 +380,13 @@ void ImportQueue::processTask(ImportTask task) {
         record.hash = task.fileHash;
         record.name = file::getStem(task.sourcePath);
 
-        // Set filePath to CAS blob path before insert (if StorageManager available)
+        // Set filePath before insert
         if (m_storageManager && mode != FileHandlingMode::LeaveInPlace) {
-            record.filePath = m_storageManager->blobPath(task.fileHash, task.extension);
+            record.filePath = PathResolver::makeStorable(
+                m_storageManager->blobPath(task.fileHash, task.extension),
+                PathCategory::Support);
         } else {
-            record.filePath = task.sourcePath;
+            record.filePath = PathResolver::makeStorable(task.sourcePath, PathCategory::GCode);
         }
         record.fileSize = actualFileSize;
 
@@ -483,11 +502,13 @@ void ImportQueue::processTask(ImportTask task) {
         record.hash = task.fileHash;
         record.name = file::getStem(task.sourcePath);
 
-        // Set filePath to CAS blob path before insert (if StorageManager available)
+        // Set filePath before insert
         if (m_storageManager && mode != FileHandlingMode::LeaveInPlace) {
-            record.filePath = m_storageManager->blobPath(task.fileHash, task.extension);
+            record.filePath = PathResolver::makeStorable(
+                m_storageManager->blobPath(task.fileHash, task.extension),
+                PathCategory::Support);
         } else {
-            record.filePath = task.sourcePath;
+            record.filePath = PathResolver::makeStorable(task.sourcePath, PathCategory::Models);
         }
         record.fileFormat = task.extension;
         record.fileSize = actualFileSize;
@@ -535,6 +556,9 @@ void ImportQueue::processTask(ImportTask task) {
         task.modelId = *modelId;
         task.record = record;
         task.record.id = *modelId;
+
+        if (m_queueForTagging)
+            modelRepo.updateTagStatus(*modelId, 1);
 
         log::infof("Import",
                    "Mesh '%s' inserted (id=%lld)",
@@ -600,10 +624,7 @@ void ImportQueue::processTask(ImportTask task) {
 
     } else if (mode != FileHandlingMode::LeaveInPlace) {
         // Fallback: legacy FileHandler when no StorageManager
-        auto libraryDir = Config::instance().getLibraryDir();
-        if (libraryDir.empty()) {
-            libraryDir = FileHandler::defaultLibraryDir();
-        }
+        auto libraryDir = Config::instance().getModelsDir();
 
         std::string error;
         Path handledPath =
@@ -620,11 +641,11 @@ void ImportQueue::processTask(ImportTask task) {
             if (task.importType == ImportType::GCode) {
                 auto record = gcodeRepo.findById(task.gcodeId);
                 if (record) {
-                    record->filePath = finalPath;
+                    record->filePath = PathResolver::makeStorable(finalPath, PathCategory::GCode);
                     gcodeRepo.update(*record);
                 }
             } else {
-                task.record.filePath = finalPath;
+                task.record.filePath = PathResolver::makeStorable(finalPath, PathCategory::Models);
                 modelRepo.update(task.record);
             }
 
@@ -634,6 +655,10 @@ void ImportQueue::processTask(ImportTask task) {
                        finalPath.filename().string().c_str());
         }
     }
+
+    // Log successful import
+    if (m_importLog)
+        m_importLog->appendDone(task.sourcePath, task.fileHash);
 
     // Stage 6: WaitingForThumbnail (both mesh and G-code need thumbnails)
     task.stage = ImportStage::WaitingForThumbnail;

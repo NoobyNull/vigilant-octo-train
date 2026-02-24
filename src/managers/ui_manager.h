@@ -35,9 +35,11 @@ class ImportOptionsDialog;
 class ProgressDialog;
 class TagImageDialog;
 class MaintenanceDialog;
+class TaggerShutdownDialog;
 
 // Forward declarations - core
 struct LoadingState;
+struct TaggerProgress;
 struct ImportBatchSummary;
 struct ImportProgress;
 class LibraryManager;
@@ -119,6 +121,7 @@ class UIManager {
     ProgressDialog* progressDialog() { return m_progressDialog.get(); }
     TagImageDialog* tagImageDialog() { return m_tagImageDialog.get(); }
     MaintenanceDialog* maintenanceDialog() { return m_maintenanceDialog.get(); }
+    TaggerShutdownDialog* taggerShutdownDialog() { return m_taggerShutdownDialog.get(); }
     ContextMenuManager* contextMenuManager() { return m_contextMenuManager.get(); }
 
     // --- Visibility state ---
@@ -149,6 +152,9 @@ class UIManager {
     void setImportProgress(const ImportProgress* progress);
     void showImportSummary(const ImportBatchSummary& summary);
     void setImportCancelCallback(std::function<void()> callback);
+
+    // Show tagger shutdown dialog
+    void showTaggerShutdownDialog(const TaggerProgress* progress);
 
     // --- Workspace state save/restore helpers ---
     void restoreVisibilityFromConfig();
@@ -187,6 +193,7 @@ class UIManager {
     std::unique_ptr<ProgressDialog> m_progressDialog;
     std::unique_ptr<TagImageDialog> m_tagImageDialog;
     std::unique_ptr<MaintenanceDialog> m_maintenanceDialog;
+    std::unique_ptr<TaggerShutdownDialog> m_taggerShutdownDialog;
 
     // Widgets (Plan 02-05)
     std::unique_ptr<StatusBar> m_statusBar;

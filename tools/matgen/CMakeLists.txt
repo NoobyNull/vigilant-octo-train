@@ -7,7 +7,12 @@ set(MATGEN_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/utils/log.cpp
     ${CMAKE_SOURCE_DIR}/src/core/utils/file_utils.cpp
     ${CMAKE_SOURCE_DIR}/src/core/utils/string_utils.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/utils/gemini_http.cpp
     ${CMAKE_SOURCE_DIR}/src/core/paths/app_paths.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/paths/path_resolver.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/config/config.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/config/input_binding.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/threading/thread_pool.cpp
     ${CMAKE_SOURCE_DIR}/src/core/materials/default_materials.cpp
     ${CMAKE_SOURCE_DIR}/src/core/materials/gemini_material_service.cpp
     ${CMAKE_SOURCE_DIR}/src/core/materials/material_archive.cpp
@@ -23,6 +28,7 @@ add_executable(dw_matgen ${MATGEN_SOURCES} ${MATGEN_DEPS})
 dw_configure_target(dw_matgen)
 
 target_link_libraries(dw_matgen PRIVATE
+    imgui
     miniz_static
     nlohmann_json::nlohmann_json
     CURL::libcurl

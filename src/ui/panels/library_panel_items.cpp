@@ -13,6 +13,7 @@
 #include <imgui.h>
 
 #include "../../core/config/config.h"
+#include "../../core/paths/path_resolver.h"
 #include "../../core/project/project.h"
 #include "../../core/utils/file_utils.h"
 #include "../context_menu_manager.h"
@@ -389,14 +390,16 @@ void LibraryPanel::registerContextMenuEntries() {
                          if (m.id == id) {
                              if (!paths.empty())
                                  paths += "\n";
-                             paths += m.filePath.string();
+                             paths += PathResolver::resolve(m.filePath, PathCategory::Support).string();
                              break;
                          }
                      }
                  }
                  ImGui::SetClipboardText(paths.c_str());
              } else if (m_currentContextMenuModel) {
-                 ImGui::SetClipboardText(m_currentContextMenuModel->filePath.string().c_str());
+                 ImGui::SetClipboardText(
+                     PathResolver::resolve(m_currentContextMenuModel->filePath, PathCategory::Support)
+                         .string().c_str());
              }
          }},
     };

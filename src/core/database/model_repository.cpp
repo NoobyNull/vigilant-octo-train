@@ -515,6 +515,8 @@ ModelRecord ModelRepository::rowToModel(Statement& stmt) {
     model.descriptorTitle = stmt.getText(26);
     model.descriptorDescription = stmt.getText(27);
     model.descriptorHover = stmt.getText(28);
+    // Column 29: tag_status
+    model.tagStatus = static_cast<int>(stmt.getInt(29));
     return model;
 }
 
@@ -580,6 +582,37 @@ bool ModelRepository::updateDescriptor(i64 id,
     }
 
     return stmt.execute();
+}
+
+bool ModelRepository::updateTagStatus(i64 id, int status) {
+    auto stmt = m_db.prepare("UPDATE models SET tag_status = ? WHERE id = ?");
+    if (!stmt.isValid())
+        return false;
+    if (!stmt.bindInt(1, static_cast<i64>(status)) || !stmt.bindInt(2, id))
+        return false;
+    return stmt.execute();
+}
+
+std::optional<ModelRecord> ModelRepository::findNextUntagged() {
+    auto stmt = m_db.prepare(
+        "SELECT * FROM models WHERE tag_status = 0 AND thumbnail_path IS NOT NULL "
+        "AND thumbnail_path != '' LIMIT 1");
+    if (!stmt.isValid())
+        return std::nullopt;
+    if (stmt.step())
+        return rowToModel(stmt);
+    return std::nullopt;
+}
+
+int ModelRepository::countByTagStatus(int status) {
+    auto stmt = m_db.prepare("SELECT COUNT(*) FROM models WHERE tag_status = ?");
+    if (!stmt.isValid())
+        return 0;
+    if (!stmt.bindInt(1, static_cast<i64>(status)))
+        return 0;
+    if (stmt.step())
+        return static_cast<int>(stmt.getInt(0));
+    return 0;
 }
 
 std::string ModelRepository::mat4ToJson(const Mat4& m) {

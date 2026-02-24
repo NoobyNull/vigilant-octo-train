@@ -51,6 +51,10 @@ class FileIOManager {
     using ThumbnailCallback = std::function<bool(int64_t modelId, Mesh& mesh)>;
     void setThumbnailCallback(ThumbnailCallback cb) { m_thumbnailCallback = std::move(cb); }
 
+    // Callback for G-code files — routes to G-code panel instead of import pipeline
+    using GCodeCallback = std::function<void(const std::string& path)>;
+    void setGCodeCallback(GCodeCallback cb) { m_gcodeCallback = std::move(cb); }
+
     // Import/Export
     void importModel();
     void exportModel();
@@ -92,6 +96,9 @@ class FileIOManager {
 
     // Optional material-aware thumbnail callback
     ThumbnailCallback m_thumbnailCallback;
+
+    // G-code file callback (routes to G-code panel)
+    GCodeCallback m_gcodeCallback;
 
     // Import options dialog (owned by UIManager, nullable)
     ImportOptionsDialog* m_importOptionsDialog = nullptr;

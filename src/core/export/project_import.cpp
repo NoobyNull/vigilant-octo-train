@@ -3,8 +3,10 @@
 
 #include "project_export_manager.h"
 
+#include "../config/config.h"
 #include "../materials/material_archive.h"
 #include "../paths/app_paths.h"
+#include "../paths/path_resolver.h"
 #include "../project/project.h"
 #include "../utils/file_utils.h"
 #include "../utils/log.h"
@@ -77,7 +79,7 @@ DwprojExportResult ProjectExportManager::importProject(const Path& archivePath,
     }
 
     // Ensure models directory exists
-    Path modelsDir = paths::getDataDir() / "models";
+    Path modelsDir = Config::instance().getModelsDir();
     (void)file::createDirectories(modelsDir);
 
     // Import each model
@@ -136,7 +138,7 @@ DwprojExportResult ProjectExportManager::importProject(const Path& archivePath,
             ModelRecord rec;
             rec.hash = mm.hash;
             rec.name = mm.name;
-            rec.filePath = destPath;
+            rec.filePath = PathResolver::makeStorable(destPath, PathCategory::Models);
             rec.fileFormat = mm.fileFormat;
             rec.fileSize = blobSize;
             rec.vertexCount = mm.vertexCount;
@@ -263,7 +265,7 @@ DwprojExportResult ProjectExportManager::importProject(const Path& archivePath,
 
     // Phase C: Import G-code files
     GCodeRepository gcodeRepo(m_db);
-    Path gcodeDir = paths::getDataDir() / "gcode";
+    Path gcodeDir = Config::instance().getGCodeDir();
     (void)file::createDirectories(gcodeDir);
 
     for (const auto& gc : manifest.gcode) {
@@ -305,7 +307,7 @@ DwprojExportResult ProjectExportManager::importProject(const Path& archivePath,
             GCodeRecord record;
             record.hash = gc.hash;
             record.name = gc.name;
-            record.filePath = outPath;
+            record.filePath = PathResolver::makeStorable(outPath, PathCategory::GCode);
             record.fileSize = fileSize;
             record.estimatedTime = gc.estimatedTime;
             record.toolNumbers = gc.toolNumbers;

@@ -30,10 +30,9 @@ bool SettingsApp::init() {
     if (m_initialized)
         return true;
 
-    paths::ensureDirectoriesExist();
-
-    // Load current config
+    // Load config first so ensureDirectoriesExist() can read category dirs
     Config::instance().load();
+    paths::ensureDirectoriesExist();
 
     // Cache values for editing
     auto& cfg = Config::instance();
@@ -75,6 +74,17 @@ bool SettingsApp::init() {
     }
     std::strncpy(m_libraryDir, libraryPath.string().c_str(), sizeof(m_libraryDir) - 1);
     m_libraryDir[sizeof(m_libraryDir) - 1] = '\0';
+
+    // Category directories
+    auto copyDir = [](char* buf, size_t sz, const Path& dir) {
+        std::strncpy(buf, dir.string().c_str(), sz - 1);
+        buf[sz - 1] = '\0';
+    };
+    copyDir(m_modelsDir, sizeof(m_modelsDir), cfg.getModelsDir());
+    copyDir(m_projectsDir, sizeof(m_projectsDir), cfg.getProjectsDir());
+    copyDir(m_materialsDir, sizeof(m_materialsDir), cfg.getMaterialsDir());
+    copyDir(m_gcodeDir, sizeof(m_gcodeDir), cfg.getGCodeDir());
+    copyDir(m_supportDir, sizeof(m_supportDir), cfg.getSupportDir());
 
     // API keys
     std::strncpy(m_geminiApiKey, cfg.getGeminiApiKey().c_str(), sizeof(m_geminiApiKey) - 1);
@@ -524,40 +534,7 @@ void SettingsApp::renderImportTab() {
         m_dirty = true;
     }
 
-    ImGui::Spacing();
-
-    // Show library directory input only when copy or move is selected
-    if (m_fileHandlingMode == 1 || m_fileHandlingMode == 2) {
-        ImGui::Text("Library Directory:");
-
-        if (ImGui::InputText("##LibraryDir", m_libraryDir, sizeof(m_libraryDir))) {
-            m_dirty = true;
-
-            // Validate path
-            Path libPath(m_libraryDir);
-            if (libPath.empty()) {
-                m_libraryDirValid = false;
-            } else if (std::filesystem::exists(libPath)) {
-                m_libraryDirValid = std::filesystem::is_directory(libPath);
-            } else {
-                // Path doesn't exist - check if we can create it
-                std::error_code ec;
-                std::filesystem::create_directories(libPath, ec);
-                m_libraryDirValid = !ec;
-            }
-        }
-
-        // Show validation indicator
-        ImGui::SameLine();
-        if (m_libraryDirValid) {
-            ImGui::TextColored(ImVec4(0.3f, 0.8f, 0.3f, 1.0f), "[OK]");
-        } else {
-            ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "[Invalid]");
-        }
-
-        ImGui::TextDisabled("Imported files will be %s to this directory",
-                            m_fileHandlingMode == 1 ? "copied" : "moved");
-    }
+    ImGui::TextDisabled("Directory configuration is in the Paths tab.");
 
     ImGui::Unindent();
 
@@ -579,26 +556,58 @@ void SettingsApp::renderImportTab() {
 void SettingsApp::renderPathsTab() {
     ImGui::Spacing();
 
-    ImGui::Text("Application Paths");
+    ImGui::Text("User Directories");
+    ImGui::TextDisabled("Where your files are stored. Change to move storage to another location.");
     ImGui::Spacing();
 
-    ImGui::TextDisabled("Configuration:");
-    ImGui::Text("  %s", paths::getConfigDir().string().c_str());
+    float labelWidth = 80.0f;
+    auto renderDirRow = [this, labelWidth](const char* label, char* buf, size_t bufSize) {
+        ImGui::Text("%s", label);
+        ImGui::SameLine(labelWidth);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 50.0f);
+        std::string id = std::string("##") + label;
+        if (ImGui::InputText(id.c_str(), buf, bufSize))
+            m_dirty = true;
+        ImGui::SameLine();
+        // Validate
+        Path p(buf);
+        if (!p.empty() && std::filesystem::exists(p) && std::filesystem::is_directory(p)) {
+            ImGui::TextColored(ImVec4(0.3f, 0.8f, 0.3f, 1.0f), "[OK]");
+        } else if (p.empty()) {
+            ImGui::TextDisabled("[default]");
+        } else {
+            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.2f, 1.0f), "[new]");
+        }
+    };
+
+    ImGui::Indent();
+    renderDirRow("Models", m_modelsDir, sizeof(m_modelsDir));
+    renderDirRow("Projects", m_projectsDir, sizeof(m_projectsDir));
+    renderDirRow("Materials", m_materialsDir, sizeof(m_materialsDir));
+    renderDirRow("GCode", m_gcodeDir, sizeof(m_gcodeDir));
+    renderDirRow("Support", m_supportDir, sizeof(m_supportDir));
+    ImGui::Unindent();
 
     ImGui::Spacing();
-
-    ImGui::TextDisabled("Application Data:");
-    ImGui::Text("  %s", paths::getDataDir().string().c_str());
-
+    ImGui::Separator();
     ImGui::Spacing();
 
-    ImGui::TextDisabled("User Projects:");
-    ImGui::Text("  %s", paths::getDefaultProjectsDir().string().c_str());
-
+    ImGui::Text("Internal (read-only)");
     ImGui::Spacing();
+
+    ImGui::Indent();
+    ImGui::TextDisabled("Config:");
+    ImGui::SameLine(labelWidth);
+    ImGui::Text("%s", paths::getConfigDir().string().c_str());
 
     ImGui::TextDisabled("Database:");
-    ImGui::Text("  %s", paths::getDatabasePath().string().c_str());
+    ImGui::SameLine(labelWidth);
+    ImGui::Text("%s", paths::getDatabasePath().string().c_str());
+
+    ImGui::TextDisabled("Cache:");
+    ImGui::SameLine(labelWidth);
+    ImGui::Text("%s", paths::getCacheDir().string().c_str());
+    ImGui::Unindent();
 
     ImGui::Spacing();
     ImGui::Separator();
@@ -610,7 +619,8 @@ void SettingsApp::renderPathsTab() {
     }
     ImGui::SameLine();
     if (ImGui::Button("Open Projects Folder")) {
-        std::string dir = paths::getDefaultProjectsDir().string();
+        std::string dir = std::string(m_projectsDir);
+        if (dir.empty()) dir = paths::getDefaultProjectsDir().string();
         std::system(("xdg-open \"" + dir + "\"").c_str());
     }
 }
@@ -703,6 +713,13 @@ void SettingsApp::applySettings() {
     cfg.setLibraryDir(Path(m_libraryDir));
     cfg.setShowImportErrorToasts(m_showImportErrorToasts);
     cfg.setEnableFloatingWindows(m_enableFloatingWindows);
+
+    // Category directories (empty string = use defaults)
+    cfg.setModelsDir(Path(m_modelsDir));
+    cfg.setProjectsDir(Path(m_projectsDir));
+    cfg.setMaterialsDir(Path(m_materialsDir));
+    cfg.setGCodeDir(Path(m_gcodeDir));
+    cfg.setSupportDir(Path(m_supportDir));
 
     // API keys
     cfg.setGeminiApiKey(m_geminiApiKey);

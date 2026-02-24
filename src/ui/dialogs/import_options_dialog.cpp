@@ -13,6 +13,7 @@ ImportOptionsDialog::ImportOptionsDialog() : Dialog("Import Options") {}
 void ImportOptionsDialog::open(const std::vector<Path>& paths) {
     m_paths = paths;
     m_selectedMode = static_cast<int>(FileHandlingMode::LeaveInPlace);
+    m_queueForTagging = false;
     m_detectedLocation = StorageLocation::Unknown;
 
     // Detect filesystem of first file's parent directory
@@ -118,6 +119,22 @@ void ImportOptionsDialog::render() {
             }
         }
 
+        // AI tagging checkbox (only when managing files and API key is set)
+        if (m_selectedMode != static_cast<int>(FileHandlingMode::LeaveInPlace)) {
+            ImGui::Spacing();
+            bool hasApiKey = !Config::instance().getGeminiApiKey().empty();
+            if (!hasApiKey)
+                ImGui::BeginDisabled();
+            ImGui::Checkbox("Queue for AI tagging after import", &m_queueForTagging);
+            if (!hasApiKey) {
+                ImGui::EndDisabled();
+                ImGui::SameLine();
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+                ImGui::Text("(no API key)");
+                ImGui::PopStyleColor();
+            }
+        }
+
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
@@ -125,7 +142,7 @@ void ImportOptionsDialog::render() {
         // Action buttons
         if (ImGui::Button("Import", ImVec2(120, 0))) {
             if (m_onConfirm) {
-                m_onConfirm(static_cast<FileHandlingMode>(m_selectedMode), m_paths);
+                m_onConfirm(static_cast<FileHandlingMode>(m_selectedMode), m_queueForTagging, m_paths);
             }
             m_open = false;
             ImGui::CloseCurrentPopup();

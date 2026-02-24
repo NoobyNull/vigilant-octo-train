@@ -8,6 +8,7 @@ set(SETTINGS_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/utils/file_utils.cpp
     ${CMAKE_SOURCE_DIR}/src/core/utils/string_utils.cpp
     ${CMAKE_SOURCE_DIR}/src/core/paths/app_paths.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/paths/path_resolver.cpp
     ${CMAKE_SOURCE_DIR}/src/core/config/config.cpp
     ${CMAKE_SOURCE_DIR}/src/core/config/input_binding.cpp
     ${CMAKE_SOURCE_DIR}/src/core/threading/thread_pool.cpp
@@ -29,6 +30,7 @@ target_link_libraries(dw_settings PRIVATE
     glad_gl33_core
     OpenGL::GL
     glm::glm
+    nlohmann_json::nlohmann_json
 )
 
 target_include_directories(dw_settings PRIVATE

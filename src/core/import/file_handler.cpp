@@ -103,7 +103,7 @@ bool FileHandler::ensureLibraryDir(const Path& libraryRoot) {
 }
 
 Path FileHandler::defaultLibraryDir() {
-    return paths::getDataDir() / "library";
+    return Config::instance().getModelsDir();
 }
 
 Path FileHandler::uniqueDestination(const Path& dir, const Path& filename) {

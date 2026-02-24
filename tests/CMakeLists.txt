@@ -36,6 +36,7 @@ set(DW_TEST_SOURCES
     test_import_pipeline.cpp
     test_config_watcher.cpp
     test_app_paths.cpp
+    test_path_resolver.cpp
     test_cost_repository.cpp
     test_cut_plan_repository.cpp
     test_gcode_repository.cpp
@@ -48,6 +49,9 @@ set(DW_TEST_SOURCES
     test_filesystem_detector.cpp
     # Export - Project export/import
     test_project_export_manager.cpp
+    # Import log + tagger
+    test_import_log.cpp
+    test_background_tagger.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
     # Tier 3 — workspace tests (no GL/SDL required)
@@ -97,12 +101,14 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/library/library_manager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/graph/graph_manager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/import/import_queue.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/import/import_log.cpp
     ${CMAKE_SOURCE_DIR}/src/core/import/file_handler.cpp
     ${CMAKE_SOURCE_DIR}/src/core/import/filesystem_detector.cpp
     ${CMAKE_SOURCE_DIR}/src/core/config/config.cpp
     ${CMAKE_SOURCE_DIR}/src/core/config/config_watcher.cpp
     ${CMAKE_SOURCE_DIR}/src/core/config/input_binding.cpp
     ${CMAKE_SOURCE_DIR}/src/core/paths/app_paths.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/paths/path_resolver.cpp
     ${CMAKE_SOURCE_DIR}/src/core/storage/storage_manager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/export/project_export_manager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/export/project_import.cpp
