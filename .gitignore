@@ -61,8 +61,8 @@ package.json
 *.sqlite3
 
 # Configuration (can be freely deleted)
-config.json
-settings.json
+/config.json
+/settings.json
 
 # Logs
 *.log
@@ -75,8 +75,9 @@ settings.json
 !.claude/
 !.ralph/
 
-# Planning artifacts (GSD phases, research, session state)
-.planning/
+# Planning artifacts (session state only - .planning/ is tracked)
+.planning/debug/
+.planning/codebase/
 .session-summary.md
 CHECKPOINT.md
 PHASE_01_SUMMARY.md
