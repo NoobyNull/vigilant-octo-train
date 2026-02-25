@@ -218,7 +218,7 @@ void CncToolPanel::renderMaterialSelector() {
         HardnessBand band = ToolCalculator::classifyMaterial(
             m_selectedJanka, m_selectedMaterialNameForCalc);
         ImGui::TextDisabled("Janka: %.0f lbf  |  %s",
-                            m_selectedJanka, hardnessBandName(band));
+                            static_cast<double>(m_selectedJanka), hardnessBandName(band));
     }
 }
 
