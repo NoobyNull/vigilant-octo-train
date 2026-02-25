@@ -18,6 +18,9 @@ namespace dw {
 
 // Forward declarations - panels
 class CncStatusPanel;
+class CncJogPanel;
+class CncConsolePanel;
+class CncWcsPanel;
 class ViewportPanel;
 class LibraryPanel;
 class PropertiesPanel;
@@ -121,6 +124,9 @@ class UIManager {
     StartPage* startPage() { return m_startPage.get(); }
     ToolBrowserPanel* toolBrowserPanel() { return m_toolBrowserPanel.get(); }
     CncStatusPanel* cncStatusPanel() { return m_cncStatusPanel.get(); }
+    CncJogPanel* cncJogPanel() { return m_cncJogPanel.get(); }
+    CncConsolePanel* cncConsolePanel() { return m_cncConsolePanel.get(); }
+    CncWcsPanel* cncWcsPanel() { return m_cncWcsPanel.get(); }
     FileDialog* fileDialog() { return m_fileDialog.get(); }
     LightingDialog* lightingDialog() { return m_lightingDialog.get(); }
     ImportSummaryDialog* importSummaryDialog() { return m_importSummaryDialog.get(); }
@@ -142,6 +148,9 @@ class UIManager {
     bool& showMaterials() { return m_showMaterials; }
     bool& showToolBrowser() { return m_showToolBrowser; }
     bool& showCncStatus() { return m_showCncStatus; }
+    bool& showCncJog() { return m_showCncJog; }
+    bool& showCncConsole() { return m_showCncConsole; }
+    bool& showCncWcs() { return m_showCncWcs; }
     bool& showStartPage() { return m_showStartPage; }
 
     // Workspace mode
@@ -188,6 +197,9 @@ class UIManager {
     std::unique_ptr<StartPage> m_startPage;
     std::unique_ptr<ToolBrowserPanel> m_toolBrowserPanel;
     std::unique_ptr<CncStatusPanel> m_cncStatusPanel;
+    std::unique_ptr<CncJogPanel> m_cncJogPanel;
+    std::unique_ptr<CncConsolePanel> m_cncConsolePanel;
+    std::unique_ptr<CncWcsPanel> m_cncWcsPanel;
 
     // Panel visibility
     bool m_showViewport = true;
@@ -200,6 +212,9 @@ class UIManager {
     bool m_showMaterials = false;
     bool m_showToolBrowser = false;
     bool m_showCncStatus = false;
+    bool m_showCncJog = false;
+    bool m_showCncConsole = false;
+    bool m_showCncWcs = false;
     bool m_showStartPage = true;
 
     // Workspace mode

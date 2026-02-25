@@ -47,6 +47,9 @@
 #include "ui/panels/properties_panel.h"
 #include "ui/panels/start_page.h"
 #include "ui/panels/cnc_status_panel.h"
+#include "ui/panels/cnc_jog_panel.h"
+#include "ui/panels/cnc_console_panel.h"
+#include "ui/panels/cnc_wcs_panel.h"
 #include "ui/panels/tool_browser_panel.h"
 #include "ui/panels/viewport_panel.h"
 #include "ui/widgets/toast.h"
@@ -537,16 +540,30 @@ void Application::initWiring() {
         gcp->setCncController(m_cncController.get());
         gcp->setToolDatabase(m_toolDatabase.get());
 
-        // Wire CNC callbacks to update both gcode panel and CNC status panel
+        // Wire CNC callbacks to update gcode panel and all CNC panels
         auto* csp = m_uiManager->cncStatusPanel();
+        auto* jogp = m_uiManager->cncJogPanel();
+        auto* conp = m_uiManager->cncConsolePanel();
+        auto* wcsp = m_uiManager->cncWcsPanel();
+
+        // Set CncController on new panels
+        if (jogp) jogp->setCncController(m_cncController.get());
+        if (conp) conp->setCncController(m_cncController.get());
+        if (wcsp) wcsp->setCncController(m_cncController.get());
+
         CncCallbacks cncCb;
-        cncCb.onConnectionChanged = [gcp, csp](bool connected, const std::string& version) {
+        cncCb.onConnectionChanged = [gcp, csp, jogp, conp, wcsp](bool connected, const std::string& version) {
             gcp->onGrblConnected(connected, version);
             if (csp) csp->onConnectionChanged(connected, version);
+            if (jogp) jogp->onConnectionChanged(connected, version);
+            if (conp) conp->onConnectionChanged(connected, version);
+            if (wcsp) wcsp->onConnectionChanged(connected, version);
         };
-        cncCb.onStatusUpdate = [gcp, csp](const MachineStatus& status) {
+        cncCb.onStatusUpdate = [gcp, csp, jogp, wcsp](const MachineStatus& status) {
             gcp->onGrblStatus(status);
             if (csp) csp->onStatusUpdate(status);
+            if (jogp) jogp->onStatusUpdate(status);
+            if (wcsp) wcsp->onStatusUpdate(status);
         };
         cncCb.onLineAcked = [gcp](const LineAck& ack) {
             gcp->onGrblLineAcked(ack);
@@ -554,14 +571,18 @@ void Application::initWiring() {
         cncCb.onProgressUpdate = [gcp](const StreamProgress& progress) {
             gcp->onGrblProgress(progress);
         };
-        cncCb.onAlarm = [gcp](int code, const std::string& desc) {
+        cncCb.onAlarm = [gcp, conp](int code, const std::string& desc) {
             gcp->onGrblAlarm(code, desc);
+            if (conp) conp->onAlarm(code, desc);
         };
-        cncCb.onError = [gcp](const std::string& message) {
+        cncCb.onError = [gcp, conp](const std::string& message) {
             gcp->onGrblError(message);
+            if (conp) conp->onError(message);
         };
-        cncCb.onRawLine = [gcp](const std::string& line, bool isSent) {
+        cncCb.onRawLine = [gcp, conp, wcsp](const std::string& line, bool isSent) {
             gcp->onGrblRawLine(line, isSent);
+            if (conp) conp->onRawLine(line, isSent);
+            if (wcsp) wcsp->onRawLine(line, isSent);
         };
         m_cncController->setCallbacks(cncCb);
     }

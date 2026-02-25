@@ -34,6 +34,9 @@
 #include "ui/panels/properties_panel.h"
 #include "ui/panels/start_page.h"
 #include "ui/panels/cnc_status_panel.h"
+#include "ui/panels/cnc_jog_panel.h"
+#include "ui/panels/cnc_console_panel.h"
+#include "ui/panels/cnc_wcs_panel.h"
 #include "ui/panels/tool_browser_panel.h"
 #include "ui/panels/viewport_panel.h"
 #include "ui/widgets/status_bar.h"
@@ -70,6 +73,9 @@ void UIManager::init(LibraryManager* libraryManager,
     m_startPage = std::make_unique<StartPage>();
     m_toolBrowserPanel = std::make_unique<ToolBrowserPanel>();
     m_cncStatusPanel = std::make_unique<CncStatusPanel>();
+    m_cncJogPanel = std::make_unique<CncJogPanel>();
+    m_cncConsolePanel = std::make_unique<CncConsolePanel>();
+    m_cncWcsPanel = std::make_unique<CncWcsPanel>();
 
     // Create dialogs
     m_fileDialog = std::make_unique<FileDialog>();
@@ -139,6 +145,9 @@ void UIManager::shutdown() {
     m_materialsPanel.reset();
     m_toolBrowserPanel.reset();
     m_cncStatusPanel.reset();
+    m_cncJogPanel.reset();
+    m_cncConsolePanel.reset();
+    m_cncWcsPanel.reset();
     m_startPage.reset();
 }
 
@@ -203,6 +212,9 @@ void UIManager::renderViewMenu() {
     ImGui::MenuItem("Materials", nullptr, &m_showMaterials);
     ImGui::MenuItem("Tool Browser", nullptr, &m_showToolBrowser);
     ImGui::MenuItem("CNC Status", nullptr, &m_showCncStatus);
+    ImGui::MenuItem("Jog Control", nullptr, &m_showCncJog);
+    ImGui::MenuItem("MDI Console", nullptr, &m_showCncConsole);
+    ImGui::MenuItem("Work Zero / WCS", nullptr, &m_showCncWcs);
     ImGui::Separator();
     if (ImGui::MenuItem("Model Mode", "Ctrl+1", m_workspaceMode == WorkspaceMode::Model)) {
         setWorkspaceMode(WorkspaceMode::Model);
@@ -317,6 +329,30 @@ void UIManager::renderPanels() {
         }
     }
 
+    if (m_showCncJog && m_cncJogPanel) {
+        m_cncJogPanel->render();
+        if (!m_cncJogPanel->isOpen()) {
+            m_showCncJog = false;
+            m_cncJogPanel->setOpen(true);
+        }
+    }
+
+    if (m_showCncConsole && m_cncConsolePanel) {
+        m_cncConsolePanel->render();
+        if (!m_cncConsolePanel->isOpen()) {
+            m_showCncConsole = false;
+            m_cncConsolePanel->setOpen(true);
+        }
+    }
+
+    if (m_showCncWcs && m_cncWcsPanel) {
+        m_cncWcsPanel->render();
+        if (!m_cncWcsPanel->isOpen()) {
+            m_showCncWcs = false;
+            m_cncWcsPanel->setOpen(true);
+        }
+    }
+
     // Render dialogs
     if (m_fileDialog) {
         m_fileDialog->render();
@@ -408,6 +444,11 @@ void UIManager::handleKeyboardShortcuts() {
     // Only handle shortcuts when not typing in a text field
     if (io.WantTextInput) {
         return;
+    }
+
+    // CNC keyboard jog (arrow keys, Page Up/Down) — no modifier required
+    if (m_showCncJog && m_cncJogPanel) {
+        m_cncJogPanel->handleKeyboardJog();
     }
 
     if (!io.KeyCtrl) {
@@ -579,6 +620,9 @@ void UIManager::setWorkspaceMode(WorkspaceMode mode) {
     if (mode == WorkspaceMode::CNC) {
         // CNC mode: show CNC panels, hide model-oriented panels
         m_showCncStatus = true;
+        m_showCncJog = true;
+        m_showCncConsole = true;
+        m_showCncWcs = true;
         m_showGCode = true;
         m_showLibrary = false;
         m_showProperties = false;
@@ -589,6 +633,9 @@ void UIManager::setWorkspaceMode(WorkspaceMode mode) {
     } else {
         // Model mode: restore standard layout
         m_showCncStatus = false;
+        m_showCncJog = false;
+        m_showCncConsole = false;
+        m_showCncWcs = false;
         m_showGCode = false;
         m_showLibrary = true;
         m_showProperties = true;
