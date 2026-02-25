@@ -60,6 +60,7 @@ set(DW_TEST_SOURCES
     test_gcode_modal_scanner.cpp
     test_tool_database.cpp
     test_tool_calculator.cpp
+    test_grbl_settings.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
     # Tier 3 — workspace tests (no GL/SDL required)
@@ -93,6 +94,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/cnc/cnc_controller.cpp
     ${CMAKE_SOURCE_DIR}/src/core/cnc/preflight_check.cpp
     ${CMAKE_SOURCE_DIR}/src/core/cnc/tool_calculator.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/cnc/grbl_settings.cpp
     ${CMAKE_SOURCE_DIR}/src/core/optimizer/cut_optimizer.cpp
     ${CMAKE_SOURCE_DIR}/src/core/optimizer/bin_packer.cpp
     ${CMAKE_SOURCE_DIR}/src/core/optimizer/guillotine.cpp
