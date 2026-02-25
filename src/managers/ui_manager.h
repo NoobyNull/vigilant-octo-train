@@ -21,6 +21,7 @@ class CncStatusPanel;
 class CncJogPanel;
 class CncConsolePanel;
 class CncWcsPanel;
+class CncToolPanel;
 class ViewportPanel;
 class LibraryPanel;
 class PropertiesPanel;
@@ -127,6 +128,7 @@ class UIManager {
     CncJogPanel* cncJogPanel() { return m_cncJogPanel.get(); }
     CncConsolePanel* cncConsolePanel() { return m_cncConsolePanel.get(); }
     CncWcsPanel* cncWcsPanel() { return m_cncWcsPanel.get(); }
+    CncToolPanel* cncToolPanel() { return m_cncToolPanel.get(); }
     FileDialog* fileDialog() { return m_fileDialog.get(); }
     LightingDialog* lightingDialog() { return m_lightingDialog.get(); }
     ImportSummaryDialog* importSummaryDialog() { return m_importSummaryDialog.get(); }
@@ -151,6 +153,7 @@ class UIManager {
     bool& showCncJog() { return m_showCncJog; }
     bool& showCncConsole() { return m_showCncConsole; }
     bool& showCncWcs() { return m_showCncWcs; }
+    bool& showCncTool() { return m_showCncTool; }
     bool& showStartPage() { return m_showStartPage; }
 
     // Workspace mode
@@ -200,6 +203,7 @@ class UIManager {
     std::unique_ptr<CncJogPanel> m_cncJogPanel;
     std::unique_ptr<CncConsolePanel> m_cncConsolePanel;
     std::unique_ptr<CncWcsPanel> m_cncWcsPanel;
+    std::unique_ptr<CncToolPanel> m_cncToolPanel;
 
     // Panel visibility
     bool m_showViewport = true;
@@ -215,6 +219,7 @@ class UIManager {
     bool m_showCncJog = false;
     bool m_showCncConsole = false;
     bool m_showCncWcs = false;
+    bool m_showCncTool = false;
     bool m_showStartPage = true;
 
     // Workspace mode

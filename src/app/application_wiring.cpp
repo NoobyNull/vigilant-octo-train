@@ -50,6 +50,7 @@
 #include "ui/panels/cnc_jog_panel.h"
 #include "ui/panels/cnc_console_panel.h"
 #include "ui/panels/cnc_wcs_panel.h"
+#include "ui/panels/cnc_tool_panel.h"
 #include "ui/panels/tool_browser_panel.h"
 #include "ui/panels/viewport_panel.h"
 #include "ui/widgets/toast.h"
@@ -590,6 +591,10 @@ void Application::initWiring() {
         tbp->setToolDatabase(m_toolDatabase.get());
         tbp->setMaterialManager(m_materialManager.get());
         tbp->setFileDialog(m_uiManager->fileDialog());
+    }
+    if (auto* ctp = m_uiManager->cncToolPanel()) {
+        ctp->setToolDatabase(m_toolDatabase.get());
+        ctp->setMaterialManager(m_materialManager.get());
     }
     if (m_uiManager->propertiesPanel()) {
         m_uiManager->propertiesPanel()->setOnMeshModified([this]() {
