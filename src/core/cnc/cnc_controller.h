@@ -38,7 +38,7 @@ class CncController {
     void stopStream();
     bool isStreaming() const { return m_streaming.load(); }
 
-    // Real-time commands (thread-safe, bypass normal queue)
+    // Real-time commands (thread-safe — all routed through IO thread)
     void feedHold();
     void cycleStart();
     void softReset();
@@ -61,6 +61,8 @@ class CncController {
     void processResponse(const std::string& line);
     void sendNextLines();
     void requestStatus();
+    void dispatchPendingCommands();
+    void handleDisconnect();
 
     MainThreadQueue* m_mtq;
     SerialPort m_port;
@@ -70,6 +72,27 @@ class CncController {
     std::thread m_ioThread;
     std::atomic<bool> m_running{false};
     std::atomic<bool> m_connected{false};
+
+    // Thread-safe command dispatch: UI thread -> IO thread
+    // Real-time single-byte commands use atomic bitmask (lock-free)
+    enum RtCommand : uint32_t {
+        RT_FEED_HOLD    = 1 << 0,
+        RT_CYCLE_START  = 1 << 1,
+        RT_SOFT_RESET   = 1 << 2,
+        RT_JOG_CANCEL   = 1 << 3,
+    };
+    std::atomic<uint32_t> m_pendingRtCommands{0};
+
+    // Override commands need multiple bytes, use mutex-protected queue
+    struct OverrideCmd {
+        std::vector<u8> bytes;
+    };
+    std::mutex m_overrideMutex;
+    std::vector<OverrideCmd> m_pendingOverrides;
+
+    // String commands (e.g., $X unlock) also queued
+    std::mutex m_cmdStringMutex;
+    std::vector<std::string> m_pendingStringCmds;
 
     // Streaming state (protected by m_streamMutex)
     std::mutex m_streamMutex;
@@ -82,12 +105,15 @@ class CncController {
     std::atomic<bool> m_held{false};           // Feed hold active
     int m_errorCount = 0;
 
-    // Status polling
+    // Status polling and disconnect detection
     MachineStatus m_lastStatus;
     std::chrono::steady_clock::time_point m_lastStatusQuery;
     std::chrono::steady_clock::time_point m_streamStartTime;
+    int m_consecutiveTimeouts = 0;
+    bool m_statusPending = false;
 
     static constexpr int STATUS_POLL_MS = 200; // 5 Hz
+    static constexpr int MAX_CONSECUTIVE_TIMEOUTS = 10; // ~2 seconds of no response
 };
 
 } // namespace dw

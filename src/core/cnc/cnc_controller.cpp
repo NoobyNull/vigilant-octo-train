@@ -27,6 +27,9 @@ bool CncController::connect(const std::string& device, int baudRate) {
 
     m_running = true;
     m_connected = false;
+    m_consecutiveTimeouts = 0;
+    m_statusPending = false;
+    m_pendingRtCommands.store(0, std::memory_order_relaxed);
     m_ioThread = std::thread(&CncController::ioThreadFunc, this);
 
     return true;
@@ -38,6 +41,19 @@ void CncController::disconnect() {
 
     if (m_ioThread.joinable())
         m_ioThread.join();
+
+    // Clear any pending commands
+    m_pendingRtCommands.store(0, std::memory_order_relaxed);
+    {
+        std::lock_guard<std::mutex> lock(m_overrideMutex);
+        m_pendingOverrides.clear();
+    }
+    {
+        std::lock_guard<std::mutex> lock(m_cmdStringMutex);
+        m_pendingStringCmds.clear();
+    }
+    m_consecutiveTimeouts = 0;
+    m_statusPending = false;
 
     if (m_port.isOpen()) {
         m_port.close();
@@ -67,18 +83,20 @@ void CncController::stopStream() {
     feedHold();
 }
 
+// --- Real-time commands (UI thread safe — all routed through IO thread) ---
+
 void CncController::feedHold() {
-    m_port.writeByte(cnc::CMD_FEED_HOLD);
+    m_pendingRtCommands.fetch_or(RT_FEED_HOLD, std::memory_order_release);
     m_held = true;
 }
 
 void CncController::cycleStart() {
-    m_port.writeByte(cnc::CMD_CYCLE_START);
+    m_pendingRtCommands.fetch_or(RT_CYCLE_START, std::memory_order_release);
     m_held = false;
 }
 
 void CncController::softReset() {
-    m_port.writeByte(cnc::CMD_SOFT_RESET);
+    m_pendingRtCommands.fetch_or(RT_SOFT_RESET, std::memory_order_release);
     m_streaming = false;
     m_held = false;
     {
@@ -86,72 +104,58 @@ void CncController::softReset() {
         m_sentLengths.clear();
         m_bufferUsed = 0;
     }
-    m_port.drain();
+    // drain() will be called by the IO thread after dispatching the reset
 }
 
 void CncController::setFeedOverride(int percent) {
-    // Reset to 100% first, then adjust
-    m_port.writeByte(cnc::CMD_FEED_100_PERCENT);
+    OverrideCmd cmd;
+    cmd.bytes.push_back(cnc::CMD_FEED_100_PERCENT);
     int diff = percent - 100;
-    u8 plus10 = cnc::CMD_FEED_PLUS_10;
-    u8 minus10 = cnc::CMD_FEED_MINUS_10;
-    u8 plus1 = cnc::CMD_FEED_PLUS_1;
-    u8 minus1 = cnc::CMD_FEED_MINUS_1;
-
-    while (diff >= 10) {
-        m_port.writeByte(plus10);
-        diff -= 10;
-    }
-    while (diff <= -10) {
-        m_port.writeByte(minus10);
-        diff += 10;
-    }
-    while (diff > 0) {
-        m_port.writeByte(plus1);
-        diff--;
-    }
-    while (diff < 0) {
-        m_port.writeByte(minus1);
-        diff++;
+    while (diff >= 10)  { cmd.bytes.push_back(cnc::CMD_FEED_PLUS_10);  diff -= 10; }
+    while (diff <= -10) { cmd.bytes.push_back(cnc::CMD_FEED_MINUS_10); diff += 10; }
+    while (diff > 0)    { cmd.bytes.push_back(cnc::CMD_FEED_PLUS_1);   diff--; }
+    while (diff < 0)    { cmd.bytes.push_back(cnc::CMD_FEED_MINUS_1);  diff++; }
+    {
+        std::lock_guard<std::mutex> lock(m_overrideMutex);
+        m_pendingOverrides.push_back(std::move(cmd));
     }
 }
 
 void CncController::setRapidOverride(int percent) {
+    OverrideCmd cmd;
     if (percent <= 25)
-        m_port.writeByte(cnc::CMD_RAPID_25_PERCENT);
+        cmd.bytes.push_back(cnc::CMD_RAPID_25_PERCENT);
     else if (percent <= 50)
-        m_port.writeByte(cnc::CMD_RAPID_50_PERCENT);
+        cmd.bytes.push_back(cnc::CMD_RAPID_50_PERCENT);
     else
-        m_port.writeByte(cnc::CMD_RAPID_100_PERCENT);
+        cmd.bytes.push_back(cnc::CMD_RAPID_100_PERCENT);
+    {
+        std::lock_guard<std::mutex> lock(m_overrideMutex);
+        m_pendingOverrides.push_back(std::move(cmd));
+    }
 }
 
 void CncController::setSpindleOverride(int percent) {
-    m_port.writeByte(cnc::CMD_SPINDLE_100_PERCENT);
+    OverrideCmd cmd;
+    cmd.bytes.push_back(cnc::CMD_SPINDLE_100_PERCENT);
     int diff = percent - 100;
-    while (diff >= 10) {
-        m_port.writeByte(cnc::CMD_SPINDLE_PLUS_10);
-        diff -= 10;
-    }
-    while (diff <= -10) {
-        m_port.writeByte(cnc::CMD_SPINDLE_MINUS_10);
-        diff += 10;
-    }
-    while (diff > 0) {
-        m_port.writeByte(cnc::CMD_SPINDLE_PLUS_1);
-        diff--;
-    }
-    while (diff < 0) {
-        m_port.writeByte(cnc::CMD_SPINDLE_MINUS_1);
-        diff++;
+    while (diff >= 10)  { cmd.bytes.push_back(cnc::CMD_SPINDLE_PLUS_10);  diff -= 10; }
+    while (diff <= -10) { cmd.bytes.push_back(cnc::CMD_SPINDLE_MINUS_10); diff += 10; }
+    while (diff > 0)    { cmd.bytes.push_back(cnc::CMD_SPINDLE_PLUS_1);   diff--; }
+    while (diff < 0)    { cmd.bytes.push_back(cnc::CMD_SPINDLE_MINUS_1);  diff++; }
+    {
+        std::lock_guard<std::mutex> lock(m_overrideMutex);
+        m_pendingOverrides.push_back(std::move(cmd));
     }
 }
 
 void CncController::jogCancel() {
-    m_port.writeByte(0x85); // Jog cancel
+    m_pendingRtCommands.fetch_or(RT_JOG_CANCEL, std::memory_order_release);
 }
 
 void CncController::unlock() {
-    m_port.write("$X\n");
+    std::lock_guard<std::mutex> lock(m_cmdStringMutex);
+    m_pendingStringCmds.push_back("$X\n");
 }
 
 StreamProgress CncController::streamProgress() const {
@@ -220,14 +224,37 @@ void CncController::ioThreadFunc() {
     m_lastStatusQuery = std::chrono::steady_clock::now();
 
     while (m_running) {
+        // Dispatch any pending commands from UI thread (feed hold, cycle start, etc.)
+        dispatchPendingCommands();
+
         // Read responses
         auto line = m_port.readLine(20);
+
+        // Check SerialPort connection state for hardware-level disconnect
+        if (m_port.connectionState() == ConnectionState::Disconnected ||
+            m_port.connectionState() == ConnectionState::Error) {
+            log::error("CNC", "Serial port reports disconnected");
+            handleDisconnect();
+            break;
+        }
+
         if (line) {
+            m_consecutiveTimeouts = 0;
             if (m_mtq && m_callbacks.onRawLine) {
                 m_mtq->enqueue(
                     [cb = m_callbacks.onRawLine, l = *line]() { cb(l, false); });
             }
             processResponse(*line);
+        } else {
+            // No data -- check for consecutive timeout disconnect detection
+            if (m_statusPending) {
+                m_consecutiveTimeouts++;
+                if (m_consecutiveTimeouts >= MAX_CONSECUTIVE_TIMEOUTS) {
+                    log::error("CNC", "No response to status queries -- connection lost");
+                    handleDisconnect();
+                    break;
+                }
+            }
         }
 
         // Status polling at 5Hz
@@ -256,6 +283,8 @@ void CncController::processResponse(const std::string& line) {
     // Status report: <Idle|MPos:0.000,0.000,0.000|...>
     if (line.front() == '<' && line.back() == '>') {
         m_lastStatus = parseStatusReport(line);
+        m_statusPending = false;
+        m_consecutiveTimeouts = 0;
         if (m_mtq && m_callbacks.onStatusUpdate) {
             m_mtq->enqueue(
                 [cb = m_callbacks.onStatusUpdate, st = m_lastStatus]() { cb(st); });
@@ -358,6 +387,64 @@ void CncController::sendNextLines() {
 
 void CncController::requestStatus() {
     m_port.writeByte(cnc::CMD_STATUS_QUERY);
+    m_statusPending = true;
+}
+
+void CncController::dispatchPendingCommands() {
+    // 1. Dispatch single-byte real-time commands (atomic, no lock needed)
+    uint32_t pending = m_pendingRtCommands.exchange(0, std::memory_order_acquire);
+
+    // Soft reset has highest priority — after reset, don't send anything else
+    if (pending & RT_SOFT_RESET) {
+        m_port.writeByte(cnc::CMD_SOFT_RESET);
+        m_port.drain();
+        return;
+    }
+    if (pending & RT_FEED_HOLD)   m_port.writeByte(cnc::CMD_FEED_HOLD);
+    if (pending & RT_CYCLE_START) m_port.writeByte(cnc::CMD_CYCLE_START);
+    if (pending & RT_JOG_CANCEL)  m_port.writeByte(0x85);
+
+    // 2. Dispatch override byte sequences (atomically per override)
+    {
+        std::lock_guard<std::mutex> lock(m_overrideMutex);
+        for (const auto& cmd : m_pendingOverrides) {
+            for (u8 b : cmd.bytes)
+                m_port.writeByte(b);
+        }
+        m_pendingOverrides.clear();
+    }
+
+    // 3. Dispatch string commands (e.g., $X unlock)
+    {
+        std::lock_guard<std::mutex> lock(m_cmdStringMutex);
+        for (const auto& s : m_pendingStringCmds)
+            m_port.write(s);
+        m_pendingStringCmds.clear();
+    }
+}
+
+void CncController::handleDisconnect() {
+    m_connected = false;
+    bool wasStreaming = m_streaming.exchange(false);
+    m_held = false;
+
+    // Clear streaming state
+    {
+        std::lock_guard<std::mutex> lock(m_streamMutex);
+        m_sentLengths.clear();
+        m_bufferUsed = 0;
+    }
+
+    // Notify UI of disconnect
+    if (m_mtq && m_callbacks.onConnectionChanged)
+        m_mtq->enqueue([cb = m_callbacks.onConnectionChanged]() {
+            cb(false, "");
+        });
+
+    if (wasStreaming && m_mtq && m_callbacks.onError)
+        m_mtq->enqueue([cb = m_callbacks.onError]() {
+            cb("Connection lost during streaming -- job aborted. Manual reconnect required.");
+        });
 }
 
 // --- Static parsers ---
