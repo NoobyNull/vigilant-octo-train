@@ -8,6 +8,14 @@
 
 namespace dw {
 
+// Serial port connection state
+enum class ConnectionState {
+    Closed,        // Port not open
+    Connected,     // Port open and healthy
+    Disconnected,  // Device removed (POLLHUP/POLLERR or consecutive timeouts)
+    Error          // Unrecoverable error
+};
+
 // Lightweight POSIX serial port wrapper for GRBL communication
 class SerialPort {
   public:
@@ -44,10 +52,14 @@ class SerialPort {
     // Get the device path
     const std::string& device() const { return m_device; }
 
+    // Get connection state (thread-safe read)
+    ConnectionState connectionState() const { return m_connectionState; }
+
   private:
     int m_fd = -1;
     std::string m_device;
     std::string m_readBuffer; // Accumulates partial reads between readLine calls
+    ConnectionState m_connectionState = ConnectionState::Closed;
 };
 
 // Scan for available serial ports (/dev/ttyUSB*, /dev/ttyACM*)

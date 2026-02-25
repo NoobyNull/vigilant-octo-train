@@ -1,6 +1,7 @@
 #include "serial_port.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cstring>
 #include <filesystem>
 
@@ -10,6 +11,7 @@
 #include <cerrno>
 #include <fcntl.h>
 #include <poll.h>
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 #endif
@@ -52,8 +54,10 @@ SerialPort::~SerialPort() {
 
 SerialPort::SerialPort(SerialPort&& other) noexcept
     : m_fd(other.m_fd), m_device(std::move(other.m_device)),
-      m_readBuffer(std::move(other.m_readBuffer)) {
+      m_readBuffer(std::move(other.m_readBuffer)),
+      m_connectionState(other.m_connectionState) {
     other.m_fd = -1;
+    other.m_connectionState = ConnectionState::Closed;
 }
 
 SerialPort& SerialPort::operator=(SerialPort&& other) noexcept {
@@ -62,7 +66,9 @@ SerialPort& SerialPort::operator=(SerialPort&& other) noexcept {
         m_fd = other.m_fd;
         m_device = std::move(other.m_device);
         m_readBuffer = std::move(other.m_readBuffer);
+        m_connectionState = other.m_connectionState;
         other.m_fd = -1;
+        other.m_connectionState = ConnectionState::Closed;
     }
     return *this;
 }
@@ -95,8 +101,9 @@ bool SerialPort::open(const std::string& device, int baudRate) {
     tty.c_cflag &= ~(CSIZE | PARENB | CSTOPB);
     tty.c_cflag |= CS8;
 
-    // Enable receiver, ignore modem status lines
+    // Enable receiver, ignore modem status lines, suppress DTR on close
     tty.c_cflag |= (CLOCAL | CREAD);
+    tty.c_cflag &= ~HUPCL; // Prevent DTR toggle on close (Arduino auto-reset prevention)
 
     // No hardware flow control
     tty.c_cflag &= ~CRTSCTS;
@@ -117,8 +124,13 @@ bool SerialPort::open(const std::string& device, int baudRate) {
     // Flush any stale data
     tcflush(m_fd, TCIOFLUSH);
 
+    // Explicitly lower DTR to prevent Arduino auto-reset on connect
+    int modemBits = TIOCM_DTR;
+    ioctl(m_fd, TIOCMBIC, &modemBits);
+
     m_device = device;
     m_readBuffer.clear();
+    m_connectionState = ConnectionState::Connected;
     log::infof("Serial", "Opened %s at %d baud", device.c_str(), baudRate);
     return true;
 }
@@ -130,18 +142,28 @@ void SerialPort::close() {
         log::infof("Serial", "Closed %s", m_device.c_str());
     }
     m_readBuffer.clear();
+    m_connectionState = ConnectionState::Closed;
 }
 
 bool SerialPort::write(const std::string& data) {
     if (m_fd < 0)
         return false;
 
-    ssize_t written = ::write(m_fd, data.c_str(), data.size());
-    if (written < 0) {
-        log::errorf("Serial", "Write failed: %s", strerror(errno));
-        return false;
+    size_t totalWritten = 0;
+    while (totalWritten < data.size()) {
+        ssize_t written = ::write(m_fd, data.c_str() + totalWritten,
+                                  data.size() - totalWritten);
+        if (written < 0) {
+            if (errno == EINTR)
+                continue;
+            if (errno == EIO || errno == ENXIO || errno == ENODEV)
+                m_connectionState = ConnectionState::Disconnected;
+            log::errorf("Serial", "Write failed: %s", strerror(errno));
+            return false;
+        }
+        totalWritten += static_cast<size_t>(written);
     }
-    return static_cast<size_t>(written) == data.size();
+    return true;
 }
 
 bool SerialPort::writeByte(u8 byte) {
@@ -149,7 +171,12 @@ bool SerialPort::writeByte(u8 byte) {
         return false;
 
     ssize_t written = ::write(m_fd, &byte, 1);
-    return written == 1;
+    if (written != 1) {
+        if (errno == EIO || errno == ENXIO || errno == ENODEV)
+            m_connectionState = ConnectionState::Disconnected;
+        return false;
+    }
+    return true;
 }
 
 std::optional<std::string> SerialPort::readLine(int timeoutMs) {
@@ -167,27 +194,45 @@ std::optional<std::string> SerialPort::readLine(int timeoutMs) {
         return line;
     }
 
-    // Poll for data
+    // Poll for data with monotonic clock for accurate timeout tracking
     struct pollfd pfd {};
     pfd.fd = m_fd;
     pfd.events = POLLIN;
 
+    auto startTime = std::chrono::steady_clock::now();
     int remaining = timeoutMs;
+
     while (remaining > 0) {
         int ret = poll(&pfd, 1, remaining);
         if (ret < 0) {
-            if (errno == EINTR)
+            if (errno == EINTR) {
+                // Recalculate remaining time after interrupt
+                auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - startTime).count();
+                remaining = timeoutMs - static_cast<int>(elapsed);
                 continue;
+            }
+            m_connectionState = ConnectionState::Error;
             return std::nullopt;
         }
         if (ret == 0)
-            return std::nullopt; // Timeout
+            return std::nullopt; // Timeout (not an error)
+
+        // Check for device disconnect/error BEFORE checking for data
+        if (pfd.revents & (POLLHUP | POLLERR)) {
+            log::error("Serial", "Device disconnected (POLLHUP/POLLERR)");
+            m_connectionState = ConnectionState::Disconnected;
+            return std::nullopt;
+        }
 
         if (pfd.revents & POLLIN) {
             char buf[256];
             ssize_t n = ::read(m_fd, buf, sizeof(buf));
-            if (n <= 0)
+            if (n <= 0) {
+                // Zero-length or error read on serial typically means device gone
+                m_connectionState = ConnectionState::Disconnected;
                 return std::nullopt;
+            }
 
             m_readBuffer.append(buf, static_cast<size_t>(n));
 
@@ -201,8 +246,10 @@ std::optional<std::string> SerialPort::readLine(int timeoutMs) {
             }
         }
 
-        // Approximate remaining time (poll doesn't tell us how long it waited)
-        remaining -= 10;
+        // Recalculate remaining time using monotonic clock
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - startTime).count();
+        remaining = timeoutMs - static_cast<int>(elapsed);
     }
 
     return std::nullopt;
