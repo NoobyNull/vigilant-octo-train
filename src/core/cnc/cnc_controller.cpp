@@ -174,6 +174,11 @@ void CncController::unlock() {
     m_pendingStringCmds.push_back("$X\n");
 }
 
+void CncController::sendCommand(const std::string& cmd) {
+    std::lock_guard<std::mutex> lock(m_cmdStringMutex);
+    m_pendingStringCmds.push_back(cmd + "\n");
+}
+
 StreamProgress CncController::streamProgress() const {
     StreamProgress p;
     // Read atomic/shared state — approximate is fine for UI display

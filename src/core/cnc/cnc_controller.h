@@ -47,6 +47,7 @@ class CncController {
     void setSpindleOverride(int percent); // 10-200
     void jogCancel();
     void unlock(); // $X
+    void sendCommand(const std::string& cmd); // Queue arbitrary G-code/system command
 
     // Status
     const MachineStatus& lastStatus() const { return m_lastStatus; }
