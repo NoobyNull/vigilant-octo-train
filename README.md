@@ -97,10 +97,10 @@ The `.run` installer is a self-extracting archive (makeself). It supports two mo
 
 ```bash
 # User install (default) — installs to ~/.local/bin
-./DigitalWorkshop-v1.5.0-linux.run
+./DigitalWorkshop-v0.1.5-linux.run
 
 # System install — installs to /usr/local/bin
-sudo ./DigitalWorkshop-v1.5.0-linux.run -- --system
+sudo ./DigitalWorkshop-v0.1.5-linux.run -- --system
 ```
 
 Both modes install `digital_workshop` and `dw_settings` binaries and create a `.desktop` entry so the app appears in your application launcher. To uninstall, run the `uninstall.sh` script from the extracted directory (or `--system` for system-wide).
