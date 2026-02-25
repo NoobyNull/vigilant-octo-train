@@ -40,6 +40,7 @@
 #include "ui/panels/cnc_tool_panel.h"
 #include "ui/panels/cnc_job_panel.h"
 #include "ui/panels/cnc_safety_panel.h"
+#include "ui/panels/cnc_settings_panel.h"
 #include "ui/panels/tool_browser_panel.h"
 #include "ui/panels/viewport_panel.h"
 #include "ui/widgets/status_bar.h"
@@ -82,6 +83,7 @@ void UIManager::init(LibraryManager* libraryManager,
     m_cncToolPanel = std::make_unique<CncToolPanel>();
     m_cncJobPanel = std::make_unique<CncJobPanel>();
     m_cncSafetyPanel = std::make_unique<CncSafetyPanel>();
+    m_cncSettingsPanel = std::make_unique<CncSettingsPanel>();
 
     // Create dialogs
     m_fileDialog = std::make_unique<FileDialog>();
@@ -227,6 +229,7 @@ void UIManager::renderViewMenu() {
     ImGui::MenuItem("Tool & Material", nullptr, &m_showCncTool);
     ImGui::MenuItem("Job Progress", nullptr, &m_showCncJob);
     ImGui::MenuItem("Safety Controls", nullptr, &m_showCncSafety);
+    ImGui::MenuItem("Firmware Settings", nullptr, &m_showCncSettings);
     ImGui::Separator();
     if (ImGui::MenuItem("Model Mode", "Ctrl+1", m_workspaceMode == WorkspaceMode::Model)) {
         setWorkspaceMode(WorkspaceMode::Model);
@@ -386,6 +389,14 @@ void UIManager::renderPanels() {
         if (!m_cncSafetyPanel->isOpen()) {
             m_showCncSafety = false;
             m_cncSafetyPanel->setOpen(true);
+        }
+    }
+
+    if (m_showCncSettings && m_cncSettingsPanel) {
+        m_cncSettingsPanel->render();
+        if (!m_cncSettingsPanel->isOpen()) {
+            m_showCncSettings = false;
+            m_cncSettingsPanel->setOpen(true);
         }
     }
 
@@ -662,6 +673,7 @@ void UIManager::setWorkspaceMode(WorkspaceMode mode) {
         m_showCncTool = true;
         m_showCncJob = true;
         m_showCncSafety = true;
+        m_showCncSettings = true;
         m_showGCode = true;
         m_showLibrary = false;
         m_showProperties = false;
@@ -678,6 +690,7 @@ void UIManager::setWorkspaceMode(WorkspaceMode mode) {
         m_showCncTool = false;
         m_showCncJob = false;
         m_showCncSafety = false;
+        m_showCncSettings = false;
         m_showGCode = false;
         m_showLibrary = true;
         m_showProperties = true;

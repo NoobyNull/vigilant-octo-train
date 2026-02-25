@@ -15,6 +15,7 @@
 #include "core/optimizer/cut_list_file.h"
 #include "core/database/gcode_repository.h"
 #include "core/cnc/cnc_controller.h"
+#include "core/cnc/grbl_settings.h"
 #include "core/export/project_export_manager.h"
 #include "core/import/background_tagger.h"
 #include "core/import/import_queue.h"
@@ -53,6 +54,7 @@
 #include "ui/panels/cnc_tool_panel.h"
 #include "ui/panels/cnc_job_panel.h"
 #include "ui/panels/cnc_safety_panel.h"
+#include "ui/panels/cnc_settings_panel.h"
 #include "ui/panels/tool_browser_panel.h"
 #include "ui/panels/viewport_panel.h"
 #include "ui/widgets/toast.h"
@@ -551,16 +553,21 @@ void Application::initWiring() {
         auto* jobp = m_uiManager->cncJobPanel();
         auto* ctp = m_uiManager->cncToolPanel();
         auto* safetyp = m_uiManager->cncSafetyPanel();
+        auto* settsp = m_uiManager->cncSettingsPanel();
 
         // Set CncController on new panels
         if (jogp) jogp->setCncController(m_cncController.get());
         if (conp) conp->setCncController(m_cncController.get());
         if (wcsp) wcsp->setCncController(m_cncController.get());
         if (safetyp) safetyp->setCncController(m_cncController.get());
+        if (settsp) {
+            settsp->setCncController(m_cncController.get());
+            settsp->setFileDialog(m_uiManager->fileDialog());
+        }
 
         CncCallbacks cncCb;
         cncCb.onConnectionChanged =
-            [gcp, csp, jogp, conp, wcsp, jobp, safetyp](
+            [gcp, csp, jogp, conp, wcsp, jobp, safetyp, settsp](
                 bool connected, const std::string& version) {
             gcp->onGrblConnected(connected, version);
             if (csp) csp->onConnectionChanged(connected, version);
@@ -573,8 +580,9 @@ void Application::initWiring() {
                 safetyp->setStreaming(false);
                 safetyp->setProgram({});
             }
+            if (settsp) settsp->onConnectionChanged(connected, version);
         };
-        cncCb.onStatusUpdate = [gcp, csp, jogp, wcsp, jobp, ctp, safetyp](const MachineStatus& status) {
+        cncCb.onStatusUpdate = [gcp, csp, jogp, wcsp, jobp, ctp, safetyp, settsp](const MachineStatus& status) {
             gcp->onGrblStatus(status);
             if (csp) csp->onStatusUpdate(status);
             if (jogp) jogp->onStatusUpdate(status);
@@ -586,6 +594,7 @@ void Application::initWiring() {
                     jobp->setRecommendedFeedRate(ctp->getRecommendedFeedRate());
             }
             if (safetyp) safetyp->onStatusUpdate(status);
+            if (settsp) settsp->onStatusUpdate(status);
         };
         cncCb.onLineAcked = [gcp](const LineAck& ack) {
             gcp->onGrblLineAcked(ack);
@@ -614,10 +623,42 @@ void Application::initWiring() {
             gcp->onGrblError(message);
             if (conp) conp->onError(message);
         };
-        cncCb.onRawLine = [gcp, conp, wcsp](const std::string& line, bool isSent) {
+        cncCb.onRawLine = [gcp, conp, wcsp, settsp](const std::string& line, bool isSent) {
             gcp->onGrblRawLine(line, isSent);
             if (conp) conp->onRawLine(line, isSent);
             if (wcsp) wcsp->onRawLine(line, isSent);
+            if (settsp) {
+                settsp->onRawLine(line, isSent);
+                // Profile sync: when $$ response completes, update active MachineProfile
+                if (!isSent && line == "ok" && settsp->hasSettings()) {
+                    auto& cfg = Config::instance();
+                    auto profile = cfg.getActiveMachineProfile();
+                    const auto& grbl = settsp->settings();
+                    bool changed = false;
+                    auto syncSetting = [&](int id, float& field) {
+                        if (auto* s = grbl.get(id)) {
+                            if (s->value != field) {
+                                field = s->value;
+                                changed = true;
+                            }
+                        }
+                    };
+                    syncSetting(110, profile.maxFeedRateX);
+                    syncSetting(111, profile.maxFeedRateY);
+                    syncSetting(112, profile.maxFeedRateZ);
+                    syncSetting(120, profile.accelX);
+                    syncSetting(121, profile.accelY);
+                    syncSetting(122, profile.accelZ);
+                    syncSetting(130, profile.maxTravelX);
+                    syncSetting(131, profile.maxTravelY);
+                    syncSetting(132, profile.maxTravelZ);
+                    syncSetting(11,  profile.junctionDeviation);
+                    if (changed) {
+                        cfg.updateMachineProfile(cfg.getActiveMachineProfileIndex(), profile);
+                        cfg.save();
+                    }
+                }
+            }
         };
         m_cncController->setCallbacks(cncCb);
     }
