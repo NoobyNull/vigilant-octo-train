@@ -40,6 +40,7 @@ class ProjectExportManager;
 class CutListFile;
 class CncController;
 class ToolDatabase;
+class MacroManager;
 class BackgroundTagger;
 class ImportLog;
 class Mesh;
@@ -152,6 +153,9 @@ class Application {
 
     // CNC controller (multi-firmware support: GRBL, grblHAL, FluidNC, Smoothieware)
     std::unique_ptr<CncController> m_cncController;
+
+    // CNC macro manager (SQLite-backed macro storage)
+    std::unique_ptr<MacroManager> m_macroManager;
 
     // Currently focused model ID (for material assignment)
     int64_t m_focusedModelId = -1;

@@ -31,6 +31,9 @@ Path getDatabasePath();
 // Tool database file path (.vtdb format)
 Path getToolDatabasePath();
 
+// Macro database file path (SQLite)
+Path getMacroDatabasePath();
+
 // Log file path
 Path getLogPath();
 

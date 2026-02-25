@@ -140,6 +140,10 @@ Path getToolDatabasePath() {
     return getDataDir() / "tools.vtdb";
 }
 
+Path getMacroDatabasePath() {
+    return getDataDir() / "macros.db";
+}
+
 Path getLogPath() {
     return getDataDir() / "digital_workshop.log";
 }

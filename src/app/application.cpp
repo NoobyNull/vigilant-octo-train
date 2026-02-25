@@ -30,6 +30,7 @@
 #include "core/database/schema.h"
 #include "core/export/project_export_manager.h"
 #include "core/cnc/cnc_controller.h"
+#include "core/cnc/macro_manager.h"
 #include "core/graph/graph_manager.h"
 #include "core/import/background_tagger.h"
 #include "core/import/import_log.h"
@@ -252,6 +253,10 @@ bool Application::init() {
 
     // CNC controller (multi-firmware support: GRBL, grblHAL, FluidNC, Smoothieware)
     m_cncController = std::make_unique<CncController>(m_mainThreadQueue.get());
+
+    // CNC macro manager (SQLite-backed macro storage)
+    m_macroManager = std::make_unique<MacroManager>(paths::getMacroDatabasePath().string());
+    m_macroManager->ensureBuiltIns();
 
     m_importQueue = std::make_unique<ImportQueue>(*m_connectionPool,
                                                   m_libraryManager.get(),
