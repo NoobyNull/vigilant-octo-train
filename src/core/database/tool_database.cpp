@@ -207,20 +207,20 @@ bool ToolDatabase::insertMachine(const VtdbMachine& m) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
     if (!stmt.isValid()) return false;
-    stmt.bindText(1, id);
-    stmt.bindText(2, m.name);
-    stmt.bindText(3, m.make);
-    stmt.bindText(4, m.model);
-    stmt.bindText(5, m.controller_type);
-    stmt.bindInt(6, m.dimensions_units);
-    stmt.bindDouble(7, m.max_width);
-    stmt.bindDouble(8, m.max_height);
-    stmt.bindInt(9, m.support_rotary);
-    stmt.bindInt(10, m.support_tool_change);
-    stmt.bindInt(11, m.has_laser_head);
-    stmt.bindDouble(12, m.spindle_power_watts);
-    stmt.bindInt(13, m.max_rpm);
-    stmt.bindInt(14, static_cast<int>(m.drive_type));
+    (void)stmt.bindText(1, id);
+    (void)stmt.bindText(2, m.name);
+    (void)stmt.bindText(3, m.make);
+    (void)stmt.bindText(4, m.model);
+    (void)stmt.bindText(5, m.controller_type);
+    (void)stmt.bindInt(6, m.dimensions_units);
+    (void)stmt.bindDouble(7, m.max_width);
+    (void)stmt.bindDouble(8, m.max_height);
+    (void)stmt.bindInt(9, m.support_rotary);
+    (void)stmt.bindInt(10, m.support_tool_change);
+    (void)stmt.bindInt(11, m.has_laser_head);
+    (void)stmt.bindDouble(12, m.spindle_power_watts);
+    (void)stmt.bindInt(13, m.max_rpm);
+    (void)stmt.bindInt(14, static_cast<int>(m.drive_type));
     return stmt.execute();
 }
 
@@ -233,20 +233,20 @@ bool ToolDatabase::updateMachine(const VtdbMachine& m) {
         WHERE id=?
     )");
     if (!stmt.isValid()) return false;
-    stmt.bindText(1, m.name);
-    stmt.bindText(2, m.make);
-    stmt.bindText(3, m.model);
-    stmt.bindText(4, m.controller_type);
-    stmt.bindInt(5, m.dimensions_units);
-    stmt.bindDouble(6, m.max_width);
-    stmt.bindDouble(7, m.max_height);
-    stmt.bindInt(8, m.support_rotary);
-    stmt.bindInt(9, m.support_tool_change);
-    stmt.bindInt(10, m.has_laser_head);
-    stmt.bindDouble(11, m.spindle_power_watts);
-    stmt.bindInt(12, m.max_rpm);
-    stmt.bindInt(13, static_cast<int>(m.drive_type));
-    stmt.bindText(14, m.id);
+    (void)stmt.bindText(1, m.name);
+    (void)stmt.bindText(2, m.make);
+    (void)stmt.bindText(3, m.model);
+    (void)stmt.bindText(4, m.controller_type);
+    (void)stmt.bindInt(5, m.dimensions_units);
+    (void)stmt.bindDouble(6, m.max_width);
+    (void)stmt.bindDouble(7, m.max_height);
+    (void)stmt.bindInt(8, m.support_rotary);
+    (void)stmt.bindInt(9, m.support_tool_change);
+    (void)stmt.bindInt(10, m.has_laser_head);
+    (void)stmt.bindDouble(11, m.spindle_power_watts);
+    (void)stmt.bindInt(12, m.max_rpm);
+    (void)stmt.bindInt(13, static_cast<int>(m.drive_type));
+    (void)stmt.bindText(14, m.id);
     return stmt.execute();
 }
 
@@ -297,8 +297,8 @@ bool ToolDatabase::insertMaterial(const VtdbMaterial& m) {
     std::string id = m.id.empty() ? uuid::generate() : m.id;
     auto stmt = m_db.prepare("INSERT OR IGNORE INTO material (id, name) VALUES (?, ?)");
     if (!stmt.isValid()) return false;
-    stmt.bindText(1, id);
-    stmt.bindText(2, m.name);
+    (void)stmt.bindText(1, id);
+    (void)stmt.bindText(2, m.name);
     return stmt.execute();
 }
 
@@ -348,29 +348,29 @@ bool ToolDatabase::insertGeometry(const VtdbToolGeometry& g) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
     if (!stmt.isValid()) return false;
-    stmt.bindText(1, id);
-    stmt.bindText(2, g.name_format);
-    stmt.bindText(3, g.notes);
-    stmt.bindInt(4, static_cast<int>(g.tool_type));
-    stmt.bindInt(5, static_cast<int>(g.units));
-    stmt.bindDouble(6, g.diameter);
-    stmt.bindDouble(7, g.included_angle);
-    stmt.bindDouble(8, g.flat_diameter);
-    stmt.bindInt(9, g.num_flutes);
-    stmt.bindDouble(10, g.flute_length);
-    stmt.bindDouble(11, g.thread_pitch);
+    (void)stmt.bindText(1, id);
+    (void)stmt.bindText(2, g.name_format);
+    (void)stmt.bindText(3, g.notes);
+    (void)stmt.bindInt(4, static_cast<int>(g.tool_type));
+    (void)stmt.bindInt(5, static_cast<int>(g.units));
+    (void)stmt.bindDouble(6, g.diameter);
+    (void)stmt.bindDouble(7, g.included_angle);
+    (void)stmt.bindDouble(8, g.flat_diameter);
+    (void)stmt.bindInt(9, g.num_flutes);
+    (void)stmt.bindDouble(10, g.flute_length);
+    (void)stmt.bindDouble(11, g.thread_pitch);
     if (!g.outline.empty())
-        stmt.bindBlob(12, g.outline.data(), static_cast<int>(g.outline.size()));
+        (void)stmt.bindBlob(12, g.outline.data(), static_cast<int>(g.outline.size()));
     else
-        stmt.bindNull(12);
-    stmt.bindDouble(13, g.tip_radius);
-    stmt.bindInt(14, g.laser_watt);
-    stmt.bindText(15, g.custom_attributes);
-    stmt.bindDouble(16, g.tooth_size);
-    stmt.bindDouble(17, g.tooth_offset);
-    stmt.bindDouble(18, g.neck_length);
-    stmt.bindDouble(19, g.tooth_height);
-    stmt.bindDouble(20, g.threaded_length);
+        (void)stmt.bindNull(12);
+    (void)stmt.bindDouble(13, g.tip_radius);
+    (void)stmt.bindInt(14, g.laser_watt);
+    (void)stmt.bindText(15, g.custom_attributes);
+    (void)stmt.bindDouble(16, g.tooth_size);
+    (void)stmt.bindDouble(17, g.tooth_offset);
+    (void)stmt.bindDouble(18, g.neck_length);
+    (void)stmt.bindDouble(19, g.tooth_height);
+    (void)stmt.bindDouble(20, g.threaded_length);
     return stmt.execute();
 }
 
@@ -452,29 +452,29 @@ bool ToolDatabase::updateGeometry(const VtdbToolGeometry& g) {
         WHERE id=?
     )");
     if (!stmt.isValid()) return false;
-    stmt.bindText(1, g.name_format);
-    stmt.bindText(2, g.notes);
-    stmt.bindInt(3, static_cast<int>(g.tool_type));
-    stmt.bindInt(4, static_cast<int>(g.units));
-    stmt.bindDouble(5, g.diameter);
-    stmt.bindDouble(6, g.included_angle);
-    stmt.bindDouble(7, g.flat_diameter);
-    stmt.bindInt(8, g.num_flutes);
-    stmt.bindDouble(9, g.flute_length);
-    stmt.bindDouble(10, g.thread_pitch);
+    (void)stmt.bindText(1, g.name_format);
+    (void)stmt.bindText(2, g.notes);
+    (void)stmt.bindInt(3, static_cast<int>(g.tool_type));
+    (void)stmt.bindInt(4, static_cast<int>(g.units));
+    (void)stmt.bindDouble(5, g.diameter);
+    (void)stmt.bindDouble(6, g.included_angle);
+    (void)stmt.bindDouble(7, g.flat_diameter);
+    (void)stmt.bindInt(8, g.num_flutes);
+    (void)stmt.bindDouble(9, g.flute_length);
+    (void)stmt.bindDouble(10, g.thread_pitch);
     if (!g.outline.empty())
-        stmt.bindBlob(11, g.outline.data(), static_cast<int>(g.outline.size()));
+        (void)stmt.bindBlob(11, g.outline.data(), static_cast<int>(g.outline.size()));
     else
-        stmt.bindNull(11);
-    stmt.bindDouble(12, g.tip_radius);
-    stmt.bindInt(13, g.laser_watt);
-    stmt.bindText(14, g.custom_attributes);
-    stmt.bindDouble(15, g.tooth_size);
-    stmt.bindDouble(16, g.tooth_offset);
-    stmt.bindDouble(17, g.neck_length);
-    stmt.bindDouble(18, g.tooth_height);
-    stmt.bindDouble(19, g.threaded_length);
-    stmt.bindText(20, g.id);
+        (void)stmt.bindNull(11);
+    (void)stmt.bindDouble(12, g.tip_radius);
+    (void)stmt.bindInt(13, g.laser_watt);
+    (void)stmt.bindText(14, g.custom_attributes);
+    (void)stmt.bindDouble(15, g.tooth_size);
+    (void)stmt.bindDouble(16, g.tooth_offset);
+    (void)stmt.bindDouble(17, g.neck_length);
+    (void)stmt.bindDouble(18, g.tooth_height);
+    (void)stmt.bindDouble(19, g.threaded_length);
+    (void)stmt.bindText(20, g.id);
     return stmt.execute();
 }
 
@@ -497,25 +497,25 @@ bool ToolDatabase::insertCuttingData(const VtdbCuttingData& cd) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
     if (!stmt.isValid()) return false;
-    stmt.bindText(1, id);
-    stmt.bindInt(2, cd.rate_units);
-    stmt.bindDouble(3, cd.feed_rate);
-    stmt.bindDouble(4, cd.plunge_rate);
-    stmt.bindInt(5, cd.spindle_speed);
-    stmt.bindInt(6, cd.spindle_dir);
-    stmt.bindDouble(7, cd.stepdown);
-    stmt.bindDouble(8, cd.stepover);
-    stmt.bindDouble(9, cd.clear_stepover);
-    stmt.bindDouble(10, cd.thread_depth);
-    stmt.bindDouble(11, cd.thread_step_in);
-    stmt.bindDouble(12, cd.laser_power);
-    stmt.bindInt(13, cd.laser_passes);
-    stmt.bindDouble(14, cd.laser_burn_rate);
-    stmt.bindDouble(15, cd.line_width);
-    stmt.bindInt(16, cd.length_units);
-    stmt.bindInt(17, cd.tool_number);
-    stmt.bindInt(18, cd.laser_kerf);
-    stmt.bindText(19, cd.notes);
+    (void)stmt.bindText(1, id);
+    (void)stmt.bindInt(2, cd.rate_units);
+    (void)stmt.bindDouble(3, cd.feed_rate);
+    (void)stmt.bindDouble(4, cd.plunge_rate);
+    (void)stmt.bindInt(5, cd.spindle_speed);
+    (void)stmt.bindInt(6, cd.spindle_dir);
+    (void)stmt.bindDouble(7, cd.stepdown);
+    (void)stmt.bindDouble(8, cd.stepover);
+    (void)stmt.bindDouble(9, cd.clear_stepover);
+    (void)stmt.bindDouble(10, cd.thread_depth);
+    (void)stmt.bindDouble(11, cd.thread_step_in);
+    (void)stmt.bindDouble(12, cd.laser_power);
+    (void)stmt.bindInt(13, cd.laser_passes);
+    (void)stmt.bindDouble(14, cd.laser_burn_rate);
+    (void)stmt.bindDouble(15, cd.line_width);
+    (void)stmt.bindInt(16, cd.length_units);
+    (void)stmt.bindInt(17, cd.tool_number);
+    (void)stmt.bindInt(18, cd.laser_kerf);
+    (void)stmt.bindText(19, cd.notes);
     return stmt.execute();
 }
 
@@ -560,25 +560,25 @@ bool ToolDatabase::updateCuttingData(const VtdbCuttingData& cd) {
         WHERE id=?
     )");
     if (!stmt.isValid()) return false;
-    stmt.bindInt(1, cd.rate_units);
-    stmt.bindDouble(2, cd.feed_rate);
-    stmt.bindDouble(3, cd.plunge_rate);
-    stmt.bindInt(4, cd.spindle_speed);
-    stmt.bindInt(5, cd.spindle_dir);
-    stmt.bindDouble(6, cd.stepdown);
-    stmt.bindDouble(7, cd.stepover);
-    stmt.bindDouble(8, cd.clear_stepover);
-    stmt.bindDouble(9, cd.thread_depth);
-    stmt.bindDouble(10, cd.thread_step_in);
-    stmt.bindDouble(11, cd.laser_power);
-    stmt.bindInt(12, cd.laser_passes);
-    stmt.bindDouble(13, cd.laser_burn_rate);
-    stmt.bindDouble(14, cd.line_width);
-    stmt.bindInt(15, cd.length_units);
-    stmt.bindInt(16, cd.tool_number);
-    stmt.bindInt(17, cd.laser_kerf);
-    stmt.bindText(18, cd.notes);
-    stmt.bindText(19, cd.id);
+    (void)stmt.bindInt(1, cd.rate_units);
+    (void)stmt.bindDouble(2, cd.feed_rate);
+    (void)stmt.bindDouble(3, cd.plunge_rate);
+    (void)stmt.bindInt(4, cd.spindle_speed);
+    (void)stmt.bindInt(5, cd.spindle_dir);
+    (void)stmt.bindDouble(6, cd.stepdown);
+    (void)stmt.bindDouble(7, cd.stepover);
+    (void)stmt.bindDouble(8, cd.clear_stepover);
+    (void)stmt.bindDouble(9, cd.thread_depth);
+    (void)stmt.bindDouble(10, cd.thread_step_in);
+    (void)stmt.bindDouble(11, cd.laser_power);
+    (void)stmt.bindInt(12, cd.laser_passes);
+    (void)stmt.bindDouble(13, cd.laser_burn_rate);
+    (void)stmt.bindDouble(14, cd.line_width);
+    (void)stmt.bindInt(15, cd.length_units);
+    (void)stmt.bindInt(16, cd.tool_number);
+    (void)stmt.bindInt(17, cd.laser_kerf);
+    (void)stmt.bindText(18, cd.notes);
+    (void)stmt.bindText(19, cd.id);
     return stmt.execute();
 }
 
@@ -598,14 +598,14 @@ bool ToolDatabase::insertEntity(const VtdbToolEntity& e) {
         VALUES (?, ?, ?, ?, ?)
     )");
     if (!stmt.isValid()) return false;
-    stmt.bindText(1, id);
+    (void)stmt.bindText(1, id);
     if (e.material_id.empty())
-        stmt.bindNull(2);
+        (void)stmt.bindNull(2);
     else
-        stmt.bindText(2, e.material_id);
-    stmt.bindText(3, e.machine_id);
-    stmt.bindText(4, e.tool_geometry_id);
-    stmt.bindText(5, e.tool_cutting_data_id);
+        (void)stmt.bindText(2, e.material_id);
+    (void)stmt.bindText(3, e.machine_id);
+    (void)stmt.bindText(4, e.tool_geometry_id);
+    (void)stmt.bindText(5, e.tool_cutting_data_id);
     return stmt.execute();
 }
 
@@ -661,22 +661,22 @@ bool ToolDatabase::insertTreeEntry(const VtdbTreeEntry& te) {
         VALUES (?, ?, ?, ?, ?, ?, ?)
     )");
     if (!stmt.isValid()) return false;
-    stmt.bindText(1, id);
+    (void)stmt.bindText(1, id);
     if (te.parent_group_id.empty())
-        stmt.bindNull(2);
+        (void)stmt.bindNull(2);
     else
-        stmt.bindText(2, te.parent_group_id);
-    stmt.bindInt(3, te.sibling_order);
+        (void)stmt.bindText(2, te.parent_group_id);
+    (void)stmt.bindInt(3, te.sibling_order);
     if (te.tool_geometry_id.empty())
-        stmt.bindNull(4);
+        (void)stmt.bindNull(4);
     else
-        stmt.bindText(4, te.tool_geometry_id);
+        (void)stmt.bindText(4, te.tool_geometry_id);
     if (te.name.empty())
-        stmt.bindNull(5);
+        (void)stmt.bindNull(5);
     else
-        stmt.bindText(5, te.name);
-    stmt.bindText(6, te.notes);
-    stmt.bindInt(7, te.expanded);
+        (void)stmt.bindText(5, te.name);
+    (void)stmt.bindText(6, te.notes);
+    (void)stmt.bindInt(7, te.expanded);
     return stmt.execute();
 }
 
@@ -748,21 +748,21 @@ bool ToolDatabase::updateTreeEntry(const VtdbTreeEntry& te) {
     )");
     if (!stmt.isValid()) return false;
     if (te.parent_group_id.empty())
-        stmt.bindNull(1);
+        (void)stmt.bindNull(1);
     else
-        stmt.bindText(1, te.parent_group_id);
-    stmt.bindInt(2, te.sibling_order);
+        (void)stmt.bindText(1, te.parent_group_id);
+    (void)stmt.bindInt(2, te.sibling_order);
     if (te.tool_geometry_id.empty())
-        stmt.bindNull(3);
+        (void)stmt.bindNull(3);
     else
-        stmt.bindText(3, te.tool_geometry_id);
+        (void)stmt.bindText(3, te.tool_geometry_id);
     if (te.name.empty())
-        stmt.bindNull(4);
+        (void)stmt.bindNull(4);
     else
-        stmt.bindText(4, te.name);
-    stmt.bindText(5, te.notes);
-    stmt.bindInt(6, te.expanded);
-    stmt.bindText(7, te.id);
+        (void)stmt.bindText(4, te.name);
+    (void)stmt.bindText(5, te.notes);
+    (void)stmt.bindInt(6, te.expanded);
+    (void)stmt.bindText(7, te.id);
     return stmt.execute();
 }
 
@@ -803,9 +803,9 @@ std::optional<VtdbToolView> ToolDatabase::getToolView(const std::string& geomId,
         "(material_id = ? OR material_id IS NULL) AND machine_id = ? "
         "ORDER BY material_id DESC LIMIT 1");
     if (!stmt.isValid()) return std::nullopt;
-    stmt.bindText(1, geomId);
-    stmt.bindText(2, materialId);
-    stmt.bindText(3, machineId);
+    (void)stmt.bindText(1, geomId);
+    (void)stmt.bindText(2, materialId);
+    (void)stmt.bindText(3, machineId);
 
     if (!stmt.step()) return std::nullopt;
 
