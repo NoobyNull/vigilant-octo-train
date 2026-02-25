@@ -88,11 +88,13 @@ set(DW_SOURCES
     # G-code
     core/gcode/gcode_parser.cpp
     core/gcode/gcode_analyzer.cpp
+    core/gcode/gcode_modal_scanner.cpp
     core/gcode/machine_profile.cpp
 
     # CNC Controller (multi-firmware support)
     core/cnc/serial_port.cpp
     core/cnc/cnc_controller.cpp
+    core/cnc/preflight_check.cpp
     core/cnc/tool_calculator.cpp
 
     # Optimizer

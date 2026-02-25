@@ -57,6 +57,7 @@ set(DW_TEST_SOURCES
     # CNC Controller (multi-firmware support)
     test_serial_port.cpp
     test_cnc_controller.cpp
+    test_gcode_modal_scanner.cpp
     test_tool_database.cpp
     test_tool_calculator.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
@@ -86,9 +87,11 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/loaders/loader_factory.cpp
     ${CMAKE_SOURCE_DIR}/src/core/gcode/gcode_parser.cpp
     ${CMAKE_SOURCE_DIR}/src/core/gcode/gcode_analyzer.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/gcode/gcode_modal_scanner.cpp
     ${CMAKE_SOURCE_DIR}/src/core/gcode/machine_profile.cpp
     ${CMAKE_SOURCE_DIR}/src/core/cnc/serial_port.cpp
     ${CMAKE_SOURCE_DIR}/src/core/cnc/cnc_controller.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/cnc/preflight_check.cpp
     ${CMAKE_SOURCE_DIR}/src/core/cnc/tool_calculator.cpp
     ${CMAKE_SOURCE_DIR}/src/core/optimizer/cut_optimizer.cpp
     ${CMAKE_SOURCE_DIR}/src/core/optimizer/bin_packer.cpp
