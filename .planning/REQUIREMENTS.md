@@ -1,7 +1,7 @@
-# Requirements: Digital Workshop — CNC Controller Suite
+# Requirements: Digital Workshop -- CNC Controller Suite
 
 **Defined:** 2026-02-24
-**Core Value:** A woodworker can go from selecting a piece of wood and a cutting tool to safely running a CNC job with optimized feeds and speeds — all without leaving the application.
+**Core Value:** A woodworker can go from selecting a piece of wood and a cutting tool to safely running a CNC job with optimized feeds and speeds -- all without leaving the application.
 
 ## v1 Requirements
 
@@ -98,45 +98,45 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FND-01 | Phase 1 | Pending |
-| FND-02 | Phase 1 | Pending |
-| FND-03 | Phase 1 | Pending |
-| FND-04 | Phase 1 | Pending |
-| CUI-01 | Phase 2 | Pending |
-| CUI-02 | Phase 2 | Pending |
-| CUI-03 | Phase 2 | Pending |
-| CUI-04 | Phase 2 | Pending |
-| CUI-05 | Phase 2 | Pending |
-| CUI-06 | Phase 2 | Pending |
-| CUI-07 | Phase 2 | Pending |
-| CUI-08 | Phase 2 | Pending |
-| CUI-09 | Phase 2 | Pending |
-| CUI-10 | Phase 2 | Pending |
-| TAC-01 | Phase 3 | Pending |
-| TAC-02 | Phase 3 | Pending |
-| TAC-03 | Phase 3 | Pending |
-| TAC-04 | Phase 3 | Pending |
-| TAC-05 | Phase 3 | Pending |
-| TAC-06 | Phase 3 | Pending |
-| TAC-07 | Phase 3 | Pending |
-| TAC-08 | Phase 3 | Pending |
-| SAF-01 | Phase 4 | Pending |
-| SAF-02 | Phase 4 | Pending |
-| SAF-03 | Phase 4 | Pending |
-| SAF-04 | Phase 4 | Pending |
-| SAF-05 | Phase 4 | Pending |
-| SAF-06 | Phase 4 | Pending |
-| SAF-07 | Phase 4 | Pending |
-| FWC-01 | Phase 5 | Pending |
-| FWC-02 | Phase 5 | Pending |
-| FWC-03 | Phase 5 | Pending |
-| FWC-04 | Phase 5 | Pending |
-| FWC-05 | Phase 5 | Pending |
-| FWC-06 | Phase 5 | Pending |
-| FWC-07 | Phase 5 | Pending |
-| FWC-08 | Phase 6 | Pending |
-| FWC-09 | Phase 6 | Pending |
-| FWC-10 | Phase 6 | Pending |
+| FND-01 | Phase 1: Fix Foundation | Pending |
+| FND-02 | Phase 1: Fix Foundation | Pending |
+| FND-03 | Phase 1: Fix Foundation | Pending |
+| FND-04 | Phase 1: Fix Foundation | Pending |
+| CUI-01 | Phase 2: Status Display | Pending |
+| CUI-02 | Phase 2: Status Display | Pending |
+| CUI-03 | Phase 2: Status Display | Pending |
+| CUI-04 | Phase 3: Manual Control | Pending |
+| CUI-05 | Phase 3: Manual Control | Pending |
+| CUI-06 | Phase 3: Manual Control | Pending |
+| CUI-07 | Phase 3: Manual Control | Pending |
+| CUI-08 | Phase 3: Manual Control | Pending |
+| CUI-09 | Phase 3: Manual Control | Pending |
+| CUI-10 | Phase 3: Manual Control | Pending |
+| TAC-01 | Phase 4: Tool Integration | Pending |
+| TAC-02 | Phase 4: Tool Integration | Pending |
+| TAC-03 | Phase 4: Tool Integration | Pending |
+| TAC-04 | Phase 5: Job Streaming | Pending |
+| TAC-05 | Phase 5: Job Streaming | Pending |
+| TAC-06 | Phase 5: Job Streaming | Pending |
+| TAC-07 | Phase 5: Job Streaming | Pending |
+| TAC-08 | Phase 5: Job Streaming | Pending |
+| SAF-01 | Phase 6: Job Safety | Pending |
+| SAF-02 | Phase 6: Job Safety | Pending |
+| SAF-03 | Phase 6: Job Safety | Pending |
+| SAF-04 | Phase 6: Job Safety | Pending |
+| SAF-05 | Phase 6: Job Safety | Pending |
+| SAF-06 | Phase 6: Job Safety | Pending |
+| SAF-07 | Phase 6: Job Safety | Pending |
+| FWC-01 | Phase 7: Firmware Settings | Pending |
+| FWC-02 | Phase 7: Firmware Settings | Pending |
+| FWC-03 | Phase 7: Firmware Settings | Pending |
+| FWC-04 | Phase 7: Firmware Settings | Pending |
+| FWC-05 | Phase 7: Firmware Settings | Pending |
+| FWC-06 | Phase 7: Firmware Settings | Pending |
+| FWC-07 | Phase 7: Firmware Settings | Pending |
+| FWC-08 | Phase 8: Macros | Pending |
+| FWC-09 | Phase 8: Macros | Pending |
+| FWC-10 | Phase 8: Macros | Pending |
 
 **Coverage:**
 - v1 requirements: 39 total
@@ -145,4 +145,4 @@ Deferred to future release. Tracked but not in current roadmap.
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after initial definition*
+*Last updated: 2026-02-24 after roadmap creation (8-phase structure)*
