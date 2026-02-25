@@ -55,6 +55,14 @@ constexpr const char* ICON_ASSIGN = "\xef\x87\x87";     // f1c7 link (chain)
 constexpr const char* ICON_WAND = "\xef\x83\x90";       // f0d0 wand-magic-sparkles
 constexpr const char* ICON_PAINTBRUSH = "\xef\x87\xbc"; // f1fc paintbrush
 
+// Jog / navigation arrows
+constexpr const char* ICON_ARROW_UP = "\xef\x81\xa2";    // f062 arrow-up
+constexpr const char* ICON_ARROW_DOWN = "\xef\x81\xa3";  // f063 arrow-down
+constexpr const char* ICON_ARROW_LEFT = "\xef\x81\xa0";  // f060 arrow-left
+constexpr const char* ICON_ARROW_RIGHT = "\xef\x81\xa1"; // f061 arrow-right
+constexpr const char* ICON_HOME = "\xef\x80\x95";        // f015 house
+constexpr const char* ICON_LOCK_OPEN = "\xef\x82\x9c";   // f09c lock-open
+
 // Playback / sender
 constexpr const char* ICON_PLAY = "\xef\x81\x8b";       // f04b play
 constexpr const char* ICON_PAUSE = "\xef\x81\x8c";      // f04c pause
@@ -100,6 +108,12 @@ struct Icons {
     static constexpr const char* Assign = icons::ICON_ASSIGN;
     static constexpr const char* Wand = icons::ICON_WAND;
     static constexpr const char* Paintbrush = icons::ICON_PAINTBRUSH;
+    static constexpr const char* ArrowUp = icons::ICON_ARROW_UP;
+    static constexpr const char* ArrowDown = icons::ICON_ARROW_DOWN;
+    static constexpr const char* ArrowLeft = icons::ICON_ARROW_LEFT;
+    static constexpr const char* ArrowRight = icons::ICON_ARROW_RIGHT;
+    static constexpr const char* Home = icons::ICON_HOME;
+    static constexpr const char* LockOpen = icons::ICON_LOCK_OPEN;
     static constexpr const char* Play = icons::ICON_PLAY;
     static constexpr const char* Pause = icons::ICON_PAUSE;
     static constexpr const char* Stop = icons::ICON_STOP;
