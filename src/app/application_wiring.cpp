@@ -590,7 +590,8 @@ void Application::initWiring() {
         cncCb.onLineAcked = [gcp](const LineAck& ack) {
             gcp->onGrblLineAcked(ack);
         };
-        cncCb.onProgressUpdate = [gcp, jobp, safetyp](const StreamProgress& progress) {
+        cncCb.onProgressUpdate =
+            [gcp, jobp, safetyp](const StreamProgress& progress) {
             gcp->onGrblProgress(progress);
             bool streaming = (progress.totalLines > 0 &&
                               progress.ackedLines < progress.totalLines);
@@ -600,6 +601,9 @@ void Application::initWiring() {
             }
             if (safetyp) {
                 safetyp->setStreaming(streaming);
+                // Push program to safety panel for resume feature
+                if (!safetyp->hasProgram() && gcp->hasGCode())
+                    safetyp->setProgram(gcp->getRawLines());
             }
         };
         cncCb.onAlarm = [gcp, conp](int code, const std::string& desc) {

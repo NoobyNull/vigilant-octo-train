@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "../../core/cnc/cnc_types.h"
+#include "../../core/cnc/preflight_check.h"
 #include "panel.h"
 
 namespace dw {
@@ -38,6 +39,7 @@ class CncSafetyPanel : public Panel {
     void renderSafetyControls();
     void renderSensorDisplay();
     void renderAbortConfirmDialog();
+    void renderResumeDialog();
 
     CncController* m_cnc = nullptr;
     MachineStatus m_status{};
@@ -45,8 +47,17 @@ class CncSafetyPanel : public Panel {
     bool m_streaming = false;
     bool m_showAbortConfirm = false;
 
-    // Program lines cached for resume-from-line feature (Plan 04)
+    // Program lines cached for resume-from-line feature
     std::vector<std::string> m_fullProgram;
+
+    // Resume-from-line state
+    bool m_showResumeDialog = false;
+    int m_resumeLine = 1;                     // 1-based for user display
+    std::vector<std::string> m_preambleLines; // Generated preamble preview
+    bool m_preambleGenerated = false;
+
+    // Pre-flight state for resume dialog
+    std::vector<PreflightIssue> m_preflightIssues;
 };
 
 } // namespace dw

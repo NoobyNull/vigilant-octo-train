@@ -1,11 +1,14 @@
 #include "ui/panels/cnc_safety_panel.h"
 
+#include <cstdio>
 #include <string>
 
 #include <imgui.h>
 
 #include "core/cnc/cnc_controller.h"
 #include "core/cnc/cnc_types.h"
+#include "core/cnc/preflight_check.h"
+#include "core/gcode/gcode_modal_scanner.h"
 #include "ui/icons.h"
 #include "ui/theme.h"
 
@@ -26,6 +29,7 @@ void CncSafetyPanel::render() {
     ImGui::Separator();
     renderSensorDisplay();
     renderAbortConfirmDialog();
+    renderResumeDialog();
 
     ImGui::End();
 }
@@ -107,9 +111,25 @@ void CncSafetyPanel::renderSafetyControls() {
     if (!canAbort)
         ImGui::EndDisabled();
 
+    // --- Resume From Line button ---
+    ImGui::Spacing();
+    bool canResumeFromLine = m_connected && !m_streaming && hasProgram();
+    if (!canResumeFromLine)
+        ImGui::BeginDisabled();
+    if (ImGui::Button("Resume From Line...", ImVec2(-1, 0))) {
+        m_showResumeDialog = true;
+        m_preambleGenerated = false;
+        m_preambleLines.clear();
+        m_preflightIssues.clear();
+        m_resumeLine = 1;
+    }
+    if (!canResumeFromLine)
+        ImGui::EndDisabled();
+
     // Safety note
     ImGui::Spacing();
-    ImGui::TextDisabled("Software stop only -- ensure hardware E-stop is accessible");
+    ImGui::TextDisabled(
+        "Software stop only -- ensure hardware E-stop is accessible");
 }
 
 void CncSafetyPanel::renderAbortConfirmDialog() {
@@ -187,6 +207,162 @@ void CncSafetyPanel::renderSensorDisplay() {
     // Door (yellow when active)
     ImVec4 doorColor(1.0f, 0.8f, 0.2f, 1.0f);
     pinIndicator("Door", cnc::PIN_DOOR, doorColor);
+}
+
+void CncSafetyPanel::renderResumeDialog() {
+    if (m_showResumeDialog) {
+        ImGui::OpenPopup("Resume From Line");
+        m_showResumeDialog = false;
+    }
+
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(480, 0), ImGuiCond_Appearing);
+
+    if (!ImGui::BeginPopupModal("Resume From Line", nullptr,
+                                 ImGuiWindowFlags_AlwaysAutoResize))
+        return;
+
+    int totalLines = static_cast<int>(m_fullProgram.size());
+
+    // --- Line number input ---
+    ImGui::Text("Line number:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(120);
+    if (ImGui::InputInt("##resumeline", &m_resumeLine)) {
+        // Clamp to valid range
+        if (m_resumeLine < 1) m_resumeLine = 1;
+        if (m_resumeLine > totalLines) m_resumeLine = totalLines;
+        m_preambleGenerated = false; // Reset on line change
+    }
+    ImGui::SameLine();
+    ImGui::TextDisabled("of %d lines", totalLines);
+
+    ImGui::Spacing();
+
+    // --- Generate Preamble button ---
+    if (ImGui::Button("Generate Preamble", ImVec2(-1, 0))) {
+        // Convert 1-based display to 0-based for scanner
+        auto state = GCodeModalScanner::scanToLine(
+            m_fullProgram, m_resumeLine - 1);
+        m_preambleLines = state.toPreamble();
+        m_preambleGenerated = true;
+
+        // Run pre-flight checks
+        if (m_cnc) {
+            m_preflightIssues = runPreflightChecks(
+                *m_cnc, false, false);
+        }
+    }
+
+    // --- Preamble preview ---
+    if (m_preambleGenerated) {
+        ImGui::Spacing();
+        ImGui::SeparatorText("Modal State Preamble");
+        ImGui::TextDisabled(
+            "%d lines will be sent before resuming:",
+            static_cast<int>(m_preambleLines.size()));
+
+        ImGui::PushStyleColor(ImGuiCol_ChildBg,
+                              ImVec4(0.12f, 0.12f, 0.12f, 1.0f));
+        if (ImGui::BeginChild("##preamble", ImVec2(-1, 120), true)) {
+            for (const auto& line : m_preambleLines) {
+                ImGui::TextUnformatted(line.c_str());
+            }
+        }
+        ImGui::EndChild();
+        ImGui::PopStyleColor();
+
+        ImGui::TextDisabled(
+            "These commands restore machine state to line %d",
+            m_resumeLine);
+    }
+
+    // --- Pre-flight check results ---
+    bool hasErrors = false;
+    if (m_preambleGenerated && !m_preflightIssues.empty()) {
+        ImGui::Spacing();
+        ImGui::SeparatorText("Pre-flight Checks");
+        for (const auto& issue : m_preflightIssues) {
+            if (issue.severity == PreflightIssue::Error) {
+                hasErrors = true;
+                ImGui::TextColored(
+                    ImVec4(1.0f, 0.3f, 0.3f, 1.0f),
+                    "%s %s", Icons::Error, issue.message.c_str());
+            } else {
+                ImGui::TextColored(
+                    ImVec4(1.0f, 0.8f, 0.2f, 1.0f),
+                    "%s %s", Icons::Warning, issue.message.c_str());
+            }
+        }
+    }
+
+    // --- Warning text ---
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f),
+                       "%s CAUTION", Icons::Warning);
+    ImGui::TextWrapped(
+        "Resuming from an arbitrary line is inherently risky. "
+        "Verify the preamble restores correct machine state "
+        "before proceeding.");
+    ImGui::TextWrapped(
+        "Arc commands (G2/G3) at the resume point may not "
+        "execute correctly.");
+
+    // --- Action buttons ---
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // Resume button (green, only when preamble generated and no errors)
+    bool canResume = m_preambleGenerated && !hasErrors;
+    if (!canResume)
+        ImGui::BeginDisabled();
+
+    ImGui::PushStyleColor(ImGuiCol_Button,
+                          ImVec4(0.2f, 0.7f, 0.3f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
+                          ImVec4(0.3f, 0.8f, 0.4f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,
+                          ImVec4(0.15f, 0.6f, 0.25f, 1.0f));
+
+    if (ImGui::Button("Resume", ImVec2(120, 0))) {
+        // Build combined program: preamble + remaining lines
+        std::vector<std::string> combined;
+        combined.reserve(
+            m_preambleLines.size() +
+            m_fullProgram.size() - static_cast<size_t>(m_resumeLine - 1));
+
+        for (const auto& line : m_preambleLines)
+            combined.push_back(line);
+
+        for (int i = m_resumeLine - 1;
+             i < static_cast<int>(m_fullProgram.size()); ++i) {
+            combined.push_back(m_fullProgram[static_cast<size_t>(i)]);
+        }
+
+        if (m_cnc)
+            m_cnc->startStream(combined);
+
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::PopStyleColor(3);
+    if (!canResume)
+        ImGui::EndDisabled();
+
+    ImGui::SameLine();
+
+    // Cancel button
+    if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        m_preambleGenerated = false;
+        m_preambleLines.clear();
+        m_preflightIssues.clear();
+        ImGui::CloseCurrentPopup();
+    }
+
+    ImGui::EndPopup();
 }
 
 void CncSafetyPanel::onStatusUpdate(const MachineStatus& status) {

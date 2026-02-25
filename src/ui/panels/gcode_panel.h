@@ -57,6 +57,9 @@ class GCodePanel : public Panel {
     void clear();
     bool hasGCode() const { return m_program.commands.size() > 0; }
 
+    // Get raw G-code lines for resume-from-line feature
+    std::vector<std::string> getRawLines() const;
+
     // Called by application_wiring to push GRBL events into the panel
     void onGrblConnected(bool connected, const std::string& version);
     void onGrblStatus(const MachineStatus& status);

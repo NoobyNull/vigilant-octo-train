@@ -9,6 +9,7 @@
 #include "../../core/config/config.h"
 #include "../../core/database/gcode_repository.h"
 #include "../../core/cnc/cnc_controller.h"
+#include "../../core/cnc/preflight_check.h"
 #include "../../core/project/project.h"
 #include "../../core/cnc/serial_port.h"
 #include "../../core/utils/file_utils.h"
@@ -1216,18 +1217,49 @@ void GCodePanel::addConsoleLine(const std::string& text, ConsoleLine::Type type)
         m_consoleLines.pop_front();
 }
 
+std::vector<std::string> GCodePanel::getRawLines() const {
+    std::vector<std::string> lines;
+    for (const auto& cmd : m_program.commands) {
+        lines.push_back(cmd.raw);
+    }
+    return lines;
+}
+
 void GCodePanel::buildSendProgram() {
     if (!m_cnc || !hasGCode())
         return;
+
+    // Run pre-flight checks before streaming
+    auto issues = runPreflightChecks(*m_cnc, false, false);
+    bool hasErrors = false;
+    for (const auto& issue : issues) {
+        if (issue.severity == PreflightIssue::Error) {
+            hasErrors = true;
+            addConsoleLine(
+                "PRE-FLIGHT ERROR: " + issue.message,
+                ConsoleLine::Error);
+        }
+    }
+    if (hasErrors)
+        return;
+
+    // Show warnings but proceed
+    for (const auto& issue : issues) {
+        if (issue.severity == PreflightIssue::Warning)
+            addConsoleLine(
+                "WARNING: " + issue.message, ConsoleLine::Info);
+    }
 
     // Extract raw command lines, skip blanks and comments
     std::vector<std::string> lines;
     for (const auto& cmd : m_program.commands) {
         std::string cmdLine = cmd.raw;
         // Strip whitespace
-        while (!cmdLine.empty() && (cmdLine.back() == ' ' || cmdLine.back() == '\r'))
+        while (!cmdLine.empty() &&
+               (cmdLine.back() == ' ' || cmdLine.back() == '\r'))
             cmdLine.pop_back();
-        if (cmdLine.empty() || cmdLine.front() == ';' || cmdLine.front() == '(')
+        if (cmdLine.empty() ||
+            cmdLine.front() == ';' || cmdLine.front() == '(')
             continue;
         // Strip inline comments
         auto semi = cmdLine.find(';');
@@ -1239,7 +1271,9 @@ void GCodePanel::buildSendProgram() {
     m_lastAckedLine = -1;
     m_streamProgress = {};
     m_cnc->startStream(lines);
-    addConsoleLine("Streaming " + std::to_string(lines.size()) + " lines", ConsoleLine::Info);
+    addConsoleLine(
+        "Streaming " + std::to_string(lines.size()) + " lines",
+        ConsoleLine::Info);
 }
 
 } // namespace dw
