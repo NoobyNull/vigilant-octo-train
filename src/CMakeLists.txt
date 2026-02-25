@@ -97,6 +97,7 @@ set(DW_SOURCES
     core/cnc/preflight_check.cpp
     core/cnc/tool_calculator.cpp
     core/cnc/grbl_settings.cpp
+    core/cnc/macro_manager.cpp
 
     # Optimizer
     core/optimizer/cut_optimizer.cpp
