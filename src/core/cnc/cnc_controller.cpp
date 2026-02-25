@@ -38,6 +38,7 @@ bool CncController::connect(const std::string& device, int baudRate) {
 void CncController::disconnect() {
     m_running = false;
     m_streaming = false;
+    m_errorState = false;
 
     if (m_ioThread.joinable())
         m_ioThread.join();
@@ -65,6 +66,15 @@ void CncController::disconnect() {
 }
 
 void CncController::startStream(const std::vector<std::string>& lines) {
+    if (m_errorState) {
+        log::error("CNC", "Cannot start stream while in error state -- call acknowledgeError() first");
+        if (m_mtq && m_callbacks.onError) {
+            m_mtq->enqueue([cb = m_callbacks.onError]() {
+                cb("Cannot start new job: previous streaming error must be acknowledged first");
+            });
+        }
+        return;
+    }
     std::lock_guard<std::mutex> lock(m_streamMutex);
     m_program = lines;
     m_sendIndex = 0;
@@ -75,6 +85,11 @@ void CncController::startStream(const std::vector<std::string>& lines) {
     m_held = false;
     m_streamStartTime = std::chrono::steady_clock::now();
     m_streaming = true;
+}
+
+void CncController::acknowledgeError() {
+    m_errorState = false;
+    log::info("CNC", "Streaming error acknowledged by operator");
 }
 
 void CncController::stopStream() {
@@ -99,6 +114,7 @@ void CncController::softReset() {
     m_pendingRtCommands.fetch_or(RT_SOFT_RESET, std::memory_order_release);
     m_streaming = false;
     m_held = false;
+    m_errorState = false; // Explicit reset clears error state
     {
         std::lock_guard<std::mutex> lock(m_streamMutex);
         m_sentLengths.clear();
@@ -326,6 +342,44 @@ void CncController::processResponse(const std::string& line) {
             } catch (...) {}
             ack.errorMessage = errorDescription(ack.errorCode);
             m_errorCount++;
+
+            if (m_streaming) {
+                // CRITICAL SAFETY: Issue soft reset to flush GRBL's RX buffer.
+                // Without this, buffered commands continue executing in potentially
+                // incorrect machine state after the error.
+                m_pendingRtCommands.fetch_or(RT_SOFT_RESET, std::memory_order_release);
+
+                // Capture error details before clearing state
+                StreamingError streamErr;
+                streamErr.lineIndex = ack.lineIndex;
+                streamErr.errorCode = ack.errorCode;
+                streamErr.errorMessage = ack.errorMessage;
+                if (ack.lineIndex >= 0 && ack.lineIndex < static_cast<int>(m_program.size()))
+                    streamErr.failedLine = m_program[ack.lineIndex];
+                streamErr.linesInFlight = static_cast<int>(m_sentLengths.size());
+
+                // Stop streaming and clear buffer accounting
+                m_streaming = false;
+                m_held = false;
+                m_sentLengths.clear();
+                m_bufferUsed = 0;
+
+                // Enter error state -- requires acknowledgment before new operations
+                m_errorState = true;
+
+                // Notify UI with detailed error report
+                if (m_mtq && m_callbacks.onStreamingError) {
+                    m_mtq->enqueue([cb = m_callbacks.onStreamingError, streamErr]() {
+                        cb(streamErr);
+                    });
+                }
+
+                // Also fire the line ack callback so UI can track the specific line
+                if (m_mtq && m_callbacks.onLineAcked) {
+                    m_mtq->enqueue([cb = m_callbacks.onLineAcked, ack]() { cb(ack); });
+                }
+                return; // Don't process further -- stream is terminated
+            }
         }
 
         m_ackIndex++;

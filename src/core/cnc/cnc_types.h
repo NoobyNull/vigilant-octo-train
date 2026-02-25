@@ -51,6 +51,15 @@ struct StreamProgress {
     f32 elapsedSeconds = 0.0f;
 };
 
+// Detailed streaming error report (when error occurs during character-counting streaming)
+struct StreamingError {
+    int lineIndex = -1;           // Which program line failed
+    int errorCode = 0;            // GRBL error code
+    std::string errorMessage;     // Human-readable description
+    std::string failedLine;       // The actual G-code line that failed
+    int linesInFlight = 0;        // How many lines were buffered in GRBL when error occurred
+};
+
 // GRBL alarm descriptions
 inline const char* alarmDescription(int code) {
     switch (code) {
@@ -126,6 +135,7 @@ struct CncCallbacks {
     std::function<void(const StreamProgress& progress)> onProgressUpdate;
     std::function<void(int alarmCode, const std::string& desc)> onAlarm;
     std::function<void(const std::string& message)> onError;
+    std::function<void(const StreamingError& error)> onStreamingError;
     std::function<void(const std::string& line, bool isSent)> onRawLine;
 };
 

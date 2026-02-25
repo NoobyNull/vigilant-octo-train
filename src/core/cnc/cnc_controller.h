@@ -52,6 +52,10 @@ class CncController {
     const MachineStatus& lastStatus() const { return m_lastStatus; }
     StreamProgress streamProgress() const;
 
+    // Error state — set after streaming error, requires acknowledgment
+    bool isInErrorState() const { return m_errorState.load(); }
+    void acknowledgeError();
+
     // Parse a GRBL status report string (public for testing)
     static MachineStatus parseStatusReport(const std::string& report);
     static MachineState parseState(const std::string& stateStr);
@@ -103,6 +107,7 @@ class CncController {
     int m_bufferUsed = 0;                      // Bytes currently in GRBL's RX buffer
     std::atomic<bool> m_streaming{false};
     std::atomic<bool> m_held{false};           // Feed hold active
+    std::atomic<bool> m_errorState{false};     // Streaming error requires acknowledgment
     int m_errorCount = 0;
 
     // Status polling and disconnect detection
