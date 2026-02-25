@@ -52,6 +52,7 @@
 #include "ui/panels/cnc_wcs_panel.h"
 #include "ui/panels/cnc_tool_panel.h"
 #include "ui/panels/cnc_job_panel.h"
+#include "ui/panels/cnc_safety_panel.h"
 #include "ui/panels/tool_browser_panel.h"
 #include "ui/panels/viewport_panel.h"
 #include "ui/widgets/toast.h"
@@ -549,22 +550,31 @@ void Application::initWiring() {
         auto* wcsp = m_uiManager->cncWcsPanel();
         auto* jobp = m_uiManager->cncJobPanel();
         auto* ctp = m_uiManager->cncToolPanel();
+        auto* safetyp = m_uiManager->cncSafetyPanel();
 
         // Set CncController on new panels
         if (jogp) jogp->setCncController(m_cncController.get());
         if (conp) conp->setCncController(m_cncController.get());
         if (wcsp) wcsp->setCncController(m_cncController.get());
+        if (safetyp) safetyp->setCncController(m_cncController.get());
 
         CncCallbacks cncCb;
-        cncCb.onConnectionChanged = [gcp, csp, jogp, conp, wcsp, jobp](bool connected, const std::string& version) {
+        cncCb.onConnectionChanged =
+            [gcp, csp, jogp, conp, wcsp, jobp, safetyp](
+                bool connected, const std::string& version) {
             gcp->onGrblConnected(connected, version);
             if (csp) csp->onConnectionChanged(connected, version);
             if (jogp) jogp->onConnectionChanged(connected, version);
             if (conp) conp->onConnectionChanged(connected, version);
             if (wcsp) wcsp->onConnectionChanged(connected, version);
             if (jobp && !connected) jobp->setStreaming(false);
+            if (safetyp) safetyp->onConnectionChanged(connected, version);
+            if (safetyp && !connected) {
+                safetyp->setStreaming(false);
+                safetyp->setProgram({});
+            }
         };
-        cncCb.onStatusUpdate = [gcp, csp, jogp, wcsp, jobp, ctp](const MachineStatus& status) {
+        cncCb.onStatusUpdate = [gcp, csp, jogp, wcsp, jobp, ctp, safetyp](const MachineStatus& status) {
             gcp->onGrblStatus(status);
             if (csp) csp->onStatusUpdate(status);
             if (jogp) jogp->onStatusUpdate(status);
@@ -575,18 +585,21 @@ void Application::initWiring() {
                 if (ctp && ctp->hasCalcResult())
                     jobp->setRecommendedFeedRate(ctp->getRecommendedFeedRate());
             }
+            if (safetyp) safetyp->onStatusUpdate(status);
         };
         cncCb.onLineAcked = [gcp](const LineAck& ack) {
             gcp->onGrblLineAcked(ack);
         };
-        cncCb.onProgressUpdate = [gcp, jobp](const StreamProgress& progress) {
+        cncCb.onProgressUpdate = [gcp, jobp, safetyp](const StreamProgress& progress) {
             gcp->onGrblProgress(progress);
+            bool streaming = (progress.totalLines > 0 &&
+                              progress.ackedLines < progress.totalLines);
             if (jobp) {
                 jobp->onProgressUpdate(progress);
-                // Detect streaming state from progress data
-                bool streaming = (progress.totalLines > 0 &&
-                                  progress.ackedLines < progress.totalLines);
                 jobp->setStreaming(streaming);
+            }
+            if (safetyp) {
+                safetyp->setStreaming(streaming);
             }
         };
         cncCb.onAlarm = [gcp, conp](int code, const std::string& desc) {
