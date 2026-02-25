@@ -33,6 +33,7 @@
 #include "ui/panels/project_panel.h"
 #include "ui/panels/properties_panel.h"
 #include "ui/panels/start_page.h"
+#include "ui/panels/cnc_status_panel.h"
 #include "ui/panels/tool_browser_panel.h"
 #include "ui/panels/viewport_panel.h"
 #include "ui/widgets/status_bar.h"
@@ -68,6 +69,7 @@ void UIManager::init(LibraryManager* libraryManager,
     }
     m_startPage = std::make_unique<StartPage>();
     m_toolBrowserPanel = std::make_unique<ToolBrowserPanel>();
+    m_cncStatusPanel = std::make_unique<CncStatusPanel>();
 
     // Create dialogs
     m_fileDialog = std::make_unique<FileDialog>();
@@ -136,6 +138,7 @@ void UIManager::shutdown() {
     m_costPanel.reset();
     m_materialsPanel.reset();
     m_toolBrowserPanel.reset();
+    m_cncStatusPanel.reset();
     m_startPage.reset();
 }
 
@@ -199,6 +202,14 @@ void UIManager::renderViewMenu() {
     ImGui::MenuItem("Cost Estimator", nullptr, &m_showCostEstimator);
     ImGui::MenuItem("Materials", nullptr, &m_showMaterials);
     ImGui::MenuItem("Tool Browser", nullptr, &m_showToolBrowser);
+    ImGui::MenuItem("CNC Status", nullptr, &m_showCncStatus);
+    ImGui::Separator();
+    if (ImGui::MenuItem("Model Mode", "Ctrl+1", m_workspaceMode == WorkspaceMode::Model)) {
+        setWorkspaceMode(WorkspaceMode::Model);
+    }
+    if (ImGui::MenuItem("CNC Mode", "Ctrl+2", m_workspaceMode == WorkspaceMode::CNC)) {
+        setWorkspaceMode(WorkspaceMode::CNC);
+    }
     ImGui::Separator();
     if (ImGui::MenuItem("Lighting Settings", "Ctrl+L") && m_lightingDialog) {
         m_lightingDialog->open();
@@ -295,6 +306,14 @@ void UIManager::renderPanels() {
         if (!m_toolBrowserPanel->isOpen()) {
             m_showToolBrowser = false;
             m_toolBrowserPanel->setOpen(true);
+        }
+    }
+
+    if (m_showCncStatus && m_cncStatusPanel) {
+        m_cncStatusPanel->render();
+        if (!m_cncStatusPanel->isOpen()) {
+            m_showCncStatus = false;
+            m_cncStatusPanel->setOpen(true);
         }
     }
 
@@ -418,6 +437,14 @@ void UIManager::handleKeyboardShortcuts() {
 
     if (ImGui::IsKeyPressed(ImGuiKey_L) && m_lightingDialog) {
         m_lightingDialog->open();
+    }
+
+    // Workspace mode switching
+    if (ImGui::IsKeyPressed(ImGuiKey_1)) {
+        setWorkspaceMode(WorkspaceMode::Model);
+    }
+    if (ImGui::IsKeyPressed(ImGuiKey_2)) {
+        setWorkspaceMode(WorkspaceMode::CNC);
     }
 }
 
@@ -545,6 +572,27 @@ void UIManager::setImportCancelCallback(std::function<void()> callback) {
 void UIManager::showTaggerShutdownDialog(const TaggerProgress* progress) {
     if (m_taggerShutdownDialog)
         m_taggerShutdownDialog->open(progress);
+}
+
+void UIManager::setWorkspaceMode(WorkspaceMode mode) {
+    m_workspaceMode = mode;
+    if (mode == WorkspaceMode::CNC) {
+        // CNC mode: show CNC panels, hide model-oriented panels
+        m_showCncStatus = true;
+        m_showGCode = true;
+        m_showLibrary = false;
+        m_showProperties = false;
+        m_showMaterials = false;
+        m_showToolBrowser = false;
+        m_showCostEstimator = false;
+        m_showCutOptimizer = false;
+    } else {
+        // Model mode: restore standard layout
+        m_showCncStatus = false;
+        m_showGCode = false;
+        m_showLibrary = true;
+        m_showProperties = true;
+    }
 }
 
 } // namespace dw

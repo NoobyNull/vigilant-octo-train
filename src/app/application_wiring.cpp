@@ -46,6 +46,7 @@
 #include "ui/panels/project_panel.h"
 #include "ui/panels/properties_panel.h"
 #include "ui/panels/start_page.h"
+#include "ui/panels/cnc_status_panel.h"
 #include "ui/panels/tool_browser_panel.h"
 #include "ui/panels/viewport_panel.h"
 #include "ui/widgets/toast.h"
@@ -536,13 +537,16 @@ void Application::initWiring() {
         gcp->setCncController(m_cncController.get());
         gcp->setToolDatabase(m_toolDatabase.get());
 
-        // Wire CNC callbacks to update the gcode panel on the main thread
+        // Wire CNC callbacks to update both gcode panel and CNC status panel
+        auto* csp = m_uiManager->cncStatusPanel();
         CncCallbacks cncCb;
-        cncCb.onConnectionChanged = [gcp](bool connected, const std::string& version) {
+        cncCb.onConnectionChanged = [gcp, csp](bool connected, const std::string& version) {
             gcp->onGrblConnected(connected, version);
+            if (csp) csp->onConnectionChanged(connected, version);
         };
-        cncCb.onStatusUpdate = [gcp](const MachineStatus& status) {
+        cncCb.onStatusUpdate = [gcp, csp](const MachineStatus& status) {
             gcp->onGrblStatus(status);
+            if (csp) csp->onStatusUpdate(status);
         };
         cncCb.onLineAcked = [gcp](const LineAck& ack) {
             gcp->onGrblLineAcked(ack);

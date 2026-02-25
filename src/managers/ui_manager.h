@@ -17,6 +17,7 @@ using ImGuiID = unsigned int;
 namespace dw {
 
 // Forward declarations - panels
+class CncStatusPanel;
 class ViewportPanel;
 class LibraryPanel;
 class PropertiesPanel;
@@ -58,6 +59,9 @@ class StatusBar;
 class ContextMenuManager;
 
 // Callback types for actions that remain in Application
+// Workspace mode — controls which panels are visible by default
+enum class WorkspaceMode { Model, CNC };
+
 using ActionCallback = std::function<void()>;
 using ModelIdCallback = std::function<void(int64_t)>;
 using PathCallback = std::function<void(const Path&)>;
@@ -116,6 +120,7 @@ class UIManager {
     CostPanel* costPanel() { return m_costPanel.get(); }
     StartPage* startPage() { return m_startPage.get(); }
     ToolBrowserPanel* toolBrowserPanel() { return m_toolBrowserPanel.get(); }
+    CncStatusPanel* cncStatusPanel() { return m_cncStatusPanel.get(); }
     FileDialog* fileDialog() { return m_fileDialog.get(); }
     LightingDialog* lightingDialog() { return m_lightingDialog.get(); }
     ImportSummaryDialog* importSummaryDialog() { return m_importSummaryDialog.get(); }
@@ -136,7 +141,12 @@ class UIManager {
     bool& showCostEstimator() { return m_showCostEstimator; }
     bool& showMaterials() { return m_showMaterials; }
     bool& showToolBrowser() { return m_showToolBrowser; }
+    bool& showCncStatus() { return m_showCncStatus; }
     bool& showStartPage() { return m_showStartPage; }
+
+    // Workspace mode
+    WorkspaceMode workspaceMode() const { return m_workspaceMode; }
+    void setWorkspaceMode(WorkspaceMode mode);
     bool& showRestartPopup() { return m_showRestartPopup; }
 
     // --- Action callbacks (set by Application) ---
@@ -177,6 +187,7 @@ class UIManager {
     std::unique_ptr<CostPanel> m_costPanel;
     std::unique_ptr<StartPage> m_startPage;
     std::unique_ptr<ToolBrowserPanel> m_toolBrowserPanel;
+    std::unique_ptr<CncStatusPanel> m_cncStatusPanel;
 
     // Panel visibility
     bool m_showViewport = true;
@@ -188,7 +199,11 @@ class UIManager {
     bool m_showCostEstimator = false;
     bool m_showMaterials = false;
     bool m_showToolBrowser = false;
+    bool m_showCncStatus = false;
     bool m_showStartPage = true;
+
+    // Workspace mode
+    WorkspaceMode m_workspaceMode = WorkspaceMode::Model;
 
     // Dialogs
     std::unique_ptr<FileDialog> m_fileDialog;

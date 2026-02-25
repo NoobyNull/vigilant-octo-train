@@ -138,6 +138,7 @@ set(DW_SOURCES
     ui/panels/cut_optimizer_panel.cpp
     ui/panels/start_page.cpp
     ui/panels/tool_browser_panel.cpp
+    ui/panels/cnc_status_panel.cpp
 
     # UI Widgets
     ui/widgets/binding_recorder.cpp
