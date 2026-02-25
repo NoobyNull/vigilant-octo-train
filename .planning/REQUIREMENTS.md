@@ -32,11 +32,11 @@ Requirements for the CNC Controller Suite milestone. Each maps to roadmap phases
 - [x] **TAC-01**: User can select a tool geometry from the tool database to calculate cutting parameters
 - [x] **TAC-02**: Selected tool geometry + selected wood species auto-calculates optimal feeds/speeds via existing calculator (no physical tool change)
 - [x] **TAC-03**: Calculated cutting parameters (RPM, feed rate, plunge rate, stepdown, stepover) displayed in a reference panel for the operator to use
-- [ ] **TAC-04**: During streaming, running feed rate is compared to calculator recommendation with visual warning if >20% deviation
-- [ ] **TAC-05**: Job elapsed time displayed and updated during streaming
-- [ ] **TAC-06**: Estimated remaining time calculated from line progress and current feed rate
-- [ ] **TAC-07**: Current line number and total line count displayed during streaming
-- [ ] **TAC-08**: Job progress percentage displayed (current line / total lines)
+- [x] **TAC-04**: During streaming, running feed rate is compared to calculator recommendation with visual warning if >20% deviation
+- [x] **TAC-05**: Job elapsed time displayed and updated during streaming
+- [x] **TAC-06**: Estimated remaining time calculated from line progress and current feed rate
+- [x] **TAC-07**: Current line number and total line count displayed during streaming
+- [x] **TAC-08**: Job progress percentage displayed (current line / total lines)
 
 ### Safety & Recovery
 
@@ -115,11 +115,11 @@ Deferred to future release. Tracked but not in current roadmap.
 | TAC-01 | Phase 4: Tool Integration | Pending |
 | TAC-02 | Phase 4: Tool Integration | Pending |
 | TAC-03 | Phase 4: Tool Integration | Pending |
-| TAC-04 | Phase 5: Job Streaming | Pending |
-| TAC-05 | Phase 5: Job Streaming | Pending |
-| TAC-06 | Phase 5: Job Streaming | Pending |
-| TAC-07 | Phase 5: Job Streaming | Pending |
-| TAC-08 | Phase 5: Job Streaming | Pending |
+| TAC-04 | Phase 5: Job Streaming | Complete |
+| TAC-05 | Phase 5: Job Streaming | Complete |
+| TAC-06 | Phase 5: Job Streaming | Complete |
+| TAC-07 | Phase 5: Job Streaming | Complete |
+| TAC-08 | Phase 5: Job Streaming | Complete |
 | SAF-01 | Phase 6: Job Safety | Pending |
 | SAF-02 | Phase 6: Job Safety | Pending |
 | SAF-03 | Phase 6: Job Safety | Pending |

@@ -11,7 +11,7 @@
 - [x] **Phase 2: Status Display** - Real-time DRO showing position, machine state, feed rate, and spindle RPM (2026-02-24)
 - [x] **Phase 3: Manual Control** - Jog, homing, work zero, coordinate systems, and MDI console (2026-02-24)
 - [ ] **Phase 4: Tool Integration** - Connect tool database and material system to feeds/speeds calculator
-- [ ] **Phase 5: Job Streaming** - Progress tracking, time estimation, and feed rate deviation warnings
+- [x] **Phase 5: Job Streaming** - Progress tracking, time estimation, and feed rate deviation warnings (2026-02-24)
 - [ ] **Phase 6: Job Safety** - Pause, resume, e-stop, safe job resume, sensor display, and pre-flight checks
 - [ ] **Phase 7: Firmware Settings** - GRBL settings panel, backup/restore, machine tuning, and profile sync
 - [ ] **Phase 8: Macros** - Macro storage, execution, and built-in common operations
@@ -79,7 +79,9 @@
   1. During streaming, the running feed rate is compared to the calculator recommendation and a visual warning appears when deviation exceeds 20%
   2. Job elapsed time, estimated remaining time, current line number, total line count, and progress percentage are all displayed and update during streaming
   3. Time estimation adjusts based on current feed rate rather than showing a static estimate
-**Plans**: TBD
+**Plans:** 2 plans
+  - [x] 05-01-PLAN.md -- CncJobPanel with progress display, time estimation, line counts
+  - [x] 05-02-PLAN.md -- Feed deviation warning, UIManager integration, callback wiring
 
 ### Phase 6: Job Safety
 **Goal**: Operator can safely pause, stop, and resume jobs with confidence that the machine will not behave unexpectedly
@@ -121,8 +123,8 @@
 | 1. Fix Foundation | 3/3 | Complete | 2026-02-24 |
 | 2. Status Display | 2/2 | Complete | 2026-02-24 |
 | 3. Manual Control | 4/4 | Complete | 2026-02-24 |
-| 4. Tool Integration | 0/0 | Not started | - |
-| 5. Job Streaming | 0/0 | Not started | - |
+| 4. Tool Integration | 2/2 | Complete | 2026-02-24 |
+| 5. Job Streaming | 2/2 | Complete | 2026-02-24 |
 | 6. Job Safety | 0/0 | Not started | - |
 | 7. Firmware Settings | 0/0 | Not started | - |
 | 8. Macros | 0/0 | Not started | - |

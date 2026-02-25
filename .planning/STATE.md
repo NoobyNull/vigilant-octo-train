@@ -8,22 +8,22 @@
 
 ## Current Position
 
-**Phase:** 5 of 8 - Job Streaming
+**Phase:** 6 of 8 - Job Safety
 **Plan:** Not yet planned
 **Status:** Ready to plan
 
 ```
-Phase Progress: [####....] 4/8
+Phase Progress: [#####...] 5/8
 ```
 
 ## Performance Metrics
 
 | Metric | Value |
 |--------|-------|
-| Plans completed | 12 |
+| Plans completed | 14 |
 | Plans failed | 0 |
-| Requirements done | 17/39 |
-| Phases done | 4/8 |
+| Requirements done | 22/39 |
+| Phases done | 5/8 |
 
 ## Accumulated Context
 
@@ -45,6 +45,8 @@ Phase Progress: [####....] 4/8
 - EventBus for decoupled component communication
 - Character-counting streaming for GRBL protocol
 - Vectric .vtdb compatibility for tool database
+- CNC panels wired via CncCallbacks in application_wiring.cpp
+- Feed deviation uses override-aware comparison (accounts for feed override %)
 
 ### TODOs
 - (none yet)
@@ -54,9 +56,9 @@ Phase Progress: [####....] 4/8
 
 ## Session Continuity
 
-**Last session:** Phase 1 execution (Fix Foundation)
-**Next action:** Plan Phase 2 (Status Display)
-**Context to carry:** Phase 1 complete -- CncController now has thread-safe command dispatch, error-triggered soft reset, DTR suppression, and USB disconnect detection. SerialPort exposes ConnectionState enum.
+**Last session:** Phase 5 execution (Job Streaming)
+**Next action:** Plan Phase 6 (Job Safety)
+**Context to carry:** Phase 5 complete -- CncJobPanel provides full job progress visibility (elapsed/remaining time, line counts, progress %, feed deviation warning). CncToolPanel exposes calculator results via getters. Feed deviation is override-aware.
 
 ---
 *State initialized: 2026-02-24*
