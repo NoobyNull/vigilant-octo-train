@@ -110,9 +110,62 @@ void CncJobPanel::renderTimeInfo() {
 }
 
 void CncJobPanel::renderFeedDeviation() {
-    // Feed deviation rendering implemented in Plan 05-02
-    // Member variables m_recommendedFeedRate, m_feedDeviation, m_feedDeviationWarning
-    // are in place and populated by onStatusUpdate().
+    if (m_recommendedFeedRate <= 0.0f) {
+        ImGui::Spacing();
+        ImGui::TextDisabled("Select tool + material for feed comparison");
+        return;
+    }
+
+    ImGui::SeparatorText("Feed Rate");
+
+    // Show actual vs recommended
+    float actual = m_status.feedRate;
+    float recommended = m_recommendedFeedRate;
+    float effectiveRecommended = recommended *
+        (static_cast<float>(m_status.feedOverride) / 100.0f);
+
+    ImGui::Text("Actual:");
+    ImGui::SameLine(120);
+    ImGui::Text("%.0f mm/min", static_cast<double>(actual));
+
+    ImGui::Text("Recommended:");
+    ImGui::SameLine(120);
+    ImGui::Text("%.0f mm/min", static_cast<double>(recommended));
+
+    // Show override-adjusted if override differs from 100%
+    if (m_status.feedOverride != 100) {
+        ImGui::Text("Adjusted:");
+        ImGui::SameLine(120);
+        ImGui::TextDisabled("%.0f mm/min (%d%% override)",
+            static_cast<double>(effectiveRecommended), m_status.feedOverride);
+    }
+
+    // Deviation display — only meaningful during Run state while streaming
+    if (m_streaming && m_status.state == MachineState::Run && actual > 0.0f) {
+        float deviationPct = m_feedDeviation * 100.0f;
+
+        if (m_feedDeviationWarning) {
+            // Red warning for >20% deviation
+            ImGui::Spacing();
+            ImVec4 warningColor(1.0f, 0.3f, 0.3f, 1.0f);
+            ImGui::TextColored(warningColor, "%s Feed Deviation: %.0f%%",
+                Icons::Warning, static_cast<double>(deviationPct));
+
+            // Red background highlight for visibility
+            ImVec2 min = ImGui::GetItemRectMin();
+            ImVec2 max = ImGui::GetItemRectMax();
+            min.x -= 4.0f; min.y -= 2.0f;
+            max.x += 4.0f; max.y += 2.0f;
+            ImGui::GetWindowDrawList()->AddRectFilled(
+                min, max, IM_COL32(255, 60, 60, 40), 3.0f);
+        } else {
+            // Normal — green indicator
+            ImGui::TextColored(ImVec4(0.3f, 0.8f, 0.3f, 1.0f),
+                "Deviation: %.0f%% (OK)", static_cast<double>(deviationPct));
+        }
+    } else if (!m_streaming) {
+        ImGui::TextDisabled("Start a job to see feed comparison");
+    }
 }
 
 void CncJobPanel::onStatusUpdate(const MachineStatus& status) {

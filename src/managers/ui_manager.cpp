@@ -38,6 +38,7 @@
 #include "ui/panels/cnc_console_panel.h"
 #include "ui/panels/cnc_wcs_panel.h"
 #include "ui/panels/cnc_tool_panel.h"
+#include "ui/panels/cnc_job_panel.h"
 #include "ui/panels/tool_browser_panel.h"
 #include "ui/panels/viewport_panel.h"
 #include "ui/widgets/status_bar.h"
@@ -78,6 +79,7 @@ void UIManager::init(LibraryManager* libraryManager,
     m_cncConsolePanel = std::make_unique<CncConsolePanel>();
     m_cncWcsPanel = std::make_unique<CncWcsPanel>();
     m_cncToolPanel = std::make_unique<CncToolPanel>();
+    m_cncJobPanel = std::make_unique<CncJobPanel>();
 
     // Create dialogs
     m_fileDialog = std::make_unique<FileDialog>();
@@ -151,6 +153,7 @@ void UIManager::shutdown() {
     m_cncConsolePanel.reset();
     m_cncWcsPanel.reset();
     m_cncToolPanel.reset();
+    m_cncJobPanel.reset();
     m_startPage.reset();
 }
 
@@ -219,6 +222,7 @@ void UIManager::renderViewMenu() {
     ImGui::MenuItem("MDI Console", nullptr, &m_showCncConsole);
     ImGui::MenuItem("Work Zero / WCS", nullptr, &m_showCncWcs);
     ImGui::MenuItem("Tool & Material", nullptr, &m_showCncTool);
+    ImGui::MenuItem("Job Progress", nullptr, &m_showCncJob);
     ImGui::Separator();
     if (ImGui::MenuItem("Model Mode", "Ctrl+1", m_workspaceMode == WorkspaceMode::Model)) {
         setWorkspaceMode(WorkspaceMode::Model);
@@ -362,6 +366,14 @@ void UIManager::renderPanels() {
         if (!m_cncToolPanel->isOpen()) {
             m_showCncTool = false;
             m_cncToolPanel->setOpen(true);
+        }
+    }
+
+    if (m_showCncJob && m_cncJobPanel) {
+        m_cncJobPanel->render();
+        if (!m_cncJobPanel->isOpen()) {
+            m_showCncJob = false;
+            m_cncJobPanel->setOpen(true);
         }
     }
 
@@ -636,6 +648,7 @@ void UIManager::setWorkspaceMode(WorkspaceMode mode) {
         m_showCncConsole = true;
         m_showCncWcs = true;
         m_showCncTool = true;
+        m_showCncJob = true;
         m_showGCode = true;
         m_showLibrary = false;
         m_showProperties = false;
@@ -650,6 +663,7 @@ void UIManager::setWorkspaceMode(WorkspaceMode mode) {
         m_showCncConsole = false;
         m_showCncWcs = false;
         m_showCncTool = false;
+        m_showCncJob = false;
         m_showGCode = false;
         m_showLibrary = true;
         m_showProperties = true;
