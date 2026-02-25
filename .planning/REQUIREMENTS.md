@@ -29,9 +29,9 @@ Requirements for the CNC Controller Suite milestone. Each maps to roadmap phases
 
 ### Tool-Aware Controller
 
-- [ ] **TAC-01**: User can select a tool geometry from the tool database to calculate cutting parameters
-- [ ] **TAC-02**: Selected tool geometry + selected wood species auto-calculates optimal feeds/speeds via existing calculator (no physical tool change)
-- [ ] **TAC-03**: Calculated cutting parameters (RPM, feed rate, plunge rate, stepdown, stepover) displayed in a reference panel for the operator to use
+- [x] **TAC-01**: User can select a tool geometry from the tool database to calculate cutting parameters
+- [x] **TAC-02**: Selected tool geometry + selected wood species auto-calculates optimal feeds/speeds via existing calculator (no physical tool change)
+- [x] **TAC-03**: Calculated cutting parameters (RPM, feed rate, plunge rate, stepdown, stepover) displayed in a reference panel for the operator to use
 - [ ] **TAC-04**: During streaming, running feed rate is compared to calculator recommendation with visual warning if >20% deviation
 - [ ] **TAC-05**: Job elapsed time displayed and updated during streaming
 - [ ] **TAC-06**: Estimated remaining time calculated from line progress and current feed rate

@@ -68,8 +68,8 @@
   2. When both a tool and a wood species are selected, the feeds/speeds calculator automatically produces recommended RPM, feed rate, plunge rate, stepdown, and stepover
   3. Calculated cutting parameters are displayed in a reference panel that the operator can consult while setting up or running a job
 **Plans:** 2 plans
-  - [ ] 04-01-PLAN.md -- CncToolPanel with tool selector, material selector, auto-calculator, result display
-  - [ ] 04-02-PLAN.md -- UIManager integration, workspace mode wiring, application dependency injection
+  - [x] 04-01-PLAN.md -- CncToolPanel with tool selector, material selector, auto-calculator, result display
+  - [x] 04-02-PLAN.md -- UIManager integration, workspace mode wiring, application dependency injection
 
 ### Phase 5: Job Streaming
 **Goal**: Operator has full visibility into job progress, timing, and can see when actual cutting conditions deviate from recommendations
