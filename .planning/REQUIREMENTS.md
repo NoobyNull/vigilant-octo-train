@@ -102,9 +102,9 @@ Deferred to future release. Tracked but not in current roadmap.
 | FND-02 | Phase 1: Fix Foundation | Done |
 | FND-03 | Phase 1: Fix Foundation | Done |
 | FND-04 | Phase 1: Fix Foundation | Done |
-| CUI-01 | Phase 2: Status Display | Pending |
-| CUI-02 | Phase 2: Status Display | Pending |
-| CUI-03 | Phase 2: Status Display | Pending |
+| CUI-01 | Phase 2: Status Display | Done |
+| CUI-02 | Phase 2: Status Display | Done |
+| CUI-03 | Phase 2: Status Display | Done |
 | CUI-04 | Phase 3: Manual Control | Pending |
 | CUI-05 | Phase 3: Manual Control | Pending |
 | CUI-06 | Phase 3: Manual Control | Pending |
