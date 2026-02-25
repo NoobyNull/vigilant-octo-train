@@ -53,7 +53,11 @@
   2. User can initiate a homing cycle and see the machine transition through homing states to Idle
   3. User can set work zero on any individual axis or all axes, and switch between G54-G59 coordinate systems with stored offsets displayed
   4. User can type a G-code command in the MDI console, see the machine response, and navigate command history with up/down arrows
-**Plans**: TBD
+**Plans:** 4 plans
+  - [ ] 03-01-PLAN.md -- CncController sendCommand() + CncJogPanel with jog buttons and homing
+  - [ ] 03-02-PLAN.md -- CncConsolePanel MDI console with input, history, and response display
+  - [ ] 03-03-PLAN.md -- CncWcsPanel with zero-set buttons and G54-G59 WCS selector
+  - [ ] 03-04-PLAN.md -- UIManager integration, keyboard jog, continuous jog, callback wiring
 
 ### Phase 4: Tool Integration
 **Goal**: Operator selects a tool and wood species, and the application shows optimal cutting parameters calculated from the existing feeds/speeds engine
@@ -114,7 +118,7 @@
 |-------|----------------|--------|-----------|
 | 1. Fix Foundation | 3/3 | Complete | 2026-02-24 |
 | 2. Status Display | 0/2 | Planned | - |
-| 3. Manual Control | 0/0 | Not started | - |
+| 3. Manual Control | 0/4 | Planned | - |
 | 4. Tool Integration | 0/0 | Not started | - |
 | 5. Job Streaming | 0/0 | Not started | - |
 | 6. Job Safety | 0/0 | Not started | - |
