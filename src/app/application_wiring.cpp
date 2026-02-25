@@ -619,9 +619,11 @@ void Application::initWiring() {
             }
             if (safetyp) {
                 safetyp->setStreaming(streaming);
-                // Push program to safety panel for resume feature
-                if (!safetyp->hasProgram() && gcp->hasGCode())
+                // Push program and bounds to safety panel for resume/outline
+                if (!safetyp->hasProgram() && gcp->hasGCode()) {
                     safetyp->setProgram(gcp->getRawLines());
+                    safetyp->setProgramBounds(gcp->boundsMin(), gcp->boundsMax());
+                }
             }
         };
         cncCb.onAlarm = [gcp, conp](int code, const std::string& desc) {

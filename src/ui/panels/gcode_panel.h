@@ -60,6 +60,10 @@ class GCodePanel : public Panel {
     // Get raw G-code lines for resume-from-line feature
     std::vector<std::string> getRawLines() const;
 
+    // Get toolpath bounds (from analyzed statistics)
+    Vec3 boundsMin() const { return m_stats.boundsMin; }
+    Vec3 boundsMax() const { return m_stats.boundsMax; }
+
     // Called by application_wiring to push GRBL events into the panel
     void onGrblConnected(bool connected, const std::string& version);
     void onGrblStatus(const MachineStatus& status);

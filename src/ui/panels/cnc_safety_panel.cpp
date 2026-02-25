@@ -27,6 +27,8 @@ void CncSafetyPanel::render() {
 
     renderSafetyControls();
     ImGui::Separator();
+    renderDrawOutline();
+    ImGui::Separator();
     renderSensorDisplay();
     renderAbortConfirmDialog();
     renderResumeDialog();
@@ -172,6 +174,112 @@ void CncSafetyPanel::renderAbortConfirmDialog() {
         }
 
         ImGui::EndPopup();
+    }
+}
+
+void CncSafetyPanel::renderDrawOutline() {
+    ImGui::SeparatorText("Draw Outline");
+
+    if (!m_hasBounds) {
+        ImGui::TextDisabled("Load a G-code file to enable outline tracing");
+        return;
+    }
+
+    // Show bounding box dimensions
+    float sizeX = m_boundsMax.x - m_boundsMin.x;
+    float sizeY = m_boundsMax.y - m_boundsMin.y;
+    ImGui::Text("Job bounds: %.1f x %.1f mm", static_cast<double>(sizeX),
+                static_cast<double>(sizeY));
+    ImGui::TextDisabled("  X: %.1f to %.1f  Y: %.1f to %.1f",
+                        static_cast<double>(m_boundsMin.x),
+                        static_cast<double>(m_boundsMax.x),
+                        static_cast<double>(m_boundsMin.y),
+                        static_cast<double>(m_boundsMax.y));
+
+    ImGui::Spacing();
+
+    // Safe Z height input
+    ImGui::Text("Safe Z height:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(80.0f);
+    ImGui::InputFloat("##safeZ", &m_outlineSafeZ, 0.0f, 0.0f, "%.1f");
+    ImGui::SameLine();
+    ImGui::TextDisabled("mm");
+    if (m_outlineSafeZ < 0.0f) m_outlineSafeZ = 0.0f;
+    if (m_outlineSafeZ > 100.0f) m_outlineSafeZ = 100.0f;
+
+    // Feed rate input
+    ImGui::Text("Travel speed:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(80.0f);
+    ImGui::InputFloat("##outlineFeed", &m_outlineFeedRate, 0.0f, 0.0f, "%.0f");
+    ImGui::SameLine();
+    ImGui::TextDisabled("mm/min");
+    if (m_outlineFeedRate < 100.0f) m_outlineFeedRate = 100.0f;
+    if (m_outlineFeedRate > 10000.0f) m_outlineFeedRate = 10000.0f;
+
+    ImGui::Spacing();
+
+    // Draw outline button
+    bool canDraw = m_connected && !m_streaming &&
+                   m_status.state == MachineState::Idle;
+
+    if (!canDraw)
+        ImGui::BeginDisabled();
+
+    if (ImGui::Button("Draw Outline", ImVec2(-1, 28))) {
+        if (m_cnc) {
+            // Generate outline G-code: raise to safe Z, trace bounding box, return
+            char cmd[128];
+
+            // Switch to absolute mode and raise Z to safe height
+            m_cnc->sendCommand("G90");
+            std::snprintf(cmd, sizeof(cmd), "G0 Z%.1f",
+                          static_cast<double>(m_outlineSafeZ));
+            m_cnc->sendCommand(cmd);
+
+            // Move to first corner (min X, min Y) at rapid
+            std::snprintf(cmd, sizeof(cmd), "G0 X%.3f Y%.3f",
+                          static_cast<double>(m_boundsMin.x),
+                          static_cast<double>(m_boundsMin.y));
+            m_cnc->sendCommand(cmd);
+
+            // Trace rectangle at feed rate
+            std::snprintf(cmd, sizeof(cmd), "G1 X%.3f Y%.3f F%.0f",
+                          static_cast<double>(m_boundsMax.x),
+                          static_cast<double>(m_boundsMin.y),
+                          static_cast<double>(m_outlineFeedRate));
+            m_cnc->sendCommand(cmd);
+
+            std::snprintf(cmd, sizeof(cmd), "G1 X%.3f Y%.3f",
+                          static_cast<double>(m_boundsMax.x),
+                          static_cast<double>(m_boundsMax.y));
+            m_cnc->sendCommand(cmd);
+
+            std::snprintf(cmd, sizeof(cmd), "G1 X%.3f Y%.3f",
+                          static_cast<double>(m_boundsMin.x),
+                          static_cast<double>(m_boundsMax.y));
+            m_cnc->sendCommand(cmd);
+
+            std::snprintf(cmd, sizeof(cmd), "G1 X%.3f Y%.3f",
+                          static_cast<double>(m_boundsMin.x),
+                          static_cast<double>(m_boundsMin.y));
+            m_cnc->sendCommand(cmd);
+
+            // Return to work zero XY at rapid, keep Z at safe height
+            m_cnc->sendCommand("G0 X0 Y0");
+        }
+    }
+
+    if (!canDraw)
+        ImGui::EndDisabled();
+
+    if (!m_connected) {
+        ImGui::TextDisabled("Connect to CNC to use");
+    } else if (m_streaming) {
+        ImGui::TextDisabled("Cannot draw during active job");
+    } else if (m_status.state != MachineState::Idle) {
+        ImGui::TextDisabled("Machine must be idle");
     }
 }
 
