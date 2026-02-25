@@ -152,6 +152,16 @@ constexpr u8 CMD_SPINDLE_MINUS_1 = 0x9D;
 
 constexpr int RX_BUFFER_SIZE = 128; // GRBL serial RX buffer
 
+// Input pin state bitmask constants (from GRBL Pn: field)
+constexpr u32 PIN_X_LIMIT = 1 << 0;
+constexpr u32 PIN_Y_LIMIT = 1 << 1;
+constexpr u32 PIN_Z_LIMIT = 1 << 2;
+constexpr u32 PIN_PROBE   = 1 << 3;
+constexpr u32 PIN_DOOR    = 1 << 4;
+constexpr u32 PIN_HOLD    = 1 << 5;
+constexpr u32 PIN_RESET   = 1 << 6;
+constexpr u32 PIN_START   = 1 << 7;
+
 } // namespace cnc
 
 // Callbacks for CncController events (all called on main thread via MainThreadQueue)

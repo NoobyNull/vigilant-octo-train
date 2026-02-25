@@ -580,6 +580,20 @@ MachineStatus CncController::parseStatusReport(const std::string& report) {
         } else if (key == "Ov") {
             sscanf(val.c_str(), "%d,%d,%d", &status.feedOverride, &status.rapidOverride,
                    &status.spindleOverride);
+        } else if (key == "Pn") {
+            status.inputPins = 0; // Clear all pins first
+            for (char c : val) {
+                switch (c) {
+                case 'X': status.inputPins |= cnc::PIN_X_LIMIT; break;
+                case 'Y': status.inputPins |= cnc::PIN_Y_LIMIT; break;
+                case 'Z': status.inputPins |= cnc::PIN_Z_LIMIT; break;
+                case 'P': status.inputPins |= cnc::PIN_PROBE; break;
+                case 'D': status.inputPins |= cnc::PIN_DOOR; break;
+                case 'H': status.inputPins |= cnc::PIN_HOLD; break;
+                case 'R': status.inputPins |= cnc::PIN_RESET; break;
+                case 'S': status.inputPins |= cnc::PIN_START; break;
+                }
+            }
         }
     }
 

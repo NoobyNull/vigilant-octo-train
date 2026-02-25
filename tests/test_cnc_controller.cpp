@@ -100,6 +100,64 @@ TEST(GrblTypes, ErrorDescriptions) {
     EXPECT_STREQ(errorDescription(999), "Unknown error");
 }
 
+// --- Pin parsing (Pn: field) ---
+
+TEST(CncController, ParseStatusReportWithPnField) {
+    auto status = CncController::parseStatusReport(
+        "<Hold:0|MPos:0.000,0.000,0.000|Pn:XZP>");
+
+    EXPECT_EQ(status.state, MachineState::Hold);
+    EXPECT_TRUE(status.inputPins & cnc::PIN_X_LIMIT);
+    EXPECT_FALSE(status.inputPins & cnc::PIN_Y_LIMIT);
+    EXPECT_TRUE(status.inputPins & cnc::PIN_Z_LIMIT);
+    EXPECT_TRUE(status.inputPins & cnc::PIN_PROBE);
+    EXPECT_FALSE(status.inputPins & cnc::PIN_DOOR);
+}
+
+TEST(CncController, ParseStatusReportPnAllPins) {
+    auto status = CncController::parseStatusReport(
+        "<Idle|MPos:0.000,0.000,0.000|Pn:XYZPDHR>");
+
+    EXPECT_TRUE(status.inputPins & cnc::PIN_X_LIMIT);
+    EXPECT_TRUE(status.inputPins & cnc::PIN_Y_LIMIT);
+    EXPECT_TRUE(status.inputPins & cnc::PIN_Z_LIMIT);
+    EXPECT_TRUE(status.inputPins & cnc::PIN_PROBE);
+    EXPECT_TRUE(status.inputPins & cnc::PIN_DOOR);
+    EXPECT_TRUE(status.inputPins & cnc::PIN_HOLD);
+    EXPECT_TRUE(status.inputPins & cnc::PIN_RESET);
+    // Note: S (start) conflicts with S in spindle speed, but Pn: field handles it correctly
+}
+
+TEST(CncController, ParseStatusReportNoPnFieldDefaultsToZero) {
+    auto status = CncController::parseStatusReport(
+        "<Idle|MPos:0.000,0.000,0.000|FS:0,0>");
+
+    EXPECT_EQ(status.inputPins, 0u);
+}
+
+TEST(CncController, ParseStatusReportPnDoorOnly) {
+    auto status = CncController::parseStatusReport(
+        "<Door:0|MPos:0.000,0.000,0.000|Pn:D>");
+
+    EXPECT_EQ(status.state, MachineState::Door);
+    EXPECT_TRUE(status.inputPins & cnc::PIN_DOOR);
+    EXPECT_FALSE(status.inputPins & cnc::PIN_X_LIMIT);
+}
+
+// --- Pin constants ---
+
+TEST(CncTypes, PinConstantsAreBitmask) {
+    // Each pin should be a unique bit
+    EXPECT_EQ(cnc::PIN_X_LIMIT, 1u << 0);
+    EXPECT_EQ(cnc::PIN_Y_LIMIT, 1u << 1);
+    EXPECT_EQ(cnc::PIN_Z_LIMIT, 1u << 2);
+    EXPECT_EQ(cnc::PIN_PROBE,   1u << 3);
+    EXPECT_EQ(cnc::PIN_DOOR,    1u << 4);
+    EXPECT_EQ(cnc::PIN_HOLD,    1u << 5);
+    EXPECT_EQ(cnc::PIN_RESET,   1u << 6);
+    EXPECT_EQ(cnc::PIN_START,   1u << 7);
+}
+
 // --- RX buffer size ---
 
 TEST(CncTypes, RxBufferSize) {
