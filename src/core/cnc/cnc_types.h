@@ -35,6 +35,33 @@ struct MachineStatus {
     u32 inputPins = 0;
 };
 
+// Work coordinate system offsets parsed from $# response
+struct WcsOffsets {
+    Vec3 g54{0.0f};
+    Vec3 g55{0.0f};
+    Vec3 g56{0.0f};
+    Vec3 g57{0.0f};
+    Vec3 g58{0.0f};
+    Vec3 g59{0.0f};
+    Vec3 g28{0.0f};  // G28 home position
+    Vec3 g30{0.0f};  // G30 home position
+    Vec3 g92{0.0f};  // G92 offset
+    float tlo = 0.0f; // Tool length offset
+
+    // Get offset by WCS index (0=G54, 1=G55, ..., 5=G59)
+    Vec3 getByIndex(int idx) const {
+        switch (idx) {
+        case 0: return g54;
+        case 1: return g55;
+        case 2: return g56;
+        case 3: return g57;
+        case 4: return g58;
+        case 5: return g59;
+        default: return Vec3{0.0f};
+        }
+    }
+};
+
 // Result of sending a single line
 struct LineAck {
     int lineIndex = -1;      // Index in the gcode program
