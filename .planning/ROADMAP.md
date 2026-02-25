@@ -27,7 +27,10 @@
   2. When GRBL enters an error state during streaming, the remaining buffer is flushed via soft reset and the UI shows the error
   3. Unplugging the USB cable during operation results in a clear "connection lost" message in the UI within 2 seconds
   4. Connecting to an Arduino-based GRBL board does not trigger a board reset or lose machine position
-**Plans**: TBD
+**Plans:** 3 plans
+  - [ ] 01-01-PLAN.md -- SerialPort hardening (DTR suppression + disconnect detection + partial write fix)
+  - [ ] 01-02-PLAN.md -- Thread-safe command dispatch + controller-level disconnect detection
+  - [ ] 01-03-PLAN.md -- Error-triggered soft reset during streaming
 
 ### Phase 2: Status Display
 **Goal**: Operator can see machine position, state, and spindle/feed data at a glance while the machine runs
