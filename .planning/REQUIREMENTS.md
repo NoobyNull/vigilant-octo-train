@@ -9,10 +9,10 @@ Requirements for the CNC Controller Suite milestone. Each maps to roadmap phases
 
 ### Foundation
 
-- [ ] **FND-01**: Real-time commands (feed hold, cycle start, overrides) are dispatched thread-safely via the IO thread, not directly from UI thread
-- [ ] **FND-02**: Streaming engine issues soft reset on unrecoverable error to prevent GRBL from executing remaining buffer
-- [ ] **FND-03**: Serial port detects USB disconnect (POLLHUP/POLLERR) and reports connection loss to UI
-- [ ] **FND-04**: Serial port suppresses DTR on open to prevent Arduino auto-reset and position loss
+- [x] **FND-01**: Real-time commands (feed hold, cycle start, overrides) are dispatched thread-safely via the IO thread, not directly from UI thread
+- [x] **FND-02**: Streaming engine issues soft reset on unrecoverable error to prevent GRBL from executing remaining buffer
+- [x] **FND-03**: Serial port detects USB disconnect (POLLHUP/POLLERR) and reports connection loss to UI
+- [x] **FND-04**: Serial port suppresses DTR on open to prevent Arduino auto-reset and position loss
 
 ### Control UI
 
@@ -98,10 +98,10 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FND-01 | Phase 1: Fix Foundation | Pending |
-| FND-02 | Phase 1: Fix Foundation | Pending |
-| FND-03 | Phase 1: Fix Foundation | Pending |
-| FND-04 | Phase 1: Fix Foundation | Pending |
+| FND-01 | Phase 1: Fix Foundation | Done |
+| FND-02 | Phase 1: Fix Foundation | Done |
+| FND-03 | Phase 1: Fix Foundation | Done |
+| FND-04 | Phase 1: Fix Foundation | Done |
 | CUI-01 | Phase 2: Status Display | Pending |
 | CUI-02 | Phase 2: Status Display | Pending |
 | CUI-03 | Phase 2: Status Display | Pending |

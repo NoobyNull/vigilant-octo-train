@@ -7,7 +7,7 @@
 
 ## Phases
 
-- [ ] **Phase 1: Fix Foundation** - Resolve thread safety, error handling, and disconnect detection bugs in existing CncController
+- [x] **Phase 1: Fix Foundation** - Resolve thread safety, error handling, and disconnect detection bugs in existing CncController (2026-02-24)
 - [ ] **Phase 2: Status Display** - Real-time DRO showing position, machine state, feed rate, and spindle RPM
 - [ ] **Phase 3: Manual Control** - Jog, homing, work zero, coordinate systems, and MDI console
 - [ ] **Phase 4: Tool Integration** - Connect tool database and material system to feeds/speeds calculator
@@ -28,9 +28,9 @@
   3. Unplugging the USB cable during operation results in a clear "connection lost" message in the UI within 2 seconds
   4. Connecting to an Arduino-based GRBL board does not trigger a board reset or lose machine position
 **Plans:** 3 plans
-  - [ ] 01-01-PLAN.md -- SerialPort hardening (DTR suppression + disconnect detection + partial write fix)
-  - [ ] 01-02-PLAN.md -- Thread-safe command dispatch + controller-level disconnect detection
-  - [ ] 01-03-PLAN.md -- Error-triggered soft reset during streaming
+  - [x] 01-01-PLAN.md -- SerialPort hardening (DTR suppression + disconnect detection + partial write fix)
+  - [x] 01-02-PLAN.md -- Thread-safe command dispatch + controller-level disconnect detection
+  - [x] 01-03-PLAN.md -- Error-triggered soft reset during streaming
 
 ### Phase 2: Status Display
 **Goal**: Operator can see machine position, state, and spindle/feed data at a glance while the machine runs
@@ -110,7 +110,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Fix Foundation | 0/0 | Not started | - |
+| 1. Fix Foundation | 3/3 | Complete | 2026-02-24 |
 | 2. Status Display | 0/0 | Not started | - |
 | 3. Manual Control | 0/0 | Not started | - |
 | 4. Tool Integration | 0/0 | Not started | - |
