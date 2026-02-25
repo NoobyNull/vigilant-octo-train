@@ -142,6 +142,7 @@ set(DW_SOURCES
     ui/panels/cnc_jog_panel.cpp
     ui/panels/cnc_console_panel.cpp
     ui/panels/cnc_wcs_panel.cpp
+    ui/panels/cnc_tool_panel.cpp
 
     # UI Widgets
     ui/widgets/binding_recorder.cpp
