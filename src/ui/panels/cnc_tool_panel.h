@@ -29,6 +29,13 @@ class CncToolPanel : public Panel {
 
     void refresh() { m_needsRefresh = true; }
 
+    // Getters for downstream consumers (CncJobPanel feed deviation comparison)
+    float getRecommendedFeedRate() const {
+        return m_hasCalcResult ? static_cast<float>(m_calcResult.feed_rate) : 0.0f;
+    }
+    bool hasCalcResult() const { return m_hasCalcResult; }
+    const CalcResult& getCalcResult() const { return m_calcResult; }
+
   private:
     void loadData();
     void recalculate();
