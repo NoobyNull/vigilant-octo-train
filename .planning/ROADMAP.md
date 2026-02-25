@@ -40,7 +40,9 @@
   1. Work position and machine position (X, Y, Z) update visually at polling rate (5Hz) during motion
   2. Machine state (Idle, Run, Hold, Alarm, Home) is displayed with a color-coded indicator that changes in real time
   3. Current feed rate (mm/min) and spindle RPM are displayed and update during streaming
-**Plans**: TBD
+**Plans:** 2 plans
+  - [ ] 02-01-PLAN.md -- CncStatusPanel with DRO, state indicator, feed/spindle display
+  - [ ] 02-02-PLAN.md -- UIManager integration, CNC callback wiring, workspace mode switching
 
 ### Phase 3: Manual Control
 **Goal**: Operator can manually move the machine, set work zero, switch coordinate systems, and send ad-hoc G-code commands
@@ -111,7 +113,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Fix Foundation | 3/3 | Complete | 2026-02-24 |
-| 2. Status Display | 0/0 | Not started | - |
+| 2. Status Display | 0/2 | Planned | - |
 | 3. Manual Control | 0/0 | Not started | - |
 | 4. Tool Integration | 0/0 | Not started | - |
 | 5. Job Streaming | 0/0 | Not started | - |
