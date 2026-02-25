@@ -8,22 +8,22 @@
 
 ## Current Position
 
-**Phase:** 6 of 8 - Job Safety
-**Plan:** Not yet planned
-**Status:** Ready to plan
+**Phase:** 8 of 8 - Macros (COMPLETE)
+**Plan:** All plans complete
+**Status:** Phase 8 complete -- CNC Controller Suite milestone DONE
 
 ```
-Phase Progress: [#####...] 5/8
+Phase Progress: [########] 8/8
 ```
 
 ## Performance Metrics
 
 | Metric | Value |
 |--------|-------|
-| Plans completed | 14 |
+| Plans completed | 21 |
 | Plans failed | 0 |
-| Requirements done | 22/39 |
-| Phases done | 5/8 |
+| Requirements done | 32/39 |
+| Phases done | 8/8 |
 
 ## Accumulated Context
 
@@ -31,6 +31,9 @@ Phase Progress: [#####...] 5/8
 - Phase structure follows natural requirement categories with CUI split into Status Display + Manual Control, TAC split into Tool Integration + Job Streaming, and FWC split into Firmware Settings + Macros
 - Phase 7 (Firmware Settings) depends on Phase 1 only, not on Phases 2-6, allowing parallel work if desired
 - Platform requirements (Windows serial, WebSocket) deferred to v2
+- Separate SQLite database (macros.db) for macro storage rather than sharing library.db
+- Built-in macros (Homing, Probe Z, Return to Zero) seeded idempotently via ensureBuiltIns()
+- G-code comments stripped during parseLines (both semicolon and parenthesis styles)
 
 ### Known Issues
 - Thread safety violation in real-time command dispatch (FND-01) -- must fix first
@@ -47,6 +50,7 @@ Phase Progress: [#####...] 5/8
 - Vectric .vtdb compatibility for tool database
 - CNC panels wired via CncCallbacks in application_wiring.cpp
 - Feed deviation uses override-aware comparison (accounts for feed override %)
+- MacroManager uses own SQLite DB for macro CRUD with built-in macro seeding
 
 ### TODOs
 - (none yet)
@@ -56,10 +60,10 @@ Phase Progress: [#####...] 5/8
 
 ## Session Continuity
 
-**Last session:** Phase 5 execution (Job Streaming)
-**Next action:** Plan Phase 6 (Job Safety)
-**Context to carry:** Phase 5 complete -- CncJobPanel provides full job progress visibility (elapsed/remaining time, line counts, progress %, feed deviation warning). CncToolPanel exposes calculator results via getters. Feed deviation is override-aware.
+**Last session:** Phase 8 execution (Macros)
+**Next action:** CNC Controller Suite milestone complete. Review outstanding platform requirements for v2.
+**Context to carry:** Phase 8 complete -- MacroManager with SQLite CRUD, 3 built-in macros, CncMacroPanel with run/edit/delete/reorder, wired into UIManager and Application. 715 tests passing.
 
 ---
 *State initialized: 2026-02-24*
-*Last updated: 2026-02-24*
+*Last updated: 2026-02-25*
