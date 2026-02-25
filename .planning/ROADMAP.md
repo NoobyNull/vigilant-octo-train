@@ -10,11 +10,11 @@
 - [x] **Phase 1: Fix Foundation** - Resolve thread safety, error handling, and disconnect detection bugs in existing CncController (2026-02-24)
 - [x] **Phase 2: Status Display** - Real-time DRO showing position, machine state, feed rate, and spindle RPM (2026-02-24)
 - [x] **Phase 3: Manual Control** - Jog, homing, work zero, coordinate systems, and MDI console (2026-02-24)
-- [ ] **Phase 4: Tool Integration** - Connect tool database and material system to feeds/speeds calculator
+- [x] **Phase 4: Tool Integration** - Connect tool database and material system to feeds/speeds calculator (2026-02-24)
 - [x] **Phase 5: Job Streaming** - Progress tracking, time estimation, and feed rate deviation warnings (2026-02-24)
-- [ ] **Phase 6: Job Safety** - Pause, resume, e-stop, safe job resume, sensor display, and pre-flight checks
-- [ ] **Phase 7: Firmware Settings** - GRBL settings panel, backup/restore, machine tuning, and profile sync
-- [ ] **Phase 8: Macros** - Macro storage, execution, and built-in common operations
+- [x] **Phase 6: Job Safety** - Pause, resume, e-stop, safe job resume, sensor display, and pre-flight checks (2026-02-24)
+- [x] **Phase 7: Firmware Settings** - GRBL settings panel, backup/restore, machine tuning, and profile sync (2026-02-25)
+- [x] **Phase 8: Macros** - Macro storage, execution, and built-in common operations (2026-02-25)
 
 ## Phase Details
 
