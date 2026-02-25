@@ -93,7 +93,11 @@
   3. User can specify a line number to resume from, and the controller automatically rebuilds modal state (units, coordinate system, spindle, coolant, feed rate) by scanning all prior G-code
   4. Endstop, probe, and door sensor states are displayed from GRBL Pn: field data
   5. Before streaming begins, a pre-flight check verifies connection is active and no alarm state exists, with optional warnings for missing tool/material selection
-**Plans**: TBD
+**Plans:** 4 plans
+  - [ ] 06-01-PLAN.md -- GCodeModalScanner TDD (modal state reconstruction for safe resume)
+  - [ ] 06-02-PLAN.md -- Pn: pin parsing, pin constants, pre-flight checks utility
+  - [ ] 06-03-PLAN.md -- CncSafetyPanel with Pause/Resume/Abort buttons and sensor display
+  - [ ] 06-04-PLAN.md -- Resume-from-line dialog with preamble preview and pre-flight integration
 
 ### Phase 7: Firmware Settings
 **Goal**: Operator can view, edit, back up, and restore GRBL firmware settings, and keep the DW machine profile in sync with the controller
@@ -125,7 +129,7 @@
 | 3. Manual Control | 4/4 | Complete | 2026-02-24 |
 | 4. Tool Integration | 2/2 | Complete | 2026-02-24 |
 | 5. Job Streaming | 2/2 | Complete | 2026-02-24 |
-| 6. Job Safety | 0/0 | Not started | - |
+| 6. Job Safety | 0/4 | Planning complete | - |
 | 7. Firmware Settings | 0/0 | Not started | - |
 | 8. Macros | 0/0 | Not started | - |
 
