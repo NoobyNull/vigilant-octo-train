@@ -35,12 +35,19 @@ class CncSettingsPanel : public Panel {
     const GrblSettings& settings() const { return m_settings; }
     bool hasSettings() const { return !m_settings.empty(); }
 
+    // EditBuffer needs to be public for helper functions
+    struct EditBuffer {
+        int id = 0;
+        char buf[32] = "";
+        bool active = false;
+    };
+
   private:
     // Rendering sub-sections
     void renderToolbar();
     void renderSettingsTab();
     void renderTuningTab();
-    void renderBackupRestoreSection();
+    void renderRawTab();
     void renderDiffDialog();
 
     // Actions
@@ -59,11 +66,6 @@ class CncSettingsPanel : public Panel {
     bool m_collecting = false;  // True while collecting $$ response lines
 
     // Editing state
-    struct EditBuffer {
-        int id = 0;
-        char buf[32] = "";
-        bool active = false;
-    };
     std::map<int, EditBuffer> m_editBuffers;
 
     // Diff dialog state (for restore preview)

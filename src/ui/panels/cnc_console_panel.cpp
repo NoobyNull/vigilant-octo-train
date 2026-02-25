@@ -135,6 +135,14 @@ int CncConsolePanel::inputCallback(ImGuiInputTextCallbackData* data) {
 }
 
 void CncConsolePanel::onRawLine(const std::string& line, bool isSent) {
+    // Filter out status polling noise — ? queries and <...> status reports
+    if (!line.empty()) {
+        if (isSent && line[0] == '?')
+            return;
+        if (!isSent && line[0] == '<')
+            return;
+    }
+
     ConsoleLine cl;
     cl.text = line;
     cl.type = isSent ? ConsoleLine::Sent : ConsoleLine::Received;

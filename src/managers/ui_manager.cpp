@@ -226,15 +226,20 @@ void UIManager::renderViewMenu() {
     ImGui::MenuItem("Cost Estimator", nullptr, &m_showCostEstimator);
     ImGui::MenuItem("Materials", nullptr, &m_showMaterials);
     ImGui::MenuItem("Tool Browser", nullptr, &m_showToolBrowser);
-    ImGui::MenuItem("CNC Status", nullptr, &m_showCncStatus);
-    ImGui::MenuItem("Jog Control", nullptr, &m_showCncJog);
-    ImGui::MenuItem("MDI Console", nullptr, &m_showCncConsole);
-    ImGui::MenuItem("Work Zero / WCS", nullptr, &m_showCncWcs);
-    ImGui::MenuItem("Tool & Material", nullptr, &m_showCncTool);
-    ImGui::MenuItem("Job Progress", nullptr, &m_showCncJob);
-    ImGui::MenuItem("Safety Controls", nullptr, &m_showCncSafety);
-    ImGui::MenuItem("Firmware Settings", nullptr, &m_showCncSettings);
-    ImGui::MenuItem("Macros", nullptr, &m_showCncMacros);
+    if (ImGui::BeginMenu("CNC")) {
+        ImGui::MenuItem("Status", nullptr, &m_showCncStatus);
+        ImGui::MenuItem("Jog Control", nullptr, &m_showCncJog);
+        ImGui::MenuItem("MDI Console", nullptr, &m_showCncConsole);
+        ImGui::MenuItem("Work Zero / WCS", nullptr, &m_showCncWcs);
+        ImGui::Separator();
+        ImGui::MenuItem("Tool & Material", nullptr, &m_showCncTool);
+        ImGui::MenuItem("Job Progress", nullptr, &m_showCncJob);
+        ImGui::MenuItem("Safety Controls", nullptr, &m_showCncSafety);
+        ImGui::Separator();
+        ImGui::MenuItem("Firmware Settings", nullptr, &m_showCncSettings);
+        ImGui::MenuItem("Macros", nullptr, &m_showCncMacros);
+        ImGui::EndMenu();
+    }
     ImGui::Separator();
     if (ImGui::MenuItem("Model Mode", "Ctrl+1", m_workspaceMode == WorkspaceMode::Model)) {
         setWorkspaceMode(WorkspaceMode::Model);
