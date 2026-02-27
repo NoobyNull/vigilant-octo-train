@@ -1,11 +1,14 @@
-# Roadmap: CNC Controller Suite
+# Roadmap: Digital Workshop
 
-**Milestone:** CNC Controller Suite
-**Depth:** Comprehensive
-**Phases:** 8
-**Total v1 Requirements:** 39
+## Milestones
+
+- [x] **v0.1.x CNC Controller Suite** - Phases 1-8 (shipped 2026-02-25)
+- [ ] **v0.2.0 Sender Feature Parity** - Phases 9-12 (in progress)
 
 ## Phases
+
+<details>
+<summary>v0.1.x CNC Controller Suite (Phases 1-8) - SHIPPED 2026-02-25</summary>
 
 - [x] **Phase 1: Fix Foundation** - Resolve thread safety, error handling, and disconnect detection bugs in existing CncController (2026-02-24)
 - [x] **Phase 2: Status Display** - Real-time DRO showing position, machine state, feed rate, and spindle RPM (2026-02-24)
@@ -16,123 +19,86 @@
 - [x] **Phase 7: Firmware Settings** - GRBL settings panel, backup/restore, machine tuning, and profile sync (2026-02-25)
 - [x] **Phase 8: Macros** - Macro storage, execution, and built-in common operations (2026-02-25)
 
+</details>
+
+### v0.2.0 Sender Feature Parity (In Progress)
+
+**Milestone Goal:** Bring CNC sender to feature parity with dedicated senders (ncSender benchmark), prioritizing safety, core controls, workflow polish, and extended capabilities.
+
+- [ ] **Phase 9: Safety** - Configurable safety guards: long-press buttons, dead-man watchdog, door interlock, soft limits, pause-before-reset
+- [ ] **Phase 10: Core Sender** - Override controls, coolant toggles, alarm handling, status polling, precision jog, WCS quick-switch
+- [ ] **Phase 11: Niceties** - DRO click-to-zero, move-to dialog, diagonal jog, console tags, recent files, keyboard overrides, macro reorder, job alerts
+- [ ] **Phase 12: Extended** - Alarm/error references, probe workflows, M6 detection, nested macros, tool color viz, gamepad, TLS
+
 ## Phase Details
 
-### Phase 1: Fix Foundation
-**Goal**: Existing CncController code is reliable enough to build features on top of
-**Depends on**: Nothing (first phase)
-**Requirements**: FND-01, FND-02, FND-03, FND-04
+### Phase 9: Safety
+**Goal**: Operator has configurable safety guards that prevent accidental machine actions and protect against common failure modes
+**Depends on**: Phase 8 (previous milestone)
+**Requirements**: SAF-10, SAF-11, SAF-12, SAF-13, SAF-14, SAF-15, SAF-16, SAF-17
 **Success Criteria** (what must be TRUE):
-  1. Real-time commands (feed hold, cycle start, overrides) execute without data races or crashes under concurrent use
-  2. When GRBL enters an error state during streaming, the remaining buffer is flushed via soft reset and the UI shows the error
-  3. Unplugging the USB cable during operation results in a clear "connection lost" message in the UI within 2 seconds
-  4. Connecting to an Arduino-based GRBL board does not trigger a board reset or lose machine position
-**Plans:** 3 plans
-  - [x] 01-01-PLAN.md -- SerialPort hardening (DTR suppression + disconnect detection + partial write fix)
-  - [x] 01-02-PLAN.md -- Thread-safe command dispatch + controller-level disconnect detection
-  - [x] 01-03-PLAN.md -- Error-triggered soft reset during streaming
-
-### Phase 2: Status Display
-**Goal**: Operator can see machine position, state, and spindle/feed data at a glance while the machine runs
-**Depends on**: Phase 1
-**Requirements**: CUI-01, CUI-02, CUI-03
-**Success Criteria** (what must be TRUE):
-  1. Work position and machine position (X, Y, Z) update visually at polling rate (5Hz) during motion
-  2. Machine state (Idle, Run, Hold, Alarm, Home) is displayed with a color-coded indicator that changes in real time
-  3. Current feed rate (mm/min) and spindle RPM are displayed and update during streaming
-**Plans:** 2 plans
-  - [x] 02-01-PLAN.md -- CncStatusPanel with DRO, state indicator, feed/spindle display
-  - [x] 02-02-PLAN.md -- UIManager integration, CNC callback wiring, workspace mode switching
-
-### Phase 3: Manual Control
-**Goal**: Operator can manually move the machine, set work zero, switch coordinate systems, and send ad-hoc G-code commands
-**Depends on**: Phase 2
-**Requirements**: CUI-04, CUI-05, CUI-06, CUI-07, CUI-08, CUI-09, CUI-10
-**Success Criteria** (what must be TRUE):
-  1. User can jog any axis in both directions using on-screen buttons or keyboard shortcuts, with selectable step sizes (0.1, 1, 10, 100mm) and continuous jog that stops on key release
-  2. User can initiate a homing cycle and see the machine transition through homing states to Idle
-  3. User can set work zero on any individual axis or all axes, and switch between G54-G59 coordinate systems with stored offsets displayed
-  4. User can type a G-code command in the MDI console, see the machine response, and navigate command history with up/down arrows
-**Plans:** 4 plans
-  - [x] 03-01-PLAN.md -- CncController sendCommand() + CncJogPanel with jog buttons and homing
-  - [x] 03-02-PLAN.md -- CncConsolePanel MDI console with input, history, and response display
-  - [x] 03-03-PLAN.md -- CncWcsPanel with zero-set buttons and G54-G59 WCS selector
-  - [x] 03-04-PLAN.md -- UIManager integration, keyboard jog, continuous jog, callback wiring
-
-### Phase 4: Tool Integration
-**Goal**: Operator selects a tool and wood species, and the application shows optimal cutting parameters calculated from the existing feeds/speeds engine
-**Depends on**: Phase 2
-**Requirements**: TAC-01, TAC-02, TAC-03
-**Success Criteria** (what must be TRUE):
-  1. User can select a tool geometry from the tool database within the controller UI context
-  2. When both a tool and a wood species are selected, the feeds/speeds calculator automatically produces recommended RPM, feed rate, plunge rate, stepdown, and stepover
-  3. Calculated cutting parameters are displayed in a reference panel that the operator can consult while setting up or running a job
-**Plans:** 2 plans
-  - [x] 04-01-PLAN.md -- CncToolPanel with tool selector, material selector, auto-calculator, result display
-  - [x] 04-02-PLAN.md -- UIManager integration, workspace mode wiring, application dependency injection
-
-### Phase 5: Job Streaming
-**Goal**: Operator has full visibility into job progress, timing, and can see when actual cutting conditions deviate from recommendations
-**Depends on**: Phase 4
-**Requirements**: TAC-04, TAC-05, TAC-06, TAC-07, TAC-08
-**Success Criteria** (what must be TRUE):
-  1. During streaming, the running feed rate is compared to the calculator recommendation and a visual warning appears when deviation exceeds 20%
-  2. Job elapsed time, estimated remaining time, current line number, total line count, and progress percentage are all displayed and update during streaming
-  3. Time estimation adjusts based on current feed rate rather than showing a static estimate
-**Plans:** 2 plans
-  - [x] 05-01-PLAN.md -- CncJobPanel with progress display, time estimation, line counts
-  - [x] 05-02-PLAN.md -- Feed deviation warning, UIManager integration, callback wiring
-
-### Phase 6: Job Safety
-**Goal**: Operator can safely pause, stop, and resume jobs with confidence that the machine will not behave unexpectedly
-**Depends on**: Phase 5
-**Requirements**: SAF-01, SAF-02, SAF-03, SAF-04, SAF-05, SAF-06, SAF-07
-**Success Criteria** (what must be TRUE):
-  1. Pause button sends feed hold and visually changes state; resume button sends cycle start only when machine is in Hold state
-  2. E-stop button sends soft reset with a confirmation dialog when a job is running, preventing accidental activation
-  3. User can specify a line number to resume from, and the controller automatically rebuilds modal state (units, coordinate system, spindle, coolant, feed rate) by scanning all prior G-code
-  4. Endstop, probe, and door sensor states are displayed from GRBL Pn: field data
-  5. Before streaming begins, a pre-flight check verifies connection is active and no alarm state exists, with optional warnings for missing tool/material selection
-**Plans:** 4 plans
-  - [ ] 06-01-PLAN.md -- GCodeModalScanner TDD (modal state reconstruction for safe resume)
-  - [ ] 06-02-PLAN.md -- Pn: pin parsing, pin constants, pre-flight checks utility
-  - [ ] 06-03-PLAN.md -- CncSafetyPanel with Pause/Resume/Abort buttons and sensor display
-  - [ ] 06-04-PLAN.md -- Resume-from-line dialog with preamble preview and pre-flight integration
-
-### Phase 7: Firmware Settings
-**Goal**: Operator can view, edit, back up, and restore GRBL firmware settings, and keep the DW machine profile in sync with the controller
-**Depends on**: Phase 1
-**Requirements**: FWC-01, FWC-02, FWC-03, FWC-04, FWC-05, FWC-06, FWC-07
-**Success Criteria** (what must be TRUE):
-  1. User can view all GRBL $$ settings with human-readable descriptions and edit individual settings with min/max/type validation
-  2. User can export current GRBL settings to a JSON backup file and restore settings from a backup file with confirmation
-  3. Machine tuning UI allows per-axis editing of steps/mm, max feed rate, and acceleration
-  4. On connect, GRBL $$ settings are read into the DW machine profile; user can push DW machine profile values back to the GRBL controller
+  1. Homing and job start buttons require a visible long-press hold before activating, preventing accidental triggering from a quick click
+  2. Continuous jog movement stops automatically if the operator releases the key/button and no keepalive is received within the configured timeout
+  3. When GRBL reports door pin active, rapid moves and spindle commands are blocked with a visible indicator explaining why
+  4. Before streaming, G-code bounding box is compared against machine travel limits and the operator is warned if the job exceeds soft limits
+  5. Every safety feature can be individually enabled or disabled through a dedicated safety settings UI section
 **Plans**: TBD
 
-### Phase 8: Macros
-**Goal**: Operator can store, organize, and execute custom G-code sequences for repetitive operations
-**Depends on**: Phase 7
-**Requirements**: FWC-08, FWC-09, FWC-10
+### Phase 10: Core Sender
+**Goal**: Operator has full real-time control over spindle speed, rapid rate, feed rate overrides, coolant, and jog precision while the machine runs
+**Depends on**: Phase 9
+**Requirements**: SND-01, SND-02, SND-03, SND-04, SND-05, SND-06, SND-07, SND-08
 **Success Criteria** (what must be TRUE):
-  1. User can create, edit, and delete macros stored in SQLite with name, G-code content, and optional keyboard shortcut
-  2. Executing a macro sends its G-code lines sequentially via the existing sendCommand path, with execution visible in the console
-  3. Built-in macros for homing, Z-probe, and return-to-zero are available out of the box
+  1. Operator can adjust spindle speed override (0-200%) and rapid override (25/50/100%) via UI controls that send GRBL real-time commands immediately
+  2. Coolant state (Flood/Mist/Off) is visible in the status panel and togglable via buttons that send M7/M8/M9 commands
+  3. When GRBL enters alarm state, the alarm code number and a human-readable description are displayed with an inline unlock button
+  4. Operator can jog in 0.01mm increments for precision zeroing, with separate configurable feedrates for small, medium, and large step groups
+  5. WCS selector (G54-G59) is visible in the status panel header for quick switching without opening the full WCS panel
+**Plans**: TBD
+
+### Phase 11: Niceties
+**Goal**: Common operator workflows are faster and more informative through interaction shortcuts, better feedback, and convenience features
+**Depends on**: Phase 10
+**Requirements**: NIC-01, NIC-02, NIC-03, NIC-04, NIC-05, NIC-06, NIC-07, NIC-08
+**Success Criteria** (what must be TRUE):
+  1. Double-clicking a DRO axis value zeros that axis, and a move-to dialog allows entering explicit XYZ coordinates for positioning
+  2. Diagonal XY jog buttons allow simultaneous two-axis movement in all four diagonal directions
+  3. Console messages are visually tagged by source ([JOB], [MDI], [MACRO], [SYS]) with distinct colors for each type
+  4. Recent G-code files (last 10) appear in the GCode panel for quick re-loading, and keyboard shortcuts adjust feed/spindle overrides
+  5. When a streaming job completes, the operator receives a visible toast notification and optional status bar flash
+**Plans**: TBD
+
+### Phase 12: Extended
+**Goal**: Sender reaches full feature parity with dedicated senders through reference tables, probe workflows, tool change handling, and advanced macro capabilities
+**Depends on**: Phase 10
+**Requirements**: EXT-01, EXT-02, EXT-03, EXT-04, EXT-05, EXT-06, EXT-07, EXT-08, EXT-09, EXT-10, EXT-11, EXT-12, EXT-13, EXT-14, EXT-15, EXT-16
+**Success Criteria** (what must be TRUE):
+  1. GRBL alarm codes and error codes display human-readable descriptions inline when they occur, with full reference tables accessible from the UI
+  2. Z-probe workflow guides the operator through approach speed, plate thickness, retract distance, and probe execution with a structured dialog
+  3. When M6 tool change is encountered during streaming, the job pauses and waits for operator acknowledgment before continuing
+  4. Macros support nested expansion via M98 with a recursion guard, and jog step sizes can be cycled via keyboard shortcut
+  5. Gamepad input maps axes to jog movement and buttons to start/pause/stop/home actions via SDL_GameController
 **Plans**: TBD
 
 ## Progress
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Fix Foundation | 3/3 | Complete | 2026-02-24 |
-| 2. Status Display | 2/2 | Complete | 2026-02-24 |
-| 3. Manual Control | 4/4 | Complete | 2026-02-24 |
-| 4. Tool Integration | 2/2 | Complete | 2026-02-24 |
-| 5. Job Streaming | 2/2 | Complete | 2026-02-24 |
-| 6. Job Safety | 0/4 | Planning complete | - |
-| 7. Firmware Settings | 0/0 | Not started | - |
-| 8. Macros | 0/0 | Not started | - |
+**Execution Order:** Phases 9 -> 10 -> 11 -> 12
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Fix Foundation | v0.1.x | 3/3 | Complete | 2026-02-24 |
+| 2. Status Display | v0.1.x | 2/2 | Complete | 2026-02-24 |
+| 3. Manual Control | v0.1.x | 4/4 | Complete | 2026-02-24 |
+| 4. Tool Integration | v0.1.x | 2/2 | Complete | 2026-02-24 |
+| 5. Job Streaming | v0.1.x | 2/2 | Complete | 2026-02-24 |
+| 6. Job Safety | v0.1.x | 4/4 | Complete | 2026-02-24 |
+| 7. Firmware Settings | v0.1.x | 2/2 | Complete | 2026-02-25 |
+| 8. Macros | v0.1.x | 3/3 | Complete | 2026-02-25 |
+| 9. Safety | v0.2.0 | 0/0 | Not started | - |
+| 10. Core Sender | v0.2.0 | 0/0 | Not started | - |
+| 11. Niceties | v0.2.0 | 0/0 | Not started | - |
+| 12. Extended | v0.2.0 | 0/0 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-24*
-*Last updated: 2026-02-24*
+*Last updated: 2026-02-26 -- v0.2.0 Sender Feature Parity milestone added*

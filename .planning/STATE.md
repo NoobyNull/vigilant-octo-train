@@ -1,65 +1,62 @@
-# State: Sender Feature Parity
+# Project State
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-02-26)
 
-**Core Value:** A woodworker can go from selecting a piece of wood and a cutting tool to safely running a CNC job with optimized feeds and speeds -- all without leaving the application.
-
-**Current Focus:** Sender Feature Parity milestone -- bring CNC sender to feature parity with dedicated senders, prioritizing safety, core controls, workflow polish, and extended capabilities.
+**Core value:** A woodworker can go from selecting a piece of wood and a cutting tool to safely running a CNC job with optimized feeds and speeds -- all without leaving the application.
+**Current focus:** Phase 9: Safety (Sender Feature Parity milestone)
 
 ## Current Position
 
-**Phase:** Not started (defining requirements)
-**Plan:** —
-**Status:** Defining requirements
+Phase: 9 of 12 (Safety)
+Plan: 0 of 0 in current phase
+Status: Ready to plan
+Last activity: 2026-02-26 -- Roadmap created for v0.2.0 Sender Feature Parity
 
-```
-Phase Progress: [        ] 0/4
-```
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
-| Metric | Value |
-|--------|-------|
-| Plans completed | 0 |
-| Plans failed | 0 |
-| Requirements done | 0/42 |
-| Phases done | 0/4 |
+**Velocity:**
+- Total plans completed: 22 (from v0.1.x milestone)
+- Average duration: ~15 min
+- Total execution time: ~5.5 hours
+
+**By Phase (v0.1.x):**
+
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| 1. Fix Foundation | 3 | ~45m | ~15m |
+| 2. Status Display | 2 | ~30m | ~15m |
+| 3. Manual Control | 4 | ~60m | ~15m |
+| 4. Tool Integration | 2 | ~30m | ~15m |
+| 5. Job Streaming | 2 | ~30m | ~15m |
+| 6. Job Safety | 4 | ~60m | ~15m |
+| 7. Firmware Settings | 2 | ~30m | ~15m |
+| 8. Macros | 3 | ~45m | ~15m |
 
 ## Accumulated Context
 
-### Key Decisions
-- Phase structure follows priority order: Safety → Core Sender → Niceties → Extended
+### Decisions
+- Phase structure follows priority order: Safety -> Core Sender -> Niceties -> Extended
 - All safety features must be individually configurable via Config toggles
-- UI-only changes to existing panels — no new windows or layout restructuring
+- UI-only changes to existing panels -- no new windows or layout restructuring
 - ncSender used as feature benchmark (170+ releases of dedicated sender polish)
 - Branch: Sender-dev
 
-### Known Issues
-- Previous milestone ROADMAP.md shows phases 6-8 plans as "Pending" but code is actually shipped
-- REQUIREMENTS.md traceability shows CUI-04 through CUI-10 as "Pending" but features are implemented
+### Pending Todos
+None yet.
 
-### Patterns Established
-- C++17, SDL2, Dear ImGui (docking), OpenGL 3.3, SQLite3
-- MainThreadQueue for UI updates from background threads
-- EventBus for decoupled component communication
-- Character-counting streaming for GRBL protocol
-- CNC panels wired via CncCallbacks in application_wiring.cpp
-- Config singleton for settings persistence (INI format)
-- MacroManager uses own SQLite DB
-
-### TODOs
-- (none yet)
-
-### Blockers
-- (none)
+### Blockers/Concerns
+None.
 
 ## Session Continuity
 
-**Last session:** Milestone initialization (Sender Feature Parity)
-**Next action:** Define requirements, create roadmap, begin Phase 9 execution
-**Context to carry:** Full ncSender feature comparison completed. 4 phases scoped. Branch Sender-dev created and pushed.
+Last session: 2026-02-26
+Stopped at: Roadmap created for v0.2.0 milestone
+Resume file: None
+Next action: `/gsd:plan-phase 9` to plan Safety phase
 
 ---
 *State initialized: 2026-02-26*
