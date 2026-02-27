@@ -9,14 +9,14 @@ Requirements for the Sender Feature Parity milestone. Each maps to roadmap phase
 
 ### Safety
 
-- [ ] **SAF-10**: Home button requires configurable long-press (default 1s) to prevent accidental homing
-- [ ] **SAF-11**: Job start requires configurable long-press (default 1s) to prevent accidental job launch
-- [ ] **SAF-12**: Abort button supports configurable long-press requirement as alternative to confirmation dialog
-- [ ] **SAF-13**: Dead-man watchdog stops continuous jog if no keepalive received within configurable timeout (default 1000ms)
-- [ ] **SAF-14**: Door interlock blocks rapid moves and spindle commands when GRBL Pn:D (door) pin is active, configurable on/off
-- [ ] **SAF-15**: Soft limit pre-check compares G-code bounds against machine travel ($130-$132) before streaming, configurable on/off
-- [ ] **SAF-16**: Stop command sends feed hold before soft reset to reduce tool marks (pause-before-reset), configurable on/off
-- [ ] **SAF-17**: Safety settings UI exposes per-feature enable/disable toggles with defaults in Config
+- [x] **SAF-10**: Home button requires configurable long-press (default 1s) to prevent accidental homing
+- [x] **SAF-11**: Job start requires configurable long-press (default 1s) to prevent accidental job launch
+- [x] **SAF-12**: Abort button supports configurable long-press requirement as alternative to confirmation dialog
+- [x] **SAF-13**: Dead-man watchdog stops continuous jog if no keepalive received within configurable timeout (default 1000ms)
+- [x] **SAF-14**: Door interlock blocks rapid moves and spindle commands when GRBL Pn:D (door) pin is active, configurable on/off
+- [x] **SAF-15**: Soft limit pre-check compares G-code bounds against machine travel ($130-$132) before streaming, configurable on/off
+- [x] **SAF-16**: Stop command sends feed hold before soft reset to reduce tool marks (pause-before-reset), configurable on/off
+- [x] **SAF-17**: Safety settings UI exposes per-feature enable/disable toggles with defaults in Config
 
 ### Core Sender
 
@@ -95,14 +95,14 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SAF-10 | Phase 9: Safety | Pending |
-| SAF-11 | Phase 9: Safety | Pending |
-| SAF-12 | Phase 9: Safety | Pending |
-| SAF-13 | Phase 9: Safety | Pending |
-| SAF-14 | Phase 9: Safety | Pending |
-| SAF-15 | Phase 9: Safety | Pending |
-| SAF-16 | Phase 9: Safety | Pending |
-| SAF-17 | Phase 9: Safety | Pending |
+| SAF-10 | Phase 9: Safety | Complete |
+| SAF-11 | Phase 9: Safety | Complete |
+| SAF-12 | Phase 9: Safety | Complete |
+| SAF-13 | Phase 9: Safety | Complete |
+| SAF-14 | Phase 9: Safety | Complete |
+| SAF-15 | Phase 9: Safety | Complete |
+| SAF-16 | Phase 9: Safety | Complete |
+| SAF-17 | Phase 9: Safety | Complete |
 | SND-01 | Phase 10: Core Sender | Pending |
 | SND-02 | Phase 10: Core Sender | Pending |
 | SND-03 | Phase 10: Core Sender | Pending |

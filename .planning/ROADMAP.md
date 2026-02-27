@@ -25,7 +25,7 @@
 
 **Milestone Goal:** Bring CNC sender to feature parity with dedicated senders (ncSender benchmark), prioritizing safety, core controls, workflow polish, and extended capabilities.
 
-- [ ] **Phase 9: Safety** - Configurable safety guards: long-press buttons, dead-man watchdog, door interlock, soft limits, pause-before-reset
+- [x] **Phase 9: Safety** - Configurable safety guards: long-press buttons, dead-man watchdog, door interlock, soft limits, pause-before-reset (2026-02-26)
 - [ ] **Phase 10: Core Sender** - Override controls, coolant toggles, alarm handling, status polling, precision jog, WCS quick-switch
 - [ ] **Phase 11: Niceties** - DRO click-to-zero, move-to dialog, diagonal jog, console tags, recent files, keyboard overrides, macro reorder, job alerts
 - [ ] **Phase 12: Extended** - Alarm/error references, probe workflows, M6 detection, nested macros, tool color viz, gamepad, TLS
@@ -44,8 +44,8 @@
   5. Every safety feature can be individually enabled or disabled through a dedicated safety settings UI section
 **Plans:** 2 plans
 Plans:
-- [ ] 09-01-PLAN.md -- Config keys, long-press buttons (Home/Start/Abort), dead-man watchdog
-- [ ] 09-02-PLAN.md -- Door interlock, soft limit pre-check, pause-before-reset, safety settings UI
+- [x] 09-01-PLAN.md -- Config keys, long-press buttons (Home/Start/Abort), dead-man watchdog
+- [x] 09-02-PLAN.md -- Door interlock, soft limit pre-check, pause-before-reset, safety settings UI
 
 ### Phase 10: Core Sender
 **Goal**: Operator has full real-time control over spindle speed, rapid rate, feed rate overrides, coolant, and jog precision while the machine runs
@@ -97,11 +97,11 @@ Plans:
 | 6. Job Safety | v0.1.x | 4/4 | Complete | 2026-02-24 |
 | 7. Firmware Settings | v0.1.x | 2/2 | Complete | 2026-02-25 |
 | 8. Macros | v0.1.x | 3/3 | Complete | 2026-02-25 |
-| 9. Safety | v0.2.0 | 0/2 | Planning complete | - |
+| 9. Safety | v0.2.0 | 2/2 | Complete | 2026-02-26 |
 | 10. Core Sender | v0.2.0 | 0/0 | Not started | - |
 | 11. Niceties | v0.2.0 | 0/0 | Not started | - |
 | 12. Extended | v0.2.0 | 0/0 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-24*
-*Last updated: 2026-02-26 -- Phase 9 Safety planned (2 plans)*
+*Last updated: 2026-02-26 -- Phase 9 Safety complete (2/2 plans)*
