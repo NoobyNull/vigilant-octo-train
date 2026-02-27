@@ -1,56 +1,53 @@
-# State: CNC Controller Suite
+# State: Sender Feature Parity
 
 ## Project Reference
 
+See: .planning/PROJECT.md (updated 2026-02-26)
+
 **Core Value:** A woodworker can go from selecting a piece of wood and a cutting tool to safely running a CNC job with optimized feeds and speeds -- all without leaving the application.
 
-**Current Focus:** CNC Controller Suite milestone -- integrate existing subsystems (tool database, feeds/speeds calculator, material system, GRBL controller) into a usable CNC workflow.
+**Current Focus:** Sender Feature Parity milestone -- bring CNC sender to feature parity with dedicated senders, prioritizing safety, core controls, workflow polish, and extended capabilities.
 
 ## Current Position
 
-**Phase:** 8 of 8 - Macros (COMPLETE)
-**Plan:** All plans complete
-**Status:** Phase 8 complete -- CNC Controller Suite milestone DONE
+**Phase:** Not started (defining requirements)
+**Plan:** —
+**Status:** Defining requirements
 
 ```
-Phase Progress: [########] 8/8
+Phase Progress: [        ] 0/4
 ```
 
 ## Performance Metrics
 
 | Metric | Value |
 |--------|-------|
-| Plans completed | 21 |
+| Plans completed | 0 |
 | Plans failed | 0 |
-| Requirements done | 32/39 |
-| Phases done | 8/8 |
+| Requirements done | 0/42 |
+| Phases done | 0/4 |
 
 ## Accumulated Context
 
 ### Key Decisions
-- Phase structure follows natural requirement categories with CUI split into Status Display + Manual Control, TAC split into Tool Integration + Job Streaming, and FWC split into Firmware Settings + Macros
-- Phase 7 (Firmware Settings) depends on Phase 1 only, not on Phases 2-6, allowing parallel work if desired
-- Platform requirements (Windows serial, WebSocket) deferred to v2
-- Separate SQLite database (macros.db) for macro storage rather than sharing library.db
-- Built-in macros (Homing, Probe Z, Return to Zero) seeded idempotently via ensureBuiltIns()
-- G-code comments stripped during parseLines (both semicolon and parenthesis styles)
+- Phase structure follows priority order: Safety → Core Sender → Niceties → Extended
+- All safety features must be individually configurable via Config toggles
+- UI-only changes to existing panels — no new windows or layout restructuring
+- ncSender used as feature benchmark (170+ releases of dedicated sender polish)
+- Branch: Sender-dev
 
 ### Known Issues
-- Thread safety violation in real-time command dispatch (FND-01) -- must fix first
-- Missing soft-reset-on-error in streaming engine (FND-02)
-- No USB disconnect detection (FND-03)
-- DTR suppression not implemented (FND-04)
-- Arc resume edge case needs investigation during Phase 6
+- Previous milestone ROADMAP.md shows phases 6-8 plans as "Pending" but code is actually shipped
+- REQUIREMENTS.md traceability shows CUI-04 through CUI-10 as "Pending" but features are implemented
 
 ### Patterns Established
 - C++17, SDL2, Dear ImGui (docking), OpenGL 3.3, SQLite3
 - MainThreadQueue for UI updates from background threads
 - EventBus for decoupled component communication
 - Character-counting streaming for GRBL protocol
-- Vectric .vtdb compatibility for tool database
 - CNC panels wired via CncCallbacks in application_wiring.cpp
-- Feed deviation uses override-aware comparison (accounts for feed override %)
-- MacroManager uses own SQLite DB for macro CRUD with built-in macro seeding
+- Config singleton for settings persistence (INI format)
+- MacroManager uses own SQLite DB
 
 ### TODOs
 - (none yet)
@@ -60,10 +57,10 @@ Phase Progress: [########] 8/8
 
 ## Session Continuity
 
-**Last session:** Phase 8 execution (Macros)
-**Next action:** CNC Controller Suite milestone complete. Review outstanding platform requirements for v2.
-**Context to carry:** Phase 8 complete -- MacroManager with SQLite CRUD, 3 built-in macros, CncMacroPanel with run/edit/delete/reorder, wired into UIManager and Application. 715 tests passing.
+**Last session:** Milestone initialization (Sender Feature Parity)
+**Next action:** Define requirements, create roadmap, begin Phase 9 execution
+**Context to carry:** Full ncSender feature comparison completed. 4 phases scoped. Branch Sender-dev created and pushed.
 
 ---
-*State initialized: 2026-02-24*
-*Last updated: 2026-02-25*
+*State initialized: 2026-02-26*
+*Last updated: 2026-02-26*
