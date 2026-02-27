@@ -123,6 +123,7 @@ void GCodePanel::render() {
 
         renderModeTabs();
         renderToolbar();
+        renderSearchBar();
 
         if (hasGCode()) {
             ImGui::Separator();
@@ -1434,6 +1435,83 @@ void GCodePanel::buildSendProgram() {
     addConsoleLine(
         "Streaming " + std::to_string(lines.size()) + " lines",
         ConsoleLine::Info);
+}
+
+// --- Search/Goto (EXT-12) ---
+
+void GCodePanel::renderSearchBar() {
+    if (!hasGCode()) return;
+
+    // Toggle search with Ctrl+F
+    if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_F)) {
+        m_searchActive = !m_searchActive;
+    }
+
+    if (!m_searchActive) return;
+
+    ImGui::Separator();
+    ImGui::SetNextItemWidth(200);
+    bool searchChanged = ImGui::InputText("##Search", m_searchBuf, sizeof(m_searchBuf),
+                                           ImGuiInputTextFlags_EnterReturnsTrue);
+
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Find Next") || searchChanged) {
+        findNext();
+    }
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(80);
+    if (ImGui::InputInt("##Goto", &m_gotoLine, 0, 0,
+                         ImGuiInputTextFlags_EnterReturnsTrue)) {
+        gotoLineNumber(m_gotoLine);
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Go to line number");
+
+    ImGui::SameLine();
+    if (ImGui::SmallButton("X##CloseSearch")) {
+        m_searchActive = false;
+        m_searchBuf[0] = '\0';
+        m_searchResultLine = -1;
+    }
+
+    if (m_searchResultLine >= 0) {
+        ImGui::SameLine();
+        ImGui::TextDisabled("Match at line %d", m_searchResultLine + 1);
+    }
+}
+
+void GCodePanel::findNext() {
+    if (m_searchBuf[0] == '\0') return;
+
+    auto lines = getRawLines();
+    int total = static_cast<int>(lines.size());
+    if (total == 0) return;
+
+    std::string needle(m_searchBuf);
+    for (auto& c : needle) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+
+    int startLine = m_searchResultLine + 1;
+
+    for (int i = 0; i < total; ++i) {
+        int idx = (startLine + i) % total;
+        std::string upper = lines[static_cast<size_t>(idx)];
+        for (auto& c : upper) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+        if (upper.find(needle) != std::string::npos) {
+            m_searchResultLine = idx;
+            m_scrollToLine = idx;
+            return;
+        }
+    }
+    m_searchResultLine = -1;
+}
+
+void GCodePanel::gotoLineNumber(int lineNum) {
+    auto lines = getRawLines();
+    int idx = lineNum - 1;
+    if (idx >= 0 && idx < static_cast<int>(lines.size())) {
+        m_scrollToLine = idx;
+        m_searchResultLine = idx;
+    }
 }
 
 } // namespace dw

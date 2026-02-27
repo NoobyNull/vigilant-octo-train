@@ -199,6 +199,17 @@ class GCodePanel : public Panel {
 
     // Machine profile editor dialog
     MachineProfileDialog m_profileDialog;
+
+    // G-code search/goto (EXT-12)
+    char m_searchBuf[128] = "";
+    int m_searchResultLine = -1;
+    bool m_searchActive = false;
+    int m_gotoLine = 0;
+    int m_scrollToLine = -1;
+
+    void renderSearchBar();
+    void findNext();
+    void gotoLineNumber(int lineNum);
 };
 
 } // namespace dw

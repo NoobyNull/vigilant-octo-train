@@ -57,6 +57,7 @@ class CncSettingsPanel : public Panel {
     void writeAllModified();
     void backupToFile();
     void restoreFromFile();
+    void exportPlainText();
 
     // State
     CncController* m_cnc = nullptr;
