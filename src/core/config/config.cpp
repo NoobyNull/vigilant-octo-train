@@ -258,6 +258,16 @@ bool Config::load() {
                 int val = 3000;
                 str::parseInt(value, val);
                 m_jogFeedLarge = std::clamp(val, 500, 10000);
+            } else if (key == "job_completion_notify") {
+                m_jobCompletionNotify = (value == "true" || value == "1");
+            } else if (key == "job_completion_flash") {
+                m_jobCompletionFlash = (value == "true" || value == "1");
+            }
+        } else if (section == "recent_gcode") {
+            if (str::startsWith(key, "file")) {
+                if (!value.empty()) {
+                    m_recentGCodeFiles.push_back(value);
+                }
             }
         } else if (section == "machine_profiles") {
             if (key == "active_profile") {
@@ -434,6 +444,15 @@ bool Config::save() {
     ss << "jog_feed_small=" << m_jogFeedSmall << "\n";
     ss << "jog_feed_medium=" << m_jogFeedMedium << "\n";
     ss << "jog_feed_large=" << m_jogFeedLarge << "\n";
+    ss << "job_completion_notify=" << (m_jobCompletionNotify ? "true" : "false") << "\n";
+    ss << "job_completion_flash=" << (m_jobCompletionFlash ? "true" : "false") << "\n";
+    ss << "\n";
+
+    // Recent G-code files section
+    ss << "[recent_gcode]\n";
+    for (size_t i = 0; i < m_recentGCodeFiles.size(); ++i) {
+        ss << "file" << i << "=" << m_recentGCodeFiles[i].string() << "\n";
+    }
     ss << "\n";
 
     // Safety section
@@ -493,6 +512,22 @@ void Config::removeRecentProject(const Path& path) {
 
 void Config::clearRecentProjects() {
     m_recentProjects.clear();
+}
+
+void Config::addRecentGCodeFile(const Path& path) {
+    // Remove if already present
+    m_recentGCodeFiles.erase(
+        std::remove(m_recentGCodeFiles.begin(), m_recentGCodeFiles.end(), path),
+        m_recentGCodeFiles.end());
+    // Insert at front
+    m_recentGCodeFiles.insert(m_recentGCodeFiles.begin(), path);
+    // Trim to max
+    if (static_cast<int>(m_recentGCodeFiles.size()) > MAX_RECENT_GCODE)
+        m_recentGCodeFiles.resize(MAX_RECENT_GCODE);
+}
+
+void Config::clearRecentGCodeFiles() {
+    m_recentGCodeFiles.clear();
 }
 
 void Config::initDefaultBindings() {

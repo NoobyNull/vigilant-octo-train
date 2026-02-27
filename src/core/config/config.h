@@ -237,6 +237,18 @@ class Config {
     bool getSafetyPauseBeforeResetEnabled() const { return m_safetyPauseBeforeResetEnabled; }
     void setSafetyPauseBeforeResetEnabled(bool v) { m_safetyPauseBeforeResetEnabled = v; }
 
+    // Recent G-code files (most recent first, max 10)
+    const std::vector<Path>& getRecentGCodeFiles() const { return m_recentGCodeFiles; }
+    void addRecentGCodeFile(const Path& path);
+    void clearRecentGCodeFiles();
+
+    // Job completion notification settings
+    bool getJobCompletionNotify() const { return m_jobCompletionNotify; }
+    void setJobCompletionNotify(bool v) { m_jobCompletionNotify = v; }
+
+    bool getJobCompletionFlash() const { return m_jobCompletionFlash; }
+    void setJobCompletionFlash(bool v) { m_jobCompletionFlash = v; }
+
     // Machine profiles
     const std::vector<gcode::MachineProfile>& getMachineProfiles() const { return m_machineProfiles; }
     void setMachineProfiles(const std::vector<gcode::MachineProfile>& profiles) { m_machineProfiles = profiles; }
@@ -343,6 +355,14 @@ class Config {
     bool m_safetyDoorInterlockEnabled = true;
     bool m_safetySoftLimitCheckEnabled = true;
     bool m_safetyPauseBeforeResetEnabled = true;
+
+    // Recent G-code files (most recent first, max 10)
+    std::vector<Path> m_recentGCodeFiles;
+    static constexpr int MAX_RECENT_GCODE = 10;
+
+    // Job completion notification
+    bool m_jobCompletionNotify = true;
+    bool m_jobCompletionFlash = true;
 
     // Machine profiles
     std::vector<gcode::MachineProfile> m_machineProfiles;

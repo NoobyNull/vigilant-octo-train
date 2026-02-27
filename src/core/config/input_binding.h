@@ -50,6 +50,10 @@ struct InputBinding {
 enum class BindAction : int {
     LightDirDrag = 0,
     LightIntensityDrag,
+    FeedOverridePlus,
+    FeedOverrideMinus,
+    SpindleOverridePlus,
+    SpindleOverrideMinus,
     COUNT,
 };
 

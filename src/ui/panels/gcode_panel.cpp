@@ -1,6 +1,7 @@
 #include "gcode_panel.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <numeric>
 
@@ -77,6 +78,49 @@ void GCodePanel::render() {
         return;
 
     if (ImGui::Begin(m_title.c_str(), &m_open)) {
+        // Job completion flash bar
+        if (m_jobFlashTimer > 0.0f) {
+            m_jobFlashTimer -= ImGui::GetIO().DeltaTime;
+            ImVec2 cursorPos = ImGui::GetCursorScreenPos();
+            float width = ImGui::GetContentRegionAvail().x;
+            float height = 4.0f;
+            float alpha = 0.5f + 0.5f * std::sin(m_jobFlashTimer * 6.0f);
+            ImU32 flashColor = ImGui::ColorConvertFloat4ToU32(
+                ImVec4(0.2f, 0.8f, 0.2f, alpha));
+            ImGui::GetWindowDrawList()->AddRectFilled(
+                cursorPos, ImVec2(cursorPos.x + width, cursorPos.y + height),
+                flashColor);
+            ImGui::Dummy(ImVec2(width, height));
+        }
+
+        // Override keyboard shortcuts (only when connected)
+        if (m_cnc && m_cncConnected) {
+            auto& cfg = Config::instance();
+            auto checkOverride = [&](BindAction action) -> bool {
+                auto b = cfg.getBinding(action);
+                if (!b.isValid() || b.type != InputType::Key)
+                    return false;
+                bool modsMatch = true;
+                if ((b.modifiers & Mod_Ctrl) && !ImGui::GetIO().KeyCtrl) modsMatch = false;
+                if ((b.modifiers & Mod_Shift) && !ImGui::GetIO().KeyShift) modsMatch = false;
+                if ((b.modifiers & Mod_Alt) && !ImGui::GetIO().KeyAlt) modsMatch = false;
+                return modsMatch && ImGui::IsKeyPressed(static_cast<ImGuiKey>(b.value), false);
+            };
+
+            if (checkOverride(BindAction::FeedOverridePlus)) {
+                m_cnc->setFeedOverride(std::min(200, m_machineStatus.feedOverride + 10));
+            }
+            if (checkOverride(BindAction::FeedOverrideMinus)) {
+                m_cnc->setFeedOverride(std::max(10, m_machineStatus.feedOverride - 10));
+            }
+            if (checkOverride(BindAction::SpindleOverridePlus)) {
+                m_cnc->setSpindleOverride(std::min(200, m_machineStatus.spindleOverride + 10));
+            }
+            if (checkOverride(BindAction::SpindleOverrideMinus)) {
+                m_cnc->setSpindleOverride(std::max(10, m_machineStatus.spindleOverride - 10));
+            }
+        }
+
         renderModeTabs();
         renderToolbar();
 
@@ -170,6 +214,10 @@ bool GCodePanel::loadFile(const std::string& path) {
     if (!m_program.commands.empty()) {
         m_filePath = path;
 
+        // Add to recent G-code files list
+        Config::instance().addRecentGCodeFile(path);
+        Config::instance().save();
+
         gcode::Analyzer analyzer;
         analyzer.setMachineProfile(Config::instance().getActiveMachineProfile());
         m_stats = analyzer.analyze(m_program);
@@ -248,6 +296,9 @@ void GCodePanel::renderToolbar() {
         }
     }
 
+    ImGui::SameLine();
+    renderRecentFiles();
+
     if (hasGCode()) {
         ImGui::SameLine();
         if (ImGui::Button("Close")) {
@@ -295,6 +346,42 @@ void GCodePanel::renderToolbar() {
                 }
             }
         }
+    }
+}
+
+void GCodePanel::renderRecentFiles() {
+    auto& cfg = Config::instance();
+    const auto& recent = cfg.getRecentGCodeFiles();
+    if (recent.empty()) {
+        ImGui::BeginDisabled();
+        ImGui::Button("Recent");
+        ImGui::EndDisabled();
+        return;
+    }
+
+    if (ImGui::Button("Recent")) {
+        ImGui::OpenPopup("RecentGCodePopup");
+    }
+    if (ImGui::BeginPopup("RecentGCodePopup")) {
+        for (const auto& rpath : recent) {
+            std::string filename = rpath.string();
+            auto lastSlash = filename.find_last_of("/\\");
+            if (lastSlash != std::string::npos)
+                filename = filename.substr(lastSlash + 1);
+
+            if (ImGui::MenuItem(filename.c_str())) {
+                loadFile(rpath.string());
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("%s", rpath.string().c_str());
+            }
+        }
+        ImGui::Separator();
+        if (ImGui::MenuItem("Clear Recent")) {
+            cfg.clearRecentGCodeFiles();
+            cfg.save();
+        }
+        ImGui::EndPopup();
     }
 }
 
@@ -1243,8 +1330,20 @@ void GCodePanel::onGrblProgress(const StreamProgress& progress) {
     // Check completion
     if (progress.ackedLines >= progress.totalLines && progress.totalLines > 0) {
         addConsoleLine("Stream complete", ConsoleLine::Info);
-        ToastManager::instance().show(ToastType::Success, "Done",
-                                      "G-code streaming finished");
+
+        auto& cfg = Config::instance();
+        if (cfg.getJobCompletionNotify()) {
+            int totalSec = static_cast<int>(progress.elapsedSeconds);
+            int min = totalSec / 60;
+            int sec = totalSec % 60;
+            char msg[128];
+            std::snprintf(msg, sizeof(msg), "G-code streaming finished in %d:%02d", min, sec);
+            ToastManager::instance().show(ToastType::Success, "Job Complete", msg);
+        }
+
+        if (cfg.getJobCompletionFlash()) {
+            m_jobFlashTimer = 3.0f;
+        }
     }
 }
 

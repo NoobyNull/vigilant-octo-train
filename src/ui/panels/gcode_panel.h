@@ -79,6 +79,7 @@ class GCodePanel : public Panel {
   private:
     // Render sections
     void renderToolbar();
+    void renderRecentFiles();
     void renderModeTabs();
     void renderMachineProfileSelector();
     void renderStatistics();
@@ -192,6 +193,9 @@ class GCodePanel : public Panel {
     // Precomputed segment times from trapezoidal planner
     std::vector<float> m_segmentTimes;          // Per-segment time (seconds)
     std::vector<float> m_segmentTimeCumulative; // Cumulative sum for binary search
+
+    // Job completion flash timer
+    float m_jobFlashTimer = 0.0f;
 
     // Machine profile editor dialog
     MachineProfileDialog m_profileDialog;
