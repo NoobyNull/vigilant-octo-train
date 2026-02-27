@@ -1,148 +1,146 @@
-# Requirements: Digital Workshop -- CNC Controller Suite
+# Requirements: Digital Workshop -- Sender Feature Parity
 
-**Defined:** 2026-02-24
+**Defined:** 2026-02-26
 **Core Value:** A woodworker can go from selecting a piece of wood and a cutting tool to safely running a CNC job with optimized feeds and speeds -- all without leaving the application.
 
 ## v1 Requirements
 
-Requirements for the CNC Controller Suite milestone. Each maps to roadmap phases.
+Requirements for the Sender Feature Parity milestone. Each maps to roadmap phases.
 
-### Foundation
+### Safety
 
-- [x] **FND-01**: Real-time commands (feed hold, cycle start, overrides) are dispatched thread-safely via the IO thread, not directly from UI thread
-- [x] **FND-02**: Streaming engine issues soft reset on unrecoverable error to prevent GRBL from executing remaining buffer
-- [x] **FND-03**: Serial port detects USB disconnect (POLLHUP/POLLERR) and reports connection loss to UI
-- [x] **FND-04**: Serial port suppresses DTR on open to prevent Arduino auto-reset and position loss
+- [ ] **SAF-10**: Home button requires configurable long-press (default 1s) to prevent accidental homing
+- [ ] **SAF-11**: Job start requires configurable long-press (default 1s) to prevent accidental job launch
+- [ ] **SAF-12**: Abort button supports configurable long-press requirement as alternative to confirmation dialog
+- [ ] **SAF-13**: Dead-man watchdog stops continuous jog if no keepalive received within configurable timeout (default 1000ms)
+- [ ] **SAF-14**: Door interlock blocks rapid moves and spindle commands when GRBL Pn:D (door) pin is active, configurable on/off
+- [ ] **SAF-15**: Soft limit pre-check compares G-code bounds against machine travel ($130-$132) before streaming, configurable on/off
+- [ ] **SAF-16**: Stop command sends feed hold before soft reset to reduce tool marks (pause-before-reset), configurable on/off
+- [ ] **SAF-17**: Safety settings UI exposes per-feature enable/disable toggles with defaults in Config
 
-### Control UI
+### Core Sender
 
-- [ ] **CUI-01**: DRO displays work and machine XYZ position, updated at polling rate (5Hz)
-- [ ] **CUI-02**: DRO displays machine state (Idle, Run, Hold, Alarm, Home, etc.) with visual indicator
-- [ ] **CUI-03**: DRO displays real-time feed rate and spindle RPM
-- [ ] **CUI-04**: Jog controls with XYZ +/- buttons, configurable step sizes (0.1, 1, 10, 100mm)
-- [ ] **CUI-05**: Keyboard jog shortcuts (arrow keys, page up/down for Z) with focus-aware input routing
-- [ ] **CUI-06**: Continuous jog support using GRBL $J= jog commands with cancel on release
-- [ ] **CUI-07**: Home cycle button that sends $H and tracks homing state
-- [ ] **CUI-08**: Set work zero buttons (X, Y, Z, All) using G10 L20
-- [ ] **CUI-09**: Work coordinate system selector (G54-G59) with display of stored offsets
-- [ ] **CUI-10**: MDI console with single-line G-code input, command history (up/down arrow), and response display
+- [ ] **SND-01**: Spindle override slider (0-200%) sends GRBL real-time spindle override commands
+- [ ] **SND-02**: Rapid override control (25%, 50%, 100%) sends GRBL real-time rapid override commands
+- [ ] **SND-03**: Coolant toggle buttons (Flood M8, Mist M7, Off M9) with visual state indicators in status panel
+- [ ] **SND-04**: Alarm state displays GRBL alarm code with human-readable description and inline $X unlock button
+- [ ] **SND-05**: Status polling interval configurable (50, 100, 150, 200ms) in settings, applied at runtime
+- [ ] **SND-06**: Jog step sizes include 0.01mm for precision zeroing (added to existing 0.1, 1, 10, 100mm)
+- [ ] **SND-07**: Per-step-group feedrate: separate configurable feedrates for small (0.01-0.1mm), medium (1mm), and large (10-100mm) step groups
+- [ ] **SND-08**: WCS quick-switch selector (G54-G59) visible in CNC status panel header without opening WCS panel
 
-### Tool-Aware Controller
+### Niceties
 
-- [x] **TAC-01**: User can select a tool geometry from the tool database to calculate cutting parameters
-- [x] **TAC-02**: Selected tool geometry + selected wood species auto-calculates optimal feeds/speeds via existing calculator (no physical tool change)
-- [x] **TAC-03**: Calculated cutting parameters (RPM, feed rate, plunge rate, stepdown, stepover) displayed in a reference panel for the operator to use
-- [x] **TAC-04**: During streaming, running feed rate is compared to calculator recommendation with visual warning if >20% deviation
-- [x] **TAC-05**: Job elapsed time displayed and updated during streaming
-- [x] **TAC-06**: Estimated remaining time calculated from line progress and current feed rate
-- [x] **TAC-07**: Current line number and total line count displayed during streaming
-- [x] **TAC-08**: Job progress percentage displayed (current line / total lines)
+- [ ] **NIC-01**: Double-click DRO axis value to zero that axis (sends G10 L20 for clicked axis)
+- [ ] **NIC-02**: Move-to dialog for explicit XYZ target entry with Go button (sends G0/G1 to target)
+- [ ] **NIC-03**: Diagonal XY jog buttons (+X+Y, +X-Y, -X+Y, -X-Y) in jog panel
+- [ ] **NIC-04**: Console messages tagged with source type ([JOB], [MDI], [MACRO], [SYS]) via color and prefix
+- [ ] **NIC-05**: Recent G-code files list (last 10) in GCode panel for quick re-load
+- [ ] **NIC-06**: Keyboard shortcuts for feed override (±10%) and spindle override (±10%) bindable in config
+- [ ] **NIC-07**: Macro list supports drag-and-drop reordering with sort_order persisted to database
+- [ ] **NIC-08**: Job completion notification via toast and optional status bar flash when streaming finishes
 
-### Safety & Recovery
+### Extended
 
-- [ ] **SAF-01**: Pause button sends feed hold (!) with visual state change
-- [ ] **SAF-02**: Resume button sends cycle start (~) only when in Hold state
-- [ ] **SAF-03**: E-stop button sends soft reset (0x18) with confirmation dialog for running jobs
-- [ ] **SAF-04**: Safe job resume: user can specify line number to resume from
-- [ ] **SAF-05**: Resume builds modal state preamble by scanning G-code from line 0 to resume point (G90/G91, coordinate system, spindle, coolant, feed rate, units)
-- [ ] **SAF-06**: Sensor status display shows endstop, probe, and door states from GRBL Pn: field
-- [ ] **SAF-07**: Pre-flight check before streaming: verify connection active, no alarm state, tool selected (optional), material selected (optional)
-
-### Firmware & Configuration
-
-- [ ] **FWC-01**: GRBL settings panel reads $$ and displays all settings with human-readable descriptions
-- [ ] **FWC-02**: User can edit individual GRBL settings with validation (min/max/type constraints)
-- [ ] **FWC-03**: Settings backup: export current $$ to JSON file
-- [ ] **FWC-04**: Settings restore: import $$ from JSON backup file with confirmation
-- [ ] **FWC-05**: Machine tuning UI for steps/mm, max feed rate, acceleration per axis
-- [ ] **FWC-06**: Machine profile sync: read GRBL $$ settings into DW machine profile on connect
-- [ ] **FWC-07**: Machine profile push: write DW machine profile values to GRBL $$ settings
-- [ ] **FWC-08**: Macro storage in SQLite with name, G-code content, optional keyboard shortcut
-- [ ] **FWC-09**: Macro execution sends G-code lines sequentially via sendCommand()
-- [ ] **FWC-10**: Built-in macros for common operations: homing, probe Z, return to zero
+- [ ] **EXT-01**: GRBL alarm code reference table (codes 1-10+) accessible from alarm display as tooltip or expandable section
+- [ ] **EXT-02**: GRBL error code reference (errors 1-37+) shown in console when error responses received
+- [ ] **EXT-03**: Firmware info query ($I) with version display in settings panel
+- [ ] **EXT-04**: Export GRBL settings to plain text file (in addition to existing JSON backup)
+- [ ] **EXT-05**: Log-to-file toggle in settings exposing existing setLogFile capability
+- [ ] **EXT-06**: G-code out-of-bounds pre-check compares parsed bounds vs machine travel limits before streaming
+- [ ] **EXT-07**: Probe active indicator (LED) in status panel parsing Pn:P from GRBL status
+- [ ] **EXT-08**: Cycle-steps keyboard shortcut cycles through jog step size groups (small→medium→large→small)
+- [ ] **EXT-09**: Per-tool color coding in toolpath visualization segments based on T-code parsing
+- [ ] **EXT-10**: M6 tool change detection pauses streaming, notifies operator, waits for acknowledgment before continuing
+- [ ] **EXT-11**: Z-probe workflow dialog with guided steps: approach speed, plate thickness, retract distance, probe execution
+- [ ] **EXT-12**: G-code search/goto: find text in loaded G-code file and scroll to matching line
+- [ ] **EXT-13**: Nested macros via M98 Pxxxx: sender-side expansion with recursion guard (max depth 16) and error reporting
+- [ ] **EXT-14**: Gamepad input via SDL_GameController: axis mapping for jog, button mapping for start/pause/stop/home
+- [ ] **EXT-15**: Tool length setter (TLS) workflow: measure tool offset, store per-tool, apply G43 compensation
+- [ ] **EXT-16**: 3D probing workflows: edge finding, corner probing, center finding with approach/retract sequences
 
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
 
-### Tool Change
+### Connectivity
 
-- **TCH-01**: M6 tool change interception pauses job and prompts operator
-- **TCH-02**: Tool change applies new tool parameters from database automatically
+- **CON-01**: Ethernet/Telnet connection for network-attached CNC controllers
+- **CON-02**: WebSocket protocol for FluidNC WiFi connectivity
+- **CON-03**: Windows serial port implementation (Win32 CreateFile/ReadFile/WriteFile)
 
-### Probing
+### Remote Control
 
-- **PRB-01**: Z-probe wizard with touch plate thickness input
-- **PRB-02**: Edge/corner/center probe wizards with guided workflow
-- **PRB-03**: Probe results stored and displayed in WCS panel
+- **RMT-01**: Headless server mode for browser-based remote access
+- **RMT-02**: Multi-client support for simultaneous monitoring
 
-### Platform
+### Plugin System
 
-- **PLT-01**: Windows serial port implementation (Win32 CreateFile/ReadFile/WriteFile)
-- **PLT-02**: WebSocket transport for FluidNC WiFi connectivity
-- **PLT-03**: Height map auto-leveling with bilinear interpolation
+- **PLG-01**: Event-based plugin architecture with command transformation pipeline
+- **PLG-02**: Plugin marketplace with GitHub-based install/update
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
 | Toolpath generation / CAM | Future milestone, requires fundamentally different architecture |
-| Rest machining | Depends on CAM foundation that doesn't exist yet |
-| LinuxCNC support | Different protocol (NML/HAL), not GRBL-compatible |
-| Real-time motion control | DW is a sender, not a motion controller; GRBL handles real-time |
-| Gamepad/joystick jog | Nice-to-have but not core; keyboard jog covers the need |
-| G-code editor | MDI console covers single commands; full editing is a separate tool |
-| Remote/network access | Desktop-first, CNC machines are physically attended |
+| Remote/headless server mode | Desktop CNC machines are physically attended |
+| Plugin/extensibility system | Premature for current userbase size |
+| Pendant hardware support | Requires specific hardware testing unavailable |
+| Firmware flashing (DFU) | Too risky without extensive hardware testing matrix |
+| Full G-code editor (Monaco-style) | MDI console + search/goto covers immediate needs |
+| Height map auto-leveling | Complex feature, deferred to probing milestone |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FND-01 | Phase 1: Fix Foundation | Done |
-| FND-02 | Phase 1: Fix Foundation | Done |
-| FND-03 | Phase 1: Fix Foundation | Done |
-| FND-04 | Phase 1: Fix Foundation | Done |
-| CUI-01 | Phase 2: Status Display | Done |
-| CUI-02 | Phase 2: Status Display | Done |
-| CUI-03 | Phase 2: Status Display | Done |
-| CUI-04 | Phase 3: Manual Control | Pending |
-| CUI-05 | Phase 3: Manual Control | Pending |
-| CUI-06 | Phase 3: Manual Control | Pending |
-| CUI-07 | Phase 3: Manual Control | Pending |
-| CUI-08 | Phase 3: Manual Control | Pending |
-| CUI-09 | Phase 3: Manual Control | Pending |
-| CUI-10 | Phase 3: Manual Control | Pending |
-| TAC-01 | Phase 4: Tool Integration | Pending |
-| TAC-02 | Phase 4: Tool Integration | Pending |
-| TAC-03 | Phase 4: Tool Integration | Pending |
-| TAC-04 | Phase 5: Job Streaming | Complete |
-| TAC-05 | Phase 5: Job Streaming | Complete |
-| TAC-06 | Phase 5: Job Streaming | Complete |
-| TAC-07 | Phase 5: Job Streaming | Complete |
-| TAC-08 | Phase 5: Job Streaming | Complete |
-| SAF-01 | Phase 6: Job Safety | Pending |
-| SAF-02 | Phase 6: Job Safety | Pending |
-| SAF-03 | Phase 6: Job Safety | Pending |
-| SAF-04 | Phase 6: Job Safety | Pending |
-| SAF-05 | Phase 6: Job Safety | Pending |
-| SAF-06 | Phase 6: Job Safety | Pending |
-| SAF-07 | Phase 6: Job Safety | Pending |
-| FWC-01 | Phase 7: Firmware Settings | Pending |
-| FWC-02 | Phase 7: Firmware Settings | Pending |
-| FWC-03 | Phase 7: Firmware Settings | Pending |
-| FWC-04 | Phase 7: Firmware Settings | Pending |
-| FWC-05 | Phase 7: Firmware Settings | Pending |
-| FWC-06 | Phase 7: Firmware Settings | Pending |
-| FWC-07 | Phase 7: Firmware Settings | Pending |
-| FWC-08 | Phase 8: Macros | Pending |
-| FWC-09 | Phase 8: Macros | Pending |
-| FWC-10 | Phase 8: Macros | Pending |
+| SAF-10 | Phase 9: Safety | Pending |
+| SAF-11 | Phase 9: Safety | Pending |
+| SAF-12 | Phase 9: Safety | Pending |
+| SAF-13 | Phase 9: Safety | Pending |
+| SAF-14 | Phase 9: Safety | Pending |
+| SAF-15 | Phase 9: Safety | Pending |
+| SAF-16 | Phase 9: Safety | Pending |
+| SAF-17 | Phase 9: Safety | Pending |
+| SND-01 | Phase 10: Core Sender | Pending |
+| SND-02 | Phase 10: Core Sender | Pending |
+| SND-03 | Phase 10: Core Sender | Pending |
+| SND-04 | Phase 10: Core Sender | Pending |
+| SND-05 | Phase 10: Core Sender | Pending |
+| SND-06 | Phase 10: Core Sender | Pending |
+| SND-07 | Phase 10: Core Sender | Pending |
+| SND-08 | Phase 10: Core Sender | Pending |
+| NIC-01 | Phase 11: Niceties | Pending |
+| NIC-02 | Phase 11: Niceties | Pending |
+| NIC-03 | Phase 11: Niceties | Pending |
+| NIC-04 | Phase 11: Niceties | Pending |
+| NIC-05 | Phase 11: Niceties | Pending |
+| NIC-06 | Phase 11: Niceties | Pending |
+| NIC-07 | Phase 11: Niceties | Pending |
+| NIC-08 | Phase 11: Niceties | Pending |
+| EXT-01 | Phase 12: Extended | Pending |
+| EXT-02 | Phase 12: Extended | Pending |
+| EXT-03 | Phase 12: Extended | Pending |
+| EXT-04 | Phase 12: Extended | Pending |
+| EXT-05 | Phase 12: Extended | Pending |
+| EXT-06 | Phase 12: Extended | Pending |
+| EXT-07 | Phase 12: Extended | Pending |
+| EXT-08 | Phase 12: Extended | Pending |
+| EXT-09 | Phase 12: Extended | Pending |
+| EXT-10 | Phase 12: Extended | Pending |
+| EXT-11 | Phase 12: Extended | Pending |
+| EXT-12 | Phase 12: Extended | Pending |
+| EXT-13 | Phase 12: Extended | Pending |
+| EXT-14 | Phase 12: Extended | Pending |
+| EXT-15 | Phase 12: Extended | Pending |
+| EXT-16 | Phase 12: Extended | Pending |
 
 **Coverage:**
-- v1 requirements: 39 total
-- Mapped to phases: 39
-- Unmapped: 0
+- v1 requirements: 42 total
+- Mapped to phases: 42
+- Unmapped: 0 ✓
 
 ---
-*Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after roadmap creation (8-phase structure)*
+*Requirements defined: 2026-02-26*
+*Last updated: 2026-02-26 after initial definition*
