@@ -57,7 +57,10 @@ Plans:
   3. When GRBL enters alarm state, the alarm code number and a human-readable description are displayed with an inline unlock button
   4. Operator can jog in 0.01mm increments for precision zeroing, with separate configurable feedrates for small, medium, and large step groups
   5. WCS selector (G54-G59) is visible in the status panel header for quick switching without opening the full WCS panel
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 10-01-PLAN.md -- Config keys, override controls (spindle/rapid/feed), coolant toggles, alarm display, status polling interval
+- [ ] 10-02-PLAN.md -- Precision jog (0.01mm), per-step-group feedrates, WCS quick-switch selector
 
 ### Phase 11: Niceties
 **Goal**: Common operator workflows are faster and more informative through interaction shortcuts, better feedback, and convenience features
@@ -98,10 +101,10 @@ Plans:
 | 7. Firmware Settings | v0.1.x | 2/2 | Complete | 2026-02-25 |
 | 8. Macros | v0.1.x | 3/3 | Complete | 2026-02-25 |
 | 9. Safety | v0.2.0 | 2/2 | Complete | 2026-02-26 |
-| 10. Core Sender | v0.2.0 | 0/0 | Not started | - |
+| 10. Core Sender | v0.2.0 | 0/2 | Planned | - |
 | 11. Niceties | v0.2.0 | 0/0 | Not started | - |
 | 12. Extended | v0.2.0 | 0/0 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-24*
-*Last updated: 2026-02-26 -- Phase 9 Safety complete (2/2 plans)*
+*Last updated: 2026-02-26 -- Phase 10 Core Sender planned (2 plans)*
