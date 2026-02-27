@@ -1,5 +1,6 @@
 #include "ui/panels/cnc_console_panel.h"
 
+#include <cstdlib>
 #include <cstring>
 
 #include <imgui.h>
@@ -187,6 +188,15 @@ void CncConsolePanel::onRawLine(const std::string& line, bool isSent) {
             return;
         if (!isSent && line[0] == '<')
             return;
+    }
+
+    // Enhance received error lines with human-readable descriptions (EXT-02)
+    if (!isSent && line.size() > 6 && line.substr(0, 6) == "error:") {
+        int code = std::atoi(line.c_str() + 6);
+        const char* desc = errorDescription(code);
+        std::string enhanced = line + " (" + desc + ")";
+        addLine(enhanced, ConsoleLine::Error, MessageSource::SYS);
+        return;
     }
 
     ConsoleLine cl;

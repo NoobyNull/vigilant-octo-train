@@ -128,6 +128,10 @@ bool Config::load() {
         } else if (section == "logging") {
             if (key == "level") {
                 str::parseInt(value, m_logLevel);
+            } else if (key == "log_to_file") {
+                m_logToFile = (value == "true" || value == "1");
+            } else if (key == "log_file_path") {
+                m_logFilePath = value;
             }
         } else if (section == "paths") {
             if (key == "last_import") {
@@ -343,6 +347,10 @@ bool Config::save() {
     // Logging section
     ss << "[logging]\n";
     ss << "level=" << m_logLevel << "\n";
+    ss << "log_to_file=" << (m_logToFile ? "true" : "false") << "\n";
+    if (!m_logFilePath.empty()) {
+        ss << "log_file_path=" << m_logFilePath.string() << "\n";
+    }
     ss << "\n";
 
     // Paths section

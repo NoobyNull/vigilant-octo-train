@@ -87,6 +87,10 @@ class CncSettingsPanel : public Panel {
 
     // Tab selection
     int m_activeTab = 0; // 0 = Settings, 1 = Tuning
+
+    // Firmware info ($I response) -- EXT-03
+    std::string m_firmwareInfo;
+    bool m_requestingInfo = false;
 };
 
 } // namespace dw

@@ -9,6 +9,8 @@
 
 #include "core/cnc/cnc_controller.h"
 #include "core/config/config.h"
+#include "core/paths/app_paths.h"
+#include "core/utils/log.h"
 #include "ui/dialogs/file_dialog.h"
 #include "ui/icons.h"
 #include "ui/theme.h"
@@ -322,6 +324,13 @@ void CncSettingsPanel::renderToolbar() {
     } else if (m_machineState == MachineState::Alarm) {
         ImGui::SameLine();
         ImGui::TextColored(kErrorColor, "Alarm active -- unlock first ($X)");
+    }
+
+    // Firmware info display -- EXT-03
+    if (!m_firmwareInfo.empty()) {
+        ImGui::TextDisabled("Firmware:");
+        ImGui::SameLine();
+        ImGui::TextUnformatted(m_firmwareInfo.c_str());
     }
 }
 
@@ -725,6 +734,31 @@ void CncSettingsPanel::renderSafetyTab() {
     }
 
     ImGui::Spacing();
+
+    // --- Logging ---
+    ImGui::SeparatorText("Logging");
+
+    bool logToFile = cfg.getLogToFile();
+    if (ImGui::Checkbox("Log to file", &logToFile)) {
+        cfg.setLogToFile(logToFile);
+        if (logToFile) {
+            Path logPath = cfg.getLogFilePath();
+            if (logPath.empty()) {
+                logPath = paths::getDataDir() / "digital_workshop.log";
+                cfg.setLogFilePath(logPath);
+            }
+            log::setLogFile(logPath.string());
+        } else {
+            log::closeLogFile();
+        }
+        cfg.save();
+    }
+    if (logToFile) {
+        Path logPath = cfg.getLogFilePath();
+        ImGui::TextDisabled("Path: %s", logPath.string().c_str());
+    }
+
+    ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
     ImGui::TextDisabled("Changes take effect immediately");
@@ -803,6 +837,12 @@ void CncSettingsPanel::onConnectionChanged(bool connected,
     m_connected = connected;
     if (connected) {
         requestSettings();
+        // Query firmware info ($I) -- EXT-03
+        if (m_cnc) {
+            m_cnc->sendCommand("$I");
+            m_requestingInfo = true;
+            m_firmwareInfo.clear();
+        }
     } else {
         m_collecting = false;
         m_writing = false;
@@ -812,6 +852,18 @@ void CncSettingsPanel::onConnectionChanged(bool connected,
 
 void CncSettingsPanel::onRawLine(const std::string& line, bool isSent) {
     if (isSent) return;
+
+    // Capture $I firmware info response -- EXT-03
+    if (m_requestingInfo) {
+        if (line == "ok") {
+            m_requestingInfo = false;
+        } else if (line.substr(0, 5) != "error") {
+            if (!m_firmwareInfo.empty()) m_firmwareInfo += " | ";
+            m_firmwareInfo += line;
+        } else {
+            m_requestingInfo = false;
+        }
+    }
 
     if (!line.empty() && line[0] == '$' && line.find('=') != std::string::npos) {
         m_settings.parseLine(line);

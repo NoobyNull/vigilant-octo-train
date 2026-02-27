@@ -119,6 +119,13 @@ class Config {
     int getLogLevel() const { return m_logLevel; }
     void setLogLevel(int level) { m_logLevel = level; }
 
+    // Log to file (EXT-05)
+    bool getLogToFile() const { return m_logToFile; }
+    void setLogToFile(bool v) { m_logToFile = v; }
+
+    const Path& getLogFilePath() const { return m_logFilePath; }
+    void setLogFilePath(const Path& p) { m_logFilePath = p; }
+
     // Workspace state (panel visibility)
     bool getShowViewport() const { return m_wsShowViewport; }
     void setShowViewport(bool v) { m_wsShowViewport = v; }
@@ -291,6 +298,8 @@ class Config {
 
     // Logging
     int m_logLevel = 1; // Info
+    bool m_logToFile = false;
+    Path m_logFilePath; // Empty = default (app data dir / "digital_workshop.log")
 
     // Default paths
     Path m_lastImportDir;

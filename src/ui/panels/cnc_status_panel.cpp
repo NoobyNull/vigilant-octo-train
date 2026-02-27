@@ -332,6 +332,27 @@ void CncStatusPanel::renderAlarmBanner() {
     }
     ImGui::SameLine();
     ImGui::TextDisabled("Clear alarm state to continue");
+
+    // Alarm reference tooltip
+    ImGui::SameLine();
+    ImGui::SmallButton("?##AlarmRef");
+    if (ImGui::IsItemHovered()) {
+        ImGui::BeginTooltip();
+        ImGui::TextUnformatted("GRBL Alarm Codes");
+        ImGui::Separator();
+        int count = 0;
+        const auto* entries = alarmReference(count);
+        for (int i = 0; i < count; ++i) {
+            bool isActive = (entries[i].code == m_lastAlarmCode);
+            if (isActive)
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.3f, 0.3f, 1.0f));
+            ImGui::Text("ALARM %d: %s -- %s", entries[i].code,
+                         entries[i].name, entries[i].description);
+            if (isActive)
+                ImGui::PopStyleColor();
+        }
+        ImGui::EndTooltip();
+    }
 }
 
 void CncStatusPanel::renderWcsSelector() {

@@ -89,14 +89,16 @@ TEST(CncController, ParseStatusReportWithWCO) {
 // --- Alarm/error descriptions ---
 
 TEST(GrblTypes, AlarmDescriptions) {
-    EXPECT_STREQ(alarmDescription(1), "Hard limit triggered");
-    EXPECT_STREQ(alarmDescription(2), "Soft limit alarm");
+    EXPECT_STREQ(alarmDescription(1), "Hard limit triggered. Machine position lost -- re-home required");
+    EXPECT_STREQ(alarmDescription(2), "G-code motion target exceeds machine travel (soft limit)");
     EXPECT_STREQ(alarmDescription(999), "Unknown alarm");
 }
 
 TEST(GrblTypes, ErrorDescriptions) {
-    EXPECT_STREQ(errorDescription(1), "G-code word consists of only a letter");
+    EXPECT_STREQ(errorDescription(1), "G-code word consists of a letter with no value");
     EXPECT_STREQ(errorDescription(22), "Feed rate has not yet been set or is undefined");
+    EXPECT_STREQ(errorDescription(4), "Negative value received for an expected positive value");
+    EXPECT_STREQ(errorDescription(37), "G43.1 dynamic tool length offset cannot apply an offset to an axis other than configured");
     EXPECT_STREQ(errorDescription(999), "Unknown error");
 }
 
