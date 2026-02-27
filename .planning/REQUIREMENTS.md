@@ -42,22 +42,22 @@ Requirements for the Sender Feature Parity milestone. Each maps to roadmap phase
 
 ### Extended
 
-- [ ] **EXT-01**: GRBL alarm code reference table (codes 1-10+) accessible from alarm display as tooltip or expandable section
-- [ ] **EXT-02**: GRBL error code reference (errors 1-37+) shown in console when error responses received
-- [ ] **EXT-03**: Firmware info query ($I) with version display in settings panel
-- [ ] **EXT-04**: Export GRBL settings to plain text file (in addition to existing JSON backup)
-- [ ] **EXT-05**: Log-to-file toggle in settings exposing existing setLogFile capability
-- [ ] **EXT-06**: G-code out-of-bounds pre-check compares parsed bounds vs machine travel limits before streaming
-- [ ] **EXT-07**: Probe active indicator (LED) in status panel parsing Pn:P from GRBL status
-- [ ] **EXT-08**: Cycle-steps keyboard shortcut cycles through jog step size groups (small→medium→large→small)
-- [ ] **EXT-09**: Per-tool color coding in toolpath visualization segments based on T-code parsing
-- [ ] **EXT-10**: M6 tool change detection pauses streaming, notifies operator, waits for acknowledgment before continuing
-- [ ] **EXT-11**: Z-probe workflow dialog with guided steps: approach speed, plate thickness, retract distance, probe execution
-- [ ] **EXT-12**: G-code search/goto: find text in loaded G-code file and scroll to matching line
-- [ ] **EXT-13**: Nested macros via M98 Pxxxx: sender-side expansion with recursion guard (max depth 16) and error reporting
-- [ ] **EXT-14**: Gamepad input via SDL_GameController: axis mapping for jog, button mapping for start/pause/stop/home
-- [ ] **EXT-15**: Tool length setter (TLS) workflow: measure tool offset, store per-tool, apply G43 compensation
-- [ ] **EXT-16**: 3D probing workflows: edge finding, corner probing, center finding with approach/retract sequences
+- [x] **EXT-01**: GRBL alarm code reference table (codes 1-10+) accessible from alarm display as tooltip or expandable section
+- [x] **EXT-02**: GRBL error code reference (errors 1-37+) shown in console when error responses received
+- [x] **EXT-03**: Firmware info query ($I) with version display in settings panel
+- [x] **EXT-04**: Export GRBL settings to plain text file (in addition to existing JSON backup)
+- [x] **EXT-05**: Log-to-file toggle in settings exposing existing setLogFile capability
+- [x] **EXT-06**: G-code out-of-bounds pre-check compares parsed bounds vs machine travel limits before streaming
+- [x] **EXT-07**: Probe active indicator (LED) in status panel parsing Pn:P from GRBL status
+- [x] **EXT-08**: Cycle-steps keyboard shortcut cycles through jog step size groups (small→medium→large→small)
+- [x] **EXT-09**: Per-tool color coding in toolpath visualization segments based on T-code parsing
+- [x] **EXT-10**: M6 tool change detection pauses streaming, notifies operator, waits for acknowledgment before continuing
+- [x] **EXT-11**: Z-probe workflow dialog with guided steps: approach speed, plate thickness, retract distance, probe execution
+- [x] **EXT-12**: G-code search/goto: find text in loaded G-code file and scroll to matching line
+- [x] **EXT-13**: Nested macros via M98 Pxxxx: sender-side expansion with recursion guard (max depth 16) and error reporting
+- [x] **EXT-14**: Gamepad input via SDL_GameController: axis mapping for jog, button mapping for start/pause/stop/home
+- [x] **EXT-15**: Tool length setter (TLS) workflow: measure tool offset, store per-tool, apply G43 compensation
+- [x] **EXT-16**: 3D probing workflows: edge finding, corner probing, center finding with approach/retract sequences
 
 ## v2 Requirements
 
@@ -119,22 +119,22 @@ Deferred to future release. Tracked but not in current roadmap.
 | NIC-06 | Phase 11: Niceties | Pending |
 | NIC-07 | Phase 11: Niceties | Pending |
 | NIC-08 | Phase 11: Niceties | Pending |
-| EXT-01 | Phase 12: Extended | Pending |
-| EXT-02 | Phase 12: Extended | Pending |
-| EXT-03 | Phase 12: Extended | Pending |
-| EXT-04 | Phase 12: Extended | Pending |
-| EXT-05 | Phase 12: Extended | Pending |
-| EXT-06 | Phase 12: Extended | Pending |
-| EXT-07 | Phase 12: Extended | Pending |
-| EXT-08 | Phase 12: Extended | Pending |
-| EXT-09 | Phase 12: Extended | Pending |
-| EXT-10 | Phase 12: Extended | Pending |
-| EXT-11 | Phase 12: Extended | Pending |
-| EXT-12 | Phase 12: Extended | Pending |
-| EXT-13 | Phase 12: Extended | Pending |
-| EXT-14 | Phase 12: Extended | Pending |
-| EXT-15 | Phase 12: Extended | Pending |
-| EXT-16 | Phase 12: Extended | Pending |
+| EXT-01 | Phase 12: Extended | Complete |
+| EXT-02 | Phase 12: Extended | Complete |
+| EXT-03 | Phase 12: Extended | Complete |
+| EXT-04 | Phase 12: Extended | Complete |
+| EXT-05 | Phase 12: Extended | Complete |
+| EXT-06 | Phase 12: Extended | Complete |
+| EXT-07 | Phase 12: Extended | Complete |
+| EXT-08 | Phase 12: Extended | Complete |
+| EXT-09 | Phase 12: Extended | Complete |
+| EXT-10 | Phase 12: Extended | Complete |
+| EXT-11 | Phase 12: Extended | Complete |
+| EXT-12 | Phase 12: Extended | Complete |
+| EXT-13 | Phase 12: Extended | Complete |
+| EXT-14 | Phase 12: Extended | Complete |
+| EXT-15 | Phase 12: Extended | Complete |
+| EXT-16 | Phase 12: Extended | Complete |
 
 **Coverage:**
 - v1 requirements: 42 total

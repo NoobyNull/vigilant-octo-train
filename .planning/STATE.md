@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
-status: unknown
-last_updated: "2026-02-27T08:56:23.636Z"
+status: complete
+last_updated: "2026-02-27T09:30:00.000Z"
 progress:
   total_phases: 20
-  completed_phases: 10
-  total_plans: 33
-  completed_plans: 29
+  completed_phases: 12
+  total_plans: 38
+  completed_plans: 34
 ---
 
 # Project State
@@ -18,36 +18,32 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** A woodworker can go from selecting a piece of wood and a cutting tool to safely running a CNC job with optimized feeds and speeds -- all without leaving the application.
-**Current focus:** Phase 10: Core Sender (Sender Feature Parity milestone)
+**Current focus:** Phase 12: Extended complete -- all Sender Feature Parity phases done
 
 ## Current Position
 
-Phase: 10 of 12 (Core Sender)
-Plan: 2 of 2 in current phase
-Status: All plans complete, pending verification
-Last activity: 2026-02-26 -- Plan 10-02 complete (precision jog, feedrates, WCS selector)
+Phase: 12 of 12 (Extended)
+Plan: 5 of 5 in current phase
+Status: All plans complete, phase verified
+Last activity: 2026-02-27 -- Phase 12 complete (5/5 plans, 16 EXT requirements)
 
-Progress: [██░░░░░░░░] 25%
+Progress: [██████████] 100% (Sender Feature Parity milestone)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 24 (22 from v0.1.x + 2 from v0.2.0)
+- Total plans completed: 34 (22 from v0.1.x + 12 from Sender Feature Parity)
 - Average duration: ~10 min
-- Total execution time: ~5.8 hours
+- Total execution time: ~7.5 hours
 
-**By Phase (v0.1.x):**
+**By Phase (Sender Feature Parity):**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1. Fix Foundation | 3 | ~45m | ~15m |
-| 2. Status Display | 2 | ~30m | ~15m |
-| 3. Manual Control | 4 | ~60m | ~15m |
-| 4. Tool Integration | 2 | ~30m | ~15m |
-| 5. Job Streaming | 2 | ~30m | ~15m |
-| 6. Job Safety | 4 | ~60m | ~15m |
-| 7. Firmware Settings | 2 | ~30m | ~15m |
-| 8. Macros | 3 | ~45m | ~15m |
+| 9. Safety | 2 | ~30m | ~15m |
+| 10. Core Sender | 2 | ~30m | ~15m |
+| 11. Niceties | 2 | ~20m | ~10m |
+| 12. Extended | 5 | ~50m | ~10m |
 
 ## Accumulated Context
 
@@ -61,6 +57,13 @@ Progress: [██░░░░░░░░] 25%
 - Dead-man watchdog uses frame-based timer with keepalive reset pattern
 - Soft limit check is Warning severity (operator can proceed)
 - Pause-before-reset uses 200ms delay for GRBL deceleration
+- Alarm/error descriptions expanded to all GRBL codes with detailed messages
+- Probe workflows use two-stage G38.2 (fast then slow) for accuracy
+- M6 tool change detection pauses at sender level (GRBL doesn't implement M6)
+- M98 nested macro expansion with 16-level recursion guard
+- Per-tool coloring groups segments by tool number with uniform color draw calls
+- Gamepad input rate-limited to 100ms with magnitude-scaled feed rates
+- PathSegment extended with toolNumber field for color-by-tool visualization
 
 ### Pending Todos
 None.
@@ -70,11 +73,11 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-26
-Stopped at: Phase 9 Safety complete (2/2 plans)
+Last session: 2026-02-27
+Stopped at: Phase 12 Extended complete (5/5 plans)
 Resume file: None
-Next action: `/gsd:plan-phase 10` to plan Core Sender phase
+Next action: Milestone verification and closeout
 
 ---
 *State initialized: 2026-02-26*
-*Last updated: 2026-02-26*
+*Last updated: 2026-02-27*

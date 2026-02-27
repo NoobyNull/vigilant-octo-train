@@ -28,7 +28,7 @@
 - [x] **Phase 9: Safety** - Configurable safety guards: long-press buttons, dead-man watchdog, door interlock, soft limits, pause-before-reset (2026-02-26)
 - [x] **Phase 10: Core Sender** - Override controls, coolant toggles, alarm handling, status polling, precision jog, WCS quick-switch (completed 2026-02-27)
 - [x] **Phase 11: Niceties** - DRO click-to-zero, move-to dialog, diagonal jog, console tags, recent files, keyboard overrides, macro reorder, job alerts (completed 2026-02-27)
-- [ ] **Phase 12: Extended** - Alarm/error references, probe workflows, M6 detection, nested macros, tool color viz, gamepad, TLS
+- [x] **Phase 12: Extended** - Alarm/error references, probe workflows, M6 detection, nested macros, tool color viz, gamepad, TLS (completed 2026-02-27)
 
 ## Phase Details
 
@@ -90,11 +90,11 @@ Plans:
   5. Gamepad input maps axes to jog movement and buttons to start/pause/stop/home actions via SDL_GameController
 **Plans:** 5 plans
 Plans:
-- [ ] 12-01-PLAN.md -- Complete GRBL alarm/error reference tables, firmware info display, log-to-file toggle
-- [ ] 12-02-PLAN.md -- Plain text GRBL settings export, G-code search/goto
-- [ ] 12-03-PLAN.md -- Out-of-bounds pre-check, probe LED indicator, Z-probe/TLS/3D probing workflows
-- [ ] 12-04-PLAN.md -- Cycle-steps keyboard shortcut, M6 tool change detection, M98 nested macros
-- [ ] 12-05-PLAN.md -- Per-tool color coding in toolpath, gamepad input via SDL_GameController
+- [x] 12-01-PLAN.md -- Complete GRBL alarm/error reference tables, firmware info display, log-to-file toggle
+- [x] 12-02-PLAN.md -- Plain text GRBL settings export, G-code search/goto
+- [x] 12-03-PLAN.md -- Out-of-bounds pre-check, probe LED indicator, Z-probe/TLS/3D probing workflows
+- [x] 12-04-PLAN.md -- Cycle-steps keyboard shortcut, M6 tool change detection, M98 nested macros
+- [x] 12-05-PLAN.md -- Per-tool color coding in toolpath, gamepad input via SDL_GameController
 
 ## Progress
 
@@ -117,4 +117,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-02-24*
-*Last updated: 2026-02-27 -- Phase 12 Extended planned (5 plans)*
+*Last updated: 2026-02-27 -- Phase 12 Extended complete (5/5 plans, all 16 EXT requirements)*
