@@ -34,6 +34,7 @@ class CncStatusPanel : public Panel {
     void renderOverrideControls();
     void renderCoolantControls();
     void renderAlarmBanner();
+    void renderWcsSelector();
 
     CncController* m_cnc = nullptr;
     MachineStatus m_status{};
@@ -41,6 +42,11 @@ class CncStatusPanel : public Panel {
     std::string m_version;
     int m_lastAlarmCode = 0;
     std::string m_lastAlarmDesc;
+
+    // WCS quick-switch: 0=G54, 1=G55, ..., 5=G59
+    int m_activeWcs = 0;
+    static constexpr const char* WCS_NAMES[] = {"G54", "G55", "G56", "G57", "G58", "G59"};
+    static constexpr int NUM_WCS = 6;
 };
 
 } // namespace dw

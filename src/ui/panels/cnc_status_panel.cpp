@@ -112,10 +112,11 @@ void CncStatusPanel::renderStateIndicator() {
     // Advance cursor past the banner
     ImGui::Dummy(ImVec2(width, height));
 
-    // Show firmware version in small text
+    // Show firmware version in small text with WCS selector right-aligned
     if (!m_version.empty()) {
         ImGui::TextDisabled("GRBL %s", m_version.c_str());
     }
+    renderWcsSelector();
 }
 
 void CncStatusPanel::renderDRO() {
@@ -296,6 +297,36 @@ void CncStatusPanel::renderAlarmBanner() {
     }
     ImGui::SameLine();
     ImGui::TextDisabled("Clear alarm state to continue");
+}
+
+void CncStatusPanel::renderWcsSelector() {
+    // WCS combo — compact, right-aligned next to firmware version
+    bool canSwitch = m_cnc && m_connected &&
+                     (m_status.state == MachineState::Idle ||
+                      m_status.state == MachineState::Jog);
+
+    if (!canSwitch) ImGui::BeginDisabled();
+
+    ImGui::SameLine(ImGui::GetContentRegionAvail().x - 70);
+    ImGui::SetNextItemWidth(70);
+    if (ImGui::BeginCombo("##WCS", WCS_NAMES[m_activeWcs], ImGuiComboFlags_NoArrowButton)) {
+        for (int i = 0; i < NUM_WCS; ++i) {
+            bool selected = (m_activeWcs == i);
+            if (ImGui::Selectable(WCS_NAMES[i], selected)) {
+                m_activeWcs = i;
+                if (m_cnc) {
+                    m_cnc->sendCommand(WCS_NAMES[i]);
+                }
+            }
+            if (selected) ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+        ImGui::SetTooltip("Work Coordinate System");
+    }
+
+    if (!canSwitch) ImGui::EndDisabled();
 }
 
 void CncStatusPanel::onAlarm(int alarmCode, const std::string& desc) {
