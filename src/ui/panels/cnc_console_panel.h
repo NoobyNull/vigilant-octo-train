@@ -29,6 +29,19 @@ class CncConsolePanel : public Panel {
     void onError(const std::string& message);
     void onAlarm(int code, const std::string& desc);
 
+    // Source of a console message
+    enum class MessageSource { MDI, JOB, MACRO, SYS };
+
+    // Typed addLine for callers who know the source
+    void addLine(const std::string& text, int type, MessageSource source);
+
+    // Console line type for addLine callers
+    struct ConsoleLine {
+        std::string text;
+        enum Type { Sent, Received, Error, Info } type;
+        MessageSource source = MessageSource::SYS;
+    };
+
   private:
     static int inputCallback(ImGuiInputTextCallbackData* data);
 
@@ -43,12 +56,6 @@ class CncConsolePanel : public Panel {
     std::vector<std::string> m_history;
     int m_historyPos = -1;
     static constexpr size_t MAX_HISTORY = 100;
-
-    // Response display
-    struct ConsoleLine {
-        std::string text;
-        enum Type { Sent, Received, Error, Info } type;
-    };
     std::deque<ConsoleLine> m_lines;
     bool m_autoScroll = true;
     bool m_scrollToBottom = false;
