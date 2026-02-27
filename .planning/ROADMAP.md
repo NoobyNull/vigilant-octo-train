@@ -27,7 +27,7 @@
 
 - [x] **Phase 9: Safety** - Configurable safety guards: long-press buttons, dead-man watchdog, door interlock, soft limits, pause-before-reset (2026-02-26)
 - [x] **Phase 10: Core Sender** - Override controls, coolant toggles, alarm handling, status polling, precision jog, WCS quick-switch (completed 2026-02-27)
-- [ ] **Phase 11: Niceties** - DRO click-to-zero, move-to dialog, diagonal jog, console tags, recent files, keyboard overrides, macro reorder, job alerts
+- [x] **Phase 11: Niceties** - DRO click-to-zero, move-to dialog, diagonal jog, console tags, recent files, keyboard overrides, macro reorder, job alerts (completed 2026-02-27)
 - [ ] **Phase 12: Extended** - Alarm/error references, probe workflows, M6 detection, nested macros, tool color viz, gamepad, TLS
 
 ## Phase Details
@@ -72,7 +72,11 @@ Plans:
   3. Console messages are visually tagged by source ([JOB], [MDI], [MACRO], [SYS]) with distinct colors for each type
   4. Recent G-code files (last 10) appear in the GCode panel for quick re-loading, and keyboard shortcuts adjust feed/spindle overrides
   5. When a streaming job completes, the operator receives a visible toast notification and optional status bar flash
-**Plans**: TBD
+**Plans:** 3/3 plans complete
+Plans:
+- [ ] 11-01-PLAN.md -- DRO click-to-zero, move-to dialog, diagonal XY jog buttons
+- [ ] 11-02-PLAN.md -- Console source tags, macro drag-and-drop reorder
+- [ ] 11-03-PLAN.md -- Recent G-code files, keyboard override shortcuts, job completion notification
 
 ### Phase 12: Extended
 **Goal**: Sender reaches full feature parity with dedicated senders through reference tables, probe workflows, tool change handling, and advanced macro capabilities
@@ -102,7 +106,7 @@ Plans:
 | 8. Macros | v0.1.x | 3/3 | Complete | 2026-02-25 |
 | 9. Safety | v0.2.0 | 2/2 | Complete | 2026-02-26 |
 | 10. Core Sender | v0.2.0 | Complete    | 2026-02-27 | - |
-| 11. Niceties | v0.2.0 | 0/0 | Not started | - |
+| 11. Niceties | 3/3 | Complete   | 2026-02-27 | - |
 | 12. Extended | v0.2.0 | 0/0 | Not started | - |
 
 ---
