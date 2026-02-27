@@ -246,6 +246,18 @@ bool Config::load() {
                 int val = 200;
                 str::parseInt(value, val);
                 m_statusPollIntervalMs = std::clamp(val, 50, 200);
+            } else if (key == "jog_feed_small") {
+                int val = 200;
+                str::parseInt(value, val);
+                m_jogFeedSmall = std::clamp(val, 10, 2000);
+            } else if (key == "jog_feed_medium") {
+                int val = 1000;
+                str::parseInt(value, val);
+                m_jogFeedMedium = std::clamp(val, 100, 5000);
+            } else if (key == "jog_feed_large") {
+                int val = 3000;
+                str::parseInt(value, val);
+                m_jogFeedLarge = std::clamp(val, 500, 10000);
             }
         } else if (section == "machine_profiles") {
             if (key == "active_profile") {
@@ -419,6 +431,9 @@ bool Config::save() {
     // CNC section
     ss << "[cnc]\n";
     ss << "status_poll_interval_ms=" << m_statusPollIntervalMs << "\n";
+    ss << "jog_feed_small=" << m_jogFeedSmall << "\n";
+    ss << "jog_feed_medium=" << m_jogFeedMedium << "\n";
+    ss << "jog_feed_large=" << m_jogFeedLarge << "\n";
     ss << "\n";
 
     // Safety section

@@ -203,6 +203,15 @@ class Config {
     int getStatusPollIntervalMs() const { return m_statusPollIntervalMs; }
     void setStatusPollIntervalMs(int ms) { m_statusPollIntervalMs = std::clamp(ms, 50, 200); }
 
+    int getJogFeedSmall() const { return m_jogFeedSmall; }
+    void setJogFeedSmall(int f) { m_jogFeedSmall = std::clamp(f, 10, 2000); }
+
+    int getJogFeedMedium() const { return m_jogFeedMedium; }
+    void setJogFeedMedium(int f) { m_jogFeedMedium = std::clamp(f, 100, 5000); }
+
+    int getJogFeedLarge() const { return m_jogFeedLarge; }
+    void setJogFeedLarge(int f) { m_jogFeedLarge = std::clamp(f, 500, 10000); }
+
     // Safety settings
     bool getSafetyLongPressEnabled() const { return m_safetyLongPressEnabled; }
     void setSafetyLongPressEnabled(bool v) { m_safetyLongPressEnabled = v; }
@@ -321,6 +330,9 @@ class Config {
 
     // CNC settings
     int m_statusPollIntervalMs = 200;
+    int m_jogFeedSmall = 200;    // mm/min for 0.01-0.1mm steps
+    int m_jogFeedMedium = 1000;  // mm/min for 1mm steps
+    int m_jogFeedLarge = 3000;   // mm/min for 10-100mm steps
 
     // Safety settings
     bool m_safetyLongPressEnabled = true;

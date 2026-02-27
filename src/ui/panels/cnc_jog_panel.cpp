@@ -87,6 +87,19 @@ void CncJogPanel::renderStepSizeSelector() {
     }
     ImGui::SameLine();
     ImGui::TextDisabled("mm");
+
+    // Show active feedrate for the selected step group
+    auto& cfg = Config::instance();
+    int feed;
+    const char* group;
+    if (m_selectedStep <= 1) {
+        feed = cfg.getJogFeedSmall(); group = "small";
+    } else if (m_selectedStep == 2) {
+        feed = cfg.getJogFeedMedium(); group = "medium";
+    } else {
+        feed = cfg.getJogFeedLarge(); group = "large";
+    }
+    ImGui::TextDisabled("Feed: %d mm/min (%s)", feed, group);
 }
 
 void CncJogPanel::renderJogButtons() {
@@ -217,7 +230,21 @@ void CncJogPanel::jogAxis(int axis, float direction) {
         return;
 
     float step = STEP_SIZES[m_selectedStep] * direction;
-    float feed = JOG_FEEDS[m_selectedStep];
+
+    // Per-step-group feedrate from Config
+    auto& cfg = Config::instance();
+    float feed;
+    if (m_selectedStep <= 1) {
+        // Small group: 0.01mm, 0.1mm
+        feed = static_cast<float>(cfg.getJogFeedSmall());
+    } else if (m_selectedStep == 2) {
+        // Medium group: 1mm
+        feed = static_cast<float>(cfg.getJogFeedMedium());
+    } else {
+        // Large group: 10mm, 100mm
+        feed = static_cast<float>(cfg.getJogFeedLarge());
+    }
+
     char cmd[128];
     std::snprintf(cmd, sizeof(cmd), "$J=G91 G21 %c%.3f F%.0f",
                   axisLetters[axis], static_cast<double>(step), static_cast<double>(feed));
