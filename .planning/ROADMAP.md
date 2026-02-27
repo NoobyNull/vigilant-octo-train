@@ -26,7 +26,7 @@
 **Milestone Goal:** Bring CNC sender to feature parity with dedicated senders (ncSender benchmark), prioritizing safety, core controls, workflow polish, and extended capabilities.
 
 - [x] **Phase 9: Safety** - Configurable safety guards: long-press buttons, dead-man watchdog, door interlock, soft limits, pause-before-reset (2026-02-26)
-- [ ] **Phase 10: Core Sender** - Override controls, coolant toggles, alarm handling, status polling, precision jog, WCS quick-switch
+- [x] **Phase 10: Core Sender** - Override controls, coolant toggles, alarm handling, status polling, precision jog, WCS quick-switch (completed 2026-02-27)
 - [ ] **Phase 11: Niceties** - DRO click-to-zero, move-to dialog, diagonal jog, console tags, recent files, keyboard overrides, macro reorder, job alerts
 - [ ] **Phase 12: Extended** - Alarm/error references, probe workflows, M6 detection, nested macros, tool color viz, gamepad, TLS
 
@@ -57,7 +57,7 @@ Plans:
   3. When GRBL enters alarm state, the alarm code number and a human-readable description are displayed with an inline unlock button
   4. Operator can jog in 0.01mm increments for precision zeroing, with separate configurable feedrates for small, medium, and large step groups
   5. WCS selector (G54-G59) is visible in the status panel header for quick switching without opening the full WCS panel
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 10-01-PLAN.md -- Config keys, override controls (spindle/rapid/feed), coolant toggles, alarm display, status polling interval
 - [ ] 10-02-PLAN.md -- Precision jog (0.01mm), per-step-group feedrates, WCS quick-switch selector
@@ -101,7 +101,7 @@ Plans:
 | 7. Firmware Settings | v0.1.x | 2/2 | Complete | 2026-02-25 |
 | 8. Macros | v0.1.x | 3/3 | Complete | 2026-02-25 |
 | 9. Safety | v0.2.0 | 2/2 | Complete | 2026-02-26 |
-| 10. Core Sender | v0.2.0 | 0/2 | Planned | - |
+| 10. Core Sender | v0.2.0 | Complete    | 2026-02-27 | - |
 | 11. Niceties | v0.2.0 | 0/0 | Not started | - |
 | 12. Extended | v0.2.0 | 0/0 | Not started | - |
 
