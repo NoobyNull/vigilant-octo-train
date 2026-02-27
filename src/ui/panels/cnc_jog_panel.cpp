@@ -5,9 +5,48 @@
 #include <imgui.h>
 
 #include "core/cnc/cnc_controller.h"
+#include "core/config/config.h"
 #include "ui/icons.h"
 
 namespace dw {
+
+namespace {
+struct LongPressButton {
+    bool holding = false;
+    float holdTime = 0.0f;
+
+    // Returns true when hold completes. Call each frame.
+    bool render(const char* label, ImVec2 size, float requiredMs, bool enabled) {
+        if (!enabled) ImGui::BeginDisabled();
+        ImGui::Button(label, size);
+        if (!enabled) ImGui::EndDisabled();
+        if (!enabled) { holding = false; holdTime = 0.0f; return false; }
+
+        bool isHeld = ImGui::IsItemActive();
+        if (isHeld) {
+            holdTime += ImGui::GetIO().DeltaTime * 1000.0f;
+            float progress = holdTime / requiredMs;
+            if (progress > 1.0f) progress = 1.0f;
+            ImVec2 rmin = ImGui::GetItemRectMin();
+            ImVec2 rmax = ImGui::GetItemRectMax();
+            ImVec2 fillMax = {rmin.x + (rmax.x - rmin.x) * progress, rmax.y};
+            ImGui::GetWindowDrawList()->AddRectFilled(
+                rmin, fillMax, IM_COL32(255, 255, 255, 40), 3.0f);
+            holding = true;
+        } else {
+            if (holding) { holding = false; holdTime = 0.0f; }
+        }
+        if (holdTime >= requiredMs) {
+            holding = false;
+            holdTime = 0.0f;
+            return true;
+        }
+        return false;
+    }
+};
+
+static LongPressButton s_homeLongPress;
+} // namespace
 
 CncJogPanel::CncJogPanel() : Panel("Jog Control") {}
 
@@ -121,16 +160,33 @@ void CncJogPanel::renderHomingSection() {
     // Home button — enabled when Idle or Alarm
     bool canHome = m_cnc && (m_status.state == MachineState::Idle ||
                               m_status.state == MachineState::Alarm);
-    if (!canHome)
-        ImGui::BeginDisabled();
-    char homeLabel[64];
-    std::snprintf(homeLabel, sizeof(homeLabel), "%s Home All", Icons::Home);
-    if (ImGui::Button(homeLabel, ImVec2(120, 0))) {
-        if (m_cnc)
-            m_cnc->sendCommand("$H");
+
+    auto& cfg = Config::instance();
+    bool useLongPress = cfg.getSafetyLongPressEnabled();
+
+    if (useLongPress) {
+        char homeLabel[64];
+        std::snprintf(homeLabel, sizeof(homeLabel), "%s Hold to Home", Icons::Home);
+        float durationMs = static_cast<float>(cfg.getSafetyLongPressDurationMs());
+        if (s_homeLongPress.render(homeLabel, ImVec2(140, 0), durationMs, canHome)) {
+            if (m_cnc)
+                m_cnc->sendCommand("$H");
+        }
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+            ImGui::SetTooltip("Hold button for %.1fs to home", static_cast<double>(durationMs / 1000.0f));
+        }
+    } else {
+        if (!canHome)
+            ImGui::BeginDisabled();
+        char homeLabel[64];
+        std::snprintf(homeLabel, sizeof(homeLabel), "%s Home All", Icons::Home);
+        if (ImGui::Button(homeLabel, ImVec2(120, 0))) {
+            if (m_cnc)
+                m_cnc->sendCommand("$H");
+        }
+        if (!canHome)
+            ImGui::EndDisabled();
     }
-    if (!canHome)
-        ImGui::EndDisabled();
 
     ImGui::SameLine();
 
@@ -184,6 +240,7 @@ void CncJogPanel::startContinuousJog(int axis, float direction, int key) {
     m_contJogAxis = axis;
     m_contJogDir = direction;
     m_contJogKey = key;
+    m_jogWatchdogTimer = 0.0f;
 }
 
 void CncJogPanel::stopContinuousJog() {
@@ -192,16 +249,33 @@ void CncJogPanel::stopContinuousJog() {
     }
     m_contJogAxis = -1;
     m_contJogKey = 0;
+    m_jogWatchdogTimer = 0.0f;
 }
 
 void CncJogPanel::handleKeyboardJog() {
     if (!m_cnc || !m_connected)
         return;
 
-    // Check if continuous jog should stop (key released)
+    // Check if continuous jog should stop (key released or watchdog timeout)
     if (m_contJogAxis >= 0) {
         if (!ImGui::IsKeyDown(static_cast<ImGuiKey>(m_contJogKey))) {
             stopContinuousJog();
+        } else {
+            // Key appears held — reset watchdog (positive keepalive)
+            m_jogWatchdogTimer = 0.0f;
+        }
+        // Dead-man watchdog: catches stale key state (focus loss, etc.)
+        // Timer increments every frame; resets above when key confirmed down.
+        // If no reset arrives within timeout, force stop.
+        if (m_contJogAxis >= 0) {
+            auto& cfg = Config::instance();
+            if (cfg.getSafetyDeadManEnabled()) {
+                m_jogWatchdogTimer += ImGui::GetIO().DeltaTime * 1000.0f;
+                float timeout = static_cast<float>(cfg.getSafetyDeadManTimeoutMs());
+                if (m_jogWatchdogTimer >= timeout) {
+                    stopContinuousJog();
+                }
+            }
         }
         return; // Don't start new jog while continuous is active
     }

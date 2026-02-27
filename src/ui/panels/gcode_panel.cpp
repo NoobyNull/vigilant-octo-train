@@ -20,6 +20,43 @@
 
 namespace dw {
 
+namespace {
+struct LongPressButton {
+    bool holding = false;
+    float holdTime = 0.0f;
+
+    bool render(const char* label, ImVec2 size, float requiredMs, bool enabled) {
+        if (!enabled) ImGui::BeginDisabled();
+        ImGui::Button(label, size);
+        if (!enabled) ImGui::EndDisabled();
+        if (!enabled) { holding = false; holdTime = 0.0f; return false; }
+
+        bool isHeld = ImGui::IsItemActive();
+        if (isHeld) {
+            holdTime += ImGui::GetIO().DeltaTime * 1000.0f;
+            float progress = holdTime / requiredMs;
+            if (progress > 1.0f) progress = 1.0f;
+            ImVec2 rmin = ImGui::GetItemRectMin();
+            ImVec2 rmax = ImGui::GetItemRectMax();
+            ImVec2 fillMax = {rmin.x + (rmax.x - rmin.x) * progress, rmax.y};
+            ImGui::GetWindowDrawList()->AddRectFilled(
+                rmin, fillMax, IM_COL32(255, 255, 255, 40), 3.0f);
+            holding = true;
+        } else {
+            if (holding) { holding = false; holdTime = 0.0f; }
+        }
+        if (holdTime >= requiredMs) {
+            holding = false;
+            holdTime = 0.0f;
+            return true;
+        }
+        return false;
+    }
+};
+
+static LongPressButton s_startLongPress;
+} // namespace
+
 constexpr int GCodePanel::BAUD_RATES[];
 
 GCodePanel::GCodePanel() : Panel("G-code") {
@@ -535,16 +572,27 @@ void GCodePanel::renderPlaybackControls() {
     bool isStreaming = m_cnc && m_cnc->isStreaming();
 
     if (!isStreaming) {
-        // Start button
+        // Start button — long-press when safety enabled
         bool canStart = m_cncConnected &&
                         (m_machineStatus.state == MachineState::Idle);
-        if (!canStart)
-            ImGui::BeginDisabled();
-        if (ImGui::Button("Start")) {
-            buildSendProgram();
+        auto& cfg = Config::instance();
+        if (cfg.getSafetyLongPressEnabled()) {
+            float durationMs = static_cast<float>(cfg.getSafetyLongPressDurationMs());
+            if (s_startLongPress.render("Hold to Start", ImVec2(0, 0), durationMs, canStart)) {
+                buildSendProgram();
+            }
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+                ImGui::SetTooltip("Hold for %.1fs to start streaming", static_cast<double>(durationMs / 1000.0f));
+            }
+        } else {
+            if (!canStart)
+                ImGui::BeginDisabled();
+            if (ImGui::Button("Start")) {
+                buildSendProgram();
+            }
+            if (!canStart)
+                ImGui::EndDisabled();
         }
-        if (!canStart)
-            ImGui::EndDisabled();
     } else {
         // Pause / Resume
         if (ImGui::Button("Hold")) {

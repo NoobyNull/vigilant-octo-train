@@ -51,6 +51,7 @@ class CncJogPanel : public Panel {
     int m_contJogAxis = -1;       // -1 = not jogging, 0=X, 1=Y, 2=Z
     float m_contJogDir = 0.0f;    // +1 or -1
     int m_contJogKey = 0;         // ImGuiKey value
+    float m_jogWatchdogTimer = 0.0f; // Dead-man watchdog timer (ms)
     static constexpr float CONTINUOUS_JOG_FEED = 2000.0f;
     static constexpr float CONTINUOUS_JOG_DISTANCE = 10000.0f;
 };

@@ -8,11 +8,49 @@
 #include "core/cnc/cnc_controller.h"
 #include "core/cnc/cnc_types.h"
 #include "core/cnc/preflight_check.h"
+#include "core/config/config.h"
 #include "core/gcode/gcode_modal_scanner.h"
 #include "ui/icons.h"
 #include "ui/theme.h"
 
 namespace dw {
+
+namespace {
+struct LongPressButton {
+    bool holding = false;
+    float holdTime = 0.0f;
+
+    bool render(const char* label, ImVec2 size, float requiredMs, bool enabled) {
+        if (!enabled) ImGui::BeginDisabled();
+        ImGui::Button(label, size);
+        if (!enabled) ImGui::EndDisabled();
+        if (!enabled) { holding = false; holdTime = 0.0f; return false; }
+
+        bool isHeld = ImGui::IsItemActive();
+        if (isHeld) {
+            holdTime += ImGui::GetIO().DeltaTime * 1000.0f;
+            float progress = holdTime / requiredMs;
+            if (progress > 1.0f) progress = 1.0f;
+            ImVec2 rmin = ImGui::GetItemRectMin();
+            ImVec2 rmax = ImGui::GetItemRectMax();
+            ImVec2 fillMax = {rmin.x + (rmax.x - rmin.x) * progress, rmax.y};
+            ImGui::GetWindowDrawList()->AddRectFilled(
+                rmin, fillMax, IM_COL32(255, 255, 255, 40), 3.0f);
+            holding = true;
+        } else {
+            if (holding) { holding = false; holdTime = 0.0f; }
+        }
+        if (holdTime >= requiredMs) {
+            holding = false;
+            holdTime = 0.0f;
+            return true;
+        }
+        return false;
+    }
+};
+
+static LongPressButton s_abortLongPress;
+} // namespace
 
 CncSafetyPanel::CncSafetyPanel() : Panel("Safety Controls") {}
 
@@ -90,28 +128,41 @@ void CncSafetyPanel::renderSafetyControls() {
 
     // --- Abort button (CRITICAL: labeled "Abort", NEVER "E-Stop") ---
     bool canAbort = m_connected;
-
-    if (!canAbort)
-        ImGui::BeginDisabled();
+    auto& cfg = Config::instance();
+    bool abortUseLongPress = cfg.getSafetyAbortLongPress();
 
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.15f, 0.15f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.25f, 0.25f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
 
-    std::string abortLabel = std::string(Icons::Stop) + " Abort";
-    if (ImGui::Button(abortLabel.c_str(), ImVec2(100, 32))) {
-        if (m_streaming) {
-            // Show confirmation dialog when a job is running
-            m_showAbortConfirm = true;
-        } else {
-            // Direct soft reset when no job is running
+    if (abortUseLongPress && m_streaming) {
+        // Long-press abort — the hold IS the confirmation
+        float durationMs = static_cast<float>(cfg.getSafetyLongPressDurationMs());
+        std::string abortLabel = std::string(Icons::Stop) + " Hold to Abort";
+        if (s_abortLongPress.render(abortLabel.c_str(), ImVec2(130, 32), durationMs, canAbort)) {
             if (m_cnc) m_cnc->softReset();
         }
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+            ImGui::SetTooltip("Hold for %.1fs to abort running job", static_cast<double>(durationMs / 1000.0f));
+        }
+    } else {
+        if (!canAbort)
+            ImGui::BeginDisabled();
+        std::string abortLabel = std::string(Icons::Stop) + " Abort";
+        if (ImGui::Button(abortLabel.c_str(), ImVec2(100, 32))) {
+            if (m_streaming) {
+                // Show confirmation dialog when a job is running
+                m_showAbortConfirm = true;
+            } else {
+                // Direct soft reset when no job is running
+                if (m_cnc) m_cnc->softReset();
+            }
+        }
+        if (!canAbort)
+            ImGui::EndDisabled();
     }
 
     ImGui::PopStyleColor(3);
-    if (!canAbort)
-        ImGui::EndDisabled();
 
     // --- Resume From Line button ---
     ImGui::Spacing();
