@@ -106,7 +106,7 @@ Plans:
 | 8. Macros | v0.1.x | 3/3 | Complete | 2026-02-25 |
 | 9. Safety | v0.2.0 | 2/2 | Complete | 2026-02-26 |
 | 10. Core Sender | v0.2.0 | Complete    | 2026-02-27 | - |
-| 11. Niceties | 3/3 | Complete   | 2026-02-27 | - |
+| 11. Niceties | 3/3 | Complete    | 2026-02-27 | - |
 | 12. Extended | v0.2.0 | 0/0 | Not started | - |
 
 ---
