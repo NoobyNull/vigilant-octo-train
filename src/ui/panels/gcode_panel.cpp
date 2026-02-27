@@ -573,8 +573,13 @@ void GCodePanel::renderPlaybackControls() {
 
     if (!isStreaming) {
         // Start button — long-press when safety enabled
+        // Door interlock: block start when door is active
+        bool doorBlocked = Config::instance().getSafetyDoorInterlockEnabled() &&
+                           ((m_machineStatus.inputPins & cnc::PIN_DOOR) != 0 ||
+                            m_machineStatus.state == MachineState::Door);
         bool canStart = m_cncConnected &&
-                        (m_machineStatus.state == MachineState::Idle);
+                        (m_machineStatus.state == MachineState::Idle) &&
+                        !doorBlocked;
         auto& cfg = Config::instance();
         if (cfg.getSafetyLongPressEnabled()) {
             float durationMs = static_cast<float>(cfg.getSafetyLongPressDurationMs());
@@ -606,8 +611,12 @@ void GCodePanel::renderPlaybackControls() {
         }
         ImGui::SameLine();
         if (ImGui::Button("Stop")) {
-            if (m_cnc)
+            if (m_cnc) {
+                if (Config::instance().getSafetyPauseBeforeResetEnabled()) {
+                    m_cnc->feedHold(); // Real-time byte, takes effect immediately
+                }
                 m_cnc->stopStream();
+            }
         }
     }
 

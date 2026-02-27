@@ -43,6 +43,9 @@ class CncSafetyPanel : public Panel {
         m_hasBounds = true;
     }
 
+    // Door interlock query — true when door is active AND interlock is enabled
+    bool isDoorInterlockActive() const;
+
   private:
     void renderSafetyControls();
     void renderSensorDisplay();
@@ -55,6 +58,11 @@ class CncSafetyPanel : public Panel {
     bool m_connected = false;
     bool m_streaming = false;
     bool m_showAbortConfirm = false;
+    bool m_doorActive = false;
+
+    // Pause-before-reset abort sequence state
+    bool m_abortPending = false;
+    float m_abortTimer = 0.0f;
 
     // Program lines cached for resume-from-line feature
     std::vector<std::string> m_fullProgram;

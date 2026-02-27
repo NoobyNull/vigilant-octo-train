@@ -63,6 +63,16 @@ void CncSafetyPanel::render() {
         return;
     }
 
+    // Pause-before-reset abort sequence: feed hold first, then soft reset after delay
+    if (m_abortPending) {
+        m_abortTimer += ImGui::GetIO().DeltaTime;
+        if (m_abortTimer >= 0.2f) {
+            if (m_cnc) m_cnc->softReset();
+            m_abortPending = false;
+            m_abortTimer = 0.0f;
+        }
+    }
+
     renderSafetyControls();
     ImGui::Separator();
     renderDrawOutline();
@@ -104,7 +114,8 @@ void CncSafetyPanel::renderSafetyControls() {
 
     // --- Resume button ---
     bool canResume = m_connected &&
-                     m_status.state == MachineState::Hold;
+                     m_status.state == MachineState::Hold &&
+                     !isDoorInterlockActive();
 
     if (!canResume)
         ImGui::BeginDisabled();
@@ -140,7 +151,15 @@ void CncSafetyPanel::renderSafetyControls() {
         float durationMs = static_cast<float>(cfg.getSafetyLongPressDurationMs());
         std::string abortLabel = std::string(Icons::Stop) + " Hold to Abort";
         if (s_abortLongPress.render(abortLabel.c_str(), ImVec2(130, 32), durationMs, canAbort)) {
-            if (m_cnc) m_cnc->softReset();
+            if (m_cnc) {
+                if (cfg.getSafetyPauseBeforeResetEnabled()) {
+                    m_cnc->feedHold();
+                    m_abortPending = true;
+                    m_abortTimer = 0.0f;
+                } else {
+                    m_cnc->softReset();
+                }
+            }
         }
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
             ImGui::SetTooltip("Hold for %.1fs to abort running job", static_cast<double>(durationMs / 1000.0f));
@@ -212,7 +231,16 @@ void CncSafetyPanel::renderAbortConfirmDialog() {
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.25f, 0.25f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
         if (ImGui::Button("Abort Job", ImVec2(120, 0))) {
-            if (m_cnc) m_cnc->softReset();
+            if (m_cnc) {
+                if (Config::instance().getSafetyPauseBeforeResetEnabled()) {
+                    // Pause-before-reset: feed hold first, soft reset after 200ms
+                    m_cnc->feedHold();
+                    m_abortPending = true;
+                    m_abortTimer = 0.0f;
+                } else {
+                    m_cnc->softReset();
+                }
+            }
             ImGui::CloseCurrentPopup();
         }
         ImGui::PopStyleColor(3);
@@ -340,6 +368,15 @@ void CncSafetyPanel::renderSensorDisplay() {
     if (!m_connected) {
         ImGui::TextDisabled("Not connected");
         return;
+    }
+
+    // Door interlock warning banner
+    if (isDoorInterlockActive()) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
+        ImGui::TextWrapped("%s DOOR INTERLOCK ACTIVE -- Rapid moves and spindle "
+                           "commands are blocked until door is closed", Icons::Warning);
+        ImGui::PopStyleColor();
+        ImGui::Spacing();
     }
 
     // Helper lambda for pin indicator
@@ -526,6 +563,12 @@ void CncSafetyPanel::renderResumeDialog() {
 
 void CncSafetyPanel::onStatusUpdate(const MachineStatus& status) {
     m_status = status;
+    m_doorActive = (status.inputPins & cnc::PIN_DOOR) != 0 ||
+                   status.state == MachineState::Door;
+}
+
+bool CncSafetyPanel::isDoorInterlockActive() const {
+    return m_doorActive && Config::instance().getSafetyDoorInterlockEnabled();
 }
 
 void CncSafetyPanel::onConnectionChanged(bool connected, const std::string& /*version*/) {
