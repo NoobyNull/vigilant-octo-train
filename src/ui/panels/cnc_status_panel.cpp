@@ -4,6 +4,7 @@
 
 #include <imgui.h>
 
+#include "core/cnc/cnc_controller.h"
 #include "ui/icons.h"
 #include "ui/theme.h"
 
@@ -74,11 +75,13 @@ void CncStatusPanel::render() {
     }
 
     renderStateIndicator();
+    renderAlarmBanner();
     ImGui::Spacing();
     renderDRO();
     ImGui::Spacing();
     renderFeedSpindle();
-    renderOverrides();
+    renderOverrideControls();
+    renderCoolantControls();
 
     ImGui::End();
 }
@@ -181,31 +184,123 @@ void CncStatusPanel::renderFeedSpindle() {
     ImGui::EndGroup();
 }
 
-void CncStatusPanel::renderOverrides() {
-    // Only show if any override differs from 100%
-    if (m_status.feedOverride == 100 && m_status.rapidOverride == 100 &&
-        m_status.spindleOverride == 100)
+void CncStatusPanel::renderOverrideControls() {
+    ImGui::SeparatorText("Overrides");
+
+    // Feed override — slider (10-200%)
+    ImGui::TextDisabled("Feed");
+    ImGui::SameLine(70);
+    int feedOvr = m_status.feedOverride;
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 50);
+    if (ImGui::SliderInt("##FeedOvr", &feedOvr, 10, 200, "%d%%")) {
+        if (m_cnc) m_cnc->setFeedOverride(feedOvr);
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("R##Feed")) {
+        if (m_cnc) m_cnc->setFeedOverride(100);
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Reset to 100%%");
+
+    // Spindle override — slider (10-200%)
+    ImGui::TextDisabled("Spindle");
+    ImGui::SameLine(70);
+    int spindleOvr = m_status.spindleOverride;
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 50);
+    if (ImGui::SliderInt("##SpindleOvr", &spindleOvr, 10, 200, "%d%%")) {
+        if (m_cnc) m_cnc->setSpindleOverride(spindleOvr);
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("R##Spindle")) {
+        if (m_cnc) m_cnc->setSpindleOverride(100);
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Reset to 100%%");
+
+    // Rapid override — 3 buttons
+    ImGui::TextDisabled("Rapid");
+    ImGui::SameLine(70);
+    int rapidOvr = m_status.rapidOverride;
+    auto rapidBtn = [&](const char* label, int pct) {
+        bool active = (rapidOvr == pct);
+        if (active) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+        if (ImGui::SmallButton(label)) {
+            if (m_cnc) m_cnc->setRapidOverride(pct);
+        }
+        if (active) ImGui::PopStyleColor();
+    };
+    rapidBtn("25%##Rapid", 25);
+    ImGui::SameLine();
+    rapidBtn("50%##Rapid", 50);
+    ImGui::SameLine();
+    rapidBtn("100%##Rapid", 100);
+}
+
+void CncStatusPanel::renderCoolantControls() {
+    ImGui::SeparatorText("Coolant");
+
+    bool canSend = m_cnc && m_connected &&
+                   m_status.state != MachineState::Alarm;
+
+    if (!canSend) ImGui::BeginDisabled();
+
+    float btnWidth = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * 2) / 3.0f;
+
+    if (ImGui::Button("Flood (M8)", ImVec2(btnWidth, 0))) {
+        if (m_cnc) m_cnc->sendCommand("M8");
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Mist (M7)", ImVec2(btnWidth, 0))) {
+        if (m_cnc) m_cnc->sendCommand("M7");
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Off (M9)", ImVec2(btnWidth, 0))) {
+        if (m_cnc) m_cnc->sendCommand("M9");
+    }
+
+    if (!canSend) ImGui::EndDisabled();
+}
+
+void CncStatusPanel::renderAlarmBanner() {
+    if (m_status.state != MachineState::Alarm)
         return;
 
     ImGui::Spacing();
-    ImGui::SeparatorText("Overrides");
 
-    auto overrideColor = [](int pct) -> ImVec4 {
-        if (pct == 100)
-            return ImVec4(0.8f, 0.8f, 0.8f, 1.0f); // Normal — white/gray
-        if (pct < 100)
-            return ImVec4(1.0f, 0.8f, 0.2f, 1.0f); // Reduced — yellow
-        return ImVec4(0.3f, 0.8f, 1.0f, 1.0f);      // Increased — cyan
-    };
+    // Red banner with alarm code and description
+    ImVec2 cursorPos = ImGui::GetCursorScreenPos();
+    float width = ImGui::GetContentRegionAvail().x;
+    float height = 50.0f;
 
-    ImGui::TextColored(overrideColor(m_status.feedOverride), "Feed %d%%",
-                        m_status.feedOverride);
+    ImGui::GetWindowDrawList()->AddRectFilled(
+        cursorPos, ImVec2(cursorPos.x + width, cursorPos.y + height),
+        IM_COL32(180, 40, 40, 200), 4.0f);
+
+    // Alarm text
+    char alarmText[128];
+    if (m_lastAlarmCode > 0) {
+        std::snprintf(alarmText, sizeof(alarmText), "ALARM %d: %s",
+                      m_lastAlarmCode, m_lastAlarmDesc.c_str());
+    } else {
+        std::snprintf(alarmText, sizeof(alarmText), "ALARM (unknown code)");
+    }
+    ImVec2 textSize = ImGui::CalcTextSize(alarmText);
+    float textX = cursorPos.x + 8.0f;
+    float textY = cursorPos.y + (height - textSize.y) * 0.5f - 8.0f;
+    ImGui::GetWindowDrawList()->AddText(
+        ImVec2(textX, textY), IM_COL32(255, 255, 255, 255), alarmText);
+
+    ImGui::Dummy(ImVec2(width, height - 28.0f));
+
+    // Inline unlock button
+    if (ImGui::Button("Unlock ($X)", ImVec2(110, 0))) {
+        if (m_cnc) m_cnc->unlock();
+    }
     ImGui::SameLine();
-    ImGui::TextColored(overrideColor(m_status.rapidOverride), "Rapid %d%%",
-                        m_status.rapidOverride);
-    ImGui::SameLine();
-    ImGui::TextColored(overrideColor(m_status.spindleOverride), "Spindle %d%%",
-                        m_status.spindleOverride);
+    ImGui::TextDisabled("Clear alarm state to continue");
+}
+
+void CncStatusPanel::onAlarm(int alarmCode, const std::string& desc) {
+    m_lastAlarmCode = alarmCode;
+    m_lastAlarmDesc = desc;
 }
 
 void CncStatusPanel::onStatusUpdate(const MachineStatus& status) {

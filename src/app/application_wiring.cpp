@@ -559,6 +559,7 @@ void Application::initWiring() {
         auto* macrop = m_uiManager->cncMacroPanel();
 
         // Set CncController on new panels
+        if (csp) csp->setCncController(m_cncController.get());
         if (jogp) jogp->setCncController(m_cncController.get());
         if (conp) conp->setCncController(m_cncController.get());
         if (wcsp) wcsp->setCncController(m_cncController.get());
@@ -626,8 +627,9 @@ void Application::initWiring() {
                 }
             }
         };
-        cncCb.onAlarm = [gcp, conp](int code, const std::string& desc) {
+        cncCb.onAlarm = [gcp, csp, conp](int code, const std::string& desc) {
             gcp->onGrblAlarm(code, desc);
+            if (csp) csp->onAlarm(code, desc);
             if (conp) conp->onAlarm(code, desc);
         };
         cncCb.onError = [gcp, conp](const std::string& message) {
