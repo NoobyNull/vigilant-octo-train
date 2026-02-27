@@ -42,7 +42,10 @@
   3. When GRBL reports door pin active, rapid moves and spindle commands are blocked with a visible indicator explaining why
   4. Before streaming, G-code bounding box is compared against machine travel limits and the operator is warned if the job exceeds soft limits
   5. Every safety feature can be individually enabled or disabled through a dedicated safety settings UI section
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 09-01-PLAN.md -- Config keys, long-press buttons (Home/Start/Abort), dead-man watchdog
+- [ ] 09-02-PLAN.md -- Door interlock, soft limit pre-check, pause-before-reset, safety settings UI
 
 ### Phase 10: Core Sender
 **Goal**: Operator has full real-time control over spindle speed, rapid rate, feed rate overrides, coolant, and jog precision while the machine runs
@@ -94,11 +97,11 @@
 | 6. Job Safety | v0.1.x | 4/4 | Complete | 2026-02-24 |
 | 7. Firmware Settings | v0.1.x | 2/2 | Complete | 2026-02-25 |
 | 8. Macros | v0.1.x | 3/3 | Complete | 2026-02-25 |
-| 9. Safety | v0.2.0 | 0/0 | Not started | - |
+| 9. Safety | v0.2.0 | 0/2 | Planning complete | - |
 | 10. Core Sender | v0.2.0 | 0/0 | Not started | - |
 | 11. Niceties | v0.2.0 | 0/0 | Not started | - |
 | 12. Extended | v0.2.0 | 0/0 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-24*
-*Last updated: 2026-02-26 -- v0.2.0 Sender Feature Parity milestone added*
+*Last updated: 2026-02-26 -- Phase 9 Safety planned (2 plans)*
