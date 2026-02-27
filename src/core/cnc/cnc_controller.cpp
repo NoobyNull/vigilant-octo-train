@@ -1,6 +1,8 @@
 #include "cnc_controller.h"
 
 #include <algorithm>
+#include <cctype>
+#include <cstdlib>
 #include <cstring>
 #include <sstream>
 
@@ -85,6 +87,7 @@ void CncController::startStream(const std::vector<std::string>& lines) {
     m_bufferUsed = 0;
     m_errorCount = 0;
     m_held = false;
+    m_toolChangePending = false;
     m_streamStartTime = std::chrono::steady_clock::now();
     m_streaming = true;
 }
@@ -92,6 +95,19 @@ void CncController::startStream(const std::vector<std::string>& lines) {
 void CncController::acknowledgeError() {
     m_errorState = false;
     log::info("CNC", "Streaming error acknowledged by operator");
+}
+
+void CncController::acknowledgeToolChange() {
+    if (m_toolChangePending.load()) {
+        m_toolChangePending = false;
+        log::info("CNC", "Tool change acknowledged by operator -- resuming stream");
+        // Skip the M6 line (GRBL doesn't implement M6 natively)
+        {
+            std::lock_guard<std::mutex> lock(m_streamMutex);
+            if (m_sendIndex < static_cast<int>(m_program.size()))
+                m_sendIndex++;
+        }
+    }
 }
 
 void CncController::stopStream() {
@@ -422,8 +438,58 @@ void CncController::processResponse(const std::string& line) {
 void CncController::sendNextLines() {
     std::lock_guard<std::mutex> lock(m_streamMutex);
 
+    // If tool change pending, don't send more lines until acknowledged
+    if (m_toolChangePending.load()) return;
+
     while (m_sendIndex < static_cast<int>(m_program.size())) {
         const std::string& line = m_program[m_sendIndex];
+
+        // Check for M6 tool change before sending (GRBL doesn't implement M6)
+        {
+            std::string upper = line;
+            for (auto& c : upper) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+
+            // Strip comments
+            auto commentPos = upper.find('(');
+            if (commentPos != std::string::npos) upper = upper.substr(0, commentPos);
+            commentPos = upper.find(';');
+            if (commentPos != std::string::npos) upper = upper.substr(0, commentPos);
+
+            bool hasM6 = false;
+            auto m6pos = upper.find("M6");
+            auto m06pos = upper.find("M06");
+
+            if (m6pos != std::string::npos) {
+                // Check it's M6 not M60+
+                size_t afterM6 = m6pos + 2;
+                if (afterM6 >= upper.size() || !std::isdigit(static_cast<unsigned char>(upper[afterM6]))) {
+                    hasM6 = true;
+                }
+            }
+            if (!hasM6 && m06pos != std::string::npos) {
+                size_t afterM06 = m06pos + 3;
+                if (afterM06 >= upper.size() || !std::isdigit(static_cast<unsigned char>(upper[afterM06]))) {
+                    hasM6 = true;
+                }
+            }
+
+            if (hasM6) {
+                // Parse tool number from T word if present
+                int toolNum = 0;
+                auto tPos = upper.find('T');
+                if (tPos != std::string::npos) {
+                    toolNum = std::atoi(upper.c_str() + tPos + 1);
+                }
+
+                m_toolChangePending = true;
+                if (m_mtq && m_callbacks.onToolChange) {
+                    m_mtq->enqueue([cb = m_callbacks.onToolChange, toolNum]() {
+                        cb(toolNum);
+                    });
+                }
+                return; // Don't send the M6 line -- wait for operator ack
+            }
+        }
 
         // Character counting: each line uses (length + 1) bytes in GRBL buffer (for the \n)
         int lineLen = static_cast<int>(line.size()) + 1;

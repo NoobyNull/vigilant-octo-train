@@ -3,6 +3,8 @@
 #include "core/cnc/macro_manager.h"
 
 #include <algorithm>
+#include <cctype>
+#include <cstdlib>
 #include <sstream>
 
 #include "core/database/database.h"
@@ -192,6 +194,65 @@ void MacroManager::ensureBuiltIns() {
         m.builtIn = true;
         addMacro(m);
     }
+}
+
+std::vector<std::string> MacroManager::expandLines(
+    const std::vector<std::string>& lines, int maxDepth) const
+{
+    return expandLinesRecursive(lines, 0, maxDepth);
+}
+
+std::vector<std::string> MacroManager::expandLinesRecursive(
+    const std::vector<std::string>& lines, int depth, int maxDepth) const
+{
+    if (depth > maxDepth) {
+        throw std::runtime_error(
+            "M98 recursion depth exceeded (max " + std::to_string(maxDepth) + ")");
+    }
+
+    std::vector<std::string> result;
+    result.reserve(lines.size());
+
+    for (const auto& line : lines) {
+        // Check for M98 Pxxxx
+        std::string upper = line;
+        for (auto& c : upper)
+            c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+
+        // Strip comments for parsing
+        auto commentPos = upper.find(';');
+        if (commentPos != std::string::npos) upper = upper.substr(0, commentPos);
+        commentPos = upper.find('(');
+        if (commentPos != std::string::npos) upper = upper.substr(0, commentPos);
+
+        auto m98Pos = upper.find("M98");
+        if (m98Pos != std::string::npos) {
+            // Find P parameter
+            auto pPos = upper.find('P', m98Pos + 3);
+            if (pPos != std::string::npos) {
+                int subId = std::atoi(upper.c_str() + pPos + 1);
+                if (subId > 0) {
+                    try {
+                        Macro sub = getById(subId);
+                        auto subLines = parseLines(sub);
+                        auto expanded = expandLinesRecursive(subLines, depth + 1, maxDepth);
+                        result.insert(result.end(), expanded.begin(), expanded.end());
+                        continue; // M98 line replaced by sub-program lines
+                    } catch (const std::exception& e) {
+                        // Sub-program not found -- keep original line with error comment
+                        result.push_back("; ERROR: M98 P" + std::to_string(subId) +
+                                         " -- " + e.what());
+                        result.push_back(line);
+                        continue;
+                    }
+                }
+            }
+        }
+
+        result.push_back(line);
+    }
+
+    return result;
 }
 
 } // namespace dw

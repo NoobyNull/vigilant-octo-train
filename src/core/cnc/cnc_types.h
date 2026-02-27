@@ -271,6 +271,7 @@ struct CncCallbacks {
     std::function<void(const std::string& message)> onError;
     std::function<void(const StreamingError& error)> onStreamingError;
     std::function<void(const std::string& line, bool isSent)> onRawLine;
+    std::function<void(int toolNumber)> onToolChange; // M6 detected during streaming
 };
 
 } // namespace dw

@@ -87,6 +87,7 @@ void CncJogPanel::renderStepSizeSelector() {
     }
     ImGui::SameLine();
     ImGui::TextDisabled("mm");
+    ImGui::TextDisabled("Tab to cycle step groups");
 
     // Show active feedrate for the selected step group
     auto& cfg = Config::instance();
@@ -324,9 +325,29 @@ void CncJogPanel::stopContinuousJog() {
     m_jogWatchdogTimer = 0.0f;
 }
 
+void CncJogPanel::cycleStepGroup() {
+    // Step groups: Small (0,1) = 0.01-0.1, Medium (2) = 1, Large (3,4) = 10-100
+    // Cycle: Small -> Medium -> Large -> Small
+    if (m_selectedStep <= 1) {
+        // Currently in Small -> go to Medium
+        m_selectedStep = 2;
+    } else if (m_selectedStep == 2) {
+        // Currently in Medium -> go to Large
+        m_selectedStep = 3;
+    } else {
+        // Currently in Large -> go to Small
+        m_selectedStep = 1; // 0.1mm (more useful default than 0.01mm)
+    }
+}
+
 void CncJogPanel::handleKeyboardJog() {
     if (!m_cnc || !m_connected)
         return;
+
+    // Tab key cycles step groups (only when no text input is focused)
+    if (ImGui::IsKeyPressed(ImGuiKey_Tab) && !ImGui::GetIO().WantTextInput) {
+        cycleStepGroup();
+    }
 
     // Check if continuous jog should stop (key released or watchdog timeout)
     if (m_contJogAxis >= 0) {

@@ -42,11 +42,22 @@ class MacroManager {
     // Returns vector of lines that will be sent (for preview)
     std::vector<std::string> parseLines(const Macro& macro) const;
 
+    // Expand M98 Pxxxx references in parsed lines, replacing with the referenced
+    // macro's lines recursively. Throws std::runtime_error if recursion exceeds maxDepth.
+    // NOTE: Callers should call expandLines(parseLines(macro)) before sending to
+    // CncController to resolve M98 Pxxxx nested macro references.
+    std::vector<std::string> expandLines(const std::vector<std::string>& lines,
+                                          int maxDepth = MAX_NEST_DEPTH) const;
+
+    static constexpr int MAX_NEST_DEPTH = 16;
+
     // Built-in initialization (called on first run or reset)
     void ensureBuiltIns();
 
   private:
     void initSchema();  // CREATE TABLE IF NOT EXISTS
+    std::vector<std::string> expandLinesRecursive(
+        const std::vector<std::string>& lines, int depth, int maxDepth) const;
     std::unique_ptr<Database> m_db;
 };
 

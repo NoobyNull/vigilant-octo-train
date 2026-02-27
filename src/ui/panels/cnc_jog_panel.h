@@ -29,6 +29,7 @@ class CncJogPanel : public Panel {
     void renderStepSizeSelector();
     void renderJogButtons();
     void renderHomingSection();
+    void cycleStepGroup();
 
     void jogAxis(int axis, float direction);
     void jogDiagonal(float xDir, float yDir);

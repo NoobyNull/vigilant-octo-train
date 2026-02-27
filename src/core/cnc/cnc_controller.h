@@ -60,6 +60,10 @@ class CncController {
     bool isInErrorState() const { return m_errorState.load(); }
     void acknowledgeError();
 
+    // Tool change — M6 detected during streaming, pauses for operator acknowledgment
+    bool isToolChangePending() const { return m_toolChangePending.load(); }
+    void acknowledgeToolChange();
+
     // Parse a GRBL status report string (public for testing)
     static MachineStatus parseStatusReport(const std::string& report);
     static MachineState parseState(const std::string& stateStr);
@@ -112,6 +116,7 @@ class CncController {
     std::atomic<bool> m_streaming{false};
     std::atomic<bool> m_held{false};           // Feed hold active
     std::atomic<bool> m_errorState{false};     // Streaming error requires acknowledgment
+    std::atomic<bool> m_toolChangePending{false}; // M6 pause waiting for operator ack
     int m_errorCount = 0;
 
     // Status polling and disconnect detection
