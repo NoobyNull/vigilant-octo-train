@@ -223,6 +223,24 @@ bool Config::load() {
                     m_recentProjects.push_back(value);
                 }
             }
+        } else if (section == "safety") {
+            if (key == "long_press_enabled") {
+                m_safetyLongPressEnabled = (value == "true" || value == "1");
+            } else if (key == "long_press_duration_ms") {
+                str::parseInt(value, m_safetyLongPressDurationMs);
+            } else if (key == "abort_long_press") {
+                m_safetyAbortLongPress = (value == "true" || value == "1");
+            } else if (key == "dead_man_enabled") {
+                m_safetyDeadManEnabled = (value == "true" || value == "1");
+            } else if (key == "dead_man_timeout_ms") {
+                str::parseInt(value, m_safetyDeadManTimeoutMs);
+            } else if (key == "door_interlock_enabled") {
+                m_safetyDoorInterlockEnabled = (value == "true" || value == "1");
+            } else if (key == "soft_limit_check_enabled") {
+                m_safetySoftLimitCheckEnabled = (value == "true" || value == "1");
+            } else if (key == "pause_before_reset_enabled") {
+                m_safetyPauseBeforeResetEnabled = (value == "true" || value == "1");
+            }
         } else if (section == "machine_profiles") {
             if (key == "active_profile") {
                 str::parseInt(value, m_activeMachineProfileIndex);
@@ -390,6 +408,18 @@ bool Config::save() {
     for (size_t i = 0; i < m_recentProjects.size(); ++i) {
         ss << "project" << i << "=" << m_recentProjects[i].string() << "\n";
     }
+    ss << "\n";
+
+    // Safety section
+    ss << "[safety]\n";
+    ss << "long_press_enabled=" << (m_safetyLongPressEnabled ? "true" : "false") << "\n";
+    ss << "long_press_duration_ms=" << m_safetyLongPressDurationMs << "\n";
+    ss << "abort_long_press=" << (m_safetyAbortLongPress ? "true" : "false") << "\n";
+    ss << "dead_man_enabled=" << (m_safetyDeadManEnabled ? "true" : "false") << "\n";
+    ss << "dead_man_timeout_ms=" << m_safetyDeadManTimeoutMs << "\n";
+    ss << "door_interlock_enabled=" << (m_safetyDoorInterlockEnabled ? "true" : "false") << "\n";
+    ss << "soft_limit_check_enabled=" << (m_safetySoftLimitCheckEnabled ? "true" : "false") << "\n";
+    ss << "pause_before_reset_enabled=" << (m_safetyPauseBeforeResetEnabled ? "true" : "false") << "\n";
     ss << "\n";
 
     // Machine profiles section

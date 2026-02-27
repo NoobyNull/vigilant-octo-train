@@ -198,6 +198,31 @@ class Config {
     const std::string& getGeminiApiKey() const { return m_geminiApiKey; }
     void setGeminiApiKey(const std::string& key) { m_geminiApiKey = key; }
 
+    // Safety settings
+    bool getSafetyLongPressEnabled() const { return m_safetyLongPressEnabled; }
+    void setSafetyLongPressEnabled(bool v) { m_safetyLongPressEnabled = v; }
+
+    int getSafetyLongPressDurationMs() const { return m_safetyLongPressDurationMs; }
+    void setSafetyLongPressDurationMs(int v) { m_safetyLongPressDurationMs = v; }
+
+    bool getSafetyAbortLongPress() const { return m_safetyAbortLongPress; }
+    void setSafetyAbortLongPress(bool v) { m_safetyAbortLongPress = v; }
+
+    bool getSafetyDeadManEnabled() const { return m_safetyDeadManEnabled; }
+    void setSafetyDeadManEnabled(bool v) { m_safetyDeadManEnabled = v; }
+
+    int getSafetyDeadManTimeoutMs() const { return m_safetyDeadManTimeoutMs; }
+    void setSafetyDeadManTimeoutMs(int v) { m_safetyDeadManTimeoutMs = v; }
+
+    bool getSafetyDoorInterlockEnabled() const { return m_safetyDoorInterlockEnabled; }
+    void setSafetyDoorInterlockEnabled(bool v) { m_safetyDoorInterlockEnabled = v; }
+
+    bool getSafetySoftLimitCheckEnabled() const { return m_safetySoftLimitCheckEnabled; }
+    void setSafetySoftLimitCheckEnabled(bool v) { m_safetySoftLimitCheckEnabled = v; }
+
+    bool getSafetyPauseBeforeResetEnabled() const { return m_safetyPauseBeforeResetEnabled; }
+    void setSafetyPauseBeforeResetEnabled(bool v) { m_safetyPauseBeforeResetEnabled = v; }
+
     // Machine profiles
     const std::vector<gcode::MachineProfile>& getMachineProfiles() const { return m_machineProfiles; }
     void setMachineProfiles(const std::vector<gcode::MachineProfile>& profiles) { m_machineProfiles = profiles; }
@@ -288,6 +313,16 @@ class Config {
 
     // API keys
     std::string m_geminiApiKey;
+
+    // Safety settings
+    bool m_safetyLongPressEnabled = true;
+    int m_safetyLongPressDurationMs = 1000;
+    bool m_safetyAbortLongPress = false;
+    bool m_safetyDeadManEnabled = true;
+    int m_safetyDeadManTimeoutMs = 1000;
+    bool m_safetyDoorInterlockEnabled = true;
+    bool m_safetySoftLimitCheckEnabled = true;
+    bool m_safetyPauseBeforeResetEnabled = true;
 
     // Machine profiles
     std::vector<gcode::MachineProfile> m_machineProfiles;
