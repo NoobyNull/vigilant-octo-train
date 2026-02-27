@@ -34,6 +34,7 @@ class CncStatusPanel : public Panel {
     void renderOverrideControls();
     void renderCoolantControls();
     void renderAlarmBanner();
+    void renderProbeIndicator();
     void renderWcsSelector();
     void renderMoveToDialog();
 

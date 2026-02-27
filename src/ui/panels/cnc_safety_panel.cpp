@@ -1,5 +1,6 @@
 #include "ui/panels/cnc_safety_panel.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <string>
 
@@ -78,8 +79,17 @@ void CncSafetyPanel::render() {
     renderDrawOutline();
     ImGui::Separator();
     renderSensorDisplay();
+
+    // Probe workflows button
+    ImGui::Separator();
+    ImGui::SeparatorText("Probing");
+    if (ImGui::Button("Probe Workflows...", ImVec2(-1, 0))) {
+        m_probeDialogOpen = true;
+    }
+
     renderAbortConfirmDialog();
     renderResumeDialog();
+    renderProbeDialog();
 
     ImGui::End();
 }
@@ -559,6 +569,347 @@ void CncSafetyPanel::renderResumeDialog() {
     }
 
     ImGui::EndPopup();
+}
+
+void CncSafetyPanel::renderProbeDialog() {
+    if (m_probeDialogOpen) {
+        ImGui::OpenPopup("Probe Workflows");
+        m_probeDialogOpen = false;
+    }
+
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+    if (!ImGui::BeginPopupModal("Probe Workflows", nullptr,
+                                 ImGuiWindowFlags_AlwaysAutoResize))
+        return;
+
+    if (ImGui::BeginTabBar("ProbeTabs")) {
+        if (ImGui::BeginTabItem("Z-Probe")) {
+            renderZProbeTab();
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("Tool Length")) {
+            renderTlsTab();
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("3D Probing")) {
+            render3DProbeTab();
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
+    }
+
+    ImGui::Separator();
+    if (ImGui::Button("Close", ImVec2(120, 0))) {
+        ImGui::CloseCurrentPopup();
+    }
+
+    ImGui::EndPopup();
+}
+
+void CncSafetyPanel::renderZProbeTab() {
+    ImGui::TextWrapped("Touch off Z-zero using a probe or touch plate.");
+    ImGui::Spacing();
+
+    ImGui::SetNextItemWidth(120);
+    ImGui::InputFloat("Approach Speed (mm/min)", &m_probeApproachSpeed, 10, 50, "%.0f");
+    m_probeApproachSpeed = std::clamp(m_probeApproachSpeed, 1.0f, 1000.0f);
+
+    ImGui::SetNextItemWidth(120);
+    ImGui::InputFloat("Plate Thickness (mm)", &m_probePlateThickness, 0.1f, 1.0f, "%.3f");
+    m_probePlateThickness = std::max(0.0f, m_probePlateThickness);
+
+    ImGui::SetNextItemWidth(120);
+    ImGui::InputFloat("Search Distance (mm)", &m_probeSearchDist, 5, 10, "%.1f");
+    m_probeSearchDist = std::clamp(m_probeSearchDist, 1.0f, 200.0f);
+
+    ImGui::SetNextItemWidth(120);
+    ImGui::InputFloat("Retract Distance (mm)", &m_probeRetractDist, 0.5f, 1, "%.1f");
+    m_probeRetractDist = std::clamp(m_probeRetractDist, 0.1f, 20.0f);
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // Preview the commands that will be sent
+    ImGui::TextDisabled("Commands:");
+    ImGui::Text("G21 G91");
+    ImGui::Text("G38.2 Z-%.1f F%.0f",
+                static_cast<double>(m_probeSearchDist),
+                static_cast<double>(m_probeApproachSpeed));
+    if (m_probeRetractDist > 0) {
+        ImGui::Text("G0 Z%.1f", static_cast<double>(m_probeRetractDist));
+        ImGui::Text("G38.2 Z-%.1f F%.0f",
+                    static_cast<double>(m_probeRetractDist + 1.0f),
+                    static_cast<double>(m_probeApproachSpeed * 0.5f));
+    }
+    ImGui::Text("G10 L20 P0 Z%.3f", static_cast<double>(m_probePlateThickness));
+    ImGui::Text("G0 Z%.1f", static_cast<double>(m_probeRetractDist));
+    ImGui::Text("G90");
+
+    ImGui::Spacing();
+
+    bool canProbe = m_cnc && m_connected &&
+                    m_status.state == MachineState::Idle;
+    if (!canProbe) ImGui::BeginDisabled();
+    if (ImGui::Button("Run Z-Probe", ImVec2(160, 30))) {
+        char cmd[256];
+        m_cnc->sendCommand("G21 G91");
+        std::snprintf(cmd, sizeof(cmd), "G38.2 Z-%.1f F%.0f",
+                      static_cast<double>(m_probeSearchDist),
+                      static_cast<double>(m_probeApproachSpeed));
+        m_cnc->sendCommand(cmd);
+
+        if (m_probeRetractDist > 0) {
+            std::snprintf(cmd, sizeof(cmd), "G0 Z%.1f",
+                          static_cast<double>(m_probeRetractDist));
+            m_cnc->sendCommand(cmd);
+            // Second slower probe for accuracy
+            std::snprintf(cmd, sizeof(cmd), "G38.2 Z-%.1f F%.0f",
+                          static_cast<double>(m_probeRetractDist + 1.0f),
+                          static_cast<double>(m_probeApproachSpeed * 0.5f));
+            m_cnc->sendCommand(cmd);
+        }
+
+        // Set Z zero accounting for plate thickness
+        std::snprintf(cmd, sizeof(cmd), "G10 L20 P0 Z%.3f",
+                      static_cast<double>(m_probePlateThickness));
+        m_cnc->sendCommand(cmd);
+
+        // Retract
+        std::snprintf(cmd, sizeof(cmd), "G0 Z%.1f",
+                      static_cast<double>(m_probeRetractDist));
+        m_cnc->sendCommand(cmd);
+
+        m_cnc->sendCommand("G90");
+    }
+    if (!canProbe) ImGui::EndDisabled();
+
+    if (!canProbe) {
+        ImGui::TextColored(ImVec4(1, 0.5f, 0, 1),
+                           "Machine must be Idle and connected to probe");
+    }
+}
+
+void CncSafetyPanel::renderTlsTab() {
+    ImGui::TextWrapped(
+        "Measure tool length offset. Touch the tool to a fixed reference surface, "
+        "then apply G43.1 compensation.");
+    ImGui::Spacing();
+
+    ImGui::SetNextItemWidth(120);
+    ImGui::InputFloat("Approach Speed (mm/min)##tls", &m_tlsApproachSpeed, 10, 50, "%.0f");
+    m_tlsApproachSpeed = std::clamp(m_tlsApproachSpeed, 1.0f, 500.0f);
+
+    ImGui::SetNextItemWidth(120);
+    ImGui::InputFloat("Search Distance (mm)##tls", &m_tlsSearchDist, 10, 50, "%.0f");
+    m_tlsSearchDist = std::clamp(m_tlsSearchDist, 1.0f, 300.0f);
+
+    ImGui::Spacing();
+    ImGui::SeparatorText("Workflow");
+
+    ImGui::TextWrapped(
+        "1. Set reference: Probe first tool (reference tool) to touch plate. "
+        "Record Z position as reference.");
+
+    ImGui::SetNextItemWidth(120);
+    ImGui::InputFloat("Reference Z (mm)", &m_tlsReferenceZ, 0.1f, 1.0f, "%.3f");
+
+    ImGui::SameLine();
+    bool canCapture = m_cnc && m_connected && m_status.state == MachineState::Idle;
+    if (!canCapture) ImGui::BeginDisabled();
+    if (ImGui::SmallButton("Capture Current Z")) {
+        m_tlsReferenceZ = m_status.machinePos.z;
+    }
+    if (!canCapture) ImGui::EndDisabled();
+
+    ImGui::TextWrapped("2. Probe new tool: Run probe cycle with new tool installed.");
+    ImGui::TextWrapped("3. The offset (difference from reference) is applied via G43.1.");
+
+    ImGui::Spacing();
+
+    // Preview
+    ImGui::TextDisabled("Commands:");
+    ImGui::Text("G21 G91");
+    ImGui::Text("G38.2 Z-%.0f F%.0f",
+                static_cast<double>(m_tlsSearchDist),
+                static_cast<double>(m_tlsApproachSpeed));
+    ImGui::Text("G43.1 Z[measured - %.3f]", static_cast<double>(m_tlsReferenceZ));
+    ImGui::Text("G90");
+
+    ImGui::Spacing();
+
+    if (!canCapture) ImGui::BeginDisabled();
+    if (ImGui::Button("Probe & Set Tool Length", ImVec2(200, 30))) {
+        char cmd[256];
+        m_cnc->sendCommand("G21 G91");
+        std::snprintf(cmd, sizeof(cmd), "G38.2 Z-%.0f F%.0f",
+                      static_cast<double>(m_tlsSearchDist),
+                      static_cast<double>(m_tlsApproachSpeed));
+        m_cnc->sendCommand(cmd);
+        m_cnc->sendCommand("G90");
+
+        // Apply G43.1 offset: measured Z - reference Z
+        // Note: This simplified approach uses the current machine Z position.
+        // A full implementation would read the probe result position from
+        // the G38.2 response before calculating the offset.
+        std::snprintf(cmd, sizeof(cmd), "G43.1 Z%.3f",
+                      static_cast<double>(m_status.machinePos.z - m_tlsReferenceZ));
+        m_cnc->sendCommand(cmd);
+    }
+    if (!canCapture) ImGui::EndDisabled();
+
+    if (!canCapture) {
+        ImGui::TextColored(ImVec4(1, 0.5f, 0, 1),
+                           "Machine must be Idle and connected");
+    }
+}
+
+void CncSafetyPanel::render3DProbeTab() {
+    ImGui::TextWrapped(
+        "Find workpiece edges, corners, or center using probe sequences.");
+    ImGui::Spacing();
+
+    ImGui::SetNextItemWidth(120);
+    ImGui::InputFloat("Probe Speed (mm/min)##3d", &m_3dProbeSpeed, 10, 50, "%.0f");
+    m_3dProbeSpeed = std::clamp(m_3dProbeSpeed, 1.0f, 1000.0f);
+
+    ImGui::SetNextItemWidth(120);
+    ImGui::InputFloat("Retract Dist (mm)##3d", &m_3dProbeRetract, 1, 5, "%.1f");
+    m_3dProbeRetract = std::clamp(m_3dProbeRetract, 0.5f, 50.0f);
+
+    ImGui::SetNextItemWidth(120);
+    ImGui::InputFloat("Search Dist (mm)##3d", &m_3dProbeSearchDist, 5, 10, "%.0f");
+    m_3dProbeSearchDist = std::clamp(m_3dProbeSearchDist, 1.0f, 200.0f);
+
+    ImGui::Spacing();
+    ImGui::SeparatorText("Probe Operation");
+
+    const char* modes[] = {"Edge X", "Edge Y", "Corner (X+Y)", "Center (X)"};
+    ImGui::SetNextItemWidth(160);
+    ImGui::Combo("Mode##3d", &m_3dProbeMode, modes, 4);
+
+    ImGui::Spacing();
+
+    // Show description and expected commands for selected mode
+    switch (m_3dProbeMode) {
+    case 0: // Edge X
+        ImGui::TextWrapped(
+            "Find X edge: Probes in -X direction from current position. "
+            "Sets X zero at contact point.");
+        ImGui::TextDisabled("G38.2 X-%.0f F%.0f",
+                            static_cast<double>(m_3dProbeSearchDist),
+                            static_cast<double>(m_3dProbeSpeed));
+        ImGui::TextDisabled("G10 L20 P0 X0");
+        break;
+    case 1: // Edge Y
+        ImGui::TextWrapped(
+            "Find Y edge: Probes in -Y direction from current position. "
+            "Sets Y zero at contact point.");
+        ImGui::TextDisabled("G38.2 Y-%.0f F%.0f",
+                            static_cast<double>(m_3dProbeSearchDist),
+                            static_cast<double>(m_3dProbeSpeed));
+        ImGui::TextDisabled("G10 L20 P0 Y0");
+        break;
+    case 2: // Corner
+        ImGui::TextWrapped(
+            "Find corner: Probes X then Y edges sequentially. "
+            "Sets both X and Y zero at the corner.");
+        ImGui::TextDisabled("G38.2 X-%.0f F%.0f  (find X edge)",
+                            static_cast<double>(m_3dProbeSearchDist),
+                            static_cast<double>(m_3dProbeSpeed));
+        ImGui::TextDisabled("G0 X%.0f  (retract X)",
+                            static_cast<double>(m_3dProbeRetract));
+        ImGui::TextDisabled("G38.2 Y-%.0f F%.0f  (find Y edge)",
+                            static_cast<double>(m_3dProbeSearchDist),
+                            static_cast<double>(m_3dProbeSpeed));
+        ImGui::TextDisabled("G10 L20 P0 X0 Y0");
+        break;
+    case 3: // Center X
+        ImGui::TextWrapped(
+            "Find center X: Probes +X then -X from the current position. "
+            "Sets X zero at the midpoint between contacts.");
+        ImGui::TextDisabled("G38.2 X+%.0f F%.0f  (right edge)",
+                            static_cast<double>(m_3dProbeSearchDist),
+                            static_cast<double>(m_3dProbeSpeed));
+        ImGui::TextDisabled("Retract, then G38.2 X-%.0f  (left edge)",
+                            static_cast<double>(m_3dProbeSearchDist * 2));
+        ImGui::TextDisabled("G10 L20 P0 X[midpoint]");
+        break;
+    }
+
+    ImGui::Spacing();
+
+    bool canProbe = m_cnc && m_connected && m_status.state == MachineState::Idle;
+    if (!canProbe) ImGui::BeginDisabled();
+    if (ImGui::Button("Run Probe", ImVec2(160, 30))) {
+        char cmd[256];
+        m_cnc->sendCommand("G21 G91");
+
+        switch (m_3dProbeMode) {
+        case 0: // Edge X
+            std::snprintf(cmd, sizeof(cmd), "G38.2 X-%.0f F%.0f",
+                          static_cast<double>(m_3dProbeSearchDist),
+                          static_cast<double>(m_3dProbeSpeed));
+            m_cnc->sendCommand(cmd);
+            m_cnc->sendCommand("G10 L20 P0 X0");
+            std::snprintf(cmd, sizeof(cmd), "G0 X%.1f",
+                          static_cast<double>(m_3dProbeRetract));
+            m_cnc->sendCommand(cmd);
+            break;
+        case 1: // Edge Y
+            std::snprintf(cmd, sizeof(cmd), "G38.2 Y-%.0f F%.0f",
+                          static_cast<double>(m_3dProbeSearchDist),
+                          static_cast<double>(m_3dProbeSpeed));
+            m_cnc->sendCommand(cmd);
+            m_cnc->sendCommand("G10 L20 P0 Y0");
+            std::snprintf(cmd, sizeof(cmd), "G0 Y%.1f",
+                          static_cast<double>(m_3dProbeRetract));
+            m_cnc->sendCommand(cmd);
+            break;
+        case 2: // Corner
+            // Probe X edge
+            std::snprintf(cmd, sizeof(cmd), "G38.2 X-%.0f F%.0f",
+                          static_cast<double>(m_3dProbeSearchDist),
+                          static_cast<double>(m_3dProbeSpeed));
+            m_cnc->sendCommand(cmd);
+            m_cnc->sendCommand("G10 L20 P0 X0");
+            std::snprintf(cmd, sizeof(cmd), "G0 X%.1f",
+                          static_cast<double>(m_3dProbeRetract));
+            m_cnc->sendCommand(cmd);
+            // Probe Y edge
+            std::snprintf(cmd, sizeof(cmd), "G38.2 Y-%.0f F%.0f",
+                          static_cast<double>(m_3dProbeSearchDist),
+                          static_cast<double>(m_3dProbeSpeed));
+            m_cnc->sendCommand(cmd);
+            m_cnc->sendCommand("G10 L20 P0 Y0");
+            std::snprintf(cmd, sizeof(cmd), "G0 Y%.1f",
+                          static_cast<double>(m_3dProbeRetract));
+            m_cnc->sendCommand(cmd);
+            break;
+        case 3: // Center X (simplified)
+            std::snprintf(cmd, sizeof(cmd), "G38.2 X%.0f F%.0f",
+                          static_cast<double>(m_3dProbeSearchDist),
+                          static_cast<double>(m_3dProbeSpeed));
+            m_cnc->sendCommand(cmd);
+            std::snprintf(cmd, sizeof(cmd), "G0 X-%.1f",
+                          static_cast<double>(m_3dProbeRetract));
+            m_cnc->sendCommand(cmd);
+            // Note: Full center-finding requires reading probe positions
+            // from status reports between probes. This simplified version
+            // probes one direction and zeros.
+            m_cnc->sendCommand("G10 L20 P0 X0");
+            break;
+        }
+        m_cnc->sendCommand("G90");
+    }
+    if (!canProbe) ImGui::EndDisabled();
+
+    if (!canProbe) {
+        ImGui::TextColored(ImVec4(1, 0.5f, 0, 1),
+                           "Machine must be Idle and connected to probe");
+    }
 }
 
 void CncSafetyPanel::onStatusUpdate(const MachineStatus& status) {

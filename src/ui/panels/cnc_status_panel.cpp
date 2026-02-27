@@ -75,6 +75,7 @@ void CncStatusPanel::render() {
     }
 
     renderStateIndicator();
+    renderProbeIndicator();
     renderAlarmBanner();
     ImGui::Spacing();
     renderDRO();
@@ -118,6 +119,24 @@ void CncStatusPanel::renderStateIndicator() {
         ImGui::TextDisabled("GRBL %s", m_version.c_str());
     }
     renderWcsSelector();
+}
+
+void CncStatusPanel::renderProbeIndicator() {
+    bool probeActive = (m_status.inputPins & cnc::PIN_PROBE) != 0;
+
+    ImVec2 pos = ImGui::GetCursorScreenPos();
+    float radius = 5.0f;
+    ImU32 color = probeActive ? IM_COL32(0, 220, 0, 255) : IM_COL32(80, 80, 80, 255);
+    ImGui::GetWindowDrawList()->AddCircleFilled(
+        ImVec2(pos.x + radius + 2, pos.y + ImGui::GetTextLineHeight() * 0.5f),
+        radius, color);
+    ImGui::Dummy(ImVec2(radius * 2 + 4, ImGui::GetTextLineHeight()));
+    ImGui::SameLine();
+    ImGui::TextDisabled("Probe");
+    if (probeActive) {
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(0.0f, 0.85f, 0.0f, 1.0f), "(ACTIVE)");
+    }
 }
 
 void CncStatusPanel::renderDRO() {
