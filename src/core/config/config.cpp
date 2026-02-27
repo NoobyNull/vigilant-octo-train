@@ -241,6 +241,12 @@ bool Config::load() {
             } else if (key == "pause_before_reset_enabled") {
                 m_safetyPauseBeforeResetEnabled = (value == "true" || value == "1");
             }
+        } else if (section == "cnc") {
+            if (key == "status_poll_interval_ms") {
+                int val = 200;
+                str::parseInt(value, val);
+                m_statusPollIntervalMs = std::clamp(val, 50, 200);
+            }
         } else if (section == "machine_profiles") {
             if (key == "active_profile") {
                 str::parseInt(value, m_activeMachineProfileIndex);
@@ -408,6 +414,11 @@ bool Config::save() {
     for (size_t i = 0; i < m_recentProjects.size(); ++i) {
         ss << "project" << i << "=" << m_recentProjects[i].string() << "\n";
     }
+    ss << "\n";
+
+    // CNC section
+    ss << "[cnc]\n";
+    ss << "status_poll_interval_ms=" << m_statusPollIntervalMs << "\n";
     ss << "\n";
 
     // Safety section

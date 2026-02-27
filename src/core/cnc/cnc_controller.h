@@ -49,6 +49,9 @@ class CncController {
     void unlock(); // $X
     void sendCommand(const std::string& cmd); // Queue arbitrary G-code/system command
 
+    // Configurable status polling interval (50-200ms)
+    void setStatusPollMs(int ms) { m_statusPollMs = ms; }
+
     // Status
     const MachineStatus& lastStatus() const { return m_lastStatus; }
     StreamProgress streamProgress() const;
@@ -118,7 +121,7 @@ class CncController {
     int m_consecutiveTimeouts = 0;
     bool m_statusPending = false;
 
-    static constexpr int STATUS_POLL_MS = 200; // 5 Hz
+    int m_statusPollMs = 200; // Default 5 Hz, configurable via Config
     static constexpr int MAX_CONSECUTIVE_TIMEOUTS = 10; // ~2 seconds of no response
 };
 

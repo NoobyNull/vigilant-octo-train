@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <string>
 #include <vector>
@@ -198,6 +199,10 @@ class Config {
     const std::string& getGeminiApiKey() const { return m_geminiApiKey; }
     void setGeminiApiKey(const std::string& key) { m_geminiApiKey = key; }
 
+    // CNC settings
+    int getStatusPollIntervalMs() const { return m_statusPollIntervalMs; }
+    void setStatusPollIntervalMs(int ms) { m_statusPollIntervalMs = std::clamp(ms, 50, 200); }
+
     // Safety settings
     bool getSafetyLongPressEnabled() const { return m_safetyLongPressEnabled; }
     void setSafetyLongPressEnabled(bool v) { m_safetyLongPressEnabled = v; }
@@ -313,6 +318,9 @@ class Config {
 
     // API keys
     std::string m_geminiApiKey;
+
+    // CNC settings
+    int m_statusPollIntervalMs = 200;
 
     // Safety settings
     bool m_safetyLongPressEnabled = true;

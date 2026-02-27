@@ -4,6 +4,7 @@
 #include <cstring>
 #include <sstream>
 
+#include "../config/config.h"
 #include "../threading/main_thread_queue.h"
 #include "../utils/log.h"
 
@@ -30,6 +31,7 @@ bool CncController::connect(const std::string& device, int baudRate) {
     m_consecutiveTimeouts = 0;
     m_statusPending = false;
     m_pendingRtCommands.store(0, std::memory_order_relaxed);
+    m_statusPollMs = Config::instance().getStatusPollIntervalMs();
     m_ioThread = std::thread(&CncController::ioThreadFunc, this);
 
     return true;
@@ -282,7 +284,7 @@ void CncController::ioThreadFunc() {
         auto now = std::chrono::steady_clock::now();
         auto elapsed =
             std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastStatusQuery).count();
-        if (elapsed >= STATUS_POLL_MS) {
+        if (elapsed >= m_statusPollMs) {
             requestStatus();
             m_lastStatusQuery = now;
         }
