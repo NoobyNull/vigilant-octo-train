@@ -111,7 +111,7 @@ void CncJogPanel::renderJogButtons() {
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(12, 12));
     float buttonSize = 48.0f;
 
-    // Helper lambda for jog buttons
+    // Helper lambda for single-axis jog buttons
     auto jogButton = [&](const char* label, int axis, float dir) {
         if (!canJog)
             ImGui::BeginDisabled();
@@ -122,31 +122,50 @@ void CncJogPanel::renderJogButtons() {
             ImGui::EndDisabled();
     };
 
-    // Calculate centering offset for the cross pattern
+    // Helper lambda for diagonal jog buttons
+    auto diagButton = [&](const char* label, float xDir, float yDir, const char* tooltip) {
+        if (!canJog)
+            ImGui::BeginDisabled();
+        if (ImGui::Button(label, ImVec2(buttonSize, buttonSize))) {
+            jogDiagonal(xDir, yDir);
+        }
+        if (!canJog)
+            ImGui::EndDisabled();
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+            ImGui::SetTooltip("%s", tooltip);
+        }
+    };
+
+    // Calculate centering offset for the 3x3 grid
     float availWidth = ImGui::GetContentRegionAvail().x;
     float crossWidth = buttonSize * 3 + ImGui::GetStyle().ItemSpacing.x * 2;
     float offsetX = (availWidth - crossWidth) * 0.5f;
     if (offsetX < 0)
         offsetX = 0;
 
-    // Row 1: Y+ centered
-    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offsetX + buttonSize +
-                          ImGui::GetStyle().ItemSpacing.x);
+    // Row 1: -X+Y, Y+, +X+Y
+    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offsetX);
+    diagButton("\\##NW", -1.0f, +1.0f, "-X +Y");
+    ImGui::SameLine();
     jogButton("Y+", 1, +1.0f);
+    ImGui::SameLine();
+    diagButton("/##NE", +1.0f, +1.0f, "+X +Y");
 
-    // Row 2: X- [space] X+
+    // Row 2: X-, [gap], X+
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offsetX);
     jogButton("X-", 0, -1.0f);
     ImGui::SameLine();
-    // Gap in the middle
     ImGui::Dummy(ImVec2(buttonSize, buttonSize));
     ImGui::SameLine();
     jogButton("X+", 0, +1.0f);
 
-    // Row 3: Y- centered
-    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offsetX + buttonSize +
-                          ImGui::GetStyle().ItemSpacing.x);
+    // Row 3: -X-Y, Y-, +X-Y
+    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offsetX);
+    diagButton("/##SW", -1.0f, -1.0f, "-X -Y");
+    ImGui::SameLine();
     jogButton("Y-", 1, -1.0f);
+    ImGui::SameLine();
+    diagButton("\\##SE", +1.0f, -1.0f, "+X -Y");
 
     ImGui::Spacing();
     ImGui::Separator();
@@ -248,6 +267,32 @@ void CncJogPanel::jogAxis(int axis, float direction) {
     char cmd[128];
     std::snprintf(cmd, sizeof(cmd), "$J=G91 G21 %c%.3f F%.0f",
                   axisLetters[axis], static_cast<double>(step), static_cast<double>(feed));
+    m_cnc->sendCommand(cmd);
+}
+
+void CncJogPanel::jogDiagonal(float xDir, float yDir) {
+    if (!m_cnc)
+        return;
+
+    float step = STEP_SIZES[m_selectedStep];
+    float xStep = step * xDir;
+    float yStep = step * yDir;
+
+    // Per-step-group feedrate from Config (same logic as jogAxis)
+    auto& cfg = Config::instance();
+    float feed;
+    if (m_selectedStep <= 1) {
+        feed = static_cast<float>(cfg.getJogFeedSmall());
+    } else if (m_selectedStep == 2) {
+        feed = static_cast<float>(cfg.getJogFeedMedium());
+    } else {
+        feed = static_cast<float>(cfg.getJogFeedLarge());
+    }
+
+    char cmd[128];
+    std::snprintf(cmd, sizeof(cmd), "$J=G91 G21 X%.3f Y%.3f F%.0f",
+                  static_cast<double>(xStep), static_cast<double>(yStep),
+                  static_cast<double>(feed));
     m_cnc->sendCommand(cmd);
 }
 

@@ -31,6 +31,7 @@ class CncJogPanel : public Panel {
     void renderHomingSection();
 
     void jogAxis(int axis, float direction);
+    void jogDiagonal(float xDir, float yDir);
     void startContinuousJog(int axis, float direction, int key);
     void stopContinuousJog();
 

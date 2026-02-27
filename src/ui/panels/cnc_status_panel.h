@@ -35,6 +35,7 @@ class CncStatusPanel : public Panel {
     void renderCoolantControls();
     void renderAlarmBanner();
     void renderWcsSelector();
+    void renderMoveToDialog();
 
     CncController* m_cnc = nullptr;
     MachineStatus m_status{};
@@ -47,6 +48,13 @@ class CncStatusPanel : public Panel {
     int m_activeWcs = 0;
     static constexpr const char* WCS_NAMES[] = {"G54", "G55", "G56", "G57", "G58", "G59"};
     static constexpr int NUM_WCS = 6;
+
+    // Move-To dialog state
+    bool m_moveToOpen = false;
+    float m_moveToX = 0.0f;
+    float m_moveToY = 0.0f;
+    float m_moveToZ = 0.0f;
+    bool m_moveToUseG0 = true; // true=G0 rapid, false=G1 feed move
 };
 
 } // namespace dw

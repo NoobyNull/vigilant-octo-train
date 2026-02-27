@@ -82,6 +82,7 @@ void CncStatusPanel::render() {
     renderFeedSpindle();
     renderOverrideControls();
     renderCoolantControls();
+    renderMoveToDialog();
 
     ImGui::End();
 }
@@ -124,6 +125,7 @@ void CncStatusPanel::renderDRO() {
 
     // Axis labels and colors
     static const char* axisNames[] = {"X", "Y", "Z"};
+    static const char axisLetters[] = {'X', 'Y', 'Z'};
     static const ImVec4 axisColors[] = {
         ImVec4(1.0f, 0.3f, 0.3f, 1.0f), // X = Red
         ImVec4(0.3f, 1.0f, 0.3f, 1.0f), // Y = Green
@@ -132,17 +134,36 @@ void CncStatusPanel::renderDRO() {
     float workPos[] = {m_status.workPos.x, m_status.workPos.y, m_status.workPos.z};
     float machPos[] = {m_status.machinePos.x, m_status.machinePos.y, m_status.machinePos.z};
 
-    // Work position — large digits
+    // Work position — large digits, double-click to zero axis
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4.0f, 2.0f));
-    ImGui::SetWindowFontScale(2.0f);
 
     for (int i = 0; i < 3; ++i) {
+        ImGui::SetWindowFontScale(2.0f);
         ImGui::TextColored(axisColors[i], "%s", axisNames[i]);
         ImGui::SameLine();
-        ImGui::Text("%+10.3f", static_cast<double>(workPos[i]));
+
+        // Render as Selectable so double-click is detectable
+        char posLabel[32];
+        std::snprintf(posLabel, sizeof(posLabel), "%+10.3f##DRO%d",
+                      static_cast<double>(workPos[i]), i);
+        if (ImGui::Selectable(posLabel, false, ImGuiSelectableFlags_AllowDoubleClick)) {
+            if (ImGui::IsMouseDoubleClicked(0)) {
+                // Zero this axis: G10 L20 P0 <axis>0
+                if (m_cnc && m_connected && m_status.state == MachineState::Idle) {
+                    char cmd[64];
+                    std::snprintf(cmd, sizeof(cmd), "G10 L20 P0 %c0", axisLetters[i]);
+                    m_cnc->sendCommand(cmd);
+                }
+            }
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetWindowFontScale(1.0f);
+            ImGui::SetTooltip("Double-click to zero %s axis", axisNames[i]);
+            ImGui::SetWindowFontScale(2.0f);
+        }
+        ImGui::SetWindowFontScale(1.0f);
     }
 
-    ImGui::SetWindowFontScale(1.0f);
     ImGui::PopStyleVar();
 
     // Machine position — smaller, secondary
@@ -153,6 +174,20 @@ void CncStatusPanel::renderDRO() {
         ImGui::TextDisabled("%s %+.3f", axisNames[i], static_cast<double>(machPos[i]));
         if (i < 2)
             ImGui::SameLine();
+    }
+
+    // Move To button
+    bool canMove = m_cnc && m_connected && m_status.state == MachineState::Idle;
+    if (!canMove) ImGui::BeginDisabled();
+    if (ImGui::SmallButton("Move To...")) {
+        m_moveToX = m_status.workPos.x;
+        m_moveToY = m_status.workPos.y;
+        m_moveToZ = m_status.workPos.z;
+        m_moveToOpen = true;
+    }
+    if (!canMove) ImGui::EndDisabled();
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+        ImGui::SetTooltip("Move machine to specific coordinates");
     }
 }
 
@@ -327,6 +362,56 @@ void CncStatusPanel::renderWcsSelector() {
     }
 
     if (!canSwitch) ImGui::EndDisabled();
+}
+
+void CncStatusPanel::renderMoveToDialog() {
+    if (m_moveToOpen) {
+        ImGui::OpenPopup("Move To Position");
+        m_moveToOpen = false;
+    }
+    if (ImGui::BeginPopupModal("Move To Position", nullptr,
+                                ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Enter target work coordinates:");
+        ImGui::Spacing();
+
+        ImGui::SetNextItemWidth(120);
+        ImGui::InputFloat("X##moveto", &m_moveToX, 0.1f, 1.0f, "%.3f");
+        ImGui::SetNextItemWidth(120);
+        ImGui::InputFloat("Y##moveto", &m_moveToY, 0.1f, 1.0f, "%.3f");
+        ImGui::SetNextItemWidth(120);
+        ImGui::InputFloat("Z##moveto", &m_moveToZ, 0.1f, 1.0f, "%.3f");
+
+        ImGui::Spacing();
+        ImGui::Checkbox("Rapid (G0)", &m_moveToUseG0);
+        if (!m_moveToUseG0) {
+            ImGui::SameLine();
+            ImGui::TextDisabled("(uses current feed rate)");
+        }
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        bool canGo = m_cnc && m_connected && m_status.state == MachineState::Idle;
+        if (!canGo) ImGui::BeginDisabled();
+        if (ImGui::Button("Go", ImVec2(80, 0))) {
+            char cmd[128];
+            const char* moveCmd = m_moveToUseG0 ? "G0" : "G1";
+            std::snprintf(cmd, sizeof(cmd), "G90 %s X%.3f Y%.3f Z%.3f",
+                          moveCmd,
+                          static_cast<double>(m_moveToX),
+                          static_cast<double>(m_moveToY),
+                          static_cast<double>(m_moveToZ));
+            m_cnc->sendCommand(cmd);
+            ImGui::CloseCurrentPopup();
+        }
+        if (!canGo) ImGui::EndDisabled();
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(80, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
 }
 
 void CncStatusPanel::onAlarm(int alarmCode, const std::string& desc) {
