@@ -47,6 +47,7 @@ class CncSettingsPanel : public Panel {
     void renderToolbar();
     void renderSettingsTab();
     void renderTuningTab();
+    void renderSafetyTab();
     void renderRawTab();
     void renderDiffDialog();
 

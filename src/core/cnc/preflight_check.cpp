@@ -1,12 +1,21 @@
 #include "preflight_check.h"
+
+#include <cmath>
+#include <string>
+
 #include "cnc_controller.h"
+#include "../config/config.h"
+#include "../gcode/machine_profile.h"
 
 namespace dw {
 
 std::vector<PreflightIssue> runPreflightChecks(
     const CncController& ctrl,
     bool hasToolSelected,
-    bool hasMaterialSelected)
+    bool hasMaterialSelected,
+    const Vec3* boundsMin,
+    const Vec3* boundsMax,
+    const gcode::MachineProfile* profile)
 {
     std::vector<PreflightIssue> issues;
 
@@ -38,6 +47,35 @@ std::vector<PreflightIssue> runPreflightChecks(
     if (!hasMaterialSelected) {
         issues.push_back({PreflightIssue::Warning,
                           "No material selected -- cutting parameters not validated"});
+    }
+
+    // Soft limit pre-check: compare G-code bounds against machine travel
+    if (boundsMin && boundsMax && profile &&
+        Config::instance().getSafetySoftLimitCheckEnabled()) {
+        float jobSizeX = boundsMax->x - boundsMin->x;
+        float jobSizeY = boundsMax->y - boundsMin->y;
+
+        bool exceeds = false;
+        std::string msg = "Job may exceed machine travel: ";
+        if (jobSizeX > profile->maxTravelX) {
+            msg += "X(" + std::to_string(static_cast<int>(jobSizeX)) + ">" +
+                   std::to_string(static_cast<int>(profile->maxTravelX)) + "mm) ";
+            exceeds = true;
+        }
+        if (jobSizeY > profile->maxTravelY) {
+            msg += "Y(" + std::to_string(static_cast<int>(jobSizeY)) + ">" +
+                   std::to_string(static_cast<int>(profile->maxTravelY)) + "mm) ";
+            exceeds = true;
+        }
+        if (std::abs(boundsMin->z) > profile->maxTravelZ ||
+            std::abs(boundsMax->z) > profile->maxTravelZ) {
+            msg += "Z(depth exceeds " +
+                   std::to_string(static_cast<int>(profile->maxTravelZ)) + "mm) ";
+            exceeds = true;
+        }
+        if (exceeds) {
+            issues.push_back({PreflightIssue::Warning, msg});
+        }
     }
 
     return issues;

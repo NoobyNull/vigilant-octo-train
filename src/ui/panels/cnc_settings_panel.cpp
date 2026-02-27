@@ -8,6 +8,7 @@
 #include <imgui.h>
 
 #include "core/cnc/cnc_controller.h"
+#include "core/config/config.h"
 #include "ui/dialogs/file_dialog.h"
 #include "ui/icons.h"
 #include "ui/theme.h"
@@ -244,8 +245,13 @@ void CncSettingsPanel::render() {
             renderTuningTab();
             ImGui::EndTabItem();
         }
-        if (ImGui::BeginTabItem("Raw")) {
+        if (ImGui::BeginTabItem("Safety")) {
             m_activeTab = 2;
+            renderSafetyTab();
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("Raw")) {
+            m_activeTab = 3;
             renderRawTab();
             ImGui::EndTabItem();
         }
@@ -636,6 +642,94 @@ void CncSettingsPanel::renderDiffDialog() {
     }
 
     ImGui::End();
+}
+
+void CncSettingsPanel::renderSafetyTab() {
+    ImGui::BeginChild("SafetyScroll", ImVec2(0, 0), ImGuiChildFlags_None);
+
+    auto& cfg = Config::instance();
+
+    // --- Long-Press Confirmation ---
+    ImGui::SeparatorText("Long-Press Confirmation");
+
+    bool longPressEnabled = cfg.getSafetyLongPressEnabled();
+    if (ImGui::Checkbox("Enable long-press for Home and Start buttons", &longPressEnabled)) {
+        cfg.setSafetyLongPressEnabled(longPressEnabled);
+        cfg.save();
+    }
+
+    if (longPressEnabled) {
+        ImGui::Indent();
+        int durationMs = cfg.getSafetyLongPressDurationMs();
+        ImGui::SetNextItemWidth(200.0f);
+        if (ImGui::SliderInt("Duration##longpress", &durationMs, 250, 3000, "%d ms")) {
+            cfg.setSafetyLongPressDurationMs(durationMs);
+            cfg.save();
+        }
+        ImGui::Unindent();
+    }
+
+    bool abortLongPress = cfg.getSafetyAbortLongPress();
+    if (ImGui::Checkbox("Use long-press for Abort (instead of confirmation dialog)",
+                        &abortLongPress)) {
+        cfg.setSafetyAbortLongPress(abortLongPress);
+        cfg.save();
+    }
+
+    ImGui::Spacing();
+
+    // --- Continuous Jog Watchdog ---
+    ImGui::SeparatorText("Continuous Jog Watchdog");
+
+    bool deadManEnabled = cfg.getSafetyDeadManEnabled();
+    if (ImGui::Checkbox("Enable dead-man watchdog", &deadManEnabled)) {
+        cfg.setSafetyDeadManEnabled(deadManEnabled);
+        cfg.save();
+    }
+
+    if (deadManEnabled) {
+        ImGui::Indent();
+        int timeoutMs = cfg.getSafetyDeadManTimeoutMs();
+        ImGui::SetNextItemWidth(200.0f);
+        if (ImGui::SliderInt("Timeout##deadman", &timeoutMs, 200, 5000, "%d ms")) {
+            cfg.setSafetyDeadManTimeoutMs(timeoutMs);
+            cfg.save();
+        }
+        ImGui::Unindent();
+    }
+
+    ImGui::Spacing();
+
+    // --- Machine Protection ---
+    ImGui::SeparatorText("Machine Protection");
+
+    bool doorInterlock = cfg.getSafetyDoorInterlockEnabled();
+    if (ImGui::Checkbox("Door interlock (block commands when door is active)",
+                        &doorInterlock)) {
+        cfg.setSafetyDoorInterlockEnabled(doorInterlock);
+        cfg.save();
+    }
+
+    bool softLimit = cfg.getSafetySoftLimitCheckEnabled();
+    if (ImGui::Checkbox("Soft limit pre-check (compare job bounds vs machine travel)",
+                        &softLimit)) {
+        cfg.setSafetySoftLimitCheckEnabled(softLimit);
+        cfg.save();
+    }
+
+    bool pauseBeforeReset = cfg.getSafetyPauseBeforeResetEnabled();
+    if (ImGui::Checkbox("Pause before reset (send feed hold before soft reset)",
+                        &pauseBeforeReset)) {
+        cfg.setSafetyPauseBeforeResetEnabled(pauseBeforeReset);
+        cfg.save();
+    }
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    ImGui::TextDisabled("Changes take effect immediately");
+
+    ImGui::EndChild();
 }
 
 // --- Actions ---

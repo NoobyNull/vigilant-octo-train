@@ -1286,8 +1286,12 @@ void GCodePanel::buildSendProgram() {
     if (!m_cnc || !hasGCode())
         return;
 
-    // Run pre-flight checks before streaming
-    auto issues = runPreflightChecks(*m_cnc, false, false);
+    // Run pre-flight checks before streaming (with soft limit check)
+    auto& profile = Config::instance().getActiveMachineProfile();
+    Vec3 bmin = m_stats.boundsMin;
+    Vec3 bmax = m_stats.boundsMax;
+    auto issues = runPreflightChecks(*m_cnc, false, false,
+                                     &bmin, &bmax, &profile);
     bool hasErrors = false;
     for (const auto& issue : issues) {
         if (issue.severity == PreflightIssue::Error) {
