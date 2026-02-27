@@ -118,6 +118,24 @@ class GCodePanel : public Panel {
     bool m_showCut = true;        // G1 mostly-XY cutting moves
     bool m_showPlunge = true;     // G1 Z-descending moves
     bool m_showRetract = true;    // G1 Z-ascending moves
+    bool m_colorByTool = false;   // Color segments by T-code tool number
+
+    // Tool color palette (8 colors, wraps via modulo)
+    static constexpr int NUM_TOOL_COLORS = 8;
+    static Vec3 toolColor(int toolNum) {
+        static const Vec3 palette[] = {
+            {0.2f, 0.6f, 1.0f},  // T1: Blue
+            {1.0f, 0.3f, 0.3f},  // T2: Red
+            {0.3f, 0.9f, 0.3f},  // T3: Green
+            {1.0f, 0.7f, 0.1f},  // T4: Orange
+            {0.8f, 0.3f, 0.9f},  // T5: Purple
+            {0.1f, 0.9f, 0.9f},  // T6: Cyan
+            {0.9f, 0.9f, 0.2f},  // T7: Yellow
+            {1.0f, 0.5f, 0.7f},  // T8: Pink
+        };
+        int idx = (toolNum > 0 ? toolNum - 1 : 0) % NUM_TOOL_COLORS;
+        return palette[idx];
+    }
 
     // 3D rendering pipeline
     Renderer m_pathRenderer;
@@ -139,6 +157,14 @@ class GCodePanel : public Panel {
     // Simulation overlay — dynamic VBO for progress visualization
     GLuint m_simVAO = 0;
     GLuint m_simVBO = 0;
+
+    // Per-tool draw groups (used when m_colorByTool is true)
+    struct ToolGroup {
+        u32 start = 0;
+        u32 count = 0;
+        int toolNumber = 0;
+    };
+    std::vector<ToolGroup> m_toolGroups;
 
     // Previous filter state to detect changes
     bool m_prevShowRapid = false;

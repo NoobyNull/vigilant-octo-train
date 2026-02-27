@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <map>
 #include <numeric>
 
 #include <imgui.h>
@@ -324,6 +325,9 @@ void GCodePanel::renderToolbar() {
             m_pathDirty = true;
         ImGui::SameLine();
         if (ImGui::Checkbox("Retract", &m_showRetract))
+            m_pathDirty = true;
+        ImGui::SameLine();
+        if (ImGui::Checkbox("Color by Tool", &m_colorByTool))
             m_pathDirty = true;
 
         if (m_projectManager && m_projectManager->currentProject() && m_currentGCodeId > 0) {
@@ -916,76 +920,134 @@ void GCodePanel::updateSimulation(float dt) {
 
 void GCodePanel::buildPathGeometry() {
     destroyPathGeometry();
+    m_toolGroups.clear();
 
     if (m_program.path.empty()) {
         m_pathDirty = false;
         return;
     }
 
-    // Classify segments into 4 groups and collect vertices
-    std::vector<f32> rapidVerts;
-    std::vector<f32> cutVerts;
-    std::vector<f32> plungeVerts;
-    std::vector<f32> retractVerts;
+    // Helper: add segment vertices (Y↔Z swap: G-code Z-up, renderer Y-up)
+    auto addSegVerts = [](std::vector<f32>& verts, const gcode::PathSegment& seg) {
+        verts.push_back(seg.start.x);
+        verts.push_back(seg.start.z);
+        verts.push_back(seg.start.y);
+        verts.push_back(seg.end.x);
+        verts.push_back(seg.end.z);
+        verts.push_back(seg.end.y);
+    };
 
-    for (const auto& seg : m_program.path) {
-        // Z-clipping: skip segments above threshold
-        if (seg.end.z > m_currentLayer)
-            continue;
+    // Helper: classify non-rapid segment (returns false if filtered out)
+    auto isVisibleNonRapid = [this](const gcode::PathSegment& seg) -> bool {
+        float dz = seg.end.z - seg.start.z;
+        float dxy2 = (seg.end.x - seg.start.x) * (seg.end.x - seg.start.x) +
+                      (seg.end.y - seg.start.y) * (seg.end.y - seg.start.y);
+        bool zDominant = (dz * dz) > dxy2 * 0.25f;
 
-        // Classify
-        std::vector<f32>* target = nullptr;
+        if (dz < -0.001f && zDominant) return m_showPlunge;
+        if (dz > 0.001f && zDominant) return m_showRetract;
+        return m_showCut;
+    };
 
-        if (seg.isRapid) {
-            if (!m_showRapid) continue;
-            target = &rapidVerts;
-        } else {
-            float dz = seg.end.z - seg.start.z;
-            float dxy2 = (seg.end.x - seg.start.x) * (seg.end.x - seg.start.x) +
-                          (seg.end.y - seg.start.y) * (seg.end.y - seg.start.y);
-            bool zDominant = (dz * dz) > dxy2 * 0.25f;
+    std::vector<f32> allVerts;
 
-            if (dz < -0.001f && zDominant) {
-                if (!m_showPlunge) continue;
-                target = &plungeVerts;
-            } else if (dz > 0.001f && zDominant) {
-                if (!m_showRetract) continue;
-                target = &retractVerts;
+    if (m_colorByTool) {
+        // --- Color by tool mode: group by tool number ---
+        // First pass: collect rapids
+        std::vector<f32> rapidVerts;
+        // Collect non-rapid segments grouped by tool
+        std::map<int, std::vector<f32>> toolVerts;
+
+        for (const auto& seg : m_program.path) {
+            if (seg.end.z > m_currentLayer) continue;
+
+            if (seg.isRapid) {
+                if (m_showRapid) addSegVerts(rapidVerts, seg);
             } else {
-                if (!m_showCut) continue;
-                target = &cutVerts;
+                if (!isVisibleNonRapid(seg)) continue;
+                addSegVerts(toolVerts[seg.toolNumber], seg);
             }
         }
 
-        // Add start + end (2 vertices, 3 floats each)
-        // Swap Y↔Z: G-code uses Z-up, renderer uses Y-up
-        target->push_back(seg.start.x);
-        target->push_back(seg.start.z);
-        target->push_back(seg.start.y);
-        target->push_back(seg.end.x);
-        target->push_back(seg.end.z);
-        target->push_back(seg.end.y);
+        allVerts.reserve(rapidVerts.size());
+        for (auto& [tool, verts] : toolVerts)
+            allVerts.reserve(allVerts.capacity() + verts.size());
+
+        // Rapids first
+        m_rapidStart = 0;
+        m_rapidCount = static_cast<u32>(rapidVerts.size() / 3);
+        allVerts.insert(allVerts.end(), rapidVerts.begin(), rapidVerts.end());
+
+        // Zero out type-based groups (not used in tool mode)
+        m_cutStart = m_cutCount = 0;
+        m_plungeStart = m_plungeCount = 0;
+        m_retractStart = m_retractCount = 0;
+
+        // Tool groups
+        u32 offset = m_rapidCount;
+        for (auto& [tool, verts] : toolVerts) {
+            ToolGroup tg;
+            tg.toolNumber = tool;
+            tg.start = offset;
+            tg.count = static_cast<u32>(verts.size() / 3);
+            m_toolGroups.push_back(tg);
+            allVerts.insert(allVerts.end(), verts.begin(), verts.end());
+            offset += tg.count;
+        }
+    } else {
+        // --- Standard mode: group by move type ---
+        std::vector<f32> rapidVerts;
+        std::vector<f32> cutVerts;
+        std::vector<f32> plungeVerts;
+        std::vector<f32> retractVerts;
+
+        for (const auto& seg : m_program.path) {
+            if (seg.end.z > m_currentLayer) continue;
+
+            std::vector<f32>* target = nullptr;
+
+            if (seg.isRapid) {
+                if (!m_showRapid) continue;
+                target = &rapidVerts;
+            } else {
+                float dz = seg.end.z - seg.start.z;
+                float dxy2 = (seg.end.x - seg.start.x) * (seg.end.x - seg.start.x) +
+                              (seg.end.y - seg.start.y) * (seg.end.y - seg.start.y);
+                bool zDominant = (dz * dz) > dxy2 * 0.25f;
+
+                if (dz < -0.001f && zDominant) {
+                    if (!m_showPlunge) continue;
+                    target = &plungeVerts;
+                } else if (dz > 0.001f && zDominant) {
+                    if (!m_showRetract) continue;
+                    target = &retractVerts;
+                } else {
+                    if (!m_showCut) continue;
+                    target = &cutVerts;
+                }
+            }
+
+            addSegVerts(*target, seg);
+        }
+
+        allVerts.reserve(rapidVerts.size() + cutVerts.size() + plungeVerts.size() + retractVerts.size());
+
+        m_rapidStart = 0;
+        m_rapidCount = static_cast<u32>(rapidVerts.size() / 3);
+        allVerts.insert(allVerts.end(), rapidVerts.begin(), rapidVerts.end());
+
+        m_cutStart = m_rapidCount;
+        m_cutCount = static_cast<u32>(cutVerts.size() / 3);
+        allVerts.insert(allVerts.end(), cutVerts.begin(), cutVerts.end());
+
+        m_plungeStart = m_cutStart + m_cutCount;
+        m_plungeCount = static_cast<u32>(plungeVerts.size() / 3);
+        allVerts.insert(allVerts.end(), plungeVerts.begin(), plungeVerts.end());
+
+        m_retractStart = m_plungeStart + m_plungeCount;
+        m_retractCount = static_cast<u32>(retractVerts.size() / 3);
+        allVerts.insert(allVerts.end(), retractVerts.begin(), retractVerts.end());
     }
-
-    // Concatenate into single buffer, record offsets
-    std::vector<f32> allVerts;
-    allVerts.reserve(rapidVerts.size() + cutVerts.size() + plungeVerts.size() + retractVerts.size());
-
-    m_rapidStart = 0;
-    m_rapidCount = static_cast<u32>(rapidVerts.size() / 3);
-    allVerts.insert(allVerts.end(), rapidVerts.begin(), rapidVerts.end());
-
-    m_cutStart = m_rapidCount;
-    m_cutCount = static_cast<u32>(cutVerts.size() / 3);
-    allVerts.insert(allVerts.end(), cutVerts.begin(), cutVerts.end());
-
-    m_plungeStart = m_cutStart + m_cutCount;
-    m_plungeCount = static_cast<u32>(plungeVerts.size() / 3);
-    allVerts.insert(allVerts.end(), plungeVerts.begin(), plungeVerts.end());
-
-    m_retractStart = m_plungeStart + m_plungeCount;
-    m_retractCount = static_cast<u32>(retractVerts.size() / 3);
-    allVerts.insert(allVerts.end(), retractVerts.begin(), retractVerts.end());
 
     if (allVerts.empty()) {
         m_pathDirty = false;
@@ -1171,7 +1233,22 @@ void GCodePanel::renderPathView() {
                 flat.setVec4("uColor", Vec4{0.3f, 0.3f, 0.35f, 0.35f});
                 glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(totalVerts));
             }
+        } else if (m_colorByTool && !m_toolGroups.empty()) {
+            // Color-by-tool mode: rapids gray, then each tool with its color
+            if (m_rapidCount > 0) {
+                flat.setVec4("uColor", Vec4{0.4f, 0.4f, 0.4f, 0.5f});
+                glDrawArrays(GL_LINES, static_cast<GLint>(m_rapidStart),
+                             static_cast<GLsizei>(m_rapidCount));
+            }
+            for (const auto& tg : m_toolGroups) {
+                if (tg.count == 0) continue;
+                Vec3 tc = toolColor(tg.toolNumber);
+                flat.setVec4("uColor", Vec4{tc.x, tc.y, tc.z, 1.0f});
+                glDrawArrays(GL_LINES, static_cast<GLint>(tg.start),
+                             static_cast<GLsizei>(tg.count));
+            }
         } else {
+            // Standard mode: color by move type
             // Rapid: dim gray
             if (m_rapidCount > 0) {
                 flat.setVec4("uColor", Vec4{0.4f, 0.4f, 0.4f, 0.5f});

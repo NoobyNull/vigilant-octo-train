@@ -41,6 +41,7 @@ class CutListFile;
 class CncController;
 class ToolDatabase;
 class MacroManager;
+class GamepadInput;
 class BackgroundTagger;
 class ImportLog;
 class Mesh;
@@ -156,6 +157,9 @@ class Application {
 
     // CNC macro manager (SQLite-backed macro storage)
     std::unique_ptr<MacroManager> m_macroManager;
+
+    // CNC gamepad input (SDL_GameController for jog/actions)
+    std::unique_ptr<GamepadInput> m_gamepadInput;
 
     // Currently focused model ID (for material assignment)
     int64_t m_focusedModelId = -1;

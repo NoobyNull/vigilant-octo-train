@@ -95,6 +95,7 @@ struct PathSegment {
     bool isRapid = false; // G0 vs G1
     f32 feedRate = 0.0f;
     int lineNumber = 0;
+    int toolNumber = 0;   // Active tool at this segment (from T-code)
 };
 
 // Parsed G-code program

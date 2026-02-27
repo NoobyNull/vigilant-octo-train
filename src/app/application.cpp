@@ -30,6 +30,7 @@
 #include "core/database/schema.h"
 #include "core/export/project_export_manager.h"
 #include "core/cnc/cnc_controller.h"
+#include "core/cnc/gamepad_input.h"
 #include "core/cnc/macro_manager.h"
 #include "core/graph/graph_manager.h"
 #include "core/import/background_tagger.h"
@@ -81,7 +82,7 @@ bool Application::init() {
     SDL_SetHint(SDL_HINT_WINDOWS_DPI_AWARENESS, "permonitorv2");
 
     // Initialize SDL2
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0) {
         std::fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
         return false;
     }
@@ -258,6 +259,10 @@ bool Application::init() {
     m_macroManager = std::make_unique<MacroManager>(paths::getMacroDatabasePath().string());
     m_macroManager->ensureBuiltIns();
 
+    // CNC gamepad input (SDL_GameController for jog/actions)
+    m_gamepadInput = std::make_unique<GamepadInput>();
+    m_gamepadInput->setCncController(m_cncController.get());
+
     m_importQueue = std::make_unique<ImportQueue>(*m_connectionPool,
                                                   m_libraryManager.get(),
                                                   m_storageManager.get());
@@ -399,6 +404,10 @@ void Application::update() {
     if (m_uiManager && m_uiManager->gcodePanel())
         m_uiManager->gcodePanel()->updateSimulation(ImGui::GetIO().DeltaTime);
 
+    // Poll gamepad input each frame
+    if (m_gamepadInput)
+        m_gamepadInput->update(ImGui::GetIO().DeltaTime);
+
     m_configManager->poll(SDL_GetTicks64());
 }
 
@@ -469,6 +478,7 @@ void Application::shutdown() {
     m_importLog.reset();
 
     // Destroy core systems
+    m_gamepadInput.reset();  // Must be destroyed before CncController
     m_toolDatabase.reset();
     m_cncController.reset();
     m_descriptorService.reset();

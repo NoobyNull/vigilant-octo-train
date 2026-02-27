@@ -98,6 +98,7 @@ set(DW_SOURCES
     core/cnc/tool_calculator.cpp
     core/cnc/grbl_settings.cpp
     core/cnc/macro_manager.cpp
+    core/cnc/gamepad_input.cpp
 
     # Optimizer
     core/optimizer/cut_optimizer.cpp
