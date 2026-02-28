@@ -934,7 +934,7 @@ void CncSettingsPanel::backupToFile() {
     std::string json = m_settings.toJsonString();
     m_fileDialog->showSave(
         "Backup Settings",
-        {{.name = "JSON Files", .extensions = "*.json"}},
+        {{"JSON Files", "*.json"}},
         "settings_backup.json",
         [json](const std::string& path) {
             std::ofstream ofs(path);
@@ -948,7 +948,7 @@ void CncSettingsPanel::restoreFromFile() {
     if (!m_fileDialog) return;
     m_fileDialog->showOpen(
         "Restore Settings",
-        {{.name = "JSON Files", .extensions = "*.json"}},
+        {{"JSON Files", "*.json"}},
         [this](const std::string& path) {
             std::ifstream ifs(path);
             if (!ifs.is_open()) return;
@@ -971,7 +971,7 @@ void CncSettingsPanel::exportPlainText() {
                                   : "grbl_settings.txt";
     m_fileDialog->showSave(
         "Export Settings",
-        {{.name = "Text Files", .extensions = "*.txt"}},
+        {{"Text Files", "*.txt"}},
         defaultName,
         [content](const std::string& path) {
             std::ofstream ofs(path);

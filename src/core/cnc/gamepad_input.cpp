@@ -8,7 +8,7 @@
 #include <cmath>
 #include <cstdio>
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 #include "core/utils/log.h"
 

@@ -30,7 +30,7 @@ static const char* toolTypeName(VtdbToolType type) {
     }
 }
 
-static constexpr int kToolTypeCount = 10;
+static constexpr int kToolTypeCount = 9;
 static const VtdbToolType kToolTypes[] = {
     VtdbToolType::BallNose,
     VtdbToolType::EndMill,

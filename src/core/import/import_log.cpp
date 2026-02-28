@@ -41,10 +41,11 @@ void ImportLog::appendLine(const std::string& status,
     std::strftime(timeBuf, sizeof(timeBuf), "%Y-%m-%dT%H:%M:%SZ", &tm);
 
     // Append-only write with fsync
-    std::FILE* fp = std::fopen(m_logPath.c_str(), "a");
+    std::FILE* fp = std::fopen(m_logPath.string().c_str(), "a");
     if (!fp)
         return;
-    std::fprintf(fp, "%s %s %s %s\n", timeBuf, status.c_str(), sourcePath.c_str(), hash.c_str());
+    std::fprintf(fp, "%s %s %s %s\n", timeBuf, status.c_str(),
+                 sourcePath.string().c_str(), hash.c_str());
     std::fflush(fp);
     // fsync for durability
 #ifdef _WIN32
