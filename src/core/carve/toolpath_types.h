@@ -37,6 +37,7 @@ struct ToolpathConfig {
     f32 safeZMm = 5.0f;
     f32 feedRateMmMin = 1000.0f;
     f32 plungeRateMmMin = 300.0f;
+    f32 leadInMm = 2.0f;  // Ramp distance for clearing lead-in/out
 };
 
 // Single toolpath move
@@ -52,6 +53,14 @@ struct Toolpath {
     f32 estimatedTimeSec = 0.0f;
     int lineCount = 0;  // Number of G-code lines this will produce
     std::vector<std::string> warnings;  // Travel limit violations
+};
+
+// Combined clearing + finishing toolpath
+struct MultiPassToolpath {
+    Toolpath clearing;   // Run first (if needed)
+    Toolpath finishing;   // Run second
+    f32 totalTimeSec = 0.0f;
+    int totalLineCount = 0;
 };
 
 // Convert preset to percentage
