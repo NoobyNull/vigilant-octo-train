@@ -3,7 +3,8 @@
 ## Milestones
 
 - [x] **v0.1.x CNC Controller Suite** - Phases 1-8 (shipped 2026-02-25)
-- [ ] **v0.2.0 Sender Feature Parity** - Phases 9-12 (in progress)
+- [ ] **v0.2.0 Sender Feature Parity** - Phases 9-13 (in progress)
+- [ ] **v0.3.0 Direct Carve** - Phases 14-19 (planned)
 
 ## Phases
 
@@ -133,6 +134,116 @@ Plans:
 - [ ] 13-02-PLAN.md -- Implement TcpSocket class, add connectTcp() to CncController, tests
 - [ ] 13-03-PLAN.md -- Connection bar UI with Serial/TCP mode selector
 
+### v0.3.0 Direct Carve
+
+**Milestone Goal:** Stream 2.5D carving toolpaths directly from STL models to the CNC machine without generating G-code files, using a guided workflow with automatic tool recommendation and surgical clearing.
+
+- [ ] **Phase 14: Heightmap Engine** - Rasterize STL to 2D heightmap grid with configurable resolution, model fitting (scale/position/depth), background computation
+- [ ] **Phase 15: Model Analysis** - Minimum feature radius detection, island identification (enclosed depressions requiring clearing), visual annotation on heightmap preview
+- [ ] **Phase 16: Tool Recommendation** - Automatic tool selection from database based on model analysis, V-bit/ball nose/TBN/clearing tool suggestions with feeds/speeds
+- [ ] **Phase 17: Toolpath Generation** - Raster scan toolpath with configurable axis, stepover presets, milling direction, safe Z, surgical island clearing
+- [ ] **Phase 18: Guided Workflow** - Step-by-step wizard: machine check, model fitting, tool selection, material setup, preview, outline test, zero, commit, run
+- [ ] **Phase 19: Streaming Integration** - Point-by-point streaming via CncController, pause/resume/abort, live progress, optional G-code file export
+
+## Phase Details (v0.3.0)
+
+### Phase 14: Heightmap Engine
+**Goal**: STL model is converted to a 2D heightmap grid that accurately represents the top-down surface for 2.5D machining, with user control over scale, position, and depth
+**Depends on**: Phase 13 (CNC infrastructure complete)
+**Requirements**: DC-01, DC-02, DC-03, DC-04
+**Success Criteria** (what must be TRUE):
+  1. Any loaded STL model produces a heightmap grid where each cell contains the maximum Z value from ray-mesh intersection at that XY position
+  2. Model can be uniformly scaled (locked aspect ratio) and Z depth independently controlled, with live preview updating as parameters change
+  3. Model position on material stock is adjustable (X/Y offset) with visual bounds checking against machine travel limits
+  4. Heightmap computation for a 500K triangle model at 0.1mm resolution completes in under 5 seconds on a background thread
+Plans:
+- [ ] 14-01-PLAN.md -- Heightmap data structure, ray-mesh intersection, resolution config
+- [ ] 14-02-PLAN.md -- Model fitting (uniform scale, Z depth, X/Y position), bounds checking, background computation
+
+### Phase 15: Model Analysis
+**Goal**: Heightmap is analyzed to identify minimum feature radius and island regions that require special tooling, with results displayed visually
+**Depends on**: Phase 14
+**Requirements**: DC-05, DC-06, DC-07, DC-08
+**Success Criteria** (what must be TRUE):
+  1. Minimum concave feature radius is computed from heightmap curvature and displayed as a measurement annotation
+  2. Island regions (enclosed depressions) are detected with flood-fill from the heightmap surface, each classified by depth and area
+  3. Island boundaries are highlighted on the heightmap preview with distinct coloring to show regions requiring clearing passes
+  4. Analysis runs automatically after heightmap generation and updates when model fitting parameters change
+Plans:
+- [ ] 15-01-PLAN.md -- Minimum feature radius computation from heightmap curvature analysis
+- [ ] 15-02-PLAN.md -- Island detection via flood-fill, classification by depth/area, visual annotation
+
+### Phase 16: Tool Recommendation
+**Goal**: System automatically recommends appropriate tools from the database based on model geometry analysis, with clear reasoning for each suggestion
+**Depends on**: Phase 15
+**Requirements**: DC-09, DC-10, DC-11, DC-12, DC-13
+**Success Criteria** (what must be TRUE):
+  1. Tool recommendation queries the .vtdb tool database and returns ranked suggestions with type, diameter, and reasoning
+  2. V-bit is recommended for finishing when model allows taper-only contact (no buried sections outside islands)
+  3. Ball nose or TBN is recommended when minimum feature radius exceeds the tool tip radius
+  4. Clearing tool is recommended only when islands are detected, with diameter sized to island geometry
+  5. Each recommendation includes feed rate, spindle speed, and stepover from the tool database cutting data
+Plans:
+- [ ] 16-01-PLAN.md -- Tool database query interface, V-bit/ball nose/TBN selection logic
+- [ ] 16-02-PLAN.md -- Clearing tool recommendation for islands, feeds/speeds display, UI presentation
+
+### Phase 17: Toolpath Generation
+**Goal**: Heightmap and tool parameters are converted into an efficient machining toolpath with configurable scan strategy, stepover, and surgical clearing for island regions only
+**Depends on**: Phase 16
+**Requirements**: DC-14, DC-15, DC-16, DC-17, DC-18, DC-19
+**Success Criteria** (what must be TRUE):
+  1. Raster scan generates parallel toolpath lines along user-selected axis (X, Y, X-then-Y, Y-then-X) with correct tool offset compensation
+  2. Stepover presets (Ultra Fine 1%, Fine 8%, Basic 12%, Rough 25%, Roughing 40%) produce correct line spacing relative to tool tip diameter
+  3. Milling direction (climb/conventional/alternating) controls scan line direction correctly
+  4. Clearing passes are generated only for identified island regions with appropriate tool, not the entire surface
+  5. Toolpath respects safe Z height, machine travel limits, and produces valid motion commands
+Plans:
+- [ ] 17-01-PLAN.md -- Raster scan generation, axis selection, stepover calculation, milling direction
+- [ ] 17-02-PLAN.md -- Tool offset compensation, safe Z retract, travel limit enforcement
+- [ ] 17-03-PLAN.md -- Surgical island clearing pass generation, multi-pass strategy
+
+### Phase 18: Guided Workflow
+**Goal**: Operator is guided through every step from model loading to job execution via a wizard interface that enforces safety checks and prevents common mistakes
+**Depends on**: Phase 17
+**Requirements**: DC-20, DC-21, DC-22, DC-23, DC-24, DC-25
+**Success Criteria** (what must be TRUE):
+  1. Wizard progresses through sequential steps with back/next navigation, each step validating before allowing progression
+  2. Machine readiness check verifies connection, homing state, safe Z, and machine profile before proceeding
+  3. Model fitting step shows live 3D preview with stock outline, scale/position/depth controls, and machine bounds warning
+  4. Preview step shows toolpath overlaid on heightmap with estimated carving time and total line count
+  5. Outline test traces the job perimeter at safe Z so operator can verify work area before committing
+Plans:
+- [ ] 18-01-PLAN.md -- Wizard framework, step navigation, machine readiness checks
+- [ ] 18-02-PLAN.md -- Model fitting UI, preview rendering, outline test execution
+- [ ] 18-03-PLAN.md -- Confirmation summary, commit flow, run integration
+
+### Phase 19: Streaming Integration
+**Goal**: Generated toolpath streams point-by-point to the CNC controller with full job control (pause/resume/abort), live progress, and optional file export
+**Depends on**: Phase 18
+**Requirements**: DC-26, DC-27, DC-28, DC-29, DC-30
+**Success Criteria** (what must be TRUE):
+  1. Toolpath points are converted to G0/G1 commands and streamed via CncController character-counting protocol
+  2. Pause, resume, and abort work identically to G-code file streaming with same safety guarantees
+  3. G-code panel shows live progress (current line, percentage, elapsed time, estimated remaining)
+  4. Commands are generated on-the-fly from the toolpath buffer without pre-building a complete G-code file in memory
+  5. Operator can optionally save the generated toolpath as a .nc file for future replay
+Plans:
+- [ ] 19-01-PLAN.md -- On-the-fly G-code generation, streaming adapter for CncController
+- [ ] 19-02-PLAN.md -- Job control (pause/resume/abort), progress reporting, G-code file export
+
+## Progress (v0.3.0)
+
+**Execution Order:** Phases 14 -> 15 -> 16 -> 17 -> 18 -> 19
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 14. Heightmap Engine | v0.3.0 | 0/2 | Planned | - |
+| 15. Model Analysis | v0.3.0 | 0/2 | Planned | - |
+| 16. Tool Recommendation | v0.3.0 | 0/2 | Planned | - |
+| 17. Toolpath Generation | v0.3.0 | 0/3 | Planned | - |
+| 18. Guided Workflow | v0.3.0 | 0/3 | Planned | - |
+| 19. Streaming Integration | v0.3.0 | 0/2 | Planned | - |
+
 ---
 *Roadmap created: 2026-02-24*
-*Last updated: 2026-02-28 -- Phase 13 TCP/IP transport planned (3 plans, 5 TCP requirements)*
+*Last updated: 2026-02-28 -- v0.3.0 Direct Carve milestone added (6 phases, 30 requirements, 14 plans)*

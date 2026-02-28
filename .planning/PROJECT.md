@@ -8,17 +8,21 @@ A cross-platform C++17 desktop application for CNC woodworkers that combines 3D 
 
 A woodworker can go from selecting a piece of wood and a cutting tool to safely running a CNC job with optimized feeds and speeds — all without leaving the application.
 
-## Current Milestone: v0.2.1 FluidNC Config Editor
+## Current Milestone: v0.3.0 Direct Carve
 
-**Goal:** View and edit FluidNC YAML configuration over serial from within the existing CNC Settings panel — detect FluidNC firmware, parse `$S` output into a tree, edit settings, and persist to flash.
+**Goal:** Stream 2.5D carving toolpaths directly from STL models to the CNC machine — no G-code files, no external CAM software — using a guided workflow with automatic tool recommendation and surgical clearing.
 
 **Target features:**
-- Detect FluidNC firmware and show FluidNC-specific settings tab
-- Parse `$S` / `$SC` output (`$path=value` format) into hierarchical tree
-- Display settings as collapsible tree with inline editing
-- Send `$/path/to/setting=value` to change settings at runtime
-- Persist changes to flash via `$CD=config.yaml`
-- Show changed-vs-default highlighting via `$SC`
+- Rasterize STL model to 2D heightmap via ray-mesh intersection
+- Analyze heightmap for minimum feature radius and island regions
+- Automatically recommend tools from .vtdb database based on geometry
+- Generate raster scan toolpath with configurable axis, stepover, milling direction
+- Surgical clearing for island regions only (not entire surface)
+- Step-by-step wizard: machine check → model fit → tool select → preview → outline test → commit → run
+- Stream toolpath point-by-point via existing CncController protocol
+- Optional G-code file export for future replay
+
+**Branch:** feature/direct-carve
 
 ## Requirements
 
@@ -57,14 +61,17 @@ A woodworker can go from selecting a piece of wood and a cutting tool to safely 
 
 ### Active
 
-- [ ] FluidNC firmware detection and settings protocol (`$S`, `$SC`, `$/path=value`)
-- [ ] FluidNC settings tree view with collapsible hierarchy and inline editing
-- [ ] Persist FluidNC config changes to flash via `$CD=config.yaml`
+- [ ] STL-to-heightmap rasterization with configurable resolution
+- [ ] Heightmap analysis: minimum feature radius, island detection
+- [ ] Automatic tool recommendation from .vtdb database
+- [ ] Raster scan toolpath with surgical island clearing
+- [ ] Guided wizard workflow with safety checks
+- [ ] Point-by-point CNC streaming with pause/resume/abort
 
 ### Out of Scope
 
-- Toolpath generation / CAM — future milestone, not current focus
-- Rest machining optimization — future milestone, requires CAM foundation
+- Full 3D CAM (3+2 axis, undercuts, rest machining) — Direct Carve is 2.5D top-down only
+- Rest machining optimization — future milestone, requires full CAM foundation
 - Mobile companion app — desktop-first
 - Cloud sync — local-only for now
 - Multi-machine control — single machine at a time
@@ -75,11 +82,9 @@ A woodworker can go from selecting a piece of wood and a cutting tool to safely 
 
 ## Context
 
-The CNC sender reached feature parity with dedicated senders in v0.2.0 (ncSender benchmark). Job history with database persistence and crash recovery was added post-milestone. The settings panel currently speaks GRBL `$N=value` numeric protocol only.
+The CNC sender reached feature parity with dedicated senders in v0.2.0 (ncSender benchmark). Job history with database persistence and crash recovery was added post-milestone. TCP/IP transport was added in v0.2.2. Live CNC tool position overlay, work envelope wireframe, and DRO readout are available in both viewports.
 
-FluidNC uses a different settings protocol: YAML-based paths instead of numeric IDs. `$S` dumps all settings as `$path=value` lines, `$SC` shows changed-from-default, and `$/path=value` changes a setting in RAM. `$CD=config.yaml` persists to flash. FluidNC firmware is already detected in `cnc_controller.cpp` via banner parsing.
-
-The existing CncSettingsPanel already has tabs (Settings, Tuning, Safety, Raw) and raw line parsing infrastructure via `onRawLine()`. FluidNC settings will integrate as an additional tab or replacement behavior when FluidNC is detected.
+Direct Carve is a 2.5D-only approach: pure top-down heightmap from STL, no undercuts. V-bit is the primary finishing tool (taper geometry eliminates roughing). Ball nose/TBN is secondary when minimum feature radius analysis indicates it. Surgical clearing targets only island regions (enclosed depressions), not the entire surface. The system uses the existing Vectric .vtdb tool database for tool geometry, feeds, and speeds.
 
 ## Constraints
 
@@ -103,7 +108,11 @@ The existing CncSettingsPanel already has tabs (Settings, Tuning, Safety, Raw) a
 | UI-only changes, no layout restructuring | Minimize disruption, focus on feature density | — Pending |
 | ncSender as feature benchmark | Mature, dedicated sender with 170+ releases | — Pending |
 
-| FluidNC settings use YAML paths not numeric IDs | FluidNC is increasingly popular, distinct protocol from GRBL | — Pending |
+| FluidNC settings use YAML paths not numeric IDs | FluidNC is increasingly popular, distinct protocol from GRBL | — Deferred |
+| 2.5D top-down only for Direct Carve | Simplest viable approach, covers majority of hobby CNC use | — Pending |
+| V-bit primary, ball nose secondary | V-bit taper eliminates roughing; ball nose only for small-radius features | — Pending |
+| Surgical island clearing only | Avoid full-surface clearing when only specific regions need it | — Pending |
+| Guided wizard workflow | Safety-first approach prevents common operator mistakes | — Pending |
 
 ---
-*Last updated: 2026-02-27 after FluidNC Config Editor milestone start*
+*Last updated: 2026-02-28 after Direct Carve milestone start*
