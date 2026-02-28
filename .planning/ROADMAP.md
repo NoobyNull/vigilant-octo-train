@@ -142,7 +142,7 @@ Plans:
 - [x] **Phase 15: Model Analysis** - Minimum feature radius detection, island identification (enclosed depressions requiring clearing), visual annotation on heightmap preview (completed 2026-02-28)
 - [x] **Phase 16: Tool Recommendation** - Automatic tool selection from database based on model analysis, V-bit/ball nose/TBN/clearing tool suggestions with feeds/speeds (completed 2026-02-28)
 - [x] **Phase 17: Toolpath Generation** - Raster scan toolpath with configurable axis, stepover presets, milling direction, safe Z, surgical island clearing (completed 2026-02-28)
-- [ ] **Phase 18: Guided Workflow** - Step-by-step wizard: machine check, model fitting, tool selection, material setup, preview, outline test, zero, commit, run
+- [x] **Phase 18: Guided Workflow** - Step-by-step wizard: machine check, model fitting, tool selection, material setup, preview, outline test, zero, commit, run (completed 2026-02-28)
 - [ ] **Phase 19: Streaming Integration** - Point-by-point streaming via CncController, pause/resume/abort, live progress, optional G-code file export
 
 ## Phase Details (v0.3.0)
@@ -213,9 +213,9 @@ Plans:
   4. Preview step shows toolpath overlaid on heightmap with estimated carving time and total line count
   5. Outline test traces the job perimeter at safe Z so operator can verify work area before committing
 Plans:
-- [ ] 18-01-PLAN.md -- Wizard framework, step navigation, machine readiness checks
-- [ ] 18-02-PLAN.md -- Model fitting UI, preview rendering, outline test execution
-- [ ] 18-03-PLAN.md -- Confirmation summary, commit flow, run integration
+- [x] 18-01-PLAN.md -- Wizard framework, step navigation, machine readiness checks
+- [x] 18-02-PLAN.md -- Model fitting UI, preview rendering, outline test execution
+- [x] 18-03-PLAN.md -- Confirmation summary, commit flow, run integration
 
 ### Phase 19: Streaming Integration
 **Goal**: Generated toolpath streams point-by-point to the CNC controller with full job control (pause/resume/abort), live progress, and optional file export
@@ -241,7 +241,7 @@ Plans:
 | 15. Model Analysis | 2/2 | Complete    | 2026-02-28 | - |
 | 16. Tool Recommendation | 2/2 | Complete    | 2026-02-28 | - |
 | 17. Toolpath Generation | 3/3 | Complete    | 2026-02-28 | - |
-| 18. Guided Workflow | 1/3 | In Progress|  | - |
+| 18. Guided Workflow | 3/3 | Complete    | 2026-02-28 | - |
 | 19. Streaming Integration | v0.3.0 | 0/2 | Planned | - |
 
 ---
