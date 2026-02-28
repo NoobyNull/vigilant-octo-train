@@ -66,7 +66,7 @@ Requirements for the v0.3.0 Direct Carve milestone. Each maps to roadmap phases 
 | DC-05 | Phase 15: Model Analysis | Planned |
 | DC-06 | Phase 15: Model Analysis | Planned |
 | DC-07 | Phase 15: Model Analysis | Planned |
-| DC-08 | Phase 15: Model Analysis | Planned |
+| DC-08 | Phase 18: Guided Workflow | Planned |
 | DC-09 | Phase 16: Tool Recommendation | Planned |
 | DC-10 | Phase 16: Tool Recommendation | Planned |
 | DC-11 | Phase 16: Tool Recommendation | Planned |
