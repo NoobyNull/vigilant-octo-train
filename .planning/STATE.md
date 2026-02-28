@@ -6,9 +6,9 @@ status: unknown
 last_updated: "2026-02-28T19:36:32.470Z"
 progress:
   total_phases: 28
-  completed_phases: 13
+  completed_phases: 14
   total_plans: 55
-  completed_plans: 40
+  completed_plans: 41
 ---
 
 # Project State
@@ -18,18 +18,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-28)
 
 **Core value:** A woodworker can load an STL model, select a tool and material, and stream a 2.5D carving toolpath directly to the CNC machine — no G-code files, no external CAM software.
-**Current focus:** Milestone v0.3.0 Direct Carve — Phase 14 complete, ready for Phase 15
+**Current focus:** Milestone v0.3.0 Direct Carve — Phase 15 complete, ready for Phase 16
 
 ## Current Position
 
-Phase: Phase 15 — Model Analysis
-Plan: 15-02 — (next plan in Phase 15)
-Status: 15-01 complete, continuing Phase 15
-Last activity: 2026-02-28 — Surface curvature analysis for minimum feature radius
+Phase: Phase 16 — Tool Recommendation (next to implement)
+Plan: 16-01 — (first plan in Phase 16)
+Status: Phase 15 complete, ready for Phase 16
+Last activity: 2026-02-28 — Island detection, analysis overlay, and curvature analysis
 
 ## Accumulated Context
 
 ### Decisions
+- BFS propagation from accessible cells for accurate burial mask computation
+- BFS from island boundary inward for minimum clearing tool diameter
+- HSV color space with 37-degree hue rotation per island for visually distinct overlays
 - Noise threshold for curvature analysis: 0.001/res^2 (plan's 2.0/res^2 too aggressive)
 - 2+ concave neighbor requirement filters isolated noise spikes
 - Free functions for stateless curvature analysis (no class needed)
@@ -66,10 +69,10 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 15-01-PLAN.md
+Stopped at: Completed 15-02-PLAN.md (Phase 15 complete)
 Resume file: None
-Next action: Implement Phase 15, Plan 15-02
+Next action: Implement Phase 16, Plan 16-01
 
 ---
 *State initialized: 2026-02-27*
-*Last updated: 2026-02-28T19:43:00Z*
+*Last updated: 2026-02-28T19:45:00Z*

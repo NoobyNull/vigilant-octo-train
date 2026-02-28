@@ -139,7 +139,7 @@ Plans:
 **Milestone Goal:** Stream 2.5D carving toolpaths directly from STL models to the CNC machine without generating G-code files, using a guided workflow with automatic tool recommendation and surgical clearing.
 
 - [x] **Phase 14: Heightmap Engine** - Rasterize STL to 2D heightmap grid with configurable resolution, model fitting (scale/position/depth), background computation (completed 2026-02-28)
-- [ ] **Phase 15: Model Analysis** - Minimum feature radius detection, island identification (enclosed depressions requiring clearing), visual annotation on heightmap preview
+- [x] **Phase 15: Model Analysis** - Minimum feature radius detection, island identification (enclosed depressions requiring clearing), visual annotation on heightmap preview (completed 2026-02-28)
 - [ ] **Phase 16: Tool Recommendation** - Automatic tool selection from database based on model analysis, V-bit/ball nose/TBN/clearing tool suggestions with feeds/speeds
 - [ ] **Phase 17: Toolpath Generation** - Raster scan toolpath with configurable axis, stepover presets, milling direction, safe Z, surgical island clearing
 - [ ] **Phase 18: Guided Workflow** - Step-by-step wizard: machine check, model fitting, tool selection, material setup, preview, outline test, zero, commit, run
@@ -238,7 +238,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 14. Heightmap Engine | 2/2 | Complete    | 2026-02-28 | - |
-| 15. Model Analysis | 1/2 | In Progress|  | - |
+| 15. Model Analysis | 2/2 | Complete   | 2026-02-28 | - |
 | 16. Tool Recommendation | v0.3.0 | 0/2 | Planned | - |
 | 17. Toolpath Generation | v0.3.0 | 0/3 | Planned | - |
 | 18. Guided Workflow | v0.3.0 | 0/3 | Planned | - |
