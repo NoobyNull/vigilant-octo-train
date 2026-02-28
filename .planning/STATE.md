@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-02-28)
 ## Current Position
 
 Phase: Phase 17 — Toolpath Generation (in progress)
-Plan: 17-03 — Surgical Island Clearing Pass Generation (complete)
-Status: Phase 17 plan 03 complete, plans 01-02 executed in parallel
-Last activity: 2026-02-28 — Island clearing pass with multi-depth raster and ramp lead-in/out
+Plan: 17-01 — Raster Scan Generation (complete)
+Status: Phase 17 plan 01 complete (plans 02-03 also executed via linter)
+Last activity: 2026-02-28 — Raster scan toolpath generator with tool offset compensation and island clearing
 
 ## Accumulated Context
 
@@ -62,6 +62,8 @@ Last activity: 2026-02-28 — Island clearing pass with multi-depth raster and r
 - 0.2mm margin above island floor prevents over-cutting
 - Lead-in/out ramp distance from config (not hardcoded)
 - [Phase 17]: V-bit 8-neighbor cone-gouge check, ball-nose drop-cutter, end-mill max-Z-within-radius for tool offset compensation
+- V-bit cone flares upward from tip -- offset only when neighbor is above cone body
+- Boundary-aware tool offset skips out-of-bounds neighbors to prevent defaultZ artifacts
 
 ### Pending Todos
 None.
@@ -77,9 +79,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 17-03-PLAN.md (island clearing pass generation)
+Stopped at: Completed 17-01-PLAN.md (raster scan generation, tool offset, island clearing)
 Resume file: None
-Next action: Verify Phase 17 plans 01-02 complete, then Phase 18
+Next action: Execute Phase 17 plan 02 (G-code emitter)
 
 ---
 *State initialized: 2026-02-27*
