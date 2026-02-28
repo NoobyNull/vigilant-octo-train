@@ -110,6 +110,9 @@ set(DW_SOURCES
     core/optimizer/bin_packer.cpp
     core/optimizer/guillotine.cpp
 
+    # Carve (Direct Carve pipeline)
+    core/carve/heightmap.cpp
+
     # Archive
     core/archive/archive.cpp
 
