@@ -11,6 +11,7 @@
 #include "../../core/gcode/gcode_parser.h"
 #include "../../core/gcode/machine_profile.h"
 #include "../../core/cnc/cnc_types.h"
+#include "../../core/database/job_repository.h"
 #include "../../render/camera.h"
 #include "../../render/framebuffer.h"
 #include "../../render/renderer.h"
@@ -50,6 +51,7 @@ class GCodePanel : public Panel {
     void setGCodeRepository(GCodeRepository* repo) { m_gcodeRepo = repo; }
     void setProjectManager(ProjectManager* pm) { m_projectManager = pm; }
     void setCncController(CncController* ctrl) { m_cnc = ctrl; }
+    void setJobRepository(JobRepository* repo) { m_jobRepo = repo; }
     void setToolDatabase(ToolDatabase* db) { m_toolDatabase = db; }
 
     // Load G-code from file
@@ -92,6 +94,7 @@ class GCodePanel : public Panel {
     void renderFeedOverride();
     void renderConsole();
     void renderSimulationControls();
+    void renderJobHistory();
 
     // 3D path geometry
     void buildPathGeometry();
@@ -175,8 +178,16 @@ class GCodePanel : public Panel {
 
     // Persistence
     GCodeRepository* m_gcodeRepo = nullptr;
+    JobRepository* m_jobRepo = nullptr;
     ProjectManager* m_projectManager = nullptr;
     i64 m_currentGCodeId = -1;
+
+    // Job history
+    i64 m_activeJobId = -1;
+    int m_lastProgressSave = 0; // Last acked line when progress was saved
+    bool m_showJobHistory = false;
+    std::vector<JobRecord> m_jobHistoryCache;
+    bool m_jobHistoryDirty = true;
 
     // Mode
     GCodePanelMode m_mode = GCodePanelMode::View;

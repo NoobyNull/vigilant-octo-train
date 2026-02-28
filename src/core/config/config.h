@@ -206,6 +206,14 @@ class Config {
     const std::string& getGeminiApiKey() const { return m_geminiApiKey; }
     void setGeminiApiKey(const std::string& key) { m_geminiApiKey = key; }
 
+    // Display units (true=mm, false=inches) — display-only, commands always use mm
+    bool getDisplayUnitsMetric() const { return m_displayUnitsMetric; }
+    void setDisplayUnitsMetric(bool v) { m_displayUnitsMetric = v; }
+
+    // Advanced settings view (show raw firmware IDs)
+    bool getAdvancedSettingsView() const { return m_advancedSettingsView; }
+    void setAdvancedSettingsView(bool v) { m_advancedSettingsView = v; }
+
     // CNC settings
     int getStatusPollIntervalMs() const { return m_statusPollIntervalMs; }
     void setStatusPollIntervalMs(int ms) { m_statusPollIntervalMs = std::clamp(ms, 50, 200); }
@@ -348,6 +356,10 @@ class Config {
 
     // API keys
     std::string m_geminiApiKey;
+
+    // Display units
+    bool m_displayUnitsMetric = true;
+    bool m_advancedSettingsView = false;
 
     // CNC settings
     int m_statusPollIntervalMs = 200;

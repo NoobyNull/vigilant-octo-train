@@ -14,8 +14,10 @@
 #include "core/database/cut_plan_repository.h"
 #include "core/optimizer/cut_list_file.h"
 #include "core/database/gcode_repository.h"
+#include "core/database/job_repository.h"
 #include "core/cnc/cnc_controller.h"
-#include "core/cnc/grbl_settings.h"
+#include "core/cnc/serial_port.h"
+#include "core/cnc/unified_settings.h"
 #include "core/cnc/macro_manager.h"
 #include "core/export/project_export_manager.h"
 #include "core/import/background_tagger.h"
@@ -543,6 +545,7 @@ void Application::initWiring() {
     }
     if (auto* gcp = m_uiManager->gcodePanel()) {
         gcp->setGCodeRepository(m_gcodeRepo.get());
+        gcp->setJobRepository(m_jobRepo.get());
         gcp->setProjectManager(m_projectManager.get());
         gcp->setCncController(m_cncController.get());
         gcp->setToolDatabase(m_toolDatabase.get());
@@ -575,7 +578,7 @@ void Application::initWiring() {
 
         CncCallbacks cncCb;
         cncCb.onConnectionChanged =
-            [gcp, csp, jogp, conp, wcsp, jobp, safetyp, settsp, macrop](
+            [this, gcp, csp, jogp, conp, wcsp, jobp, safetyp, settsp, macrop](
                 bool connected, const std::string& version) {
             gcp->onGrblConnected(connected, version);
             if (csp) csp->onConnectionChanged(connected, version);
@@ -590,6 +593,15 @@ void Application::initWiring() {
             }
             if (settsp) settsp->onConnectionChanged(connected, version);
             if (macrop) macrop->onConnectionChanged(connected, version);
+            // Sync CNC state to menu bar
+            m_uiManager->setCncConnected(connected);
+            m_uiManager->setCncSimulating(m_cncController->isSimulating());
+            // Auto-fallback: when real hardware disconnects, restart simulator
+            if (!connected && m_wasRealConnection) {
+                m_wasRealConnection = false;
+                m_lastConnectedPort.clear();
+                m_cncController->connectSimulator();
+            }
         };
         cncCb.onStatusUpdate = [gcp, csp, jogp, wcsp, jobp, ctp, safetyp, settsp, macrop](const MachineStatus& status) {
             gcp->onGrblStatus(status);
@@ -610,10 +622,11 @@ void Application::initWiring() {
             gcp->onGrblLineAcked(ack);
         };
         cncCb.onProgressUpdate =
-            [gcp, jobp, safetyp](const StreamProgress& progress) {
+            [this, gcp, jobp, safetyp](const StreamProgress& progress) {
             gcp->onGrblProgress(progress);
             bool streaming = (progress.totalLines > 0 &&
                               progress.ackedLines < progress.totalLines);
+            m_uiManager->setCncStreaming(streaming);
             if (jobp) {
                 jobp->onProgressUpdate(progress);
                 jobp->setStreaming(streaming);
@@ -646,26 +659,31 @@ void Application::initWiring() {
                 if (!isSent && line == "ok" && settsp->hasSettings()) {
                     auto& cfg = Config::instance();
                     auto profile = cfg.getActiveMachineProfile();
-                    const auto& grbl = settsp->settings();
+                    const auto& us = settsp->unifiedSettings();
                     bool changed = false;
-                    auto syncSetting = [&](int id, float& field) {
-                        if (auto* s = grbl.get(id)) {
-                            if (s->value != field) {
-                                field = s->value;
-                                changed = true;
+                    auto syncSetting = [&](const char* key, float& field) {
+                        if (auto* s = us.get(key)) {
+                            if (!s->value.empty()) {
+                                try {
+                                    float v = std::stof(s->value);
+                                    if (v != field) {
+                                        field = v;
+                                        changed = true;
+                                    }
+                                } catch (...) {}
                             }
                         }
                     };
-                    syncSetting(110, profile.maxFeedRateX);
-                    syncSetting(111, profile.maxFeedRateY);
-                    syncSetting(112, profile.maxFeedRateZ);
-                    syncSetting(120, profile.accelX);
-                    syncSetting(121, profile.accelY);
-                    syncSetting(122, profile.accelZ);
-                    syncSetting(130, profile.maxTravelX);
-                    syncSetting(131, profile.maxTravelY);
-                    syncSetting(132, profile.maxTravelZ);
-                    syncSetting(11,  profile.junctionDeviation);
+                    syncSetting("max_feed_x",        profile.maxFeedRateX);
+                    syncSetting("max_feed_y",        profile.maxFeedRateY);
+                    syncSetting("max_feed_z",        profile.maxFeedRateZ);
+                    syncSetting("accel_x",           profile.accelX);
+                    syncSetting("accel_y",           profile.accelY);
+                    syncSetting("accel_z",           profile.accelZ);
+                    syncSetting("max_travel_x",      profile.maxTravelX);
+                    syncSetting("max_travel_y",      profile.maxTravelY);
+                    syncSetting("max_travel_z",      profile.maxTravelZ);
+                    syncSetting("junction_deviation", profile.junctionDeviation);
                     if (changed) {
                         cfg.updateMachineProfile(cfg.getActiveMachineProfileIndex(), profile);
                         cfg.save();
@@ -674,6 +692,32 @@ void Application::initWiring() {
             }
         };
         m_cncController->setCallbacks(cncCb);
+
+        // Wire menu bar Connect button (user picks a port)
+        m_uiManager->setOnConnect([this](const std::string& port) {
+            m_cncController->disconnect(); // stops simulator
+            m_cncController->connect(port, 115200);
+            m_wasRealConnection = true;
+            m_lastConnectedPort = port;
+        });
+
+        // Wire menu bar Disconnect button (falls back to simulator)
+        // Clear m_wasRealConnection BEFORE disconnect() so the
+        // onConnectionChanged callback doesn't also try to restart sim.
+        m_uiManager->setOnDisconnect([this]() {
+            m_wasRealConnection = false;
+            m_lastConnectedPort.clear();
+            m_cncController->disconnect();
+            m_cncController->connectSimulator();
+        });
+
+        // Wire keyboard smash panic stop — feed hold + abort stream
+        m_uiManager->setOnPanicStop([this]() {
+            m_cncController->feedHold();
+            m_cncController->stopStream();
+            ToastManager::instance().show(
+                ToastType::Warning, "PANIC STOP", "Feed hold sent — job aborted", 5.0f);
+        });
     }
     if (auto* tbp = m_uiManager->toolBrowserPanel()) {
         tbp->setToolDatabase(m_toolDatabase.get());

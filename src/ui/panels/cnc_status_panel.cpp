@@ -5,6 +5,7 @@
 #include <imgui.h>
 
 #include "core/cnc/cnc_controller.h"
+#include "core/config/config.h"
 #include "ui/icons.h"
 #include "ui/theme.h"
 
@@ -142,6 +143,11 @@ void CncStatusPanel::renderProbeIndicator() {
 void CncStatusPanel::renderDRO() {
     ImGui::SeparatorText("Position");
 
+    auto& cfg = Config::instance();
+    bool metric = cfg.getDisplayUnitsMetric();
+    float uf = metric ? 1.0f : (1.0f / 25.4f);
+    const char* pu = metric ? "mm" : "in";
+
     // Axis labels and colors
     static const char* axisNames[] = {"X", "Y", "Z"};
     static const char axisLetters[] = {'X', 'Y', 'Z'};
@@ -150,8 +156,8 @@ void CncStatusPanel::renderDRO() {
         ImVec4(0.3f, 1.0f, 0.3f, 1.0f), // Y = Green
         ImVec4(0.3f, 0.5f, 1.0f, 1.0f), // Z = Blue
     };
-    float workPos[] = {m_status.workPos.x, m_status.workPos.y, m_status.workPos.z};
-    float machPos[] = {m_status.machinePos.x, m_status.machinePos.y, m_status.machinePos.z};
+    float workPos[] = {m_status.workPos.x * uf, m_status.workPos.y * uf, m_status.workPos.z * uf};
+    float machPos[] = {m_status.machinePos.x * uf, m_status.machinePos.y * uf, m_status.machinePos.z * uf};
 
     // Work position — large digits, double-click to zero axis
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4.0f, 2.0f));
@@ -163,8 +169,12 @@ void CncStatusPanel::renderDRO() {
 
         // Render as Selectable so double-click is detectable
         char posLabel[32];
-        std::snprintf(posLabel, sizeof(posLabel), "%+10.3f##DRO%d",
-                      static_cast<double>(workPos[i]), i);
+        if (metric)
+            std::snprintf(posLabel, sizeof(posLabel), "%+10.3f##DRO%d",
+                          static_cast<double>(workPos[i]), i);
+        else
+            std::snprintf(posLabel, sizeof(posLabel), "%+10.4f##DRO%d",
+                          static_cast<double>(workPos[i]), i);
         if (ImGui::Selectable(posLabel, false, ImGuiSelectableFlags_AllowDoubleClick)) {
             if (ImGui::IsMouseDoubleClicked(0)) {
                 // Zero this axis: G10 L20 P0 <axis>0
@@ -183,6 +193,10 @@ void CncStatusPanel::renderDRO() {
         ImGui::SetWindowFontScale(1.0f);
     }
 
+    // Show unit label after DRO
+    ImGui::SameLine();
+    ImGui::TextDisabled("%s", pu);
+
     ImGui::PopStyleVar();
 
     // Machine position — smaller, secondary
@@ -190,7 +204,10 @@ void CncStatusPanel::renderDRO() {
     ImGui::TextDisabled("Machine:");
     ImGui::SameLine();
     for (int i = 0; i < 3; ++i) {
-        ImGui::TextDisabled("%s %+.3f", axisNames[i], static_cast<double>(machPos[i]));
+        if (metric)
+            ImGui::TextDisabled("%s %+.3f", axisNames[i], static_cast<double>(machPos[i]));
+        else
+            ImGui::TextDisabled("%s %+.4f", axisNames[i], static_cast<double>(machPos[i]));
         if (i < 2)
             ImGui::SameLine();
     }
@@ -213,6 +230,11 @@ void CncStatusPanel::renderDRO() {
 void CncStatusPanel::renderFeedSpindle() {
     ImGui::SeparatorText("Feed & Spindle");
 
+    auto& cfg = Config::instance();
+    bool metric = cfg.getDisplayUnitsMetric();
+    float uf = metric ? 1.0f : (1.0f / 25.4f);
+    const char* fu = metric ? "mm/min" : "in/min";
+
     float availWidth = ImGui::GetContentRegionAvail().x;
     float halfWidth = availWidth * 0.5f;
 
@@ -220,10 +242,10 @@ void CncStatusPanel::renderFeedSpindle() {
     ImGui::BeginGroup();
     ImGui::TextDisabled("Feed Rate");
     ImGui::SetWindowFontScale(1.5f);
-    ImGui::Text("%.0f", static_cast<double>(m_status.feedRate));
+    ImGui::Text("%.0f", static_cast<double>(m_status.feedRate * uf));
     ImGui::SetWindowFontScale(1.0f);
     ImGui::SameLine();
-    ImGui::TextDisabled("mm/min");
+    ImGui::TextDisabled("%s", fu);
     ImGui::EndGroup();
 
     ImGui::SameLine(halfWidth);

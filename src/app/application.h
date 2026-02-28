@@ -39,6 +39,7 @@ class GeminiDescriptorService;
 class ProjectExportManager;
 class CutListFile;
 class CncController;
+class JobRepository;
 class ToolDatabase;
 class MacroManager;
 class GamepadInput;
@@ -155,6 +156,9 @@ class Application {
     // CNC controller (multi-firmware support: GRBL, grblHAL, FluidNC, Smoothieware)
     std::unique_ptr<CncController> m_cncController;
 
+    // CNC job history (SQLite-backed job recording)
+    std::unique_ptr<JobRepository> m_jobRepo;
+
     // CNC macro manager (SQLite-backed macro storage)
     std::unique_ptr<MacroManager> m_macroManager;
 
@@ -178,6 +182,11 @@ class Application {
     float m_dpiScale = 1.0f;
     float m_uiScale = 1.0f; // Combined dpi * user scale
     int m_displayIndex = 0;
+
+    // Serial port scan timer for CNC auto-connect
+    u64 m_lastPortScanMs = 0;
+    bool m_wasRealConnection = false;
+    std::string m_lastConnectedPort;
 
     static constexpr int DEFAULT_WIDTH = 1280;
     static constexpr int DEFAULT_HEIGHT = 720;

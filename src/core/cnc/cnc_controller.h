@@ -9,6 +9,7 @@
 
 #include "serial_port.h"
 #include "cnc_types.h"
+#include "unified_settings.h"
 
 namespace dw {
 
@@ -27,8 +28,10 @@ class CncController {
 
     // Connection
     bool connect(const std::string& device, int baudRate = 115200);
+    bool connectSimulator();
     void disconnect();
     bool isConnected() const { return m_connected.load(); }
+    bool isSimulating() const { return m_simulating.load(); }
 
     // Set event callbacks (call before connect)
     void setCallbacks(const CncCallbacks& cb) { m_callbacks = cb; }
@@ -64,6 +67,9 @@ class CncController {
     bool isToolChangePending() const { return m_toolChangePending.load(); }
     void acknowledgeToolChange();
 
+    // Firmware type detected during connection
+    FirmwareType firmwareType() const { return m_firmwareType; }
+
     // Parse a GRBL status report string (public for testing)
     static MachineStatus parseStatusReport(const std::string& report);
     static MachineState parseState(const std::string& stateStr);
@@ -75,6 +81,12 @@ class CncController {
     void requestStatus();
     void dispatchPendingCommands();
     void handleDisconnect();
+
+    // Simulator internals
+    void simIoThreadFunc();
+    void simProcessCommand(const std::string& cmd);
+    std::string buildSimStatus();
+    void simAdvancePosition(float dt);
 
     MainThreadQueue* m_mtq;
     SerialPort m_port;
@@ -128,6 +140,63 @@ class CncController {
 
     int m_statusPollMs = 200; // Default 5 Hz, configurable via Config
     static constexpr int MAX_CONSECUTIVE_TIMEOUTS = 10; // ~2 seconds of no response
+
+    // Firmware detection
+    FirmwareType m_firmwareType = FirmwareType::GRBL;
+
+    // Simulator state
+    std::atomic<bool> m_simulating{false};
+
+    struct SimState {
+        // Position
+        Vec3 machinePos{0.0f};
+        Vec3 targetPos{0.0f};
+
+        // Modal state
+        bool absoluteMode = true;    // G90 vs G91
+        bool metricMode = true;      // G21 vs G20
+        int motionMode = 0;          // 0=G0, 1=G1, 2=G2, 3=G3
+        int activeWcs = 0;           // 0=G54 .. 5=G59
+        int spindleDir = 0;          // 0=off, 3=CW(M3), 4=CCW(M4)
+
+        // Feed and speed
+        float feedRate = 1000.0f;    // mm/min
+        float spindleSpeed = 0.0f;
+        bool isRapid = false;
+
+        // Overrides
+        int feedOverride = 100;
+        int rapidOverride = 100;
+        int spindleOverride = 100;
+
+        // Coolant
+        bool coolantFlood = false;
+        bool coolantMist = false;
+
+        // WCS offsets (G54-G59), G28/G30 home, G92 offset
+        Vec3 wcsOffsets[6] = {};
+        Vec3 g28Home{0.0f};
+        Vec3 g30Home{0.0f};
+        Vec3 g92Offset{0.0f};
+        float toolLengthOffset = 0.0f;
+
+        // Machine state
+        MachineState state = MachineState::Idle;
+        int toolNumber = 0;
+
+        // GRBL settings (subset used by panels)
+        float settings[256] = {};
+        bool settingsInitialized = false;
+    };
+
+    SimState m_sim;
+
+    void simEmitLine(const std::string& line);
+    void simEmitOk();
+    void simHandleSettings(const std::string& cmd);
+    void simHandleHash();
+    void simHandleParserState();
+    void simHandleBuildInfo();
 };
 
 } // namespace dw

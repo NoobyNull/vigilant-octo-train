@@ -274,36 +274,42 @@ void CncSafetyPanel::renderDrawOutline() {
         return;
     }
 
+    auto& cfg = Config::instance();
+    bool metric = cfg.getDisplayUnitsMetric();
+    float uf = metric ? 1.0f : (1.0f / 25.4f);
+    const char* pu = metric ? "mm" : "in";
+    const char* fu = metric ? "mm/min" : "in/min";
+
     // Show bounding box dimensions
     float sizeX = m_boundsMax.x - m_boundsMin.x;
     float sizeY = m_boundsMax.y - m_boundsMin.y;
-    ImGui::Text("Job bounds: %.1f x %.1f mm", static_cast<double>(sizeX),
-                static_cast<double>(sizeY));
+    ImGui::Text("Job bounds: %.1f x %.1f %s", static_cast<double>(sizeX * uf),
+                static_cast<double>(sizeY * uf), pu);
     ImGui::TextDisabled("  X: %.1f to %.1f  Y: %.1f to %.1f",
-                        static_cast<double>(m_boundsMin.x),
-                        static_cast<double>(m_boundsMax.x),
-                        static_cast<double>(m_boundsMin.y),
-                        static_cast<double>(m_boundsMax.y));
+                        static_cast<double>(m_boundsMin.x * uf),
+                        static_cast<double>(m_boundsMax.x * uf),
+                        static_cast<double>(m_boundsMin.y * uf),
+                        static_cast<double>(m_boundsMax.y * uf));
 
     ImGui::Spacing();
 
-    // Safe Z height input
+    // Safe Z height input (stored in mm, displayed in user units)
     ImGui::Text("Safe Z height:");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(80.0f);
     ImGui::InputFloat("##safeZ", &m_outlineSafeZ, 0.0f, 0.0f, "%.1f");
     ImGui::SameLine();
-    ImGui::TextDisabled("mm");
+    ImGui::TextDisabled("%s", pu);
     if (m_outlineSafeZ < 0.0f) m_outlineSafeZ = 0.0f;
     if (m_outlineSafeZ > 100.0f) m_outlineSafeZ = 100.0f;
 
-    // Feed rate input
+    // Feed rate input (stored in mm/min, displayed in user units)
     ImGui::Text("Travel speed:");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(80.0f);
     ImGui::InputFloat("##outlineFeed", &m_outlineFeedRate, 0.0f, 0.0f, "%.0f");
     ImGui::SameLine();
-    ImGui::TextDisabled("mm/min");
+    ImGui::TextDisabled("%s", fu);
     if (m_outlineFeedRate < 100.0f) m_outlineFeedRate = 100.0f;
     if (m_outlineFeedRate > 10000.0f) m_outlineFeedRate = 10000.0f;
 
@@ -612,20 +618,31 @@ void CncSafetyPanel::renderZProbeTab() {
     ImGui::TextWrapped("Touch off Z-zero using a probe or touch plate.");
     ImGui::Spacing();
 
+    auto& cfg = Config::instance();
+    bool metric = cfg.getDisplayUnitsMetric();
+    const char* pu = metric ? "mm" : "in";
+    const char* fu = metric ? "mm/min" : "in/min";
+
+    char speedLabel[64], thickLabel[64], searchLabel[64], retractLabel[64];
+    std::snprintf(speedLabel, sizeof(speedLabel), "Approach Speed (%s)", fu);
+    std::snprintf(thickLabel, sizeof(thickLabel), "Plate Thickness (%s)", pu);
+    std::snprintf(searchLabel, sizeof(searchLabel), "Search Distance (%s)", pu);
+    std::snprintf(retractLabel, sizeof(retractLabel), "Retract Distance (%s)", pu);
+
     ImGui::SetNextItemWidth(120);
-    ImGui::InputFloat("Approach Speed (mm/min)", &m_probeApproachSpeed, 10, 50, "%.0f");
+    ImGui::InputFloat(speedLabel, &m_probeApproachSpeed, 10, 50, "%.0f");
     m_probeApproachSpeed = std::clamp(m_probeApproachSpeed, 1.0f, 1000.0f);
 
     ImGui::SetNextItemWidth(120);
-    ImGui::InputFloat("Plate Thickness (mm)", &m_probePlateThickness, 0.1f, 1.0f, "%.3f");
+    ImGui::InputFloat(thickLabel, &m_probePlateThickness, 0.1f, 1.0f, "%.3f");
     m_probePlateThickness = std::max(0.0f, m_probePlateThickness);
 
     ImGui::SetNextItemWidth(120);
-    ImGui::InputFloat("Search Distance (mm)", &m_probeSearchDist, 5, 10, "%.1f");
+    ImGui::InputFloat(searchLabel, &m_probeSearchDist, 5, 10, "%.1f");
     m_probeSearchDist = std::clamp(m_probeSearchDist, 1.0f, 200.0f);
 
     ImGui::SetNextItemWidth(120);
-    ImGui::InputFloat("Retract Distance (mm)", &m_probeRetractDist, 0.5f, 1, "%.1f");
+    ImGui::InputFloat(retractLabel, &m_probeRetractDist, 0.5f, 1, "%.1f");
     m_probeRetractDist = std::clamp(m_probeRetractDist, 0.1f, 20.0f);
 
     ImGui::Spacing();
@@ -698,12 +715,21 @@ void CncSafetyPanel::renderTlsTab() {
         "then apply G43.1 compensation.");
     ImGui::Spacing();
 
+    {
+    auto& cfg = Config::instance();
+    const char* pu = cfg.getDisplayUnitsMetric() ? "mm" : "in";
+    const char* fu = cfg.getDisplayUnitsMetric() ? "mm/min" : "in/min";
+
+    char tlsSpeedLabel[64], tlsSearchLabel[64];
+    std::snprintf(tlsSpeedLabel, sizeof(tlsSpeedLabel), "Approach Speed (%s)##tls", fu);
+    std::snprintf(tlsSearchLabel, sizeof(tlsSearchLabel), "Search Distance (%s)##tls", pu);
+
     ImGui::SetNextItemWidth(120);
-    ImGui::InputFloat("Approach Speed (mm/min)##tls", &m_tlsApproachSpeed, 10, 50, "%.0f");
+    ImGui::InputFloat(tlsSpeedLabel, &m_tlsApproachSpeed, 10, 50, "%.0f");
     m_tlsApproachSpeed = std::clamp(m_tlsApproachSpeed, 1.0f, 500.0f);
 
     ImGui::SetNextItemWidth(120);
-    ImGui::InputFloat("Search Distance (mm)##tls", &m_tlsSearchDist, 10, 50, "%.0f");
+    ImGui::InputFloat(tlsSearchLabel, &m_tlsSearchDist, 10, 50, "%.0f");
     m_tlsSearchDist = std::clamp(m_tlsSearchDist, 1.0f, 300.0f);
 
     ImGui::Spacing();
@@ -713,8 +739,10 @@ void CncSafetyPanel::renderTlsTab() {
         "1. Set reference: Probe first tool (reference tool) to touch plate. "
         "Record Z position as reference.");
 
+    char refZLabel[64];
+    std::snprintf(refZLabel, sizeof(refZLabel), "Reference Z (%s)", pu);
     ImGui::SetNextItemWidth(120);
-    ImGui::InputFloat("Reference Z (mm)", &m_tlsReferenceZ, 0.1f, 1.0f, "%.3f");
+    ImGui::InputFloat(refZLabel, &m_tlsReferenceZ, 0.1f, 1.0f, "%.3f");
 
     ImGui::SameLine();
     bool canCapture = m_cnc && m_connected && m_status.state == MachineState::Idle;
@@ -764,6 +792,7 @@ void CncSafetyPanel::renderTlsTab() {
         ImGui::TextColored(ImVec4(1, 0.5f, 0, 1),
                            "Machine must be Idle and connected");
     }
+    } // end unit label scope
 }
 
 void CncSafetyPanel::render3DProbeTab() {
@@ -771,16 +800,25 @@ void CncSafetyPanel::render3DProbeTab() {
         "Find workpiece edges, corners, or center using probe sequences.");
     ImGui::Spacing();
 
+    auto& cfg = Config::instance();
+    const char* pu = cfg.getDisplayUnitsMetric() ? "mm" : "in";
+    const char* fu = cfg.getDisplayUnitsMetric() ? "mm/min" : "in/min";
+
+    char probeSpeedLbl[64], retractLbl[64], searchLbl[64];
+    std::snprintf(probeSpeedLbl, sizeof(probeSpeedLbl), "Probe Speed (%s)##3d", fu);
+    std::snprintf(retractLbl, sizeof(retractLbl), "Retract Dist (%s)##3d", pu);
+    std::snprintf(searchLbl, sizeof(searchLbl), "Search Dist (%s)##3d", pu);
+
     ImGui::SetNextItemWidth(120);
-    ImGui::InputFloat("Probe Speed (mm/min)##3d", &m_3dProbeSpeed, 10, 50, "%.0f");
+    ImGui::InputFloat(probeSpeedLbl, &m_3dProbeSpeed, 10, 50, "%.0f");
     m_3dProbeSpeed = std::clamp(m_3dProbeSpeed, 1.0f, 1000.0f);
 
     ImGui::SetNextItemWidth(120);
-    ImGui::InputFloat("Retract Dist (mm)##3d", &m_3dProbeRetract, 1, 5, "%.1f");
+    ImGui::InputFloat(retractLbl, &m_3dProbeRetract, 1, 5, "%.1f");
     m_3dProbeRetract = std::clamp(m_3dProbeRetract, 0.5f, 50.0f);
 
     ImGui::SetNextItemWidth(120);
-    ImGui::InputFloat("Search Dist (mm)##3d", &m_3dProbeSearchDist, 5, 10, "%.0f");
+    ImGui::InputFloat(searchLbl, &m_3dProbeSearchDist, 5, 10, "%.0f");
     m_3dProbeSearchDist = std::clamp(m_3dProbeSearchDist, 1.0f, 200.0f);
 
     ImGui::Spacing();

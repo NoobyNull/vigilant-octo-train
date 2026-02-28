@@ -266,6 +266,10 @@ bool Config::load() {
                 m_jobCompletionNotify = (value == "true" || value == "1");
             } else if (key == "job_completion_flash") {
                 m_jobCompletionFlash = (value == "true" || value == "1");
+            } else if (key == "display_units") {
+                m_displayUnitsMetric = (value != "in");
+            } else if (key == "advanced_settings_view") {
+                m_advancedSettingsView = (value == "true" || value == "1");
             }
         } else if (section == "recent_gcode") {
             if (str::startsWith(key, "file")) {
@@ -454,6 +458,8 @@ bool Config::save() {
     ss << "jog_feed_large=" << m_jogFeedLarge << "\n";
     ss << "job_completion_notify=" << (m_jobCompletionNotify ? "true" : "false") << "\n";
     ss << "job_completion_flash=" << (m_jobCompletionFlash ? "true" : "false") << "\n";
+    ss << "display_units=" << (m_displayUnitsMetric ? "mm" : "in") << "\n";
+    ss << "advanced_settings_view=" << (m_advancedSettingsView ? "true" : "false") << "\n";
     ss << "\n";
 
     // Recent G-code files section

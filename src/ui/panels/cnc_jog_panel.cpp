@@ -79,18 +79,30 @@ void CncJogPanel::render() {
 void CncJogPanel::renderStepSizeSelector() {
     ImGui::SeparatorText("Step Size");
 
+    auto& cfg = Config::instance();
+    bool metric = cfg.getDisplayUnitsMetric();
+    float uf = metric ? 1.0f : (1.0f / 25.4f);
+    const char* pu = metric ? "mm" : "in";
+    const char* fu = metric ? "mm/min" : "in/min";
+
     for (int i = 0; i < NUM_STEPS; ++i) {
         if (i > 0)
             ImGui::SameLine();
-        if (ImGui::RadioButton(STEP_LABELS[i], m_selectedStep == i))
-            m_selectedStep = i;
+        if (metric) {
+            if (ImGui::RadioButton(STEP_LABELS[i], m_selectedStep == i))
+                m_selectedStep = i;
+        } else {
+            char inLabel[16];
+            std::snprintf(inLabel, sizeof(inLabel), "%.4f", static_cast<double>(STEP_SIZES[i] * uf));
+            if (ImGui::RadioButton(inLabel, m_selectedStep == i))
+                m_selectedStep = i;
+        }
     }
     ImGui::SameLine();
-    ImGui::TextDisabled("mm");
+    ImGui::TextDisabled("%s", pu);
     ImGui::TextDisabled("Tab to cycle step groups");
 
     // Show active feedrate for the selected step group
-    auto& cfg = Config::instance();
     int feed;
     const char* group;
     if (m_selectedStep <= 1) {
@@ -100,7 +112,7 @@ void CncJogPanel::renderStepSizeSelector() {
     } else {
         feed = cfg.getJogFeedLarge(); group = "large";
     }
-    ImGui::TextDisabled("Feed: %d mm/min (%s)", feed, group);
+    ImGui::TextDisabled("Feed: %.0f %s (%s)", static_cast<double>(feed * uf), fu, group);
 }
 
 void CncJogPanel::renderJogButtons() {

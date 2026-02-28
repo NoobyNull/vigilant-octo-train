@@ -55,22 +55,26 @@ std::vector<PreflightIssue> runPreflightChecks(
         float jobSizeX = boundsMax->x - boundsMin->x;
         float jobSizeY = boundsMax->y - boundsMin->y;
 
+        bool metric = Config::instance().getDisplayUnitsMetric();
+        float uf = metric ? 1.0f : (1.0f / 25.4f);
+        const char* pu = metric ? "mm" : "in";
+
         bool exceeds = false;
         std::string msg = "Job may exceed machine travel: ";
         if (jobSizeX > profile->maxTravelX) {
-            msg += "X(" + std::to_string(static_cast<int>(jobSizeX)) + ">" +
-                   std::to_string(static_cast<int>(profile->maxTravelX)) + "mm) ";
+            msg += "X(" + std::to_string(static_cast<int>(jobSizeX * uf)) + ">" +
+                   std::to_string(static_cast<int>(profile->maxTravelX * uf)) + pu + ") ";
             exceeds = true;
         }
         if (jobSizeY > profile->maxTravelY) {
-            msg += "Y(" + std::to_string(static_cast<int>(jobSizeY)) + ">" +
-                   std::to_string(static_cast<int>(profile->maxTravelY)) + "mm) ";
+            msg += "Y(" + std::to_string(static_cast<int>(jobSizeY * uf)) + ">" +
+                   std::to_string(static_cast<int>(profile->maxTravelY * uf)) + pu + ") ";
             exceeds = true;
         }
         if (std::abs(boundsMin->z) > profile->maxTravelZ ||
             std::abs(boundsMax->z) > profile->maxTravelZ) {
             msg += "Z(depth exceeds " +
-                   std::to_string(static_cast<int>(profile->maxTravelZ)) + "mm) ";
+                   std::to_string(static_cast<int>(profile->maxTravelZ * uf)) + pu + ") ";
             exceeds = true;
         }
         if (exceeds) {

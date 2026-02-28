@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "../../core/cnc/cnc_types.h"
-#include "../../core/cnc/grbl_settings.h"
+#include "../../core/cnc/unified_settings.h"
 #include "panel.h"
 
 namespace dw {
@@ -12,9 +12,9 @@ namespace dw {
 class CncController;
 class FileDialog;
 
-// CNC firmware settings panel -- view, edit, backup/restore GRBL $ settings.
-// Receives raw lines via onRawLine callback to capture $$ responses.
-// Provides both a grouped settings view and a focused machine tuning tab.
+// CNC firmware settings panel -- unified view for GRBL, grblHAL, and FluidNC.
+// Receives raw lines via onRawLine callback to capture $$ / $S responses.
+// Provides category-based settings view with optional Advanced mode showing raw IDs.
 class CncSettingsPanel : public Panel {
   public:
     CncSettingsPanel();
@@ -32,12 +32,12 @@ class CncSettingsPanel : public Panel {
     void onStatusUpdate(const MachineStatus& status);
 
     // Access settings for profile sync
-    const GrblSettings& settings() const { return m_settings; }
+    const UnifiedSettingsMap& unifiedSettings() const { return m_settings; }
     bool hasSettings() const { return !m_settings.empty(); }
 
     // EditBuffer needs to be public for helper functions
     struct EditBuffer {
-        int id = 0;
+        std::string key;
         char buf[32] = "";
         bool active = false;
     };
@@ -51,10 +51,23 @@ class CncSettingsPanel : public Panel {
     void renderRawTab();
     void renderDiffDialog();
 
+    // Unified setting rendering helpers
+    void renderUnifiedBool(const std::string& key, const char* label,
+                           const char* onLabel, const char* offLabel);
+    void renderUnifiedBitmask(const std::string& key, const char* label);
+    void renderUnifiedNumeric(const std::string& key, const char* label,
+                              const char* units, float width);
+    void renderUnifiedPerAxisGroup(const char* label, const char* units,
+                                    const std::string& keyX,
+                                    const std::string& keyY,
+                                    const std::string& keyZ);
+    void renderAdvancedId(const UnifiedSetting& s);
+
     // Actions
     void requestSettings();
-    void applySettingToGrbl(int id, float value);
+    void applySetting(const std::string& key, const std::string& value);
     void writeAllModified();
+    void saveToFlash();
     void backupToFile();
     void restoreFromFile();
     void exportPlainText();
@@ -62,23 +75,26 @@ class CncSettingsPanel : public Panel {
     // State
     CncController* m_cnc = nullptr;
     FileDialog* m_fileDialog = nullptr;
-    GrblSettings m_settings;
+    UnifiedSettingsMap m_settings;
+    FirmwareType m_firmwareType = FirmwareType::GRBL;
     MachineState m_machineState = MachineState::Unknown;
     bool m_connected = false;
-    bool m_collecting = false;  // True while collecting $$ response lines
+    bool m_collecting = false;    // True while collecting response lines
+    bool m_collectingSC = false;  // True while collecting $SC response
+    bool m_advancedView = false;  // Show raw firmware IDs
 
     // Editing state
-    std::map<int, EditBuffer> m_editBuffers;
+    std::map<std::string, EditBuffer> m_editBuffers;
 
     // Diff dialog state (for restore preview)
     bool m_showDiffDialog = false;
-    GrblSettings m_restoreSettings;
-    std::vector<std::pair<GrblSetting, GrblSetting>> m_diffEntries;
+    UnifiedSettingsMap m_restoreSettings;
+    std::vector<UnifiedSettingsMap::DiffEntry> m_diffEntries;
 
-    // Write queue for sequential EEPROM-safe writes
+    // Write queue for sequential EEPROM-safe writes (GRBL only)
     struct WriteQueueItem {
-        int id;
-        float value;
+        std::string key;
+        std::string value;
     };
     std::vector<WriteQueueItem> m_writeQueue;
     int m_writeIndex = 0;
@@ -87,9 +103,9 @@ class CncSettingsPanel : public Panel {
     static constexpr float WRITE_DELAY_SEC = 0.05f; // 50ms between EEPROM writes
 
     // Tab selection
-    int m_activeTab = 0; // 0 = Settings, 1 = Tuning
+    int m_activeTab = 0;
 
-    // Firmware info ($I response) -- EXT-03
+    // Firmware info ($I response)
     std::string m_firmwareInfo;
     bool m_requestingInfo = false;
 };

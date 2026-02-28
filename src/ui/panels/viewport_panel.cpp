@@ -460,9 +460,6 @@ void ViewportPanel::renderViewport() {
         m_camera.setViewport(width, height);
     }
 
-    // Handle input
-    handleInput();
-
     // Render to framebuffer
     m_framebuffer.bind();
 
@@ -491,6 +488,11 @@ void ViewportPanel::renderViewport() {
                  contentSize,
                  ImVec2(0, 1),
                  ImVec2(1, 0));
+
+    // Handle input after Image so ImGui's item/window hover state is fully resolved.
+    // This prevents the viewport from stealing clicks when a floating panel overlaps it.
+    handleInput();
+
     // Context menu for viewport interactions
     if (m_contextMenuManager != nullptr) {
         if (ImGui::BeginPopupContextItem("ViewportPanel_Context")) {

@@ -362,6 +362,31 @@ bool Schema::createTables(Database& db) {
     )");
 
 
+    // CNC job history table
+    if (!db.execute(R"(
+        CREATE TABLE IF NOT EXISTS cnc_jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            file_name TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            total_lines INTEGER NOT NULL,
+            last_acked_line INTEGER DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'running',
+            error_count INTEGER DEFAULT 0,
+            elapsed_seconds REAL DEFAULT 0,
+            modal_distance_mode TEXT DEFAULT 'G90',
+            modal_coordinate_system TEXT DEFAULT 'G54',
+            modal_units TEXT DEFAULT 'G21',
+            modal_spindle_state TEXT DEFAULT 'M5',
+            modal_coolant_state TEXT DEFAULT 'M9',
+            modal_feed_rate REAL DEFAULT 0,
+            modal_spindle_speed REAL DEFAULT 0,
+            started_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            ended_at TEXT
+        )
+    )")) {
+        return false;
+    }
+
     // Create indexes for common queries (best-effort)
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_materials_name ON materials(name)");
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_materials_category ON materials(category)");
@@ -393,6 +418,10 @@ bool Schema::createTables(Database& db) {
                      "model_categories(category_id)");
     (void)db.execute(
         "CREATE INDEX IF NOT EXISTS idx_models_tag_status ON models(tag_status)");
+    (void)db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_cnc_jobs_started ON cnc_jobs(started_at)");
+    (void)db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_cnc_jobs_status ON cnc_jobs(status)");
 
     // Set schema version
     if (!setVersion(db, CURRENT_VERSION)) {
@@ -583,6 +612,35 @@ bool Schema::migrate(Database& db, int fromVersion) {
         (void)db.execute("ALTER TABLE materials ADD COLUMN is_bundled INTEGER DEFAULT 0");
         (void)db.execute("ALTER TABLE materials ADD COLUMN is_hidden INTEGER DEFAULT 0");
         log::info("Schema", "v12: Added is_bundled and is_hidden columns to materials");
+    }
+
+    if (fromVersion < 13) {
+        (void)db.execute(R"(
+            CREATE TABLE IF NOT EXISTS cnc_jobs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file_name TEXT NOT NULL,
+                file_path TEXT NOT NULL,
+                total_lines INTEGER NOT NULL,
+                last_acked_line INTEGER DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'running',
+                error_count INTEGER DEFAULT 0,
+                elapsed_seconds REAL DEFAULT 0,
+                modal_distance_mode TEXT DEFAULT 'G90',
+                modal_coordinate_system TEXT DEFAULT 'G54',
+                modal_units TEXT DEFAULT 'G21',
+                modal_spindle_state TEXT DEFAULT 'M5',
+                modal_coolant_state TEXT DEFAULT 'M9',
+                modal_feed_rate REAL DEFAULT 0,
+                modal_spindle_speed REAL DEFAULT 0,
+                started_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                ended_at TEXT
+            )
+        )");
+        (void)db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_cnc_jobs_started ON cnc_jobs(started_at)");
+        (void)db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_cnc_jobs_status ON cnc_jobs(status)");
+        log::info("Schema", "v13: Added cnc_jobs table");
     }
 
     if (!setVersion(db, CURRENT_VERSION)) {

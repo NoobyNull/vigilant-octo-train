@@ -12,6 +12,7 @@
 #include "../../core/database/gcode_repository.h"
 #include "../../core/cnc/cnc_controller.h"
 #include "../../core/cnc/preflight_check.h"
+#include "../../core/gcode/gcode_modal_scanner.h"
 #include "../../core/project/project.h"
 #include "../../core/cnc/serial_port.h"
 #include "../../core/utils/file_utils.h"
@@ -78,6 +79,11 @@ void GCodePanel::render() {
     if (!m_open)
         return;
 
+    // Force GCode panel to stay docked — never float
+    ImGuiWindowClass gcodeClass;
+    gcodeClass.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoUndocking;
+    ImGui::SetNextWindowClass(&gcodeClass);
+
     if (ImGui::Begin(m_title.c_str(), &m_open)) {
         // Job completion flash bar
         if (m_jobFlashTimer > 0.0f) {
@@ -125,6 +131,10 @@ void GCodePanel::render() {
         renderModeTabs();
         renderToolbar();
         renderSearchBar();
+
+        if (m_showJobHistory) {
+            renderJobHistory();
+        }
 
         if (hasGCode()) {
             ImGui::Separator();
@@ -300,6 +310,15 @@ void GCodePanel::renderToolbar() {
 
     ImGui::SameLine();
     renderRecentFiles();
+
+    if (m_jobRepo) {
+        ImGui::SameLine();
+        if (ImGui::Button(m_showJobHistory ? "Hide History" : "History")) {
+            m_showJobHistory = !m_showJobHistory;
+            if (m_showJobHistory)
+                m_jobHistoryDirty = true;
+        }
+    }
 
     if (hasGCode()) {
         ImGui::SameLine();
@@ -885,6 +904,20 @@ void GCodePanel::renderSimulationControls() {
 }
 
 void GCodePanel::updateSimulation(float dt) {
+    // Live CNC tracking: when streaming, drive the 3D visualization from acked line index
+    if (m_cncConnected && m_lastAckedLine >= 0 && !m_program.path.empty() &&
+        m_streamProgress.totalLines > 0) {
+        // Find the last path segment whose lineNumber <= m_lastAckedLine
+        size_t bestIdx = 0;
+        for (size_t i = 0; i < m_program.path.size(); ++i) {
+            if (m_program.path[i].lineNumber <= m_lastAckedLine)
+                bestIdx = i + 1; // +1 because simSegmentIndex is the *next* segment to animate
+        }
+        m_simSegmentIndex = bestIdx;
+        m_simSegmentProgress = 0.0f;
+        return;
+    }
+
     if (m_simState != SimState::Playing || m_program.path.empty())
         return;
 
@@ -1387,6 +1420,14 @@ void GCodePanel::onGrblConnected(bool connected, const std::string& version) {
         addConsoleLine("Connection failed — no compatible controller detected", ConsoleLine::Error);
     } else {
         addConsoleLine("Disconnected", ConsoleLine::Info);
+        // Finalize active job as aborted on disconnect
+        if (m_jobRepo && m_activeJobId > 0) {
+            auto modal = GCodeModalScanner::scanToLine(getRawLines(), m_streamProgress.ackedLines);
+            m_jobRepo->finishJob(m_activeJobId, "aborted", m_streamProgress.ackedLines,
+                                 m_streamProgress.elapsedSeconds, m_streamProgress.errorCount, modal);
+            m_activeJobId = -1;
+            m_jobHistoryDirty = true;
+        }
     }
 }
 
@@ -1405,9 +1446,25 @@ void GCodePanel::onGrblLineAcked(const LineAck& ack) {
 void GCodePanel::onGrblProgress(const StreamProgress& progress) {
     m_streamProgress = progress;
 
+    // Periodic progress save (every 50 acked lines)
+    if (m_jobRepo && m_activeJobId > 0 &&
+        progress.ackedLines - m_lastProgressSave >= 50) {
+        m_jobRepo->updateProgress(m_activeJobId, progress.ackedLines, progress.elapsedSeconds);
+        m_lastProgressSave = progress.ackedLines;
+    }
+
     // Check completion
     if (progress.ackedLines >= progress.totalLines && progress.totalLines > 0) {
         addConsoleLine("Stream complete", ConsoleLine::Info);
+
+        // Finalize job record
+        if (m_jobRepo && m_activeJobId > 0) {
+            auto modal = GCodeModalScanner::scanToLine(getRawLines(), progress.ackedLines);
+            m_jobRepo->finishJob(m_activeJobId, "completed", progress.ackedLines,
+                                 progress.elapsedSeconds, progress.errorCount, modal);
+            m_activeJobId = -1;
+            m_jobHistoryDirty = true;
+        }
 
         auto& cfg = Config::instance();
         if (cfg.getJobCompletionNotify()) {
@@ -1428,6 +1485,15 @@ void GCodePanel::onGrblProgress(const StreamProgress& progress) {
 void GCodePanel::onGrblAlarm(int code, const std::string& desc) {
     addConsoleLine("ALARM:" + std::to_string(code) + " " + desc, ConsoleLine::Error);
     ToastManager::instance().show(ToastType::Error, "Alarm", desc);
+
+    // Finalize active job as aborted
+    if (m_jobRepo && m_activeJobId > 0) {
+        auto modal = GCodeModalScanner::scanToLine(getRawLines(), m_streamProgress.ackedLines);
+        m_jobRepo->finishJob(m_activeJobId, "aborted", m_streamProgress.ackedLines,
+                             m_streamProgress.elapsedSeconds, m_streamProgress.errorCount, modal);
+        m_activeJobId = -1;
+        m_jobHistoryDirty = true;
+    }
 }
 
 void GCodePanel::onGrblError(const std::string& message) {
@@ -1508,6 +1574,19 @@ void GCodePanel::buildSendProgram() {
 
     m_lastAckedLine = -1;
     m_streamProgress = {};
+    m_lastProgressSave = 0;
+
+    // Record job start in database
+    if (m_jobRepo) {
+        JobRecord job;
+        job.fileName = file::getStem(m_filePath) + "." + file::getExtension(m_filePath);
+        job.filePath = m_filePath;
+        job.totalLines = static_cast<int>(lines.size());
+        auto id = m_jobRepo->insert(job);
+        m_activeJobId = id.value_or(-1);
+        m_jobHistoryDirty = true;
+    }
+
     m_cnc->startStream(lines);
     addConsoleLine(
         "Streaming " + std::to_string(lines.size()) + " lines",
@@ -1589,6 +1668,127 @@ void GCodePanel::gotoLineNumber(int lineNum) {
         m_scrollToLine = idx;
         m_searchResultLine = idx;
     }
+}
+
+// --- Job History ---
+
+void GCodePanel::renderJobHistory() {
+    if (!m_jobRepo)
+        return;
+
+    // Refresh cache when dirty
+    if (m_jobHistoryDirty) {
+        m_jobHistoryCache = m_jobRepo->findRecent(50);
+        m_jobHistoryDirty = false;
+    }
+
+    ImGui::Separator();
+    ImGui::Text("Job History");
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Clear All")) {
+        m_jobRepo->clearAll();
+        m_jobHistoryDirty = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Refresh"))
+        m_jobHistoryDirty = true;
+
+    if (m_jobHistoryCache.empty()) {
+        ImGui::TextDisabled("No job history");
+        ImGui::Separator();
+        return;
+    }
+
+    float historyHeight = std::min(300.0f, ImGui::GetContentRegionAvail().y * 0.5f);
+    if (ImGui::BeginChild("JobHistoryList", ImVec2(0, historyHeight), true)) {
+        if (ImGui::BeginTable("Jobs", 6,
+                              ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH |
+                                  ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY)) {
+            ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+            ImGui::TableSetupColumn("File", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("Lines", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+            ImGui::TableSetupColumn("Duration", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+            ImGui::TableSetupColumn("Date", ImGuiTableColumnFlags_WidthFixed, 120.0f);
+            ImGui::TableSetupColumn("##Actions", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+            ImGui::TableHeadersRow();
+
+            i64 removeId = -1;
+            for (const auto& job : m_jobHistoryCache) {
+                ImGui::TableNextRow();
+                ImGui::PushID(static_cast<int>(job.id));
+
+                // Status column with color
+                ImGui::TableNextColumn();
+                if (job.status == "completed") {
+                    ImGui::TextColored(ImVec4(0.3f, 0.9f, 0.3f, 1.0f), "Done");
+                } else if (job.status == "aborted") {
+                    ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "Abort");
+                } else if (job.status == "interrupted") {
+                    ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.1f, 1.0f), "Crash");
+                } else {
+                    ImGui::TextColored(ImVec4(0.4f, 0.7f, 1.0f, 1.0f), "Run");
+                }
+
+                // File name
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted(job.fileName.c_str());
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("%s", job.filePath.c_str());
+
+                // Lines (acked/total)
+                ImGui::TableNextColumn();
+                ImGui::Text("%d/%d", job.lastAckedLine, job.totalLines);
+
+                // Duration
+                ImGui::TableNextColumn();
+                int totalSec = static_cast<int>(job.elapsedSeconds);
+                int min = totalSec / 60;
+                int sec = totalSec % 60;
+                ImGui::Text("%d:%02d", min, sec);
+
+                // Date
+                ImGui::TableNextColumn();
+                // Show just date portion of ISO timestamp
+                if (job.startedAt.size() >= 16)
+                    ImGui::TextUnformatted(job.startedAt.substr(0, 16).c_str());
+                else
+                    ImGui::TextUnformatted(job.startedAt.c_str());
+
+                // Actions
+                ImGui::TableNextColumn();
+                if (job.status != "completed" && job.status != "running" &&
+                    job.lastAckedLine > 0) {
+                    if (ImGui::SmallButton("Resume")) {
+                        // Load file and pre-set resume line
+                        if (loadFile(job.filePath)) {
+                            m_showJobHistory = false;
+                            m_mode = GCodePanelMode::Send;
+                            addConsoleLine(
+                                "Loaded from history — resume from line " +
+                                    std::to_string(job.lastAckedLine),
+                                ConsoleLine::Info);
+                        }
+                    }
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("Load file for resume from line %d", job.lastAckedLine);
+                }
+                ImGui::SameLine();
+                if (ImGui::SmallButton("X"))
+                    removeId = job.id;
+
+                ImGui::PopID();
+            }
+
+            ImGui::EndTable();
+
+            if (removeId > 0) {
+                m_jobRepo->remove(removeId);
+                m_jobHistoryDirty = true;
+            }
+        }
+    }
+    ImGui::EndChild();
+    ImGui::Separator();
 }
 
 } // namespace dw

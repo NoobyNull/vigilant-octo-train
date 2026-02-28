@@ -25,11 +25,13 @@
 #include "core/optimizer/cut_list_file.h"
 #include "core/database/database.h"
 #include "core/database/gcode_repository.h"
+#include "core/database/job_repository.h"
 #include "core/database/model_repository.h"
 #include "core/database/tool_database.h"
 #include "core/database/schema.h"
 #include "core/export/project_export_manager.h"
 #include "core/cnc/cnc_controller.h"
+#include "core/cnc/serial_port.h"
 #include "core/cnc/gamepad_input.h"
 #include "core/cnc/macro_manager.h"
 #include "core/graph/graph_manager.h"
@@ -55,6 +57,7 @@
 #include "ui/panels/library_panel.h"
 #include "ui/panels/viewport_panel.h"
 #include "ui/theme.h"
+#include "ui/widgets/toast.h"
 #include "version.h"
 
 namespace dw {
@@ -219,7 +222,19 @@ bool Application::init() {
     m_materialManager->seedDefaults();
     m_modelRepo = std::make_unique<ModelRepository>(*m_database);
     m_gcodeRepo = std::make_unique<GCodeRepository>(*m_database);
+    m_jobRepo = std::make_unique<JobRepository>(*m_database);
     m_cutPlanRepo = std::make_unique<CutPlanRepository>(*m_database);
+    // Mark any 'running' jobs as interrupted (app crashed during previous session)
+    {
+        auto running = m_jobRepo->findByStatus("running");
+        for (auto& job : running) {
+            m_jobRepo->finishJob(
+                job.id, "interrupted", job.lastAckedLine, job.elapsedSeconds, job.errorCount, job.modalState);
+        }
+        if (!running.empty())
+            log::infof("App", "Marked %zu interrupted job(s) from prior session", running.size());
+    }
+
     m_cutListFile = std::make_unique<CutListFile>();
     m_cutListFile->setDirectory(paths::getDataDir() / "cutlists");
     m_costRepo = std::make_unique<CostRepository>(*m_database);
@@ -327,6 +342,10 @@ bool Application::init() {
         });
     }
 
+    // Auto-start CNC simulator (always-connected mode)
+    m_cncController->connectSimulator();
+    m_uiManager->showCncPanels(true);
+
     m_initialized = true;
     std::printf("Digital Workshop %s initialized\n", VERSION);
     return true;
@@ -408,7 +427,31 @@ void Application::update() {
     if (m_gamepadInput)
         m_gamepadInput->update(ImGui::GetIO().DeltaTime);
 
-    m_configManager->poll(SDL_GetTicks64());
+    // Periodic serial port scan — update available ports for menu bar Connect button
+    u64 ticks = SDL_GetTicks64();
+    if (ticks - m_lastPortScanMs >= 2000) {
+        m_lastPortScanMs = ticks;
+        auto ports = listSerialPorts();
+        m_uiManager->setAvailablePorts(ports);
+
+        // Notify user once when a new device appears during simulation
+        if (!ports.empty() && m_cncController->isSimulating() && m_lastConnectedPort.empty()) {
+            std::string portList;
+            for (const auto& p : ports) {
+                if (!portList.empty()) portList += ", ";
+                portList += p;
+            }
+            ToastManager::instance().show(
+                ToastType::Info, "CNC Device Detected", portList, 5.0f);
+            // Set sentinel so we only toast once per appearance
+            m_lastConnectedPort = "__notified__";
+        }
+        if (ports.empty() && m_lastConnectedPort == "__notified__") {
+            m_lastConnectedPort.clear();
+        }
+    }
+
+    m_configManager->poll(ticks);
 }
 
 void Application::render() {
@@ -416,7 +459,10 @@ void Application::render() {
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    ImGuiID dockspaceId = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
+    ImGuiDockNodeFlags dockFlags = ImGuiDockNodeFlags_None;
+    if (!Config::instance().getEnableFloatingWindows())
+        dockFlags |= ImGuiDockNodeFlags_NoUndocking;
+    ImGuiID dockspaceId = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), dockFlags);
     if (m_uiManager->isFirstFrame()) {
         m_uiManager->clearFirstFrame();
         if (ImGui::DockBuilderGetNode(dockspaceId) == nullptr ||
@@ -486,6 +532,7 @@ void Application::shutdown() {
     m_costRepo.reset();
     m_cutPlanRepo.reset();
     m_cutListFile.reset();
+    m_jobRepo.reset();
     m_gcodeRepo.reset();
     m_modelRepo.reset();
     m_importQueue.reset();
