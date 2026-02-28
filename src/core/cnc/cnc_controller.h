@@ -29,6 +29,7 @@ class CncController {
 
     // Connection
     bool connect(const std::string& device, int baudRate = 115200);
+    bool connectTcp(const std::string& host, int port);
     bool connectSimulator();
     void disconnect();
     bool isConnected() const { return m_connected.load(); }

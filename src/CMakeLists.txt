@@ -94,6 +94,7 @@ set(DW_SOURCES
 
     # CNC Controller (multi-firmware support)
     core/cnc/serial_port.cpp
+    core/cnc/tcp_socket.cpp
     core/cnc/cnc_controller.cpp
     core/cnc/preflight_check.cpp
     core/cnc/tool_calculator.cpp

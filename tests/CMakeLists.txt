@@ -56,6 +56,7 @@ set(DW_TEST_SOURCES
     test_background_tagger.cpp
     # CNC Controller (multi-firmware support)
     test_serial_port.cpp
+    test_tcp_socket.cpp
     test_cnc_controller.cpp
     test_gcode_modal_scanner.cpp
     test_tool_database.cpp
@@ -92,6 +93,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/gcode/gcode_modal_scanner.cpp
     ${CMAKE_SOURCE_DIR}/src/core/gcode/machine_profile.cpp
     ${CMAKE_SOURCE_DIR}/src/core/cnc/serial_port.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/cnc/tcp_socket.cpp
     ${CMAKE_SOURCE_DIR}/src/core/cnc/cnc_controller.cpp
     ${CMAKE_SOURCE_DIR}/src/core/cnc/preflight_check.cpp
     ${CMAKE_SOURCE_DIR}/src/core/cnc/tool_calculator.cpp

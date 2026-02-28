@@ -1,5 +1,6 @@
 #include "cnc_controller.h"
 #include "serial_port.h"
+#include "tcp_socket.h"
 
 #include <algorithm>
 #include <cctype>
@@ -30,6 +31,30 @@ bool CncController::connect(const std::string& device, int baudRate) {
     m_port = std::move(port);
 
     // Soft-reset to get a clean state
+    m_port->writeByte(cnc::CMD_SOFT_RESET);
+    m_port->drain();
+
+    m_running = true;
+    m_connected = false;
+    m_consecutiveTimeouts = 0;
+    m_statusPending = false;
+    m_pendingRtCommands.store(0, std::memory_order_relaxed);
+    m_statusPollMs = Config::instance().getStatusPollIntervalMs();
+    m_ioThread = std::thread(&CncController::ioThreadFunc, this);
+
+    return true;
+}
+
+bool CncController::connectTcp(const std::string& host, int port) {
+    disconnect();
+
+    auto sock = std::make_unique<TcpSocket>();
+    if (!sock->connect(host, port))
+        return false;
+
+    m_port = std::move(sock);
+
+    // Soft-reset to get a clean state (same as serial connect)
     m_port->writeByte(cnc::CMD_SOFT_RESET);
     m_port->drain();
 
