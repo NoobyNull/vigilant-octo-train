@@ -72,6 +72,7 @@ set(DW_TEST_SOURCES
     test_analysis_overlay.cpp
     test_tool_recommender.cpp
     test_toolpath_generator.cpp
+    test_gcode_export.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
     # Tier 3 — workspace tests (no GL/SDL required)
@@ -152,6 +153,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/carve/analysis_overlay.cpp
     ${CMAKE_SOURCE_DIR}/src/core/carve/tool_recommender.cpp
     ${CMAKE_SOURCE_DIR}/src/core/carve/toolpath_generator.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/gcode_export.cpp
     ${CMAKE_SOURCE_DIR}/src/render/camera.cpp
     ${CMAKE_SOURCE_DIR}/src/app/workspace.cpp
 )
