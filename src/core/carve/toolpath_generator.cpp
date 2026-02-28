@@ -71,12 +71,112 @@ Toolpath ToolpathGenerator::generateClearing(const Heightmap& heightmap,
                                               const ToolpathConfig& config,
                                               f32 toolDiameter)
 {
-    // Clearing uses the same scan-line approach but only cuts within island
-    // regions. Build an end mill tool geometry from the diameter for offset.
-    VtdbToolGeometry clearTool;
-    clearTool.tool_type = VtdbToolType::EndMill;
-    clearTool.diameter = static_cast<f64>(toolDiameter);
-    return generateFinishing(heightmap, config, toolDiameter, clearTool);
+    Toolpath path;
+    if (heightmap.empty() || toolDiameter <= 0.0f) return path;
+    if (islands.islands.empty()) return path;
+
+    const f32 stepoverMm = toolDiameter * 0.4f; // 40% stepover for roughing
+    const f32 stepdownMm = toolDiameter;         // Max depth per pass
+    const f32 toolRadius = toolDiameter * 0.5f;
+
+    for (const auto& island : islands.islands) {
+        addRetract(path, config.safeZMm);
+        clearIslandRegion(path, heightmap, islands, island,
+                          config, stepoverMm, stepdownMm, toolRadius);
+    }
+
+    computeMetrics(path, config);
+    return path;
+}
+
+// ---------------------------------------------------------------------------
+// Island clearing
+// ---------------------------------------------------------------------------
+
+void ToolpathGenerator::clearIslandRegion(Toolpath& path,
+                                           const Heightmap& heightmap,
+                                           const IslandResult& islands,
+                                           const Island& island,
+                                           const ToolpathConfig& config,
+                                           f32 stepoverMm,
+                                           f32 stepdownMm,
+                                           f32 toolRadius)
+{
+    const f32 res = heightmap.resolution();
+    const Vec3 bmin = heightmap.boundsMin();
+
+    // Island bounding box with tool radius margin
+    const f32 xMin = island.boundsMin.x - toolRadius;
+    const f32 xMax = island.boundsMax.x + toolRadius;
+    const f32 yMin = island.boundsMin.y - toolRadius;
+    const f32 yMax = island.boundsMax.y + toolRadius;
+
+    // Depth passes: from surface (maxZ) down to clearing depth
+    const f32 margin = 0.2f; // Small margin above island floor
+    const f32 targetZ = island.minZ + margin;
+    const int numDepthPasses = std::max(
+        1, static_cast<int>(std::ceil(island.depth / stepdownMm)));
+
+    for (int depthIdx = 0; depthIdx < numDepthPasses; ++depthIdx) {
+        const f32 t = static_cast<f32>(depthIdx + 1)
+                      / static_cast<f32>(numDepthPasses);
+        const f32 cutZ = island.maxZ - t * (island.maxZ - targetZ);
+
+        // Raster scan lines within island bounds along X
+        const int numLines = std::max(
+            1, static_cast<int>((yMax - yMin) / stepoverMm) + 1);
+
+        for (int lineIdx = 0; lineIdx < numLines; ++lineIdx) {
+            const f32 y = yMin + static_cast<f32>(lineIdx) * stepoverMm;
+            if (y > yMax) break;
+
+            bool inIsland = false;
+            addRetract(path, config.safeZMm);
+
+            const int numPoints = std::max(
+                1, static_cast<int>((xMax - xMin) / res) + 1);
+
+            for (int ptIdx = 0; ptIdx < numPoints; ++ptIdx) {
+                const f32 x = xMin + static_cast<f32>(ptIdx) * res;
+
+                // Check island mask membership
+                const int col = static_cast<int>((x - bmin.x) / res);
+                const int row = static_cast<int>((y - bmin.y) / res);
+                bool cellInIsland = false;
+                if (col >= 0 && col < islands.maskCols &&
+                    row >= 0 && row < islands.maskRows) {
+                    cellInIsland =
+                        (islands.islandMask[row * islands.maskCols + col]
+                         == island.id);
+                }
+
+                if (cellInIsland && !inIsland) {
+                    // Entering island: ramp down over lead-in distance
+                    addRapidTo(path, {x, y, config.safeZMm});
+                    const f32 rampEnd = std::min(
+                        x + config.leadInMm, xMax);
+                    addCutTo(path, {x, y, island.maxZ});
+                    addCutTo(path, {rampEnd, y, cutZ});
+                    inIsland = true;
+                } else if (cellInIsland && inIsland) {
+                    // Inside island: cut at depth or surface (whichever higher)
+                    const f32 surfaceZ = heightmap.atMm(x, y);
+                    const f32 z = std::max(cutZ, surfaceZ);
+                    addCutTo(path, {x, y, z});
+                } else if (!cellInIsland && inIsland) {
+                    // Exiting island: ramp up over lead-out distance
+                    addCutTo(path, {x, y, island.maxZ});
+                    addCutTo(path, {x + config.leadInMm, y, config.safeZMm});
+                    inIsland = false;
+                }
+                // Not in island and not entering: skip (no cut)
+            }
+
+            if (inIsland) {
+                addRetract(path, config.safeZMm);
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
