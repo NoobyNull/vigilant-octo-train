@@ -8,7 +8,7 @@ progress:
   total_phases: 28
   completed_phases: 13
   total_plans: 55
-  completed_plans: 39
+  completed_plans: 40
 ---
 
 # Project State
@@ -22,14 +22,17 @@ See: .planning/PROJECT.md (updated 2026-02-28)
 
 ## Current Position
 
-Phase: Phase 15 — Toolpath Generation (next to implement)
-Plan: 15-01 — (first plan in Phase 15)
-Status: Phase 14 complete, ready for Phase 15
-Last activity: 2026-02-28 — Model fitter, bounds checking, and background computation implemented
+Phase: Phase 15 — Model Analysis
+Plan: 15-02 — (next plan in Phase 15)
+Status: 15-01 complete, continuing Phase 15
+Last activity: 2026-02-28 — Surface curvature analysis for minimum feature radius
 
 ## Accumulated Context
 
 ### Decisions
+- Noise threshold for curvature analysis: 0.001/res^2 (plan's 2.0/res^2 too aggressive)
+- 2+ concave neighbor requirement filters isolated noise spikes
+- Free functions for stateless curvature analysis (no class needed)
 - Vertex transformation done eagerly before async launch to avoid shared mutable state
 - CarveJob destructor calls cancel+wait for clean shutdown
 - Cancellation via atomic bool checked in heightmap progress callback
@@ -63,10 +66,10 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 14-02-PLAN.md (Phase 14 complete)
+Stopped at: Completed 15-01-PLAN.md
 Resume file: None
-Next action: Implement Phase 15, Plan 15-01
+Next action: Implement Phase 15, Plan 15-02
 
 ---
 *State initialized: 2026-02-27*
-*Last updated: 2026-02-28T19:32:00Z*
+*Last updated: 2026-02-28T19:43:00Z*
