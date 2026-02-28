@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-28T20:31:19Z"
+last_updated: "2026-02-28T20:35:34.571Z"
 progress:
   total_phases: 28
-  completed_phases: 16
+  completed_phases: 17
   total_plans: 55
-  completed_plans: 47
+  completed_plans: 49
 ---
 
 # Project State
@@ -68,6 +68,9 @@ Last activity: 2026-02-28 — G-code export, wizard steps (ZeroConfirm, Commit, 
 - Feed rate F word emitted only on first G1 move (modal G-code convention)
 - FileDialog showSave with callback pattern for G-code export
 - Abort sends Ctrl+X soft reset (0x18) for immediate machine stop
+- [Phase 18]: Panel hidden by default (m_open=false), shown via View > Sender > Direct Carve menu
+- [Phase 18]: Theme::Colors helper functions for all wizard status indicators (no hardcoded ImVec4)
+- [Phase 18]: Font-relative step indicator sizing for DPI awareness
 
 ### Pending Todos
 None.

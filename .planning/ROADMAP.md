@@ -241,7 +241,7 @@ Plans:
 | 15. Model Analysis | 2/2 | Complete    | 2026-02-28 | - |
 | 16. Tool Recommendation | 2/2 | Complete    | 2026-02-28 | - |
 | 17. Toolpath Generation | 3/3 | Complete    | 2026-02-28 | - |
-| 18. Guided Workflow | 3/3 | Complete    | 2026-02-28 | - |
+| 18. Guided Workflow | 3/3 | Complete   | 2026-02-28 | - |
 | 19. Streaming Integration | v0.3.0 | 0/2 | Planned | - |
 
 ---

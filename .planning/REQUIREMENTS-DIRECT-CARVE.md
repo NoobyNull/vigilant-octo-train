@@ -40,8 +40,8 @@ Requirements for the v0.3.0 Direct Carve milestone. Each maps to roadmap phases 
 
 ### Guided Workflow
 
-- [ ] **DC-20**: Step-by-step wizard UI guides operator through: machine check, model fitting, tool selection, material setup, preview, outline test, zero, commit, run
-- [ ] **DC-21**: Machine readiness check verifies: connection active, homed, safe Z tested, machine profile configured
+- [x] **DC-20**: Step-by-step wizard UI guides operator through: machine check, model fitting, tool selection, material setup, preview, outline test, zero, commit, run
+- [x] **DC-21**: Machine readiness check verifies: connection active, homed, safe Z tested, machine profile configured
 - [ ] **DC-22**: Model fitting step shows 3D preview with stock dimensions, allows scale/position/depth adjustment
 - [ ] **DC-23**: Preview step shows toolpath overlay on heightmap with estimated time and line count
 - [ ] **DC-24**: Outline test step runs a perimeter trace at safe Z to verify work area before committing to cut
@@ -78,8 +78,8 @@ Requirements for the v0.3.0 Direct Carve milestone. Each maps to roadmap phases 
 | DC-17 | Phase 17: Toolpath Generation | Planned |
 | DC-18 | Phase 17: Toolpath Generation | Planned |
 | DC-19 | Phase 17: Toolpath Generation | Planned |
-| DC-20 | Phase 18: Guided Workflow | Planned |
-| DC-21 | Phase 18: Guided Workflow | Planned |
+| DC-20 | Phase 18: Guided Workflow | Complete |
+| DC-21 | Phase 18: Guided Workflow | Complete |
 | DC-22 | Phase 18: Guided Workflow | Planned |
 | DC-23 | Phase 18: Guided Workflow | Planned |
 | DC-24 | Phase 18: Guided Workflow | Planned |
