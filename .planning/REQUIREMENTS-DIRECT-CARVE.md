@@ -36,7 +36,7 @@ Requirements for the v0.3.0 Direct Carve milestone. Each maps to roadmap phases 
 - [ ] **DC-16**: Milling direction selectable: climb, conventional, or alternating (bidirectional)
 - [ ] **DC-17**: Safe Z height configurable with automatic retract between scan lines and around island boundaries
 - [ ] **DC-18**: Clearing passes generate only for identified island regions (surgical clearing), not the entire surface
-- [ ] **DC-19**: Toolpath respects machine profile travel limits and acceleration constraints
+- [x] **DC-19**: Toolpath respects machine profile travel limits (acceleration managed by GRBL firmware)
 
 ### Guided Workflow
 
