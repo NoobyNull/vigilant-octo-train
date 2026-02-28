@@ -237,7 +237,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 14. Heightmap Engine | v0.3.0 | 0/2 | Planned | - |
+| 14. Heightmap Engine | 1/2 | In Progress|  | - |
 | 15. Model Analysis | v0.3.0 | 0/2 | Planned | - |
 | 16. Tool Recommendation | v0.3.0 | 0/2 | Planned | - |
 | 17. Toolpath Generation | v0.3.0 | 0/3 | Planned | - |
