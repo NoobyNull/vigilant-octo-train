@@ -170,6 +170,7 @@ set(DW_SOURCES
     ui/widgets/binding_recorder.cpp
     ui/widgets/status_bar.cpp
     ui/widgets/toast.cpp
+    ui/widgets/tool_recommendation_widget.cpp
 
     # UI Dialogs
     ui/dialogs/message_dialog.cpp
