@@ -1,9 +1,13 @@
 #pragma once
 
+#include "../cnc/cnc_tool.h"
 #include "../mesh/vertex.h"
 #include "../types.h"
 #include "heightmap.h"
+#include "island_detector.h"
 #include "model_fitter.h"
+#include "surface_analysis.h"
+#include "toolpath_types.h"
 
 #include <atomic>
 #include <future>
@@ -45,11 +49,28 @@ public:
     // Cancel in-progress computation
     void cancel();
 
+    // Analysis results (available after heightmap)
+    const CurvatureResult& curvatureResult() const;
+    const IslandResult& islandResult() const;
+
+    // Run analysis after heightmap (call from main thread, fast)
+    void analyzeHeightmap(f32 toolAngleDeg);
+
+    // Toolpath generation
+    void generateToolpath(const ToolpathConfig& config,
+                          const VtdbToolGeometry& finishTool,
+                          const VtdbToolGeometry* clearTool);
+    const MultiPassToolpath& toolpath() const;
+
 private:
     std::atomic<CarveJobState> m_state{CarveJobState::Idle};
     std::atomic<f32> m_progress{0.0f};
     std::atomic<bool> m_cancelled{false};
     Heightmap m_heightmap;
+    CurvatureResult m_curvature;
+    IslandResult m_islands;
+    MultiPassToolpath m_toolpath;
+    bool m_analyzed = false;
     std::string m_error;
     std::future<void> m_future;
 };

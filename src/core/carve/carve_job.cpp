@@ -1,4 +1,7 @@
 #include "carve_job.h"
+#include "surface_analysis.h"
+#include "island_detector.h"
+#include "toolpath_generator.h"
 
 #include <stdexcept>
 
@@ -102,6 +105,62 @@ std::string CarveJob::errorMessage() const
 void CarveJob::cancel()
 {
     m_cancelled.store(true, std::memory_order_release);
+}
+
+const CurvatureResult& CarveJob::curvatureResult() const
+{
+    return m_curvature;
+}
+
+const IslandResult& CarveJob::islandResult() const
+{
+    return m_islands;
+}
+
+void CarveJob::analyzeHeightmap(f32 toolAngleDeg)
+{
+    if (m_state.load(std::memory_order_acquire) != CarveJobState::Ready) {
+        return;
+    }
+    m_curvature = analyzeCurvature(m_heightmap);
+    m_islands = detectIslands(m_heightmap, toolAngleDeg);
+    m_analyzed = true;
+}
+
+void CarveJob::generateToolpath(const ToolpathConfig& config,
+                                 const VtdbToolGeometry& finishTool,
+                                 const VtdbToolGeometry* clearTool)
+{
+    if (!m_analyzed) {
+        return;
+    }
+
+    ToolpathGenerator gen;
+
+    m_toolpath.finishing = gen.generateFinishing(
+        m_heightmap, config,
+        static_cast<f32>(finishTool.flat_diameter), finishTool);
+
+    if (clearTool && !m_islands.islands.empty()) {
+        m_toolpath.clearing = gen.generateClearing(
+            m_heightmap, m_islands, config,
+            static_cast<f32>(clearTool->diameter));
+        m_toolpath.totalTimeSec =
+            m_toolpath.finishing.estimatedTimeSec +
+            m_toolpath.clearing.estimatedTimeSec;
+        m_toolpath.totalLineCount =
+            m_toolpath.finishing.lineCount +
+            m_toolpath.clearing.lineCount;
+    } else {
+        m_toolpath.clearing = Toolpath{};
+        m_toolpath.totalTimeSec = m_toolpath.finishing.estimatedTimeSec;
+        m_toolpath.totalLineCount = m_toolpath.finishing.lineCount;
+    }
+}
+
+const MultiPassToolpath& CarveJob::toolpath() const
+{
+    return m_toolpath;
 }
 
 } // namespace carve
