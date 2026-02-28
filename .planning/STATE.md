@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-28T20:15:00.000Z"
+last_updated: "2026-02-28T20:16:28.925Z"
 progress:
   total_phases: 28
   completed_phases: 15
   total_plans: 55
-  completed_plans: 44
+  completed_plans: 45
 ---
 
 # Project State
@@ -61,6 +61,7 @@ Last activity: 2026-02-28 — Island clearing pass with multi-depth raster and r
 - Stepdown equals tool diameter for multi-depth island clearing passes
 - 0.2mm margin above island floor prevents over-cutting
 - Lead-in/out ramp distance from config (not hardcoded)
+- [Phase 17]: V-bit 8-neighbor cone-gouge check, ball-nose drop-cutter, end-mill max-Z-within-radius for tool offset compensation
 
 ### Pending Todos
 None.
