@@ -568,6 +568,8 @@ void Application::initWiring() {
         if (dcarvep) {
             dcarvep->setCncController(m_cncController.get());
             dcarvep->setToolDatabase(m_toolDatabase.get());
+            dcarvep->setFileDialog(m_uiManager->fileDialog());
+            dcarvep->setGCodePanel(gcp);
         }
 
         // Set CncController on new panels
