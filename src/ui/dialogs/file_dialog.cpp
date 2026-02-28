@@ -20,14 +20,16 @@ void FileDialog::render() {
 
     ImGui::OpenPopup(m_title.c_str());
 
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    const auto* viewport = ImGui::GetMainViewport();
+    ImVec2 center = viewport->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(600, 450), ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x * 0.45f, viewport->WorkSize.y * 0.5f), ImGuiCond_Appearing);
 
     if (ImGui::BeginPopupModal(m_title.c_str(), &m_open)) {
         // Path bar
         ImGui::Text("%s", m_currentPath.c_str());
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 80);
+        float upBtnW = ImGui::CalcTextSize("Up").x + ImGui::GetStyle().FramePadding.x * 4;
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - upBtnW);
         if (ImGui::Button("Up")) {
             std::string parent = file::getParent(m_currentPath).string();
             if (!parent.empty() && parent != m_currentPath) {
@@ -44,7 +46,8 @@ void FileDialog::render() {
         ImGui::Separator();
 
         // File list
-        ImGui::BeginChild("FileList", ImVec2(0, -80), true);
+        float bottomReserve = ImGui::GetFrameHeightWithSpacing() * 3; // filename input + filter + buttons
+        ImGui::BeginChild("FileList", ImVec2(0, -bottomReserve), true);
 
         for (const auto& entry : m_entries) {
             bool isSelected = m_multiSelect ? (m_selectedFiles.count(entry.name) > 0)
@@ -106,14 +109,14 @@ void FileDialog::render() {
         ImGui::Separator();
 
         if (m_mode == FileDialogMode::Save) {
-            ImGui::SetNextItemWidth(400);
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.65f);
             ImGui::InputText("Filename", m_inputFileName.data(), 256);
         }
 
         // Filter dropdown
         if (!m_filters.empty() && m_mode != FileDialogMode::SelectFolder) {
             ImGui::SameLine();
-            ImGui::SetNextItemWidth(150);
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.35f);
             if (ImGui::BeginCombo("##Filter", m_filters[m_selectedFilter].name.c_str())) {
                 for (size_t i = 0; i < m_filters.size(); ++i) {
                     if (ImGui::Selectable(m_filters[i].name.c_str(),
@@ -129,7 +132,7 @@ void FileDialog::render() {
         ImGui::Spacing();
 
         // Buttons
-        float buttonWidth = 100.0f;
+        float buttonWidth = ImGui::CalcTextSize("Cancel").x + ImGui::GetStyle().FramePadding.x * 4;
 
         if (m_multiSelect && !m_selectedFiles.empty()) {
             ImGui::Text("%d item(s) selected", static_cast<int>(m_selectedFiles.size()));

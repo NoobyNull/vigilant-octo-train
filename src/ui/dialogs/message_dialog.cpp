@@ -15,9 +15,10 @@ void MessageDialog::render() {
 
     ImGui::OpenPopup(m_title.c_str());
 
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    const auto* viewport = ImGui::GetMainViewport();
+    ImVec2 center = viewport->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(400, 0), ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x * 0.3f, 0), ImGuiCond_Appearing);
 
     if (ImGui::BeginPopupModal(m_title.c_str(), &m_open, ImGuiWindowFlags_AlwaysAutoResize)) {
         // Icon based on type
@@ -52,7 +53,7 @@ void MessageDialog::render() {
         ImGui::Separator();
         ImGui::Spacing();
 
-        float buttonWidth = 120.0f;
+        float buttonWidth = ImGui::CalcTextSize("Cancel").x + ImGui::GetStyle().FramePadding.x * 6;
         float spacing = ImGui::GetStyle().ItemSpacing.x;
         float contentWidth = ImGui::GetContentRegionAvail().x;
 
@@ -136,9 +137,10 @@ void ConfirmDialog::render() {
 
     ImGui::OpenPopup(m_title.c_str());
 
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    const auto* viewport = ImGui::GetMainViewport();
+    ImVec2 center = viewport->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(350, 0), ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x * 0.25f, 0), ImGuiCond_Appearing);
 
     if (ImGui::BeginPopupModal(m_title.c_str(), &m_open, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.7f, 0.9f, 1.0f));
@@ -152,7 +154,7 @@ void ConfirmDialog::render() {
         ImGui::Separator();
         ImGui::Spacing();
 
-        float buttonWidth = 100.0f;
+        float buttonWidth = ImGui::CalcTextSize("Cancel").x + ImGui::GetStyle().FramePadding.x * 6;
         float spacing = ImGui::GetStyle().ItemSpacing.x;
         float contentWidth = ImGui::GetContentRegionAvail().x;
 

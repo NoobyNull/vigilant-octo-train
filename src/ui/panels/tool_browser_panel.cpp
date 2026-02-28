@@ -53,6 +53,7 @@ void ToolBrowserPanel::render() {
         m_needsRefresh = false;
     }
 
+    applyMinSize(22, 10);
     if (!ImGui::Begin(m_title.c_str(), &m_open)) {
         ImGui::End();
         return;
@@ -68,7 +69,7 @@ void ToolBrowserPanel::render() {
     ImGui::Separator();
 
     // Two-column layout: tree (left) | detail (right)
-    float treeWidth = 260.0f;
+    float treeWidth = ImGui::GetContentRegionAvail().x * 0.25f;
     ImVec2 avail = ImGui::GetContentRegionAvail();
 
     if (ImGui::BeginChild("ToolTree", ImVec2(treeWidth, avail.y), ImGuiChildFlags_Borders)) {
@@ -359,7 +360,8 @@ void ToolBrowserPanel::renderToolDetail() {
     ImGui::Spacing();
     char saveBtnLabel[64];
     std::snprintf(saveBtnLabel, sizeof(saveBtnLabel), "%s Save Changes", Icons::Save);
-    if (ImGui::Button(saveBtnLabel, ImVec2(150, 0))) {
+    float saveBtnW = ImGui::CalcTextSize(saveBtnLabel).x + ImGui::GetStyle().FramePadding.x * 4;
+    if (ImGui::Button(saveBtnLabel, ImVec2(saveBtnW, 0))) {
         m_toolDatabase->updateGeometry(m_editGeometry);
         if (m_hasCuttingData) {
             m_toolDatabase->updateCuttingData(m_editCuttingData);
@@ -423,7 +425,8 @@ void ToolBrowserPanel::renderAddToolPopup() {
         }
 
         ImGui::Spacing();
-        if (ImGui::Button("Create", ImVec2(120, 0))) {
+        float toolDlgBtnW = ImGui::CalcTextSize("Cancel").x + ImGui::GetStyle().FramePadding.x * 4;
+        if (ImGui::Button("Create", ImVec2(toolDlgBtnW, 0))) {
             // Auto-generate name if empty
             if (m_addToolName.empty()) {
                 char autoName[128];
@@ -449,7 +452,7 @@ void ToolBrowserPanel::renderAddToolPopup() {
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        if (ImGui::Button("Cancel", ImVec2(toolDlgBtnW, 0))) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
@@ -490,7 +493,8 @@ void ToolBrowserPanel::renderAddGroupPopup() {
         }
 
         ImGui::Spacing();
-        if (ImGui::Button("Create", ImVec2(120, 0))) {
+        float grpBtnW = ImGui::CalcTextSize("Cancel").x + ImGui::GetStyle().FramePadding.x * 4;
+        if (ImGui::Button("Create", ImVec2(grpBtnW, 0))) {
             if (!m_addGroupName.empty()) {
                 VtdbTreeEntry te;
                 te.parent_group_id = m_addGroupParentId;
@@ -502,7 +506,7 @@ void ToolBrowserPanel::renderAddGroupPopup() {
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        if (ImGui::Button("Cancel", ImVec2(grpBtnW, 0))) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
@@ -625,7 +629,8 @@ void ToolBrowserPanel::renderCalculator() {
     // Calculate button
     char calcBtnLabel[64];
     std::snprintf(calcBtnLabel, sizeof(calcBtnLabel), "%s Calculate", Icons::Settings);
-    if (ImGui::Button(calcBtnLabel, ImVec2(150, 0))) {
+    float calcBtnW = ImGui::CalcTextSize(calcBtnLabel).x + ImGui::GetStyle().FramePadding.x * 4;
+    if (ImGui::Button(calcBtnLabel, ImVec2(calcBtnW, 0))) {
         runCalculation();
     }
 

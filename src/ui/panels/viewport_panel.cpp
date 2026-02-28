@@ -32,6 +32,7 @@ void ViewportPanel::render() {
         }
     }
 
+    applyMinSize(20, 10);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 
     if (ImGui::Begin(m_title.c_str(),

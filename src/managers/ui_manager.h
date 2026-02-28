@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "../core/config/layout_preset.h"
 #include "../core/types.h"
 
 using ImGuiID = unsigned int;
@@ -174,6 +175,13 @@ class UIManager {
     void showCncPanels(bool show); // Show/hide CNC panels without affecting model panels
     bool& showRestartPopup() { return m_showRestartPopup; }
 
+    // Layout presets
+    void applyLayoutPreset(int presetIndex);
+    LayoutPreset captureCurrentLayout(const std::string& name) const;
+    void saveCurrentAsPreset(const std::string& name);
+    void deletePreset(int index);
+    int activePresetIndex() const { return m_activePresetIndex; }
+
     // --- Action callbacks (set by Application) ---
     void setOnNewProject(ActionCallback cb) { m_onNewProject = std::move(cb); }
     void setOnOpenProject(ActionCallback cb) { m_onOpenProject = std::move(cb); }
@@ -256,6 +264,25 @@ class UIManager {
     bool m_showCncSettings = false;
     bool m_showCncMacros = false;
     bool m_showStartPage = true;
+
+    // Panel registry for preset system
+    struct PanelEntry {
+        const char* key;         // Preset key (e.g. "cnc_status")
+        bool* showFlag;          // &m_showCncStatus
+        const char* menuLabel;   // View menu display name
+        const char* windowTitle; // ImGui window title for focus detection
+    };
+    std::vector<PanelEntry> m_panelRegistry;
+    void buildPanelRegistry();
+
+    // Layout preset state
+    int m_activePresetIndex = 0;
+    bool m_suppressAutoContext = false;
+    bool m_showSavePresetPopup = false;
+    char m_presetNameBuf[64] = {};
+    void checkAutoContextTrigger(const std::string& focusedPanelKey);
+    void renderPresetSelector();
+    void renderSavePresetPopup();
 
     // Workspace mode
     WorkspaceMode m_workspaceMode = WorkspaceMode::Model;

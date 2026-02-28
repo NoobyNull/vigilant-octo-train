@@ -35,6 +35,7 @@ set(DW_SOURCES
     core/config/config.cpp
     core/config/config_watcher.cpp
     core/config/input_binding.cpp
+    core/config/layout_preset.cpp
 
     # Database
     core/database/database.cpp

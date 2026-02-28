@@ -210,7 +210,7 @@ void LibraryPanel::renderModelItem(const ModelRecord& model,
                               isSelected,
                               ImGuiSelectableFlags_AllowDoubleClick |
                                   ImGuiSelectableFlags_DontClosePopups,
-                              ImVec2(0, 24.0f))) {
+                              ImVec2(0, ImGui::GetTextLineHeightWithSpacing()))) {
             if (ImGui::IsMouseDoubleClicked(0)) {
                 if (m_onModelOpened)
                     m_onModelOpened(model.id);
@@ -673,7 +673,7 @@ void LibraryPanel::renderGCodeItem(const GCodeRecord& gcode,
                               isSelected,
                               ImGuiSelectableFlags_AllowDoubleClick |
                                   ImGuiSelectableFlags_DontClosePopups,
-                              ImVec2(0, 24.0f))) {
+                              ImVec2(0, ImGui::GetTextLineHeightWithSpacing()))) {
             if (ImGui::IsMouseDoubleClicked(0)) {
                 if (m_onGCodeOpened)
                     m_onGCodeOpened(gcode.id);

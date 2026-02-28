@@ -53,12 +53,13 @@ struct LongPressButton {
 static LongPressButton s_abortLongPress;
 } // namespace
 
-CncSafetyPanel::CncSafetyPanel() : Panel("Safety Controls") {}
+CncSafetyPanel::CncSafetyPanel() : Panel("Safety") {}
 
 void CncSafetyPanel::render() {
     if (!m_open)
         return;
 
+    applyMinSize(18, 10);
     if (!ImGui::Begin(m_title.c_str(), &m_open)) {
         ImGui::End();
         return;
@@ -96,6 +97,8 @@ void CncSafetyPanel::render() {
 
 void CncSafetyPanel::renderSafetyControls() {
     ImGui::SeparatorText("Job Control");
+    const auto& style = ImGui::GetStyle();
+    float safetyBtnH = ImGui::GetFrameHeight() * 1.5f;
 
     // --- Pause button ---
     bool canPause = m_connected &&
@@ -112,7 +115,9 @@ void CncSafetyPanel::renderSafetyControls() {
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.75f, 0.55f, 0.10f, 1.0f));
 
     std::string pauseLabel = std::string(Icons::Pause) + " Pause";
-    if (ImGui::Button(pauseLabel.c_str(), ImVec2(100, 32))) {
+    float pauseW = ImGui::CalcTextSize(pauseLabel.c_str()).x
+                   + style.FramePadding.x * 4;
+    if (ImGui::Button(pauseLabel.c_str(), ImVec2(pauseW, safetyBtnH))) {
         if (m_cnc) m_cnc->feedHold();
     }
 
@@ -137,7 +142,9 @@ void CncSafetyPanel::renderSafetyControls() {
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.15f, 0.6f, 0.25f, 1.0f));
 
     std::string resumeLabel = std::string(Icons::Play) + " Resume";
-    if (ImGui::Button(resumeLabel.c_str(), ImVec2(100, 32))) {
+    float resumeW = ImGui::CalcTextSize(resumeLabel.c_str()).x
+                    + style.FramePadding.x * 4;
+    if (ImGui::Button(resumeLabel.c_str(), ImVec2(resumeW, safetyBtnH))) {
         if (m_cnc) m_cnc->cycleStart();
     }
 
@@ -160,7 +167,10 @@ void CncSafetyPanel::renderSafetyControls() {
         // Long-press abort — the hold IS the confirmation
         float durationMs = static_cast<float>(cfg.getSafetyLongPressDurationMs());
         std::string abortLabel = std::string(Icons::Stop) + " Hold to Abort";
-        if (s_abortLongPress.render(abortLabel.c_str(), ImVec2(130, 32), durationMs, canAbort)) {
+        float abortW = ImGui::CalcTextSize(abortLabel.c_str()).x
+                       + style.FramePadding.x * 4;
+        if (s_abortLongPress.render(abortLabel.c_str(),
+                ImVec2(abortW, safetyBtnH), durationMs, canAbort)) {
             if (m_cnc) {
                 if (cfg.getSafetyPauseBeforeResetEnabled()) {
                     m_cnc->feedHold();
@@ -178,7 +188,9 @@ void CncSafetyPanel::renderSafetyControls() {
         if (!canAbort)
             ImGui::BeginDisabled();
         std::string abortLabel = std::string(Icons::Stop) + " Abort";
-        if (ImGui::Button(abortLabel.c_str(), ImVec2(100, 32))) {
+        float abortW = ImGui::CalcTextSize(abortLabel.c_str()).x
+                       + style.FramePadding.x * 4;
+        if (ImGui::Button(abortLabel.c_str(), ImVec2(abortW, safetyBtnH))) {
             if (m_streaming) {
                 // Show confirmation dialog when a job is running
                 m_showAbortConfirm = true;
@@ -240,7 +252,8 @@ void CncSafetyPanel::renderAbortConfirmDialog() {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.15f, 0.15f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.25f, 0.25f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
-        if (ImGui::Button("Abort Job", ImVec2(120, 0))) {
+        float abortDlgBtnW = ImGui::CalcTextSize("Abort Job").x + ImGui::GetStyle().FramePadding.x * 4;
+        if (ImGui::Button("Abort Job", ImVec2(abortDlgBtnW, 0))) {
             if (m_cnc) {
                 if (Config::instance().getSafetyPauseBeforeResetEnabled()) {
                     // Pause-before-reset: feed hold first, soft reset after 200ms
@@ -258,7 +271,7 @@ void CncSafetyPanel::renderAbortConfirmDialog() {
         ImGui::SameLine();
 
         // Cancel button
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        if (ImGui::Button("Cancel", ImVec2(abortDlgBtnW, 0))) {
             ImGui::CloseCurrentPopup();
         }
 
@@ -296,7 +309,7 @@ void CncSafetyPanel::renderDrawOutline() {
     // Safe Z height input (stored in mm, displayed in user units)
     ImGui::Text("Safe Z height:");
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(80.0f);
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6);
     ImGui::InputFloat("##safeZ", &m_outlineSafeZ, 0.0f, 0.0f, "%.1f");
     ImGui::SameLine();
     ImGui::TextDisabled("%s", pu);
@@ -306,7 +319,7 @@ void CncSafetyPanel::renderDrawOutline() {
     // Feed rate input (stored in mm/min, displayed in user units)
     ImGui::Text("Travel speed:");
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(80.0f);
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6);
     ImGui::InputFloat("##outlineFeed", &m_outlineFeedRate, 0.0f, 0.0f, "%.0f");
     ImGui::SameLine();
     ImGui::TextDisabled("%s", fu);
@@ -404,21 +417,36 @@ void CncSafetyPanel::renderSensorDisplay() {
 
     // Limit switches (red when active -- indicates potential issue)
     ImVec4 limitColor(1.0f, 0.3f, 0.3f, 1.0f);
-    pinIndicator("X Limit", cnc::PIN_X_LIMIT, limitColor);
-    ImGui::SameLine(120);
-    pinIndicator("Y Limit", cnc::PIN_Y_LIMIT, limitColor);
-    ImGui::SameLine(240);
-    pinIndicator("Z Limit", cnc::PIN_Z_LIMIT, limitColor);
+    if (ImGui::BeginTable("##limitpins", 3, ImGuiTableFlags_None)) {
+        ImGui::TableSetupColumn("X", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Y", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Z", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        pinIndicator("X Limit", cnc::PIN_X_LIMIT, limitColor);
+        ImGui::TableNextColumn();
+        pinIndicator("Y Limit", cnc::PIN_Y_LIMIT, limitColor);
+        ImGui::TableNextColumn();
+        pinIndicator("Z Limit", cnc::PIN_Z_LIMIT, limitColor);
+        ImGui::EndTable();
+    }
 
-    // Probe (green when active)
+    // Probe (green when active) and Door (yellow when active)
     ImVec4 probeColor(0.3f, 0.8f, 0.3f, 1.0f);
-    pinIndicator("Probe", cnc::PIN_PROBE, probeColor);
-
-    ImGui::SameLine(120);
-
-    // Door (yellow when active)
     ImVec4 doorColor(1.0f, 0.8f, 0.2f, 1.0f);
-    pinIndicator("Door", cnc::PIN_DOOR, doorColor);
+    if (ImGui::BeginTable("##otherpins", 3, ImGuiTableFlags_None)) {
+        ImGui::TableSetupColumn("Col1", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Col2", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Col3", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        pinIndicator("Probe", cnc::PIN_PROBE, probeColor);
+        ImGui::TableNextColumn();
+        pinIndicator("Door", cnc::PIN_DOOR, doorColor);
+        ImGui::TableNextColumn();
+        // Empty third column for alignment
+        ImGui::EndTable();
+    }
 }
 
 void CncSafetyPanel::renderResumeDialog() {
@@ -429,7 +457,7 @@ void CncSafetyPanel::renderResumeDialog() {
 
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(480, 0), ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize(ImVec2(ImGui::GetMainViewport()->WorkSize.x * 0.35f, 0), ImGuiCond_Appearing);
 
     if (!ImGui::BeginPopupModal("Resume From Line", nullptr,
                                  ImGuiWindowFlags_AlwaysAutoResize))
@@ -440,7 +468,7 @@ void CncSafetyPanel::renderResumeDialog() {
     // --- Line number input ---
     ImGui::Text("Line number:");
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(120);
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
     if (ImGui::InputInt("##resumeline", &m_resumeLine)) {
         // Clamp to valid range
         if (m_resumeLine < 1) m_resumeLine = 1;
@@ -477,7 +505,8 @@ void CncSafetyPanel::renderResumeDialog() {
 
         ImGui::PushStyleColor(ImGuiCol_ChildBg,
                               ImVec4(0.12f, 0.12f, 0.12f, 1.0f));
-        if (ImGui::BeginChild("##preamble", ImVec2(-1, 120), true)) {
+        float preambleH = ImGui::GetTextLineHeightWithSpacing() * 6;
+        if (ImGui::BeginChild("##preamble", ImVec2(-1, preambleH), true)) {
             for (const auto& line : m_preambleLines) {
                 ImGui::TextUnformatted(line.c_str());
             }
@@ -540,7 +569,8 @@ void CncSafetyPanel::renderResumeDialog() {
     ImGui::PushStyleColor(ImGuiCol_ButtonActive,
                           ImVec4(0.15f, 0.6f, 0.25f, 1.0f));
 
-    if (ImGui::Button("Resume", ImVec2(120, 0))) {
+    float resumeDlgBtnW = ImGui::CalcTextSize("Resume").x + ImGui::GetStyle().FramePadding.x * 4;
+    if (ImGui::Button("Resume", ImVec2(resumeDlgBtnW, 0))) {
         // Build combined program: preamble + remaining lines
         std::vector<std::string> combined;
         combined.reserve(
@@ -567,7 +597,7 @@ void CncSafetyPanel::renderResumeDialog() {
     ImGui::SameLine();
 
     // Cancel button
-    if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+    if (ImGui::Button("Cancel", ImVec2(resumeDlgBtnW, 0))) {
         m_preambleGenerated = false;
         m_preambleLines.clear();
         m_preflightIssues.clear();
@@ -590,7 +620,7 @@ void CncSafetyPanel::renderProbeDialog() {
                                  ImGuiWindowFlags_AlwaysAutoResize))
         return;
 
-    if (ImGui::BeginTabBar("ProbeTabs")) {
+    if (ImGui::BeginTabBar("ProbeTabs", ImGuiTabBarFlags_FittingPolicyScroll)) {
         if (ImGui::BeginTabItem("Z-Probe")) {
             renderZProbeTab();
             ImGui::EndTabItem();
@@ -607,7 +637,8 @@ void CncSafetyPanel::renderProbeDialog() {
     }
 
     ImGui::Separator();
-    if (ImGui::Button("Close", ImVec2(120, 0))) {
+    float closeBtnW = ImGui::CalcTextSize("Close").x + ImGui::GetStyle().FramePadding.x * 4;
+    if (ImGui::Button("Close", ImVec2(closeBtnW, 0))) {
         ImGui::CloseCurrentPopup();
     }
 
@@ -629,19 +660,19 @@ void CncSafetyPanel::renderZProbeTab() {
     std::snprintf(searchLabel, sizeof(searchLabel), "Search Distance (%s)", pu);
     std::snprintf(retractLabel, sizeof(retractLabel), "Retract Distance (%s)", pu);
 
-    ImGui::SetNextItemWidth(120);
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
     ImGui::InputFloat(speedLabel, &m_probeApproachSpeed, 10, 50, "%.0f");
     m_probeApproachSpeed = std::clamp(m_probeApproachSpeed, 1.0f, 1000.0f);
 
-    ImGui::SetNextItemWidth(120);
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
     ImGui::InputFloat(thickLabel, &m_probePlateThickness, 0.1f, 1.0f, "%.3f");
     m_probePlateThickness = std::max(0.0f, m_probePlateThickness);
 
-    ImGui::SetNextItemWidth(120);
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
     ImGui::InputFloat(searchLabel, &m_probeSearchDist, 5, 10, "%.1f");
     m_probeSearchDist = std::clamp(m_probeSearchDist, 1.0f, 200.0f);
 
-    ImGui::SetNextItemWidth(120);
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
     ImGui::InputFloat(retractLabel, &m_probeRetractDist, 0.5f, 1, "%.1f");
     m_probeRetractDist = std::clamp(m_probeRetractDist, 0.1f, 20.0f);
 
@@ -670,7 +701,10 @@ void CncSafetyPanel::renderZProbeTab() {
     bool canProbe = m_cnc && m_connected &&
                     m_status.state == MachineState::Idle;
     if (!canProbe) ImGui::BeginDisabled();
-    if (ImGui::Button("Run Z-Probe", ImVec2(160, 30))) {
+    float zProbeW = ImGui::CalcTextSize("Run Z-Probe").x
+                    + ImGui::GetStyle().FramePadding.x * 4;
+    float probeBtnH = ImGui::GetFrameHeight() * 1.5f;
+    if (ImGui::Button("Run Z-Probe", ImVec2(zProbeW, probeBtnH))) {
         char cmd[256];
         m_cnc->sendCommand("G21 G91");
         std::snprintf(cmd, sizeof(cmd), "G38.2 Z-%.1f F%.0f",
@@ -724,11 +758,11 @@ void CncSafetyPanel::renderTlsTab() {
     std::snprintf(tlsSpeedLabel, sizeof(tlsSpeedLabel), "Approach Speed (%s)##tls", fu);
     std::snprintf(tlsSearchLabel, sizeof(tlsSearchLabel), "Search Distance (%s)##tls", pu);
 
-    ImGui::SetNextItemWidth(120);
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
     ImGui::InputFloat(tlsSpeedLabel, &m_tlsApproachSpeed, 10, 50, "%.0f");
     m_tlsApproachSpeed = std::clamp(m_tlsApproachSpeed, 1.0f, 500.0f);
 
-    ImGui::SetNextItemWidth(120);
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
     ImGui::InputFloat(tlsSearchLabel, &m_tlsSearchDist, 10, 50, "%.0f");
     m_tlsSearchDist = std::clamp(m_tlsSearchDist, 1.0f, 300.0f);
 
@@ -741,7 +775,7 @@ void CncSafetyPanel::renderTlsTab() {
 
     char refZLabel[64];
     std::snprintf(refZLabel, sizeof(refZLabel), "Reference Z (%s)", pu);
-    ImGui::SetNextItemWidth(120);
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
     ImGui::InputFloat(refZLabel, &m_tlsReferenceZ, 0.1f, 1.0f, "%.3f");
 
     ImGui::SameLine();
@@ -769,7 +803,10 @@ void CncSafetyPanel::renderTlsTab() {
     ImGui::Spacing();
 
     if (!canCapture) ImGui::BeginDisabled();
-    if (ImGui::Button("Probe & Set Tool Length", ImVec2(200, 30))) {
+    float tlsBtnW = ImGui::CalcTextSize("Probe & Set Tool Length").x
+                    + ImGui::GetStyle().FramePadding.x * 4;
+    float tlsBtnH = ImGui::GetFrameHeight() * 1.5f;
+    if (ImGui::Button("Probe & Set Tool Length", ImVec2(tlsBtnW, tlsBtnH))) {
         char cmd[256];
         m_cnc->sendCommand("G21 G91");
         std::snprintf(cmd, sizeof(cmd), "G38.2 Z-%.0f F%.0f",
@@ -809,15 +846,15 @@ void CncSafetyPanel::render3DProbeTab() {
     std::snprintf(retractLbl, sizeof(retractLbl), "Retract Dist (%s)##3d", pu);
     std::snprintf(searchLbl, sizeof(searchLbl), "Search Dist (%s)##3d", pu);
 
-    ImGui::SetNextItemWidth(120);
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
     ImGui::InputFloat(probeSpeedLbl, &m_3dProbeSpeed, 10, 50, "%.0f");
     m_3dProbeSpeed = std::clamp(m_3dProbeSpeed, 1.0f, 1000.0f);
 
-    ImGui::SetNextItemWidth(120);
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
     ImGui::InputFloat(retractLbl, &m_3dProbeRetract, 1, 5, "%.1f");
     m_3dProbeRetract = std::clamp(m_3dProbeRetract, 0.5f, 50.0f);
 
-    ImGui::SetNextItemWidth(120);
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
     ImGui::InputFloat(searchLbl, &m_3dProbeSearchDist, 5, 10, "%.0f");
     m_3dProbeSearchDist = std::clamp(m_3dProbeSearchDist, 1.0f, 200.0f);
 
@@ -825,7 +862,7 @@ void CncSafetyPanel::render3DProbeTab() {
     ImGui::SeparatorText("Probe Operation");
 
     const char* modes[] = {"Edge X", "Edge Y", "Corner (X+Y)", "Center (X)"};
-    ImGui::SetNextItemWidth(160);
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10);
     ImGui::Combo("Mode##3d", &m_3dProbeMode, modes, 4);
 
     ImGui::Spacing();
@@ -881,7 +918,10 @@ void CncSafetyPanel::render3DProbeTab() {
 
     bool canProbe = m_cnc && m_connected && m_status.state == MachineState::Idle;
     if (!canProbe) ImGui::BeginDisabled();
-    if (ImGui::Button("Run Probe", ImVec2(160, 30))) {
+    float runProbeW = ImGui::CalcTextSize("Run Probe").x
+                      + ImGui::GetStyle().FramePadding.x * 4;
+    float runProbeBtnH = ImGui::GetFrameHeight() * 1.5f;
+    if (ImGui::Button("Run Probe", ImVec2(runProbeW, runProbeBtnH))) {
         char cmd[256];
         m_cnc->sendCommand("G21 G91");
 

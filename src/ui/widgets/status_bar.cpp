@@ -2,6 +2,7 @@
 
 #include "ui/widgets/status_bar.h"
 
+#include <algorithm>
 #include <cstdio>
 
 #include <imgui.h>
@@ -25,7 +26,8 @@ void StatusBar::render(const LoadingState* loadingState) {
                              ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
                              ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking;
 
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 4));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,
+                        ImVec2(ImGui::GetStyle().WindowPadding.x, ImGui::GetStyle().FramePadding.y));
     if (ImGui::Begin("##StatusBar", nullptr, flags)) {
         // Left side: loading status or "Ready"
         if (loadingState && loadingState->active.load()) {
@@ -52,13 +54,15 @@ void StatusBar::render(const LoadingState* loadingState) {
             }
 
             // Align to right side
-            float progressBarWidth = 200.0f;
+            float progressBarWidth = std::max(ImGui::GetContentRegionAvail().x * 0.15f, 120.0f);
             float cancelButtonWidth = ImGui::CalcTextSize("X").x +
                                       ImGui::GetStyle().FramePadding.x * 2;
-            float totalWidth = progressBarWidth + cancelButtonWidth + 16; // spacing
+            float itemSpacing = ImGui::GetStyle().ItemSpacing.x * 2;
+            float totalWidth = progressBarWidth + cancelButtonWidth + itemSpacing;
             float windowWidth = ImGui::GetWindowWidth();
-            if (windowWidth > totalWidth + 100) { // Ensure enough space
-                ImGui::SameLine(windowWidth - totalWidth - 8);
+            float minContentWidth = totalWidth + windowWidth * 0.1f;
+            if (windowWidth > minContentWidth) { // Ensure enough space
+                ImGui::SameLine(windowWidth - totalWidth - ImGui::GetStyle().WindowPadding.x);
             } else {
                 ImGui::SameLine();
             }

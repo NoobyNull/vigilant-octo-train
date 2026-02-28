@@ -20,7 +20,8 @@ void MachineProfileDialog::render() {
     if (!m_open)
         return;
 
-    ImGui::SetNextWindowSize(ImVec2(380, 480), ImGuiCond_FirstUseEver);
+    const auto* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x * 0.28f, viewport->WorkSize.y * 0.5f), ImGuiCond_FirstUseEver);
 
     if (ImGui::Begin("Machine Profiles", &m_open)) {
         auto& config = Config::instance();

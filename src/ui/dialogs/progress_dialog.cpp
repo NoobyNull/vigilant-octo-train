@@ -50,7 +50,8 @@ void ProgressDialog::render() {
 
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(400, 0));
+    const auto* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x * 0.3f, 0), ImGuiCond_FirstUseEver);
 
     if (ImGui::BeginPopupModal(m_title.c_str(), nullptr, ImGuiWindowFlags_NoMove)) {
         int completed = m_completed.load(std::memory_order_relaxed);
@@ -80,7 +81,7 @@ void ProgressDialog::render() {
 
         // Cancel button (centered)
         if (m_cancellable) {
-            float buttonWidth = 120.0f;
+            float buttonWidth = ImGui::CalcTextSize("Cancel").x + ImGui::GetStyle().FramePadding.x * 4;
             float contentWidth = ImGui::GetContentRegionAvail().x;
             ImGui::SetCursorPosX((contentWidth - buttonWidth) / 2);
             if (ImGui::Button("Cancel", ImVec2(buttonWidth, 0))) {

@@ -28,9 +28,10 @@ void ImportSummaryDialog::render() {
     if (!m_open)
         return;
 
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    const auto* viewport = ImGui::GetMainViewport();
+    ImVec2 center = viewport->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(600, 0), ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x * 0.4f, 0), ImGuiCond_Appearing);
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
 
@@ -108,7 +109,8 @@ void ImportSummaryDialog::render() {
 
             if (!hasSelection)
                 ImGui::BeginDisabled();
-            if (ImGui::Button(reimportLabel.c_str(), ImVec2(200, 0))) {
+            float reimportBtnW = ImGui::CalcTextSize(reimportLabel.c_str()).x + ImGui::GetStyle().FramePadding.x * 4;
+            if (ImGui::Button(reimportLabel.c_str(), ImVec2(reimportBtnW, 0))) {
                 // Collect checked duplicates and invoke callback
                 std::vector<DuplicateRecord> selected;
                 for (size_t i = 0; i < m_summary.duplicates.size(); ++i) {
@@ -124,7 +126,8 @@ void ImportSummaryDialog::render() {
                 ImGui::EndDisabled();
 
             ImGui::SameLine();
-            if (ImGui::Button("Skip All", ImVec2(120, 0))) {
+            float skipBtnW = ImGui::CalcTextSize("Skip All").x + ImGui::GetStyle().FramePadding.x * 4;
+            if (ImGui::Button("Skip All", ImVec2(skipBtnW, 0))) {
                 m_open = false;
                 ImGui::CloseCurrentPopup();
             }
@@ -151,7 +154,8 @@ void ImportSummaryDialog::render() {
         if (m_summary.duplicateCount == 0) {
             ImGui::Separator();
             ImGui::Spacing();
-            if (ImGui::Button("OK", ImVec2(120, 0))) {
+            float okBtnW = ImGui::CalcTextSize("OK").x + ImGui::GetStyle().FramePadding.x * 4;
+            if (ImGui::Button("OK", ImVec2(okBtnW, 0))) {
                 m_open = false;
                 ImGui::CloseCurrentPopup();
             }

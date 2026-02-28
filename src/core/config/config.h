@@ -8,6 +8,7 @@
 #include "../gcode/machine_profile.h"
 #include "../types.h"
 #include "input_binding.h"
+#include "layout_preset.h"
 
 namespace dw {
 
@@ -274,6 +275,15 @@ class Config {
     void removeMachineProfile(int index);
     void updateMachineProfile(int index, const gcode::MachineProfile& profile);
 
+    // Layout presets
+    const std::vector<LayoutPreset>& getLayoutPresets() const { return m_layoutPresets; }
+    void setLayoutPresets(const std::vector<LayoutPreset>& presets) { m_layoutPresets = presets; }
+    int getActiveLayoutPresetIndex() const { return m_activeLayoutPresetIndex; }
+    void setActiveLayoutPresetIndex(int index);
+    void addLayoutPreset(const LayoutPreset& preset);
+    void removeLayoutPreset(int index);
+    void updateLayoutPreset(int index, const LayoutPreset& preset);
+
   private:
     Config();
     void initDefaultBindings();
@@ -349,7 +359,11 @@ class Config {
     Path m_gcodeDir;
     Path m_supportDir;
     bool m_showImportErrorToasts = true;
+#ifdef _WIN32
+    bool m_enableFloatingWindows = true;
+#else
     bool m_enableFloatingWindows = false;
+#endif
 
     // Default material
     i64 m_defaultMaterialId = -1;
@@ -388,6 +402,10 @@ class Config {
     // Machine profiles
     std::vector<gcode::MachineProfile> m_machineProfiles;
     int m_activeMachineProfileIndex = 0;
+
+    // Layout presets
+    std::vector<LayoutPreset> m_layoutPresets;
+    int m_activeLayoutPresetIndex = 0;
 };
 
 } // namespace dw

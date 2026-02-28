@@ -30,9 +30,10 @@ void TaggerShutdownDialog::render() {
         return;
     }
 
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    const auto* viewport = ImGui::GetMainViewport();
+    ImVec2 center = viewport->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(400, 0), ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x * 0.3f, 0), ImGuiCond_Appearing);
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
 

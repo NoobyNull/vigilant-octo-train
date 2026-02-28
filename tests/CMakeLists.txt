@@ -128,6 +128,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/config/config.cpp
     ${CMAKE_SOURCE_DIR}/src/core/config/config_watcher.cpp
     ${CMAKE_SOURCE_DIR}/src/core/config/input_binding.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/config/layout_preset.cpp
     ${CMAKE_SOURCE_DIR}/src/core/paths/app_paths.cpp
     ${CMAKE_SOURCE_DIR}/src/core/paths/path_resolver.cpp
     ${CMAKE_SOURCE_DIR}/src/core/storage/storage_manager.cpp

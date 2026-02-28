@@ -10,9 +10,10 @@ void MaintenanceDialog::render() {
     if (!m_open)
         return;
 
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    const auto* viewport = ImGui::GetMainViewport();
+    ImVec2 center = viewport->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(400, 0), ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x * 0.3f, 0), ImGuiCond_Appearing);
 
     if (!ImGui::Begin(m_title.c_str(),
                       &m_open,
@@ -34,7 +35,7 @@ void MaintenanceDialog::render() {
         ImGui::Separator();
         ImGui::Spacing();
 
-        float buttonWidth = 120.0f;
+        float buttonWidth = ImGui::CalcTextSize("Cancel").x + ImGui::GetStyle().FramePadding.x * 6;
         float totalWidth = buttonWidth * 2 + ImGui::GetStyle().ItemSpacing.x;
         float offset = (ImGui::GetContentRegionAvail().x - totalWidth) * 0.5f;
         if (offset > 0)
@@ -85,7 +86,7 @@ void MaintenanceDialog::render() {
         ImGui::Separator();
         ImGui::Spacing();
 
-        float buttonWidth = 120.0f;
+        float buttonWidth = ImGui::CalcTextSize("Cancel").x + ImGui::GetStyle().FramePadding.x * 6;
         float offset = (ImGui::GetContentRegionAvail().x - buttonWidth) * 0.5f;
         if (offset > 0)
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offset);

@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include <imgui.h>
+
 #include "core/utils/thread_utils.h"
 
 namespace dw {
@@ -23,6 +25,16 @@ class Panel {
     const std::string& title() const { return m_title; }
 
   protected:
+    // Apply minimum window size constraints before ImGui::Begin().
+    // widthChars/heightLines are in font-relative units for DPI scaling.
+    void applyMinSize(float widthChars, float heightLines) const {
+        float fontSize = ImGui::GetFontSize();
+        float minW = fontSize * widthChars;
+        float minH = ImGui::GetTextLineHeightWithSpacing() * heightLines;
+        ImGui::SetNextWindowSizeConstraints(ImVec2(minW, minH),
+                                            ImVec2(FLT_MAX, FLT_MAX));
+    }
+
     std::string m_title;
     bool m_open = true;
 };

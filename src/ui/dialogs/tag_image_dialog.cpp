@@ -97,8 +97,10 @@ void TagImageDialog::render() {
         return;
     }
 
-    ImGui::SetNextWindowSize(ImVec2(600, 420), ImGuiCond_FirstUseEver);
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    const auto* viewport = ImGui::GetMainViewport();
+    ImVec2 tagDlgSize(viewport->WorkSize.x * 0.45f, viewport->WorkSize.y * 0.45f);
+    ImGui::SetNextWindowSize(tagDlgSize, ImGuiCond_FirstUseEver);
+    ImVec2 center = viewport->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
     if (!ImGui::Begin("Tag Image", &m_open, ImGuiWindowFlags_NoDocking)) {
@@ -113,7 +115,7 @@ void TagImageDialog::render() {
     bool isReady = (m_state == State::Ready);
 
     // --- Layout: thumbnail on left, fields on right ---
-    float thumbSize = 192.0f;
+    float thumbSize = ImGui::GetFontSize() * 12;
     ImVec2 thumbUV0(0, 0);
     ImVec2 thumbUV1(1, 1);
 
@@ -162,7 +164,8 @@ void TagImageDialog::render() {
 
     ImGui::SetNextItemWidth(fieldWidth);
     ImGui::InputTextMultiline(
-        "Description", m_description, sizeof(m_description), ImVec2(fieldWidth, 60));
+        "Description", m_description, sizeof(m_description),
+        ImVec2(fieldWidth, ImGui::GetTextLineHeightWithSpacing() * 3));
 
     ImGui::SetNextItemWidth(fieldWidth);
     ImGui::InputText("Hover", m_hover, sizeof(m_hover));
@@ -189,8 +192,9 @@ void TagImageDialog::render() {
     ImGui::Separator();
     ImGui::Spacing();
 
+    float tagBtnW = ImGui::CalcTextSize("Cancel").x + ImGui::GetStyle().FramePadding.x * 4;
     if (isReady) {
-        if (ImGui::Button("Save", ImVec2(100, 0))) {
+        if (ImGui::Button("Save", ImVec2(tagBtnW, 0))) {
             if (m_onSave) {
                 m_onSave(m_record.id, buildResult());
             }
@@ -200,7 +204,7 @@ void TagImageDialog::render() {
         ImGui::SameLine();
     }
 
-    if (ImGui::Button("Cancel", ImVec2(100, 0))) {
+    if (ImGui::Button("Cancel", ImVec2(tagBtnW, 0))) {
         m_open = false;
         m_state = State::Idle;
     }

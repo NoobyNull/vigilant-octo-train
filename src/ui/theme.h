@@ -29,7 +29,8 @@ class Theme {
     };
 
     // Base style (spacing, rounding, borders) — called before ScaleAllSizes for DPI
-    static void applyBaseStyle();
+    // fontSize: base font size before DPI scaling (default 16.0f)
+    static void applyBaseStyle(float fontSize = 16.0f);
 };
 
 } // namespace dw

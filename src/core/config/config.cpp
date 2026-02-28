@@ -21,6 +21,10 @@ Config::Config() : m_parallelismTier(ParallelismTier::Auto) {
         gcode::MachineProfile::shapeoko4(),
         gcode::MachineProfile::longmillMK2(),
     };
+    m_layoutPresets = {
+        LayoutPreset::modelDefault(),
+        LayoutPreset::cncDefault(),
+    };
 }
 
 Config& Config::instance() {
@@ -50,6 +54,7 @@ bool Config::load() {
     std::string line;
     std::string section;
     std::optional<std::vector<gcode::MachineProfile>> loadedMachineProfiles;
+    std::optional<std::vector<LayoutPreset>> loadedLayoutPresets;
 
     while (std::getline(stream, line)) {
         line = str::trim(line);
@@ -288,6 +293,17 @@ bool Config::load() {
                     loadedMachineProfiles->push_back(std::move(profile));
                 }
             }
+        } else if (section == "layout_presets") {
+            if (key == "active_preset") {
+                str::parseInt(value, m_activeLayoutPresetIndex);
+            } else if (str::startsWith(key, "preset")) {
+                auto preset = LayoutPreset::fromJsonString(value);
+                if (!preset.name.empty()) {
+                    if (!loadedLayoutPresets)
+                        loadedLayoutPresets = std::vector<LayoutPreset>{};
+                    loadedLayoutPresets->push_back(std::move(preset));
+                }
+            }
         }
     }
 
@@ -298,6 +314,15 @@ bool Config::load() {
     if (m_activeMachineProfileIndex < 0 ||
         m_activeMachineProfileIndex >= static_cast<int>(m_machineProfiles.size())) {
         m_activeMachineProfileIndex = 0;
+    }
+
+    // Replace defaults with loaded layout presets if any were found
+    if (loadedLayoutPresets && !loadedLayoutPresets->empty()) {
+        m_layoutPresets = std::move(*loadedLayoutPresets);
+    }
+    if (m_activeLayoutPresetIndex < 0 ||
+        m_activeLayoutPresetIndex >= static_cast<int>(m_layoutPresets.size())) {
+        m_activeLayoutPresetIndex = 0;
     }
 
     log::infof("Config", "Loaded from %s", configPath.string().c_str());
@@ -487,6 +512,14 @@ bool Config::save() {
     for (size_t i = 0; i < m_machineProfiles.size(); ++i) {
         ss << "profile" << i << "=" << m_machineProfiles[i].toJsonString() << "\n";
     }
+    ss << "\n";
+
+    // Layout presets section
+    ss << "[layout_presets]\n";
+    ss << "active_preset=" << m_activeLayoutPresetIndex << "\n";
+    for (size_t i = 0; i < m_layoutPresets.size(); ++i) {
+        ss << "preset" << i << "=" << m_layoutPresets[i].toJsonString() << "\n";
+    }
 
     // Atomic save: write to temp file, then rename
     Path tempPath = configPath.string() + ".tmp";
@@ -591,6 +624,30 @@ void Config::removeMachineProfile(int index) {
 void Config::updateMachineProfile(int index, const gcode::MachineProfile& profile) {
     if (index >= 0 && index < static_cast<int>(m_machineProfiles.size()))
         m_machineProfiles[static_cast<size_t>(index)] = profile;
+}
+
+void Config::setActiveLayoutPresetIndex(int index) {
+    if (index >= 0 && index < static_cast<int>(m_layoutPresets.size()))
+        m_activeLayoutPresetIndex = index;
+}
+
+void Config::addLayoutPreset(const LayoutPreset& preset) {
+    m_layoutPresets.push_back(preset);
+}
+
+void Config::removeLayoutPreset(int index) {
+    if (index < 0 || index >= static_cast<int>(m_layoutPresets.size()))
+        return;
+    if (m_layoutPresets[static_cast<size_t>(index)].builtIn)
+        return;
+    m_layoutPresets.erase(m_layoutPresets.begin() + index);
+    if (m_activeLayoutPresetIndex >= static_cast<int>(m_layoutPresets.size()))
+        m_activeLayoutPresetIndex = static_cast<int>(m_layoutPresets.size()) - 1;
+}
+
+void Config::updateLayoutPreset(int index, const LayoutPreset& preset) {
+    if (index >= 0 && index < static_cast<int>(m_layoutPresets.size()))
+        m_layoutPresets[static_cast<size_t>(index)] = preset;
 }
 
 Path Config::getModelsDir() const {

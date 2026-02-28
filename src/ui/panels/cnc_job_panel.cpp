@@ -17,6 +17,7 @@ void CncJobPanel::render() {
     if (!m_open)
         return;
 
+    applyMinSize(14, 8);
     if (!ImGui::Begin(m_title.c_str(), &m_open)) {
         ImGui::End();
         return;
@@ -70,9 +71,16 @@ void CncJobPanel::renderProgressBar() {
 void CncJobPanel::renderLineInfo() {
     ImGui::SeparatorText("Progress");
 
-    ImGui::Text("Line:");
-    ImGui::SameLine(100);
-    ImGui::Text("%d / %d", m_progress.ackedLines, m_progress.totalLines);
+    if (ImGui::BeginTable("##jobprogress", 2, ImGuiTableFlags_None)) {
+        ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthStretch, 0.35f);
+        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch, 0.65f);
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("Line:");
+        ImGui::TableNextColumn();
+        ImGui::Text("%d / %d", m_progress.ackedLines, m_progress.totalLines);
+        ImGui::EndTable();
+    }
 
     if (m_progress.errorCount > 0) {
         ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f),
@@ -83,30 +91,41 @@ void CncJobPanel::renderLineInfo() {
 void CncJobPanel::renderTimeInfo() {
     ImGui::SeparatorText("Time");
 
-    // Elapsed time
-    std::string elapsedStr = formatTime(m_progress.elapsedSeconds);
-    ImGui::Text("Elapsed:");
-    ImGui::SameLine(100);
-    ImGui::Text("%s", elapsedStr.c_str());
+    if (ImGui::BeginTable("##jobtime", 2, ImGuiTableFlags_None)) {
+        ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthStretch, 0.35f);
+        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch, 0.65f);
 
-    // Remaining time estimate
-    ImGui::Text("Remaining:");
-    ImGui::SameLine(100);
+        // Elapsed time
+        std::string elapsedStr = formatTime(m_progress.elapsedSeconds);
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("Elapsed:");
+        ImGui::TableNextColumn();
+        ImGui::Text("%s", elapsedStr.c_str());
 
-    if (m_progress.ackedLines < 5 || m_progress.elapsedSeconds < 3.0f) {
-        // Not enough data for a reliable estimate
-        ImGui::TextDisabled("Calculating...");
-    } else if (m_progress.ackedLines >= m_progress.totalLines) {
-        // Job complete
-        ImGui::TextColored(ImVec4(0.3f, 0.8f, 0.3f, 1.0f), "Complete");
-    } else {
-        // Line-rate based ETA — naturally adjusts with feed rate changes
-        float rate = static_cast<float>(m_progress.ackedLines) / m_progress.elapsedSeconds;
-        float remaining = static_cast<float>(m_progress.totalLines - m_progress.ackedLines);
-        float eta = remaining / rate;
+        // Remaining time estimate
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("Remaining:");
+        ImGui::TableNextColumn();
 
-        std::string etaStr = formatTime(eta);
-        ImGui::Text("~%s", etaStr.c_str());
+        if (m_progress.ackedLines < 5 || m_progress.elapsedSeconds < 3.0f) {
+            // Not enough data for a reliable estimate
+            ImGui::TextDisabled("Calculating...");
+        } else if (m_progress.ackedLines >= m_progress.totalLines) {
+            // Job complete
+            ImGui::TextColored(ImVec4(0.3f, 0.8f, 0.3f, 1.0f), "Complete");
+        } else {
+            // Line-rate based ETA — naturally adjusts with feed rate changes
+            float rate = static_cast<float>(m_progress.ackedLines) / m_progress.elapsedSeconds;
+            float remaining = static_cast<float>(m_progress.totalLines - m_progress.ackedLines);
+            float eta = remaining / rate;
+
+            std::string etaStr = formatTime(eta);
+            ImGui::Text("~%s", etaStr.c_str());
+        }
+
+        ImGui::EndTable();
     }
 }
 
@@ -130,20 +149,33 @@ void CncJobPanel::renderFeedDeviation() {
     float effectiveRecommended = recommended *
         (static_cast<float>(m_status.feedOverride) / 100.0f);
 
-    ImGui::Text("Actual:");
-    ImGui::SameLine(120);
-    ImGui::Text("%.0f %s", static_cast<double>(actual * uf), fu);
+    if (ImGui::BeginTable("##feeddeviation", 2, ImGuiTableFlags_None)) {
+        ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthStretch, 0.35f);
+        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch, 0.65f);
 
-    ImGui::Text("Recommended:");
-    ImGui::SameLine(120);
-    ImGui::Text("%.0f %s", static_cast<double>(recommended * uf), fu);
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("Actual:");
+        ImGui::TableNextColumn();
+        ImGui::Text("%.0f %s", static_cast<double>(actual * uf), fu);
 
-    // Show override-adjusted if override differs from 100%
-    if (m_status.feedOverride != 100) {
-        ImGui::Text("Adjusted:");
-        ImGui::SameLine(120);
-        ImGui::TextDisabled("%.0f %s (%d%% override)",
-            static_cast<double>(effectiveRecommended * uf), fu, m_status.feedOverride);
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("Recommended:");
+        ImGui::TableNextColumn();
+        ImGui::Text("%.0f %s", static_cast<double>(recommended * uf), fu);
+
+        // Show override-adjusted if override differs from 100%
+        if (m_status.feedOverride != 100) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::Text("Adjusted:");
+            ImGui::TableNextColumn();
+            ImGui::TextDisabled("%.0f %s (%d%% override)",
+                static_cast<double>(effectiveRecommended * uf), fu, m_status.feedOverride);
+        }
+
+        ImGui::EndTable();
     }
 
     // Deviation display — only meaningful during Run state while streaming

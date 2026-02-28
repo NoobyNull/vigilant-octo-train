@@ -23,9 +23,10 @@ void MaterialsPanel::renderAddDialog() {
         m_showAddDialog = false;
     }
 
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    const auto* viewport = ImGui::GetMainViewport();
+    ImVec2 center = viewport->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(340, 0), ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x * 0.25f, 0), ImGuiCond_Appearing);
 
     if (ImGui::BeginPopupModal("Add Material", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         bool closing = m_closeAddDialog;
@@ -66,7 +67,8 @@ void MaterialsPanel::renderAddDialog() {
 
         // Manual entry button
         ImGui::BeginDisabled(m_isGenerating);
-        if (ImGui::Button("Manual Entry", ImVec2(120, 0))) {
+        float addBtnW = ImGui::CalcTextSize("Manual Entry").x + ImGui::GetStyle().FramePadding.x * 4;
+        if (ImGui::Button("Manual Entry", ImVec2(addBtnW, 0))) {
             m_editBuffer = MaterialRecord{};
             m_editBuffer.name = promptEmpty ? "New Material" : std::string(m_generatePrompt);
             m_isNewMaterial = true;
@@ -75,7 +77,7 @@ void MaterialsPanel::renderAddDialog() {
         }
         ImGui::EndDisabled();
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        if (ImGui::Button("Cancel", ImVec2(addBtnW, 0))) {
             m_isGenerating = false;
             closing = true;
         }
@@ -106,10 +108,13 @@ void MaterialsPanel::renderEditForm() {
         m_showEditForm = false;
     }
 
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    const auto* viewport = ImGui::GetMainViewport();
+    ImVec2 center = viewport->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(420, 0), ImGuiCond_Appearing);
-    ImGui::SetNextWindowSizeConstraints(ImVec2(320, 0), ImVec2(500, FLT_MAX));
+    ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x * 0.3f, 0), ImGuiCond_Appearing);
+    float minW = viewport->WorkSize.x * 0.22f;
+    float maxW = viewport->WorkSize.x * 0.4f;
+    ImGui::SetNextWindowSizeConstraints(ImVec2(minW, 0), ImVec2(maxW, FLT_MAX));
 
     if (ImGui::BeginPopupModal("Edit Material", nullptr, 0)) {
         ImGui::Text(m_isNewMaterial ? "New Material" : "Edit Material");
@@ -132,7 +137,8 @@ void MaterialsPanel::renderEditForm() {
         // Category combo
         const char* categories[] = {"Hardwood", "Softwood", "Domestic", "Composite"};
         int catIndex = static_cast<int>(m_editBuffer.category);
-        ImGui::SetNextItemWidth(200.0f);
+        float paramInputW = ImGui::GetContentRegionAvail().x * 0.5f;
+        ImGui::SetNextItemWidth(paramInputW);
         if (ImGui::Combo("Category", &catIndex, categories, 4)) {
             m_editBuffer.category = static_cast<MaterialCategory>(catIndex);
         }
@@ -143,21 +149,21 @@ void MaterialsPanel::renderEditForm() {
         ImGui::Spacing();
 
         // Janka Hardness
-        ImGui::SetNextItemWidth(180.0f);
+        ImGui::SetNextItemWidth(paramInputW);
         ImGui::InputFloat(
             "Janka Hardness (lbf)", &m_editBuffer.jankaHardness, 10.0f, 100.0f, "%.0f");
 
         // Feed Rate
-        ImGui::SetNextItemWidth(180.0f);
+        ImGui::SetNextItemWidth(paramInputW);
         ImGui::InputFloat("Feed Rate (in/min)", &m_editBuffer.feedRate, 1.0f, 10.0f, "%.1f");
 
         // Spindle Speed
-        ImGui::SetNextItemWidth(180.0f);
+        ImGui::SetNextItemWidth(paramInputW);
         ImGui::InputFloat(
             "Spindle Speed (RPM)", &m_editBuffer.spindleSpeed, 100.0f, 1000.0f, "%.0f");
 
         // Depth of Cut
-        ImGui::SetNextItemWidth(180.0f);
+        ImGui::SetNextItemWidth(paramInputW);
         ImGui::InputFloat("Depth of Cut (in)", &m_editBuffer.depthOfCut, 0.01f, 0.1f, "%.3f");
 
         ImGui::Spacing();
@@ -166,7 +172,7 @@ void MaterialsPanel::renderEditForm() {
         ImGui::Spacing();
 
         // Cost per Board Foot
-        ImGui::SetNextItemWidth(180.0f);
+        ImGui::SetNextItemWidth(paramInputW);
         ImGui::InputFloat(
             "Cost per Board Foot ($)", &m_editBuffer.costPerBoardFoot, 0.1f, 1.0f, "%.2f");
 
@@ -184,7 +190,8 @@ void MaterialsPanel::renderEditForm() {
         ImGui::Separator();
         ImGui::Spacing();
 
-        if (ImGui::Button("Save", ImVec2(120, 0))) {
+        float matBtnW = ImGui::CalcTextSize("Cancel").x + ImGui::GetStyle().FramePadding.x * 4;
+        if (ImGui::Button("Save", ImVec2(matBtnW, 0))) {
             if (m_materialManager && !m_editBuffer.name.empty()) {
                 if (m_isNewMaterial && !m_editBuffer.archivePath.empty()) {
                     // AI-generated: import the .dwmat archive, then apply user edits
@@ -214,7 +221,7 @@ void MaterialsPanel::renderEditForm() {
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        if (ImGui::Button("Cancel", ImVec2(matBtnW, 0))) {
             ImGui::CloseCurrentPopup();
         }
 
@@ -236,11 +243,12 @@ void MaterialsPanel::renderDeleteConfirm() {
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
     if (ImGui::BeginPopupModal("Delete Material?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        float delBtnW = ImGui::CalcTextSize("Cancel").x + ImGui::GetStyle().FramePadding.x * 4;
         ImGui::Text("Delete \"%s\"?", m_deleteName.c_str());
         ImGui::TextDisabled("This action cannot be undone.");
         ImGui::Spacing();
 
-        if (ImGui::Button("Delete", ImVec2(120, 0))) {
+        if (ImGui::Button("Delete", ImVec2(delBtnW, 0))) {
             if (m_materialManager && m_deleteId != -1) {
                 if (m_materialManager->removeMaterial(m_deleteId)) {
                     if (m_selectedMaterialId == m_deleteId) {
@@ -254,7 +262,7 @@ void MaterialsPanel::renderDeleteConfirm() {
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        if (ImGui::Button("Cancel", ImVec2(delBtnW, 0))) {
             ImGui::CloseCurrentPopup();
         }
 

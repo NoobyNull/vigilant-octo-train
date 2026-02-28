@@ -59,6 +59,7 @@ void CncStatusPanel::render() {
     if (!m_open)
         return;
 
+    applyMinSize(16, 8);
     if (!ImGui::Begin(m_title.c_str(), &m_open)) {
         ImGui::End();
         return;
@@ -97,7 +98,7 @@ void CncStatusPanel::renderStateIndicator() {
     // Draw a full-width colored banner for the state
     ImVec2 cursorPos = ImGui::GetCursorScreenPos();
     float width = ImGui::GetContentRegionAvail().x;
-    float height = 30.0f;
+    float height = ImGui::GetFrameHeight() * 1.3f;
 
     ImGui::GetWindowDrawList()->AddRectFilled(
         cursorPos, ImVec2(cursorPos.x + width, cursorPos.y + height), bgColor, 4.0f);
@@ -126,7 +127,7 @@ void CncStatusPanel::renderProbeIndicator() {
     bool probeActive = (m_status.inputPins & cnc::PIN_PROBE) != 0;
 
     ImVec2 pos = ImGui::GetCursorScreenPos();
-    float radius = 5.0f;
+    float radius = ImGui::GetFontSize() * 0.35f;
     ImU32 color = probeActive ? IM_COL32(0, 220, 0, 255) : IM_COL32(80, 80, 80, 255);
     ImGui::GetWindowDrawList()->AddCircleFilled(
         ImVec2(pos.x + radius + 2, pos.y + ImGui::GetTextLineHeight() * 0.5f),
@@ -160,7 +161,10 @@ void CncStatusPanel::renderDRO() {
     float machPos[] = {m_status.machinePos.x * uf, m_status.machinePos.y * uf, m_status.machinePos.z * uf};
 
     // Work position — large digits, double-click to zero axis
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4.0f, 2.0f));
+    const auto& droStyle = ImGui::GetStyle();
+    ImVec2 droSpacing(droStyle.ItemSpacing.x * 0.5f,
+                      droStyle.ItemSpacing.y * 0.33f);
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, droSpacing);
 
     for (int i = 0; i < 3; ++i) {
         ImGui::SetWindowFontScale(2.0f);
@@ -235,80 +239,94 @@ void CncStatusPanel::renderFeedSpindle() {
     float uf = metric ? 1.0f : (1.0f / 25.4f);
     const char* fu = metric ? "mm/min" : "in/min";
 
-    float availWidth = ImGui::GetContentRegionAvail().x;
-    float halfWidth = availWidth * 0.5f;
+    if (ImGui::BeginTable("##feedspindle", 2, ImGuiTableFlags_None)) {
+        ImGui::TableSetupColumn("Feed", ImGuiTableColumnFlags_WidthStretch, 0.5f);
+        ImGui::TableSetupColumn("Spindle", ImGuiTableColumnFlags_WidthStretch, 0.5f);
+        ImGui::TableNextRow();
 
-    // Feed rate — left side
-    ImGui::BeginGroup();
-    ImGui::TextDisabled("Feed Rate");
-    ImGui::SetWindowFontScale(1.5f);
-    ImGui::Text("%.0f", static_cast<double>(m_status.feedRate * uf));
-    ImGui::SetWindowFontScale(1.0f);
-    ImGui::SameLine();
-    ImGui::TextDisabled("%s", fu);
-    ImGui::EndGroup();
+        // Feed rate — left column
+        ImGui::TableNextColumn();
+        ImGui::TextDisabled("Feed Rate");
+        ImGui::SetWindowFontScale(1.5f);
+        ImGui::Text("%.0f", static_cast<double>(m_status.feedRate * uf));
+        ImGui::SetWindowFontScale(1.0f);
+        ImGui::SameLine();
+        ImGui::TextDisabled("%s", fu);
 
-    ImGui::SameLine(halfWidth);
+        // Spindle speed — right column
+        ImGui::TableNextColumn();
+        ImGui::TextDisabled("Spindle");
+        ImGui::SetWindowFontScale(1.5f);
+        ImGui::Text("%.0f", static_cast<double>(m_status.spindleSpeed));
+        ImGui::SetWindowFontScale(1.0f);
+        ImGui::SameLine();
+        ImGui::TextDisabled("RPM");
 
-    // Spindle speed — right side
-    ImGui::BeginGroup();
-    ImGui::TextDisabled("Spindle");
-    ImGui::SetWindowFontScale(1.5f);
-    ImGui::Text("%.0f", static_cast<double>(m_status.spindleSpeed));
-    ImGui::SetWindowFontScale(1.0f);
-    ImGui::SameLine();
-    ImGui::TextDisabled("RPM");
-    ImGui::EndGroup();
+        ImGui::EndTable();
+    }
 }
 
 void CncStatusPanel::renderOverrideControls() {
     ImGui::SeparatorText("Overrides");
 
-    // Feed override — slider (10-200%)
-    ImGui::TextDisabled("Feed");
-    ImGui::SameLine(70);
-    int feedOvr = m_status.feedOverride;
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 50);
-    if (ImGui::SliderInt("##FeedOvr", &feedOvr, 10, 200, "%d%%")) {
-        if (m_cnc) m_cnc->setFeedOverride(feedOvr);
-    }
-    ImGui::SameLine();
-    if (ImGui::SmallButton("R##Feed")) {
-        if (m_cnc) m_cnc->setFeedOverride(100);
-    }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Reset to 100%%");
+    if (ImGui::BeginTable("##overrides", 2, ImGuiTableFlags_None)) {
+        ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthStretch, 0.15f);
+        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch, 0.85f);
 
-    // Spindle override — slider (10-200%)
-    ImGui::TextDisabled("Spindle");
-    ImGui::SameLine(70);
-    int spindleOvr = m_status.spindleOverride;
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 50);
-    if (ImGui::SliderInt("##SpindleOvr", &spindleOvr, 10, 200, "%d%%")) {
-        if (m_cnc) m_cnc->setSpindleOverride(spindleOvr);
-    }
-    ImGui::SameLine();
-    if (ImGui::SmallButton("R##Spindle")) {
-        if (m_cnc) m_cnc->setSpindleOverride(100);
-    }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Reset to 100%%");
-
-    // Rapid override — 3 buttons
-    ImGui::TextDisabled("Rapid");
-    ImGui::SameLine(70);
-    int rapidOvr = m_status.rapidOverride;
-    auto rapidBtn = [&](const char* label, int pct) {
-        bool active = (rapidOvr == pct);
-        if (active) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-        if (ImGui::SmallButton(label)) {
-            if (m_cnc) m_cnc->setRapidOverride(pct);
+        // Feed override — slider (10-200%)
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextDisabled("Feed");
+        ImGui::TableNextColumn();
+        int feedOvr = m_status.feedOverride;
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 50);
+        if (ImGui::SliderInt("##FeedOvr", &feedOvr, 10, 200, "%d%%")) {
+            if (m_cnc) m_cnc->setFeedOverride(feedOvr);
         }
-        if (active) ImGui::PopStyleColor();
-    };
-    rapidBtn("25%##Rapid", 25);
-    ImGui::SameLine();
-    rapidBtn("50%##Rapid", 50);
-    ImGui::SameLine();
-    rapidBtn("100%##Rapid", 100);
+        ImGui::SameLine();
+        if (ImGui::SmallButton("R##Feed")) {
+            if (m_cnc) m_cnc->setFeedOverride(100);
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Reset to 100%%");
+
+        // Spindle override — slider (10-200%)
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextDisabled("Spindle");
+        ImGui::TableNextColumn();
+        int spindleOvr = m_status.spindleOverride;
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 50);
+        if (ImGui::SliderInt("##SpindleOvr", &spindleOvr, 10, 200, "%d%%")) {
+            if (m_cnc) m_cnc->setSpindleOverride(spindleOvr);
+        }
+        ImGui::SameLine();
+        if (ImGui::SmallButton("R##Spindle")) {
+            if (m_cnc) m_cnc->setSpindleOverride(100);
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Reset to 100%%");
+
+        // Rapid override — 3 buttons
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextDisabled("Rapid");
+        ImGui::TableNextColumn();
+        int rapidOvr = m_status.rapidOverride;
+        auto rapidBtn = [&](const char* label, int pct) {
+            bool active = (rapidOvr == pct);
+            if (active) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+            if (ImGui::SmallButton(label)) {
+                if (m_cnc) m_cnc->setRapidOverride(pct);
+            }
+            if (active) ImGui::PopStyleColor();
+        };
+        rapidBtn("25%##Rapid", 25);
+        ImGui::SameLine();
+        rapidBtn("50%##Rapid", 50);
+        ImGui::SameLine();
+        rapidBtn("100%##Rapid", 100);
+
+        ImGui::EndTable();
+    }
 }
 
 void CncStatusPanel::renderCoolantControls() {
@@ -345,7 +363,7 @@ void CncStatusPanel::renderAlarmBanner() {
     // Red banner with alarm code and description
     ImVec2 cursorPos = ImGui::GetCursorScreenPos();
     float width = ImGui::GetContentRegionAvail().x;
-    float height = 50.0f;
+    float height = ImGui::GetFrameHeight() * 2.2f;
 
     ImGui::GetWindowDrawList()->AddRectFilled(
         cursorPos, ImVec2(cursorPos.x + width, cursorPos.y + height),
@@ -360,15 +378,16 @@ void CncStatusPanel::renderAlarmBanner() {
         std::snprintf(alarmText, sizeof(alarmText), "ALARM (unknown code)");
     }
     ImVec2 textSize = ImGui::CalcTextSize(alarmText);
-    float textX = cursorPos.x + 8.0f;
+    float textX = cursorPos.x + ImGui::GetStyle().FramePadding.x;
     float textY = cursorPos.y + (height - textSize.y) * 0.5f - 8.0f;
     ImGui::GetWindowDrawList()->AddText(
         ImVec2(textX, textY), IM_COL32(255, 255, 255, 255), alarmText);
 
-    ImGui::Dummy(ImVec2(width, height - 28.0f));
+    ImGui::Dummy(ImVec2(width, height - ImGui::GetFrameHeightWithSpacing()));
 
     // Inline unlock button
-    if (ImGui::Button("Unlock ($X)", ImVec2(110, 0))) {
+    float unlockBtnW = ImGui::CalcTextSize("Unlock ($X)").x + ImGui::GetStyle().FramePadding.x * 4;
+    if (ImGui::Button("Unlock ($X)", ImVec2(unlockBtnW, 0))) {
         if (m_cnc) m_cnc->unlock();
     }
     ImGui::SameLine();
@@ -404,8 +423,9 @@ void CncStatusPanel::renderWcsSelector() {
 
     if (!canSwitch) ImGui::BeginDisabled();
 
-    ImGui::SameLine(ImGui::GetContentRegionAvail().x - 70);
-    ImGui::SetNextItemWidth(70);
+    float wcsComboW = ImGui::CalcTextSize("G59").x + ImGui::GetStyle().FramePadding.x * 4;
+    ImGui::SameLine(ImGui::GetContentRegionAvail().x - wcsComboW);
+    ImGui::SetNextItemWidth(wcsComboW);
     if (ImGui::BeginCombo("##WCS", WCS_NAMES[m_activeWcs], ImGuiComboFlags_NoArrowButton)) {
         for (int i = 0; i < NUM_WCS; ++i) {
             bool selected = (m_activeWcs == i);
@@ -436,11 +456,12 @@ void CncStatusPanel::renderMoveToDialog() {
         ImGui::Text("Enter target work coordinates:");
         ImGui::Spacing();
 
-        ImGui::SetNextItemWidth(120);
+        float moveInputW = ImGui::GetFontSize() * 8;
+        ImGui::SetNextItemWidth(moveInputW);
         ImGui::InputFloat("X##moveto", &m_moveToX, 0.1f, 1.0f, "%.3f");
-        ImGui::SetNextItemWidth(120);
+        ImGui::SetNextItemWidth(moveInputW);
         ImGui::InputFloat("Y##moveto", &m_moveToY, 0.1f, 1.0f, "%.3f");
-        ImGui::SetNextItemWidth(120);
+        ImGui::SetNextItemWidth(moveInputW);
         ImGui::InputFloat("Z##moveto", &m_moveToZ, 0.1f, 1.0f, "%.3f");
 
         ImGui::Spacing();
@@ -456,7 +477,10 @@ void CncStatusPanel::renderMoveToDialog() {
 
         bool canGo = m_cnc && m_connected && m_status.state == MachineState::Idle;
         if (!canGo) ImGui::BeginDisabled();
-        if (ImGui::Button("Go", ImVec2(80, 0))) {
+        float goBtnW = ImGui::CalcTextSize("Go").x + ImGui::GetStyle().FramePadding.x * 4;
+        float cancelBtnW = ImGui::CalcTextSize("Cancel").x + ImGui::GetStyle().FramePadding.x * 4;
+        float moveBtnW = std::max(goBtnW, cancelBtnW);
+        if (ImGui::Button("Go", ImVec2(moveBtnW, 0))) {
             char cmd[128];
             const char* moveCmd = m_moveToUseG0 ? "G0" : "G1";
             std::snprintf(cmd, sizeof(cmd), "G90 %s X%.3f Y%.3f Z%.3f",
@@ -469,7 +493,7 @@ void CncStatusPanel::renderMoveToDialog() {
         }
         if (!canGo) ImGui::EndDisabled();
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(80, 0))) {
+        if (ImGui::Button("Cancel", ImVec2(moveBtnW, 0))) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();

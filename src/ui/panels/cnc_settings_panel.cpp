@@ -30,7 +30,7 @@ const ImVec4 kChangedFromDefault{0.6f, 0.4f, 1.0f, 1.0f}; // Purple for FluidNC 
 
 } // namespace
 
-CncSettingsPanel::CncSettingsPanel() : Panel("Firmware Settings") {
+CncSettingsPanel::CncSettingsPanel() : Panel("Firmware") {
     m_advancedView = Config::instance().getAdvancedSettingsView();
 }
 
@@ -38,6 +38,7 @@ void CncSettingsPanel::render() {
     if (!m_open)
         return;
 
+    applyMinSize(22, 10);
     if (!ImGui::Begin(m_title.c_str(), &m_open)) {
         ImGui::End();
         return;
@@ -72,7 +73,7 @@ void CncSettingsPanel::render() {
     renderToolbar();
     ImGui::Spacing();
 
-    if (ImGui::BeginTabBar("SettingsTabs")) {
+    if (ImGui::BeginTabBar("SettingsTabs", ImGuiTabBarFlags_FittingPolicyScroll)) {
         if (ImGui::BeginTabItem("Settings")) {
             m_activeTab = 0;
             renderSettingsTab();
@@ -162,31 +163,40 @@ void CncSettingsPanel::renderUnifiedBitmask(const std::string& key, const char* 
     bool by = (mask & 2) != 0;
     bool bz = (mask & 4) != 0;
 
-    ImGui::Text("%s", label);
-    renderAdvancedId(*s);
-    ImGui::SameLine(220.0f);
+    char tableId[64];
+    std::snprintf(tableId, sizeof(tableId), "##bitmask_%s", key.c_str());
+    if (ImGui::BeginTable(tableId, 2, ImGuiTableFlags_None)) {
+        ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthStretch, 0.4f);
+        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch, 0.6f);
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("%s", label);
+        renderAdvancedId(*s);
+        ImGui::TableNextColumn();
 
-    char lbl[64];
-    std::snprintf(lbl, sizeof(lbl), "X##bm_%s", key.c_str());
-    ImGui::TextColored(kAxisX, "X");
-    ImGui::SameLine();
-    ImGui::Checkbox(lbl, &bx);
-
-    ImGui::SameLine();
-    std::snprintf(lbl, sizeof(lbl), "Y##bm_%s", key.c_str());
-    ImGui::TextColored(kAxisY, "Y");
-    ImGui::SameLine();
-    ImGui::Checkbox(lbl, &by);
-
-    ImGui::SameLine();
-    std::snprintf(lbl, sizeof(lbl), "Z##bm_%s", key.c_str());
-    ImGui::TextColored(kAxisZ, "Z");
-    ImGui::SameLine();
-    ImGui::Checkbox(lbl, &bz);
-
-    if (s->changedFromDefault) {
+        char lbl[64];
+        std::snprintf(lbl, sizeof(lbl), "X##bm_%s", key.c_str());
+        ImGui::TextColored(kAxisX, "X");
         ImGui::SameLine();
-        ImGui::TextColored(kChangedFromDefault, "*");
+        ImGui::Checkbox(lbl, &bx);
+
+        ImGui::SameLine();
+        std::snprintf(lbl, sizeof(lbl), "Y##bm_%s", key.c_str());
+        ImGui::TextColored(kAxisY, "Y");
+        ImGui::SameLine();
+        ImGui::Checkbox(lbl, &by);
+
+        ImGui::SameLine();
+        std::snprintf(lbl, sizeof(lbl), "Z##bm_%s", key.c_str());
+        ImGui::TextColored(kAxisZ, "Z");
+        ImGui::SameLine();
+        ImGui::Checkbox(lbl, &bz);
+
+        if (s->changedFromDefault) {
+            ImGui::SameLine();
+            ImGui::TextColored(kChangedFromDefault, "*");
+        }
+        ImGui::EndTable();
     }
 
     mask = (bx ? 1 : 0) | (by ? 2 : 0) | (bz ? 4 : 0);
@@ -207,32 +217,41 @@ void CncSettingsPanel::renderUnifiedNumeric(const std::string& key, const char* 
         eb.active = true;
     }
 
-    ImGui::Text("%s", label);
-    renderAdvancedId(*s);
-    ImGui::SameLine(220.0f);
-    ImGui::PushItemWidth(width);
-    char inputLabel[64];
-    std::snprintf(inputLabel, sizeof(inputLabel), "##num_%s", key.c_str());
-    if (ImGui::InputText(inputLabel, eb.buf, sizeof(eb.buf),
-                          ImGuiInputTextFlags_EnterReturnsTrue)) {
-        m_settings.set(key, eb.buf);
-        eb.active = false;
-    }
-    ImGui::PopItemWidth();
+    char numTableId[64];
+    std::snprintf(numTableId, sizeof(numTableId), "##numeric_%s", key.c_str());
+    if (ImGui::BeginTable(numTableId, 2, ImGuiTableFlags_None)) {
+        ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthStretch, 0.4f);
+        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch, 0.6f);
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("%s", label);
+        renderAdvancedId(*s);
+        ImGui::TableNextColumn();
+        ImGui::PushItemWidth(width);
+        char inputLabel[64];
+        std::snprintf(inputLabel, sizeof(inputLabel), "##num_%s", key.c_str());
+        if (ImGui::InputText(inputLabel, eb.buf, sizeof(eb.buf),
+                              ImGuiInputTextFlags_EnterReturnsTrue)) {
+            m_settings.set(key, eb.buf);
+            eb.active = false;
+        }
+        ImGui::PopItemWidth();
 
-    if (units[0] != '\0') {
-        ImGui::SameLine();
-        ImGui::TextDisabled("%s", units);
-    }
+        if (units[0] != '\0') {
+            ImGui::SameLine();
+            ImGui::TextDisabled("%s", units);
+        }
 
-    if (s->modified) {
-        ImGui::SameLine();
-        ImGui::TextColored(kModifiedColor, "(modified)");
-    }
+        if (s->modified) {
+            ImGui::SameLine();
+            ImGui::TextColored(kModifiedColor, "(modified)");
+        }
 
-    if (s->changedFromDefault) {
-        ImGui::SameLine();
-        ImGui::TextColored(kChangedFromDefault, "*");
+        if (s->changedFromDefault) {
+            ImGui::SameLine();
+            ImGui::TextColored(kChangedFromDefault, "*");
+        }
+        ImGui::EndTable();
     }
 }
 
@@ -257,28 +276,37 @@ void CncSettingsPanel::renderUnifiedPerAxisGroup(const char* label, const char* 
             eb.active = true;
         }
 
-        ImGui::TextColored(*colors[i], "  %s", axes[i]);
-        renderAdvancedId(*s);
-        ImGui::SameLine(220.0f);
-        ImGui::PushItemWidth(120.0f);
-        char lbl[64];
-        std::snprintf(lbl, sizeof(lbl), "##ax_%s", keys[i]->c_str());
-        if (ImGui::InputText(lbl, eb.buf, sizeof(eb.buf),
-                              ImGuiInputTextFlags_EnterReturnsTrue)) {
-            m_settings.set(*keys[i], eb.buf);
-            eb.active = false;
-        }
-        ImGui::PopItemWidth();
-        ImGui::SameLine();
-        ImGui::TextDisabled("%s", units);
+        char axTableId[64];
+        std::snprintf(axTableId, sizeof(axTableId), "##peraxis_%s", keys[i]->c_str());
+        if (ImGui::BeginTable(axTableId, 2, ImGuiTableFlags_None)) {
+            ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthStretch, 0.4f);
+            ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch, 0.6f);
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::TextColored(*colors[i], "  %s", axes[i]);
+            renderAdvancedId(*s);
+            ImGui::TableNextColumn();
+            ImGui::PushItemWidth(ImGui::GetFontSize() * 8);
+            char lbl[64];
+            std::snprintf(lbl, sizeof(lbl), "##ax_%s", keys[i]->c_str());
+            if (ImGui::InputText(lbl, eb.buf, sizeof(eb.buf),
+                                  ImGuiInputTextFlags_EnterReturnsTrue)) {
+                m_settings.set(*keys[i], eb.buf);
+                eb.active = false;
+            }
+            ImGui::PopItemWidth();
+            ImGui::SameLine();
+            ImGui::TextDisabled("%s", units);
 
-        if (s->modified) {
-            ImGui::SameLine();
-            ImGui::TextColored(kModifiedColor, "(modified)");
-        }
-        if (s->changedFromDefault) {
-            ImGui::SameLine();
-            ImGui::TextColored(kChangedFromDefault, "*");
+            if (s->modified) {
+                ImGui::SameLine();
+                ImGui::TextColored(kModifiedColor, "(modified)");
+            }
+            if (s->changedFromDefault) {
+                ImGui::SameLine();
+                ImGui::TextColored(kChangedFromDefault, "*");
+            }
+            ImGui::EndTable();
         }
     }
 }
@@ -292,6 +320,16 @@ void CncSettingsPanel::renderToolbar() {
         m_machineState != MachineState::Alarm &&
         !m_writing;
 
+    // Helper: SameLine only if the next button fits, otherwise wrap
+    const auto& style = ImGui::GetStyle();
+    float availRight = ImGui::GetContentRegionAvail().x;
+    auto sameLineIfFits = [&](const char* nextLabel) {
+        float nextW = ImGui::CalcTextSize(nextLabel).x + style.FramePadding.x * 2;
+        float cursorAfter = ImGui::GetItemRectMax().x - ImGui::GetWindowPos().x;
+        if (cursorAfter + style.ItemSpacing.x + nextW < availRight)
+            ImGui::SameLine();
+    };
+
     char btnLabel[64];
     std::snprintf(btnLabel, sizeof(btnLabel), "%s Read", Icons::Refresh);
     if (ImGui::Button(btnLabel)) {
@@ -304,7 +342,9 @@ void CncSettingsPanel::renderToolbar() {
             ImGui::SetTooltip("Query all GRBL settings ($$)");
     }
 
-    ImGui::SameLine();
+    char nextLabel[64];
+    std::snprintf(nextLabel, sizeof(nextLabel), "%s Write All", Icons::Save);
+    sameLineIfFits(nextLabel);
 
     ImGui::BeginDisabled(!canWrite);
     std::snprintf(btnLabel, sizeof(btnLabel), "%s Write All", Icons::Save);
@@ -315,25 +355,30 @@ void CncSettingsPanel::renderToolbar() {
         if (m_firmwareType == FirmwareType::FluidNC)
             ImGui::SetTooltip("Write all modified settings to FluidNC (RAM)");
         else
-            ImGui::SetTooltip("Write all modified settings to GRBL (with EEPROM-safe delays)");
+            ImGui::SetTooltip(
+                "Write all modified settings to GRBL "
+                "(with EEPROM-safe delays)");
     }
     ImGui::EndDisabled();
 
     // Save to Flash — FluidNC only
     if (m_firmwareType == FirmwareType::FluidNC) {
-        ImGui::SameLine();
+        std::snprintf(nextLabel, sizeof(nextLabel),
+                      "%s Save to Flash", Icons::Save);
+        sameLineIfFits(nextLabel);
         ImGui::BeginDisabled(!canWrite);
-        std::snprintf(btnLabel, sizeof(btnLabel), "%s Save to Flash", Icons::Save);
-        if (ImGui::Button(btnLabel)) {
+        if (ImGui::Button(nextLabel)) {
             saveToFlash();
         }
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Persist RAM settings to flash\n"
-                              "($CD=config.yaml). Overwrites config.");
+            ImGui::SetTooltip(
+                "Persist RAM settings to flash\n"
+                "($CD=config.yaml). Overwrites config.");
         ImGui::EndDisabled();
     }
 
-    ImGui::SameLine();
+    std::snprintf(nextLabel, sizeof(nextLabel), "%s Backup", Icons::Export);
+    sameLineIfFits(nextLabel);
 
     std::snprintf(btnLabel, sizeof(btnLabel), "%s Backup", Icons::Export);
     if (ImGui::Button(btnLabel)) {
@@ -342,7 +387,8 @@ void CncSettingsPanel::renderToolbar() {
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Export settings to JSON file");
 
-    ImGui::SameLine();
+    std::snprintf(nextLabel, sizeof(nextLabel), "%s Restore", Icons::Import);
+    sameLineIfFits(nextLabel);
 
     std::snprintf(btnLabel, sizeof(btnLabel), "%s Restore", Icons::Import);
     if (ImGui::Button(btnLabel)) {
@@ -351,7 +397,7 @@ void CncSettingsPanel::renderToolbar() {
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Import settings from JSON file");
 
-    ImGui::SameLine();
+    sameLineIfFits("Export Text");
 
     if (ImGui::Button("Export Text")) {
         exportPlainText();
@@ -360,7 +406,7 @@ void CncSettingsPanel::renderToolbar() {
         ImGui::SetTooltip("Export settings as plain text");
 
     // Advanced toggle
-    ImGui::SameLine();
+    sameLineIfFits("Advanced");
     if (ImGui::Checkbox("Advanced", &m_advancedView)) {
         Config::instance().setAdvancedSettingsView(m_advancedView);
         Config::instance().save();
@@ -387,7 +433,7 @@ void CncSettingsPanel::renderToolbar() {
     if (!m_firmwareInfo.empty()) {
         ImGui::TextDisabled("Firmware:");
         ImGui::SameLine();
-        ImGui::TextUnformatted(m_firmwareInfo.c_str());
+        ImGui::TextWrapped("%s", m_firmwareInfo.c_str());
     }
 }
 
@@ -612,13 +658,13 @@ void CncSettingsPanel::renderRawTab() {
                           ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY,
                       ImVec2(0, 0));
     if (m_advancedView) {
-        ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+        ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("$path/to/key").x);
     }
     ImGui::TableSetupColumn("Setting", ImGuiTableColumnFlags_WidthStretch);
-    ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthFixed, 120.0f);
-    ImGui::TableSetupColumn("Units", ImGuiTableColumnFlags_WidthFixed, 70.0f);
-    ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-    ImGui::TableSetupColumn("##apply", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+    ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 8);
+    ImGui::TableSetupColumn("Units", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("steps/mm").x);
+    ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("modified_").x);
+    ImGui::TableSetupColumn("##apply", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("Apply__").x);
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableHeadersRow();
 
@@ -689,7 +735,8 @@ void CncSettingsPanel::renderRawTab() {
 // --- Diff Dialog ---
 
 void CncSettingsPanel::renderDiffDialog() {
-    ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
+    const auto* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x * 0.35f, viewport->WorkSize.y * 0.4f), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin("Restore Settings Preview", &m_showDiffDialog)) {
         ImGui::End();
         return;
@@ -780,7 +827,7 @@ void CncSettingsPanel::renderSafetyTab() {
     if (longPressEnabled) {
         ImGui::Indent();
         int durationMs = cfg.getSafetyLongPressDurationMs();
-        ImGui::SetNextItemWidth(200.0f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
         if (ImGui::SliderInt("Duration##longpress", &durationMs, 250, 3000, "%d ms")) {
             cfg.setSafetyLongPressDurationMs(durationMs);
             cfg.save();
@@ -809,7 +856,7 @@ void CncSettingsPanel::renderSafetyTab() {
     if (deadManEnabled) {
         ImGui::Indent();
         int timeoutMs = cfg.getSafetyDeadManTimeoutMs();
-        ImGui::SetNextItemWidth(200.0f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
         if (ImGui::SliderInt("Timeout##deadman", &timeoutMs, 200, 5000, "%d ms")) {
             cfg.setSafetyDeadManTimeoutMs(timeoutMs);
             cfg.save();

@@ -35,7 +35,8 @@ struct Canvas2D {
     Area begin() {
         Area area;
         area.size = ImGui::GetContentRegionAvail();
-        if (area.size.x < 50 || area.size.y < 50)
+        float minCanvas = ImGui::GetFontSize() * 3;
+        if (area.size.x < minCanvas || area.size.y < minCanvas)
             return area;
 
         area.pos = ImGui::GetCursorScreenPos();

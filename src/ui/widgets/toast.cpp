@@ -51,10 +51,10 @@ void ToastManager::show(ToastType type,
 void ToastManager::render(float deltaTime) {
     // Position toasts in top-right corner, stacked vertically
     auto* viewport = ImGui::GetMainViewport();
-    float yOffset = viewport->WorkPos.y + 60.0f; // Below menu bar
-    const float xPadding = 16.0f;
-    const float ySpacing = 8.0f;
-    const float toastWidth = 320.0f;
+    float yOffset = viewport->WorkPos.y + ImGui::GetFrameHeightWithSpacing() * 2; // Below menu bar
+    const float xPadding = ImGui::GetStyle().WindowPadding.x;
+    const float ySpacing = ImGui::GetStyle().ItemSpacing.y;
+    const float toastWidth = std::clamp(viewport->WorkSize.x * 0.25f, 200.0f, 500.0f);
 
     // Update and render toasts
     for (auto it = m_toasts.begin(); it != m_toasts.end();) {

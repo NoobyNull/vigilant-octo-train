@@ -66,7 +66,9 @@ void MaterialsPanel::render() {
         // registerContextMenuEntries will be called once manager is available
     }
 
-    ImGui::SetNextWindowSize(ImVec2(600, 500), ImGuiCond_FirstUseEver);
+    const auto* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x * 0.4f, viewport->WorkSize.y * 0.5f), ImGuiCond_FirstUseEver);
+    applyMinSize(20, 10);
     if (ImGui::Begin(m_title.c_str(), &m_open)) {
         renderToolbar();
         ImGui::Separator();
@@ -189,7 +191,7 @@ void MaterialsPanel::renderToolbar() {
     ImGui::SameLine();
 
     // Thumbnail size slider
-    ImGui::SetNextItemWidth(60.0f);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.1f);
     ImGui::SliderFloat("##ThumbSize", &m_thumbnailSize, THUMB_MIN, 256.0f, "%.0f");
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         Config::instance().setMaterialsThumbSize(m_thumbnailSize);
@@ -291,7 +293,7 @@ void MaterialsPanel::registerContextMenuEntries() {
 // ---------------------------------------------------------------------------
 
 void MaterialsPanel::renderCategoryTabs() {
-    if (ImGui::BeginTabBar("MaterialCategories")) {
+    if (ImGui::BeginTabBar("MaterialCategories", ImGuiTabBarFlags_FittingPolicyScroll)) {
         auto makeTab = [&](const char* label,
                            const char* tooltip,
                            CategoryTab tab,
