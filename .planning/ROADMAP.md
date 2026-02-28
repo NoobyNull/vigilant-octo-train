@@ -4,7 +4,7 @@
 
 - [x] **v0.1.x CNC Controller Suite** - Phases 1-8 (shipped 2026-02-25)
 - [ ] **v0.2.0 Sender Feature Parity** - Phases 9-13 (in progress)
-- [ ] **v0.3.0 Direct Carve** - Phases 14-19 (planned)
+- [x] **v0.3.0 Direct Carve** - Phases 14-19 (completed 2026-02-28)
 
 ## Phases
 
@@ -143,7 +143,7 @@ Plans:
 - [x] **Phase 16: Tool Recommendation** - Automatic tool selection from database based on model analysis, V-bit/ball nose/TBN/clearing tool suggestions with feeds/speeds (completed 2026-02-28)
 - [x] **Phase 17: Toolpath Generation** - Raster scan toolpath with configurable axis, stepover presets, milling direction, safe Z, surgical island clearing (completed 2026-02-28)
 - [x] **Phase 18: Guided Workflow** - Step-by-step wizard: machine check, model fitting, tool selection, material setup, preview, outline test, zero, commit, run (completed 2026-02-28)
-- [ ] **Phase 19: Streaming Integration** - Point-by-point streaming via CncController, pause/resume/abort, live progress, optional G-code file export
+- [x] **Phase 19: Streaming Integration** - Point-by-point streaming via CncController, pause/resume/abort, live progress, optional G-code file export (completed 2026-02-28)
 
 ## Phase Details (v0.3.0)
 
@@ -228,8 +228,8 @@ Plans:
   4. Commands are generated on-the-fly from the toolpath buffer without pre-building a complete G-code file in memory
   5. Operator can optionally save the generated toolpath as a .nc file for future replay
 Plans:
-- [ ] 19-01-PLAN.md -- On-the-fly G-code generation, streaming adapter for CncController
-- [ ] 19-02-PLAN.md -- Job control (pause/resume/abort), progress reporting, G-code file export
+- [x] 19-01-PLAN.md -- On-the-fly G-code generation, streaming adapter for CncController
+- [x] 19-02-PLAN.md -- Job control (pause/resume/abort), progress reporting, G-code file export
 
 ## Progress (v0.3.0)
 
@@ -242,7 +242,7 @@ Plans:
 | 16. Tool Recommendation | 2/2 | Complete    | 2026-02-28 | - |
 | 17. Toolpath Generation | 3/3 | Complete    | 2026-02-28 | - |
 | 18. Guided Workflow | 3/3 | Complete   | 2026-02-28 | - |
-| 19. Streaming Integration | 1/2 | In Progress|  | - |
+| 19. Streaming Integration | 2/2 | Complete   | 2026-02-28 | - |
 
 ---
 *Roadmap created: 2026-02-24*
