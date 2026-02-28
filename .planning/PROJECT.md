@@ -8,17 +8,17 @@ A cross-platform C++17 desktop application for CNC woodworkers that combines 3D 
 
 A woodworker can go from selecting a piece of wood and a cutting tool to safely running a CNC job with optimized feeds and speeds — all without leaving the application.
 
-## Current Milestone: v0.2.0 Sender Feature Parity
+## Current Milestone: v0.2.1 FluidNC Config Editor
 
-**Goal:** Bring the CNC sender subsystem to feature parity with dedicated senders (ncSender benchmark), prioritizing safety, core sender controls, workflow polish, and extended capabilities.
+**Goal:** View and edit FluidNC YAML configuration over serial from within the existing CNC Settings panel — detect FluidNC firmware, parse `$S` output into a tree, edit settings, and persist to flash.
 
 **Target features:**
-- Configurable safety features (long-press guards, dead-man watchdog, door interlock, soft limits, pause-before-reset)
-- Full override controls (spindle, rapid, feed) with keyboard shortcuts
-- Coolant toggles, alarm handling with codes + unlock, status polling config
-- Finer jog control (0.01mm, per-step feedrates, diagonals, move-to dialog)
-- Workflow niceties (DRO click-to-zero, recent files, job completion alerts, console source tags)
-- Extended features (error/alarm references, probe workflow, M6 detection, nested macros, tool color viz)
+- Detect FluidNC firmware and show FluidNC-specific settings tab
+- Parse `$S` / `$SC` output (`$path=value` format) into hierarchical tree
+- Display settings as collapsible tree with inline editing
+- Send `$/path/to/setting=value` to change settings at runtime
+- Persist changes to flash via `$CD=config.yaml`
+- Show changed-vs-default highlighting via `$SC`
 
 ## Requirements
 
@@ -49,15 +49,17 @@ A woodworker can go from selecting a piece of wood and a cutting tool to safely 
 - ✓ Job safety (pause/resume/abort, sensor display, pre-flight, draw outline) — CNC Controller Suite
 - ✓ Firmware settings (GRBL $$ editor, backup/restore, NC/NO toggles) — CNC Controller Suite
 - ✓ Macro system (SQLite storage, built-in macros, keyboard shortcuts) — CNC Controller Suite
+- ✓ Configurable safety guards (long-press, dead-man, door interlock, soft limits) — Sender Feature Parity
+- ✓ Override controls (spindle %, rapid %, feed %), coolant toggles, alarm handling — Sender Feature Parity
+- ✓ Extended jog (0.01mm, diagonals, move-to), DRO click-to-zero, recent files — Sender Feature Parity
+- ✓ Probe workflows (Z, TLS, 3D), M6 detection, nested macros, gamepad input — Sender Feature Parity
+- ✓ CNC job history with database persistence and crash recovery — Sender Feature Parity
 
 ### Active
 
-- [ ] Configurable safety system with per-feature toggles
-- [ ] Full override controls (spindle %, rapid %, enhanced feed %)
-- [ ] Coolant control, alarm code handling, status polling configuration
-- [ ] Extended jog capabilities (0.01mm, per-step feedrates, diagonals, move-to)
-- [ ] Workflow niceties (DRO click-to-zero, recent files, job alerts, source tags)
-- [ ] Extended sender features (alarm/error references, probe workflow, M6 detection, nested macros)
+- [ ] FluidNC firmware detection and settings protocol (`$S`, `$SC`, `$/path=value`)
+- [ ] FluidNC settings tree view with collapsible hierarchy and inline editing
+- [ ] Persist FluidNC config changes to flash via `$CD=config.yaml`
 
 ### Out of Scope
 
@@ -67,17 +69,17 @@ A woodworker can go from selecting a piece of wood and a cutting tool to safely 
 - Cloud sync — local-only for now
 - Multi-machine control — single machine at a time
 - Remote/headless server mode — desktop CNC machines are physically attended
-- Gamepad/joystick jog — deferred, keyboard covers the need
+- Gamepad/joystick jog — shipped in v0.2.0
 - Full G-code editor — MDI console covers single commands; full editing is a separate tool
 - Plugin/extensibility system — premature for current userbase
 
 ## Context
 
-The CNC Controller Suite milestone shipped all 8 phases: foundation fixes, status display, manual control, tool integration, job streaming, job safety, firmware settings, and macros. The sender is functional but lacks feature parity with dedicated senders like ncSender.
+The CNC sender reached feature parity with dedicated senders in v0.2.0 (ncSender benchmark). Job history with database persistence and crash recovery was added post-milestone. The settings panel currently speaks GRBL `$N=value` numeric protocol only.
 
-Key gaps identified through ncSender comparison: no spindle/rapid override controls, no coolant toggles, no alarm code reference, no configurable safety guards (long-press, dead-man), limited jog options (no 0.01mm, no diagonals), no M6 tool change detection, no probe workflow, basic console without source tagging.
+FluidNC uses a different settings protocol: YAML-based paths instead of numeric IDs. `$S` dumps all settings as `$path=value` lines, `$SC` shows changed-from-default, and `$/path=value` changes a setting in RAM. `$CD=config.yaml` persists to flash. FluidNC firmware is already detected in `cnc_controller.cpp` via banner parsing.
 
-All changes in this milestone are UI-only modifications to existing panels — no layout changes, no new panel windows.
+The existing CncSettingsPanel already has tabs (Settings, Tuning, Safety, Raw) and raw line parsing infrastructure via `onRawLine()`. FluidNC settings will integrate as an additional tab or replacement behavior when FluidNC is detected.
 
 ## Constraints
 
@@ -101,5 +103,7 @@ All changes in this milestone are UI-only modifications to existing panels — n
 | UI-only changes, no layout restructuring | Minimize disruption, focus on feature density | — Pending |
 | ncSender as feature benchmark | Mature, dedicated sender with 170+ releases | — Pending |
 
+| FluidNC settings use YAML paths not numeric IDs | FluidNC is increasingly popular, distinct protocol from GRBL | — Pending |
+
 ---
-*Last updated: 2026-02-26 after Sender Feature Parity milestone start*
+*Last updated: 2026-02-27 after FluidNC Config Editor milestone start*
