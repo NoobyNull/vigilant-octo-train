@@ -118,6 +118,7 @@ set(DW_SOURCES
     core/carve/island_detector.cpp
     core/carve/analysis_overlay.cpp
     core/carve/tool_recommender.cpp
+    core/carve/toolpath_generator.cpp
 
     # Archive
     core/archive/archive.cpp

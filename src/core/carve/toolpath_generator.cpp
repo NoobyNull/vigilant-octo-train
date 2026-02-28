@@ -338,10 +338,11 @@ f32 ToolpathGenerator::vBitOffset(const Heightmap& heightmap,
                                    f32 x, f32 y,
                                    const VtdbToolGeometry& tool) const
 {
-    // V-bit: tip contacts surface directly on flat areas.
-    // On slopes, check neighbors to prevent gouging.
-    // The tool cone has half-angle = included_angle/2.
-    // At distance r from tip center, cone Z = r / tan(halfAngle).
+    // V-bit: tip contacts surface directly. The cone flares upward from
+    // the tip at half-angle = included_angle / 2. At XY distance r from
+    // the tip, the cone body is at Z = tipZ + r / tan(halfAngle).
+    // If a neighbor's surface is ABOVE the cone body at that distance,
+    // the tool must be raised to prevent the shank/cone from colliding.
     const f32 halfAngle = static_cast<f32>(tool.included_angle) * 0.5f;
     if (halfAngle <= 0.0f || halfAngle >= 90.0f) return 0.0f;
 
@@ -349,6 +350,8 @@ f32 ToolpathGenerator::vBitOffset(const Heightmap& heightmap,
     if (tanHalf <= 0.0f) return 0.0f;
 
     const f32 res = heightmap.resolution();
+    const Vec3 bmin = heightmap.boundsMin();
+    const Vec3 bmax = heightmap.boundsMax();
     const f32 centerZ = heightmap.atMm(x, y);
     f32 maxRaise = 0.0f;
 
@@ -358,14 +361,21 @@ f32 ToolpathGenerator::vBitOffset(const Heightmap& heightmap,
         {1, 1}, {1, -1}, {-1, 1}, {-1, -1}
     };
     for (const auto& d : dirs) {
+        const f32 nx = x + d[0] * res;
+        const f32 ny = y + d[1] * res;
+
+        // Skip neighbors outside heightmap bounds
+        if (nx < bmin.x || nx > bmax.x ||
+            ny < bmin.y || ny > bmax.y) continue;
+
         const f32 dx = d[0] * res;
         const f32 dy = d[1] * res;
         const f32 dist = std::sqrt(dx * dx + dy * dy);
-        const f32 nz = heightmap.atMm(x + dx, y + dy);
-        // Cone surface Z at this distance from center
-        const f32 coneZ = centerZ - dist / tanHalf;
+        const f32 nz = heightmap.atMm(nx, ny);
+        // Cone body Z at this distance from tip (flares upward)
+        const f32 coneZ = centerZ + dist / tanHalf;
         if (nz > coneZ) {
-            // Neighbor is above where cone would be -- raise to avoid gouging
+            // Neighbor surface is above the cone body -- must raise
             const f32 raise = nz - coneZ;
             maxRaise = std::max(maxRaise, raise);
         }
@@ -386,6 +396,8 @@ f32 ToolpathGenerator::ballNoseOffset(const Heightmap& heightmap,
     if (R <= 0.0f) return 0.0f;
 
     const f32 res = heightmap.resolution();
+    const Vec3 bmin = heightmap.boundsMin();
+    const Vec3 bmax = heightmap.boundsMax();
     const int steps = std::max(1, static_cast<int>(R / res));
     const f32 centerZ = heightmap.atMm(x, y);
 
@@ -399,7 +411,12 @@ f32 ToolpathGenerator::ballNoseOffset(const Heightmap& heightmap,
             const f32 r2 = dx * dx + dy * dy;
             if (r2 > R * R) continue;
 
-            const f32 sz = heightmap.atMm(x + dx, y + dy);
+            const f32 nx = x + dx;
+            const f32 ny = y + dy;
+            if (nx < bmin.x || nx > bmax.x ||
+                ny < bmin.y || ny > bmax.y) continue;
+
+            const f32 sz = heightmap.atMm(nx, ny);
             const f32 lift = std::sqrt(R * R - r2);
             const f32 contactZ = sz + lift;
             maxContactZ = std::max(maxContactZ, contactZ);
@@ -419,6 +436,8 @@ f32 ToolpathGenerator::endMillOffset(const Heightmap& heightmap,
     if (R <= 0.0f) return 0.0f;
 
     const f32 res = heightmap.resolution();
+    const Vec3 bmin = heightmap.boundsMin();
+    const Vec3 bmax = heightmap.boundsMax();
     const int steps = std::max(1, static_cast<int>(R / res));
     const f32 centerZ = heightmap.atMm(x, y);
     f32 maxZ = centerZ;
@@ -429,7 +448,12 @@ f32 ToolpathGenerator::endMillOffset(const Heightmap& heightmap,
             const f32 dy = static_cast<f32>(dj) * res;
             if (dx * dx + dy * dy > R * R) continue;
 
-            maxZ = std::max(maxZ, heightmap.atMm(x + dx, y + dy));
+            const f32 nx = x + dx;
+            const f32 ny = y + dy;
+            if (nx < bmin.x || nx > bmax.x ||
+                ny < bmin.y || ny > bmax.y) continue;
+
+            maxZ = std::max(maxZ, heightmap.atMm(nx, ny));
         }
     }
 
