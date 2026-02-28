@@ -44,13 +44,7 @@ bool ToolRecommendationWidget::render() {
         ImGui::Spacing();
         ImGui::SeparatorText("Clearing Tool (for island regions)");
 
-        // Island summary
         if (!m_result.clearing.empty()) {
-            const auto& islands = m_result.finishing.empty()
-                ? std::vector<carve::ToolCandidate>()
-                : std::vector<carve::ToolCandidate>();
-
-            // We don't have direct island data here, show clearing options
             ImGui::TextDisabled("Select a clearing tool for buried regions");
         }
 
@@ -80,8 +74,8 @@ bool ToolRecommendationWidget::renderToolCard(
 
     // Card background with selection highlight
     const ImVec4 bgColor = selected
-        ? ImVec4(0.20f, 0.35f, 0.55f, 0.60f) // Selected highlight
-        : ImVec4(0.15f, 0.15f, 0.18f, 0.40f); // Default subtle bg
+        ? ImGui::ColorConvertU32ToFloat4(Theme::Colors::Primary & 0x99FFFFFF)
+        : ImGui::ColorConvertU32ToFloat4(Theme::Colors::Surface & 0x66FFFFFF);
 
     ImGui::PushStyleColor(ImGuiCol_ChildBg, bgColor);
     const float cardWidth = ImGui::GetContentRegionAvail().x;
@@ -202,10 +196,10 @@ const carve::ToolCandidate* ToolRecommendationWidget::selectedClearing() const {
 unsigned int ToolRecommendationWidget::toolTypeBadgeColor(VtdbToolType type) {
     // ABGR packed colors matching tool categories
     switch (type) {
-    case VtdbToolType::VBit:            return 0xFF55AA55; // Green
-    case VtdbToolType::BallNose:        return 0xFFCC8855; // Blue
-    case VtdbToolType::TaperedBallNose: return 0xFFAA55AA; // Purple
-    case VtdbToolType::EndMill:         return 0xFF5599DD; // Orange
+    case VtdbToolType::VBit:            return Theme::Colors::Success;
+    case VtdbToolType::BallNose:        return Theme::Colors::Primary;
+    case VtdbToolType::TaperedBallNose: return Theme::Colors::Warning;
+    case VtdbToolType::EndMill:         return Theme::Colors::Error;
     default:                            return Theme::Colors::Secondary;
     }
 }
