@@ -240,7 +240,7 @@ Plans:
 | 14. Heightmap Engine | 2/2 | Complete    | 2026-02-28 | - |
 | 15. Model Analysis | 2/2 | Complete    | 2026-02-28 | - |
 | 16. Tool Recommendation | 2/2 | Complete    | 2026-02-28 | - |
-| 17. Toolpath Generation | v0.3.0 | 0/3 | Planned | - |
+| 17. Toolpath Generation | 2/3 | In Progress|  | - |
 | 18. Guided Workflow | v0.3.0 | 0/3 | Planned | - |
 | 19. Streaming Integration | v0.3.0 | 0/2 | Planned | - |
 

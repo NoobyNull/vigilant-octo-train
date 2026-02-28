@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-28T20:05:57.613Z"
+last_updated: "2026-02-28T20:15:00.000Z"
 progress:
   total_phases: 28
   completed_phases: 15
   total_plans: 55
-  completed_plans: 43
+  completed_plans: 44
 ---
 
 # Project State
@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-28)
 
 **Core value:** A woodworker can load an STL model, select a tool and material, and stream a 2.5D carving toolpath directly to the CNC machine — no G-code files, no external CAM software.
-**Current focus:** Milestone v0.3.0 Direct Carve — Phase 16 complete, ready for Phase 17
+**Current focus:** Milestone v0.3.0 Direct Carve — Phase 17 in progress
 
 ## Current Position
 
-Phase: Phase 16 — Tool Recommendation (complete)
-Plan: 16-02 — Clearing Tool Recommendation and UI (complete)
-Status: Phase 16 complete, ready for Phase 17
-Last activity: 2026-02-28 — Tool recommender with clearing scorer and UI widget
+Phase: Phase 17 — Toolpath Generation (in progress)
+Plan: 17-03 — Surgical Island Clearing Pass Generation (complete)
+Status: Phase 17 plan 03 complete, plans 01-02 executed in parallel
+Last activity: 2026-02-28 — Island clearing pass with multi-depth raster and ramp lead-in/out
 
 ## Accumulated Context
 
@@ -57,6 +57,10 @@ Last activity: 2026-02-28 — Tool recommender with clearing scorer and UI widge
 - Guided wizard workflow enforcing safety at each step
 - Model fitting: uniform scale (locked aspect), independent Z depth, XY position
 - Streaming via existing CncController character-counting protocol
+- 40% stepover for roughing clearing passes (standard CNC roughing practice)
+- Stepdown equals tool diameter for multi-depth island clearing passes
+- 0.2mm margin above island floor prevents over-cutting
+- Lead-in/out ramp distance from config (not hardcoded)
 
 ### Pending Todos
 None.
@@ -72,9 +76,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Re-executed 16-01-PLAN.md (added 17 tests, CMake integration)
+Stopped at: Completed 17-03-PLAN.md (island clearing pass generation)
 Resume file: None
-Next action: Implement Phase 17
+Next action: Verify Phase 17 plans 01-02 complete, then Phase 18
 
 ---
 *State initialized: 2026-02-27*
