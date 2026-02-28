@@ -545,51 +545,74 @@ void GCodePanel::reanalyze() {
 void GCodePanel::renderConnectionBar() {
     ImGui::Text("%s Connection", Icons::Plug);
 
-    // Port combo
-    if (ImGui::Button(Icons::Refresh)) {
-        m_availablePorts = listSerialPorts();
-        if (m_selectedPort >= m_availablePorts.size())
-            m_selectedPort = 0;
-    }
+    // Mode selector
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Serial", m_connMode == ConnMode::Serial))
+        m_connMode = ConnMode::Serial;
+    ImGui::SameLine();
+    if (ImGui::RadioButton("TCP", m_connMode == ConnMode::Tcp))
+        m_connMode = ConnMode::Tcp;
     ImGui::SameLine();
 
-    ImGui::SetNextItemWidth(150);
-    if (m_availablePorts.empty()) {
-        ImGui::BeginDisabled();
-        if (ImGui::BeginCombo("##Port", "No ports found")) {
-            ImGui::EndCombo();
+    if (m_connMode == ConnMode::Serial) {
+        // Refresh button
+        if (ImGui::Button(Icons::Refresh)) {
+            m_availablePorts = listSerialPorts();
+            if (m_selectedPort >= m_availablePorts.size())
+                m_selectedPort = 0;
         }
-        ImGui::EndDisabled();
-    } else {
-        const char* portPreview = m_availablePorts[m_selectedPort].c_str();
-        if (ImGui::BeginCombo("##Port", portPreview)) {
-            for (size_t i = 0; i < m_availablePorts.size(); ++i) {
-                bool selected = (i == m_selectedPort);
-                if (ImGui::Selectable(m_availablePorts[i].c_str(), selected))
-                    m_selectedPort = i;
+        ImGui::SameLine();
+
+        // Port combo
+        ImGui::SetNextItemWidth(150);
+        if (m_availablePorts.empty()) {
+            ImGui::BeginDisabled();
+            if (ImGui::BeginCombo("##Port", "No ports found")) {
+                ImGui::EndCombo();
+            }
+            ImGui::EndDisabled();
+        } else {
+            const char* portPreview = m_availablePorts[m_selectedPort].c_str();
+            if (ImGui::BeginCombo("##Port", portPreview)) {
+                for (size_t i = 0; i < m_availablePorts.size(); ++i) {
+                    bool selected = (i == m_selectedPort);
+                    if (ImGui::Selectable(m_availablePorts[i].c_str(), selected))
+                        m_selectedPort = i;
+                    if (selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+        }
+
+        // Baud combo
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(80);
+        char baudLabel[16];
+        snprintf(baudLabel, sizeof(baudLabel), "%d", BAUD_RATES[m_selectedBaud]);
+        if (ImGui::BeginCombo("##Baud", baudLabel)) {
+            for (size_t i = 0; i < static_cast<size_t>(NUM_BAUD_RATES); ++i) {
+                char label[16];
+                snprintf(label, sizeof(label), "%d", BAUD_RATES[i]);
+                bool selected = (i == m_selectedBaud);
+                if (ImGui::Selectable(label, selected))
+                    m_selectedBaud = i;
                 if (selected)
                     ImGui::SetItemDefaultFocus();
             }
             ImGui::EndCombo();
         }
-    }
-
-    // Baud combo
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(80);
-    char baudLabel[16];
-    snprintf(baudLabel, sizeof(baudLabel), "%d", BAUD_RATES[m_selectedBaud]);
-    if (ImGui::BeginCombo("##Baud", baudLabel)) {
-        for (size_t i = 0; i < static_cast<size_t>(NUM_BAUD_RATES); ++i) {
-            char label[16];
-            snprintf(label, sizeof(label), "%d", BAUD_RATES[i]);
-            bool selected = (i == m_selectedBaud);
-            if (ImGui::Selectable(label, selected))
-                m_selectedBaud = i;
-            if (selected)
-                ImGui::SetItemDefaultFocus();
-        }
-        ImGui::EndCombo();
+    } else {
+        // TCP mode: Host input + Port input
+        ImGui::SetNextItemWidth(150);
+        ImGui::InputText("##TcpHost", m_tcpHost, sizeof(m_tcpHost));
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(60);
+        ImGui::InputInt("##TcpPort", &m_tcpPort, 0, 0);
+        if (m_tcpPort < 1)
+            m_tcpPort = 1;
+        if (m_tcpPort > 65535)
+            m_tcpPort = 65535;
     }
 
     // Connect / Disconnect button
@@ -600,14 +623,29 @@ void GCodePanel::renderConnectionBar() {
                 m_cnc->disconnect();
         }
     } else {
-        bool canConnect = m_cnc && !m_availablePorts.empty();
+        bool canConnect = false;
+        if (m_connMode == ConnMode::Serial)
+            canConnect = m_cnc && !m_availablePorts.empty();
+        else
+            canConnect = m_cnc && m_tcpHost[0] != '\0';
+
         if (!canConnect)
             ImGui::BeginDisabled();
         if (ImGui::Button("Connect")) {
-            if (!m_cnc->connect(m_availablePorts[m_selectedPort], BAUD_RATES[m_selectedBaud])) {
-                addConsoleLine("Failed to open " + m_availablePorts[m_selectedPort], ConsoleLine::Error);
+            if (m_connMode == ConnMode::Serial) {
+                if (!m_cnc->connect(m_availablePorts[m_selectedPort], BAUD_RATES[m_selectedBaud])) {
+                    addConsoleLine("Failed to open " + m_availablePorts[m_selectedPort], ConsoleLine::Error);
+                } else {
+                    addConsoleLine("Connecting to " + m_availablePorts[m_selectedPort] + "...", ConsoleLine::Info);
+                }
             } else {
-                addConsoleLine("Connecting to " + m_availablePorts[m_selectedPort] + "...", ConsoleLine::Info);
+                std::string host(m_tcpHost);
+                std::string addr = host + ":" + std::to_string(m_tcpPort);
+                if (!m_cnc->connectTcp(host, m_tcpPort)) {
+                    addConsoleLine("Failed to connect to " + addr, ConsoleLine::Error);
+                } else {
+                    addConsoleLine("Connecting to " + addr + "...", ConsoleLine::Info);
+                }
             }
         }
         if (!canConnect)

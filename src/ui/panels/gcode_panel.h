@@ -203,12 +203,20 @@ class GCodePanel : public Panel {
     StreamProgress m_streamProgress;
     int m_feedOverridePercent = 100;
 
+    // Connection mode
+    enum class ConnMode { Serial, Tcp };
+    ConnMode m_connMode = ConnMode::Serial;
+
     // Serial port selection
     std::vector<std::string> m_availablePorts;
     size_t m_selectedPort = 0;
     size_t m_selectedBaud = 3; // Index into baud rate list (115200)
     static constexpr int BAUD_RATES[] = {9600, 19200, 38400, 57600, 115200, 230400};
     static constexpr int NUM_BAUD_RATES = 6;
+
+    // TCP connection state
+    char m_tcpHost[128] = "192.168.1.1";  // ImGui InputText buffer
+    int m_tcpPort = 23;                    // Default telnet port (common for serial-to-ethernet bridges)
 
     // Console
     std::deque<ConsoleLine> m_consoleLines;
