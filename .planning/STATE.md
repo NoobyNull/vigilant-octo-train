@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-28T20:42:00Z"
+last_updated: "2026-02-28T20:43:38Z"
 progress:
   total_phases: 28
   completed_phases: 19
@@ -77,6 +77,9 @@ Last activity: 2026-02-28 — Phase 19 streaming integration complete
 - [Phase 19]: Phase-based state machine (Preamble/Clearing/Finishing/Postamble/Complete) for streaming dispatch
 - [Phase 19]: Modal feed rate optimization -- F word emitted only on change
 - [Phase 19]: Postamble split into 3 individual lines for GRBL buffer compatibility
+- [Phase 19-02]: Progress delegation via push (DirectCarvePanel -> GCodePanel) rather than polling
+- [Phase 19-02]: 1.5s long-press abort with red fill overlay for safety
+- [Phase 19-02]: Abort sequence: feed hold + soft reset + retract Z warning
 
 ### Pending Todos
 None.
