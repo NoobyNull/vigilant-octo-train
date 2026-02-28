@@ -171,6 +171,7 @@ class UIManager {
     // Workspace mode
     WorkspaceMode workspaceMode() const { return m_workspaceMode; }
     void setWorkspaceMode(WorkspaceMode mode);
+    void showCncPanels(bool show); // Show/hide CNC panels without affecting model panels
     bool& showRestartPopup() { return m_showRestartPopup; }
 
     // --- Action callbacks (set by Application) ---
@@ -184,6 +185,20 @@ class UIManager {
     void setOnSpawnSettings(ActionCallback cb) { m_onSpawnSettings = std::move(cb); }
     void setOnShowAbout(ActionCallback cb) { m_onShowAbout = std::move(cb); }
     void setOnLibraryMaintenance(ActionCallback cb) { m_onLibraryMaintenance = std::move(cb); }
+
+    // CNC menu bar callbacks
+    using ConnectCallback = std::function<void(const std::string& port)>;
+    void setOnConnect(ConnectCallback cb) { m_onConnect = std::move(cb); }
+    void setOnDisconnect(ActionCallback cb) { m_onDisconnect = std::move(cb); }
+    void setOnPanicStop(ActionCallback cb) { m_onPanicStop = std::move(cb); }
+
+    // CNC streaming state (for panic smash detection)
+    void setCncStreaming(bool v) { m_cncStreaming = v; }
+
+    // CNC state for menu bar display
+    void setCncConnected(bool v) { m_cncConnected = v; }
+    void setCncSimulating(bool v) { m_cncSimulating = v; }
+    void setAvailablePorts(std::vector<std::string> ports) { m_availablePorts = std::move(ports); }
 
     // --- Import progress callbacks (Plan 02-05) ---
     void setImportProgress(const ImportProgress* progress);
@@ -285,6 +300,23 @@ class UIManager {
     ActionCallback m_onSpawnSettings;
     ActionCallback m_onShowAbout;
     ActionCallback m_onLibraryMaintenance;
+
+    // CNC menu bar callbacks
+    ConnectCallback m_onConnect;
+    ActionCallback m_onDisconnect;
+    ActionCallback m_onPanicStop;
+
+    // CNC state for menu bar display
+    bool m_cncConnected = false;
+    bool m_cncSimulating = false;
+    bool m_cncStreaming = false;
+    std::vector<std::string> m_availablePorts;
+
+    // Keyboard smash panic detector
+    static constexpr int PANIC_KEY_COUNT = 5;       // keys required
+    static constexpr float PANIC_WINDOW_SEC = 0.4f; // time window
+    float m_panicKeyTimes[PANIC_KEY_COUNT] = {};
+    int m_panicKeyHead = 0;
 };
 
 } // namespace dw

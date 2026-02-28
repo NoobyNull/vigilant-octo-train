@@ -5,6 +5,7 @@
 
 #include "managers/ui_manager.h"
 
+#include <algorithm>
 #include <array>
 
 #include <imgui.h>
@@ -173,6 +174,55 @@ void UIManager::renderMenuBar() {
         renderEditMenu();
         renderToolsMenu();
         renderHelpMenu();
+
+        // Right-aligned CNC connection status
+        {
+            float barWidth = ImGui::GetWindowWidth();
+            float cursorX = barWidth;
+
+            if (m_cncConnected && !m_cncSimulating) {
+                // Connected to real hardware — show Disconnect button
+                const char* label = "Disconnect";
+                float btnWidth = ImGui::CalcTextSize(label).x + ImGui::GetStyle().FramePadding.x * 2.0f + 8.0f;
+                cursorX -= btnWidth + 8.0f;
+                ImGui::SetCursorPosX(cursorX);
+                if (ImGui::SmallButton(label) && m_onDisconnect) {
+                    m_onDisconnect();
+                }
+            } else if (m_cncSimulating) {
+                // Simulator mode — show Connect dropdown if ports available, then "Virtual CNC" label
+                if (!m_availablePorts.empty()) {
+                    const char* connLabel = "Connect";
+                    float connWidth = ImGui::CalcTextSize(connLabel).x + ImGui::GetStyle().FramePadding.x * 2.0f + 20.0f;
+                    cursorX -= connWidth + 8.0f;
+                    ImGui::SetCursorPosX(cursorX);
+                    if (ImGui::SmallButton(connLabel)) {
+                        if (m_availablePorts.size() == 1 && m_onConnect) {
+                            m_onConnect(m_availablePorts.front());
+                        } else {
+                            ImGui::OpenPopup("##PortSelect");
+                        }
+                    }
+                    if (ImGui::BeginPopup("##PortSelect")) {
+                        for (const auto& port : m_availablePorts) {
+                            if (ImGui::MenuItem(port.c_str()) && m_onConnect) {
+                                m_onConnect(port);
+                            }
+                        }
+                        ImGui::EndPopup();
+                    }
+                }
+
+                const char* label = "Virtual CNC";
+                float textWidth = ImGui::CalcTextSize(label).x;
+                cursorX -= textWidth + 12.0f;
+                ImGui::SetCursorPosX(cursorX);
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+                ImGui::TextUnformatted(label);
+                ImGui::PopStyleColor();
+            }
+        }
+
         ImGui::EndMainMenuBar();
     }
 }
@@ -221,12 +271,14 @@ void UIManager::renderViewMenu() {
     ImGui::MenuItem("Properties", nullptr, &m_showProperties);
     ImGui::MenuItem("Project", nullptr, &m_showProject);
     ImGui::Separator();
-    ImGui::MenuItem("G-code Viewer", nullptr, &m_showGCode);
     ImGui::MenuItem("Cut Optimizer", nullptr, &m_showCutOptimizer);
     ImGui::MenuItem("Cost Estimator", nullptr, &m_showCostEstimator);
     ImGui::MenuItem("Materials", nullptr, &m_showMaterials);
     ImGui::MenuItem("Tool Browser", nullptr, &m_showToolBrowser);
-    if (ImGui::BeginMenu("CNC")) {
+    ImGui::Separator();
+    if (ImGui::BeginMenu("Sender")) {
+        ImGui::MenuItem("G-code Viewer", nullptr, &m_showGCode);
+        ImGui::Separator();
         ImGui::MenuItem("Status", nullptr, &m_showCncStatus);
         ImGui::MenuItem("Jog Control", nullptr, &m_showCncJog);
         ImGui::MenuItem("MDI Console", nullptr, &m_showCncConsole);
@@ -238,14 +290,14 @@ void UIManager::renderViewMenu() {
         ImGui::Separator();
         ImGui::MenuItem("Firmware Settings", nullptr, &m_showCncSettings);
         ImGui::MenuItem("Macros", nullptr, &m_showCncMacros);
+        ImGui::Separator();
+        if (ImGui::MenuItem("Show All")) {
+            showCncPanels(true);
+        }
+        if (ImGui::MenuItem("Hide All")) {
+            showCncPanels(false);
+        }
         ImGui::EndMenu();
-    }
-    ImGui::Separator();
-    if (ImGui::MenuItem("Model Mode", "Ctrl+1", m_workspaceMode == WorkspaceMode::Model)) {
-        setWorkspaceMode(WorkspaceMode::Model);
-    }
-    if (ImGui::MenuItem("CNC Mode", "Ctrl+2", m_workspaceMode == WorkspaceMode::CNC)) {
-        setWorkspaceMode(WorkspaceMode::CNC);
     }
     ImGui::Separator();
     if (ImGui::MenuItem("Lighting Settings", "Ctrl+L") && m_lightingDialog) {
@@ -506,6 +558,30 @@ void UIManager::renderRestartPopup(const ActionCallback& onRelaunch) {
 void UIManager::handleKeyboardShortcuts() {
     auto& io = ImGui::GetIO();
 
+    // Keyboard smash panic stop — runs BEFORE WantTextInput check
+    // so it works even when a text field (e.g. MDI console) is focused.
+    // Only active during real hardware streaming.
+    if (m_cncStreaming && m_cncConnected && !m_cncSimulating) {
+        // Count any key-down event this frame
+        for (int k = static_cast<int>(ImGuiKey_NamedKey_BEGIN);
+             k < static_cast<int>(ImGuiKey_NamedKey_END); ++k) {
+            if (ImGui::IsKeyPressed(static_cast<ImGuiKey>(k), false)) {
+                float now = static_cast<float>(ImGui::GetTime());
+                m_panicKeyTimes[m_panicKeyHead] = now;
+                m_panicKeyHead = (m_panicKeyHead + 1) % PANIC_KEY_COUNT;
+                // Check if oldest entry in ring is within window
+                float oldest = m_panicKeyTimes[m_panicKeyHead];
+                if (oldest > 0.0f && (now - oldest) <= PANIC_WINDOW_SEC) {
+                    // Panic detected — fire callback and reset
+                    if (m_onPanicStop) m_onPanicStop();
+                    std::fill(std::begin(m_panicKeyTimes), std::end(m_panicKeyTimes), 0.0f);
+                    return;
+                }
+                break; // only record one key per frame
+            }
+        }
+    }
+
     // Only handle shortcuts when not typing in a text field
     if (io.WantTextInput) {
         return;
@@ -678,6 +754,19 @@ void UIManager::setImportCancelCallback(std::function<void()> callback) {
 void UIManager::showTaggerShutdownDialog(const TaggerProgress* progress) {
     if (m_taggerShutdownDialog)
         m_taggerShutdownDialog->open(progress);
+}
+
+void UIManager::showCncPanels(bool show) {
+    m_showCncStatus = show;
+    m_showCncJog = show;
+    m_showCncConsole = show;
+    m_showCncWcs = show;
+    m_showCncTool = show;
+    m_showCncJob = show;
+    m_showCncSafety = show;
+    m_showCncSettings = show;
+    m_showCncMacros = show;
+    m_showGCode = show;
 }
 
 void UIManager::setWorkspaceMode(WorkspaceMode mode) {

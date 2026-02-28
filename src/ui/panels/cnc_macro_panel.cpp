@@ -82,12 +82,42 @@ void CncMacroPanel::renderMacroList() {
 
     ImGui::Separator();
 
-    // Macro list
+    // Macro list with drag-and-drop reordering
     for (size_t i = 0; i < m_macros.size(); ++i) {
         auto& macro = m_macros[i];
         ImGui::PushID(macro.id);
 
+        // Drag handle
+        ImGui::Button("=##drag", ImVec2(20, 0));
+        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+            m_dragSourceIdx = static_cast<int>(i);
+            ImGui::SetDragDropPayload("MACRO_REORDER", &m_dragSourceIdx, sizeof(int));
+            ImGui::Text("Move: %s", macro.name.c_str());
+            ImGui::EndDragDropSource();
+        }
+        if (ImGui::BeginDragDropTarget()) {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MACRO_REORDER")) {
+                int srcIdx = *static_cast<const int*>(payload->Data);
+                int dstIdx = static_cast<int>(i);
+                if (srcIdx != dstIdx && srcIdx >= 0 &&
+                    srcIdx < static_cast<int>(m_macros.size())) {
+                    std::vector<int> ids;
+                    for (const auto& m : m_macros) ids.push_back(m.id);
+                    int movedId = ids[static_cast<size_t>(srcIdx)];
+                    ids.erase(ids.begin() + srcIdx);
+                    ids.insert(ids.begin() + dstIdx, movedId);
+                    m_macroManager->reorder(ids);
+                    m_needsRefresh = true;
+                }
+            }
+            ImGui::EndDragDropTarget();
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Drag to reorder");
+        }
+
         // Run button
+        ImGui::SameLine();
         if (!canRun) {
             ImGui::BeginDisabled();
         }
@@ -110,7 +140,6 @@ void CncMacroPanel::renderMacroList() {
         // Macro name
         ImGui::SameLine();
         if (macro.builtIn) {
-            // Lock icon for built-in macros
             ImGui::TextDisabled("%s", Icons::Settings);
             ImGui::SameLine();
         }
@@ -148,30 +177,6 @@ void CncMacroPanel::renderMacroList() {
                 }
             }
             ImGui::PopStyleColor();
-        }
-
-        // Move up/down buttons
-        if (m_macros.size() > 1) {
-            ImGui::SameLine();
-            if (i > 0) {
-                if (ImGui::SmallButton(Icons::ArrowUp)) {
-                    std::vector<int> ids;
-                    for (const auto& m : m_macros) ids.push_back(m.id);
-                    std::swap(ids[i], ids[i - 1]);
-                    m_macroManager->reorder(ids);
-                    m_needsRefresh = true;
-                }
-            }
-            if (i < m_macros.size() - 1) {
-                ImGui::SameLine();
-                if (ImGui::SmallButton(Icons::ArrowDown)) {
-                    std::vector<int> ids;
-                    for (const auto& m : m_macros) ids.push_back(m.id);
-                    std::swap(ids[i], ids[i + 1]);
-                    m_macroManager->reorder(ids);
-                    m_needsRefresh = true;
-                }
-            }
         }
 
         ImGui::PopID();

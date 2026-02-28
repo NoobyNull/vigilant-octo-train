@@ -1,5 +1,6 @@
 #include "ui/panels/cnc_console_panel.h"
 
+#include <cstdlib>
 #include <cstring>
 
 #include <imgui.h>
@@ -8,6 +9,32 @@
 #include "ui/icons.h"
 
 namespace dw {
+
+using MS = CncConsolePanel::MessageSource;
+
+namespace {
+
+static const char* sourceTag(MS source) {
+    switch (source) {
+    case MS::JOB:   return "[JOB] ";
+    case MS::MDI:   return "[MDI] ";
+    case MS::MACRO: return "[MACRO] ";
+    case MS::SYS:   return "[SYS] ";
+    }
+    return "";
+}
+
+static ImVec4 sourceColor(MS source) {
+    switch (source) {
+    case MS::JOB:   return ImVec4(0.3f, 0.7f, 1.0f, 1.0f);   // Blue
+    case MS::MDI:   return ImVec4(0.4f, 0.8f, 1.0f, 1.0f);   // Cyan
+    case MS::MACRO: return ImVec4(0.8f, 0.6f, 1.0f, 1.0f);   // Purple
+    case MS::SYS:   return ImVec4(1.0f, 0.8f, 0.2f, 1.0f);   // Yellow
+    }
+    return ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+} // anonymous namespace
 
 CncConsolePanel::CncConsolePanel() : Panel("MDI Console") {}
 
@@ -32,6 +59,11 @@ void CncConsolePanel::render() {
     float inputHeight = ImGui::GetFrameHeightWithSpacing() + 4.0f;
     if (ImGui::BeginChild("ConsoleOutput", ImVec2(0, -inputHeight), ImGuiChildFlags_Borders)) {
         for (const auto& line : m_lines) {
+            // Source tag in source-specific color
+            ImGui::TextColored(sourceColor(line.source), "%s", sourceTag(line.source));
+            ImGui::SameLine(0, 0);
+
+            // Message text in type-specific color
             ImVec4 color;
             const char* prefix = "";
             switch (line.type) {
@@ -134,6 +166,21 @@ int CncConsolePanel::inputCallback(ImGuiInputTextCallbackData* data) {
     return 0;
 }
 
+// NOTE: Application wiring can call addLine() with explicit source to tag
+// JOB (streaming) and MACRO (macro execution) messages. Current callbacks
+// default: sent=MDI, received/error/alarm/connection=SYS.
+
+void CncConsolePanel::addLine(const std::string& text, int type, MessageSource source) {
+    ConsoleLine cl;
+    cl.text = text;
+    cl.type = static_cast<ConsoleLine::Type>(type);
+    cl.source = source;
+    m_lines.push_back(std::move(cl));
+    if (m_lines.size() > MAX_LINES)
+        m_lines.pop_front();
+    m_scrollToBottom = true;
+}
+
 void CncConsolePanel::onRawLine(const std::string& line, bool isSent) {
     // Filter out status polling noise — ? queries and <...> status reports
     if (!line.empty()) {
@@ -143,9 +190,19 @@ void CncConsolePanel::onRawLine(const std::string& line, bool isSent) {
             return;
     }
 
+    // Enhance received error lines with human-readable descriptions (EXT-02)
+    if (!isSent && line.size() > 6 && line.substr(0, 6) == "error:") {
+        int code = std::atoi(line.c_str() + 6);
+        const char* desc = errorDescription(code);
+        std::string enhanced = line + " (" + desc + ")";
+        addLine(enhanced, ConsoleLine::Error, MessageSource::SYS);
+        return;
+    }
+
     ConsoleLine cl;
     cl.text = line;
     cl.type = isSent ? ConsoleLine::Sent : ConsoleLine::Received;
+    cl.source = isSent ? MessageSource::MDI : MessageSource::SYS;
     m_lines.push_back(std::move(cl));
     if (m_lines.size() > MAX_LINES)
         m_lines.pop_front();
@@ -156,6 +213,7 @@ void CncConsolePanel::onError(const std::string& message) {
     ConsoleLine cl;
     cl.text = message;
     cl.type = ConsoleLine::Error;
+    cl.source = MessageSource::SYS;
     m_lines.push_back(std::move(cl));
     if (m_lines.size() > MAX_LINES)
         m_lines.pop_front();
@@ -168,6 +226,7 @@ void CncConsolePanel::onAlarm(int code, const std::string& desc) {
     ConsoleLine cl;
     cl.text = buf;
     cl.type = ConsoleLine::Error;
+    cl.source = MessageSource::SYS;
     m_lines.push_back(std::move(cl));
     if (m_lines.size() > MAX_LINES)
         m_lines.pop_front();
@@ -178,6 +237,7 @@ void CncConsolePanel::onConnectionChanged(bool connected, const std::string& /*v
     m_connected = connected;
     ConsoleLine cl;
     cl.type = ConsoleLine::Info;
+    cl.source = MessageSource::SYS;
     cl.text = connected ? "Connected to GRBL" : "Disconnected";
     m_lines.push_back(std::move(cl));
     if (m_lines.size() > MAX_LINES)

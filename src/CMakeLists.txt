@@ -45,6 +45,7 @@ set(DW_SOURCES
     core/database/material_repository.cpp
     core/database/project_repository.cpp
     core/database/gcode_repository.cpp
+    core/database/job_repository.cpp
     core/database/cost_repository.cpp
     core/database/cut_plan_repository.cpp
     core/database/tool_database.cpp
@@ -97,7 +98,9 @@ set(DW_SOURCES
     core/cnc/preflight_check.cpp
     core/cnc/tool_calculator.cpp
     core/cnc/grbl_settings.cpp
+    core/cnc/unified_settings.cpp
     core/cnc/macro_manager.cpp
+    core/cnc/gamepad_input.cpp
 
     # Optimizer
     core/optimizer/cut_optimizer.cpp

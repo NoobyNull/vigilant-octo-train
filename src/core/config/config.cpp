@@ -128,6 +128,10 @@ bool Config::load() {
         } else if (section == "logging") {
             if (key == "level") {
                 str::parseInt(value, m_logLevel);
+            } else if (key == "log_to_file") {
+                m_logToFile = (value == "true" || value == "1");
+            } else if (key == "log_file_path") {
+                m_logFilePath = value;
             }
         } else if (section == "paths") {
             if (key == "last_import") {
@@ -223,6 +227,56 @@ bool Config::load() {
                     m_recentProjects.push_back(value);
                 }
             }
+        } else if (section == "safety") {
+            if (key == "long_press_enabled") {
+                m_safetyLongPressEnabled = (value == "true" || value == "1");
+            } else if (key == "long_press_duration_ms") {
+                str::parseInt(value, m_safetyLongPressDurationMs);
+            } else if (key == "abort_long_press") {
+                m_safetyAbortLongPress = (value == "true" || value == "1");
+            } else if (key == "dead_man_enabled") {
+                m_safetyDeadManEnabled = (value == "true" || value == "1");
+            } else if (key == "dead_man_timeout_ms") {
+                str::parseInt(value, m_safetyDeadManTimeoutMs);
+            } else if (key == "door_interlock_enabled") {
+                m_safetyDoorInterlockEnabled = (value == "true" || value == "1");
+            } else if (key == "soft_limit_check_enabled") {
+                m_safetySoftLimitCheckEnabled = (value == "true" || value == "1");
+            } else if (key == "pause_before_reset_enabled") {
+                m_safetyPauseBeforeResetEnabled = (value == "true" || value == "1");
+            }
+        } else if (section == "cnc") {
+            if (key == "status_poll_interval_ms") {
+                int val = 200;
+                str::parseInt(value, val);
+                m_statusPollIntervalMs = std::clamp(val, 50, 200);
+            } else if (key == "jog_feed_small") {
+                int val = 200;
+                str::parseInt(value, val);
+                m_jogFeedSmall = std::clamp(val, 10, 2000);
+            } else if (key == "jog_feed_medium") {
+                int val = 1000;
+                str::parseInt(value, val);
+                m_jogFeedMedium = std::clamp(val, 100, 5000);
+            } else if (key == "jog_feed_large") {
+                int val = 3000;
+                str::parseInt(value, val);
+                m_jogFeedLarge = std::clamp(val, 500, 10000);
+            } else if (key == "job_completion_notify") {
+                m_jobCompletionNotify = (value == "true" || value == "1");
+            } else if (key == "job_completion_flash") {
+                m_jobCompletionFlash = (value == "true" || value == "1");
+            } else if (key == "display_units") {
+                m_displayUnitsMetric = (value != "in");
+            } else if (key == "advanced_settings_view") {
+                m_advancedSettingsView = (value == "true" || value == "1");
+            }
+        } else if (section == "recent_gcode") {
+            if (str::startsWith(key, "file")) {
+                if (!value.empty()) {
+                    m_recentGCodeFiles.push_back(value);
+                }
+            }
         } else if (section == "machine_profiles") {
             if (key == "active_profile") {
                 str::parseInt(value, m_activeMachineProfileIndex);
@@ -297,6 +351,10 @@ bool Config::save() {
     // Logging section
     ss << "[logging]\n";
     ss << "level=" << m_logLevel << "\n";
+    ss << "log_to_file=" << (m_logToFile ? "true" : "false") << "\n";
+    if (!m_logFilePath.empty()) {
+        ss << "log_file_path=" << m_logFilePath.string() << "\n";
+    }
     ss << "\n";
 
     // Paths section
@@ -392,6 +450,37 @@ bool Config::save() {
     }
     ss << "\n";
 
+    // CNC section
+    ss << "[cnc]\n";
+    ss << "status_poll_interval_ms=" << m_statusPollIntervalMs << "\n";
+    ss << "jog_feed_small=" << m_jogFeedSmall << "\n";
+    ss << "jog_feed_medium=" << m_jogFeedMedium << "\n";
+    ss << "jog_feed_large=" << m_jogFeedLarge << "\n";
+    ss << "job_completion_notify=" << (m_jobCompletionNotify ? "true" : "false") << "\n";
+    ss << "job_completion_flash=" << (m_jobCompletionFlash ? "true" : "false") << "\n";
+    ss << "display_units=" << (m_displayUnitsMetric ? "mm" : "in") << "\n";
+    ss << "advanced_settings_view=" << (m_advancedSettingsView ? "true" : "false") << "\n";
+    ss << "\n";
+
+    // Recent G-code files section
+    ss << "[recent_gcode]\n";
+    for (size_t i = 0; i < m_recentGCodeFiles.size(); ++i) {
+        ss << "file" << i << "=" << m_recentGCodeFiles[i].string() << "\n";
+    }
+    ss << "\n";
+
+    // Safety section
+    ss << "[safety]\n";
+    ss << "long_press_enabled=" << (m_safetyLongPressEnabled ? "true" : "false") << "\n";
+    ss << "long_press_duration_ms=" << m_safetyLongPressDurationMs << "\n";
+    ss << "abort_long_press=" << (m_safetyAbortLongPress ? "true" : "false") << "\n";
+    ss << "dead_man_enabled=" << (m_safetyDeadManEnabled ? "true" : "false") << "\n";
+    ss << "dead_man_timeout_ms=" << m_safetyDeadManTimeoutMs << "\n";
+    ss << "door_interlock_enabled=" << (m_safetyDoorInterlockEnabled ? "true" : "false") << "\n";
+    ss << "soft_limit_check_enabled=" << (m_safetySoftLimitCheckEnabled ? "true" : "false") << "\n";
+    ss << "pause_before_reset_enabled=" << (m_safetyPauseBeforeResetEnabled ? "true" : "false") << "\n";
+    ss << "\n";
+
     // Machine profiles section
     ss << "[machine_profiles]\n";
     ss << "active_profile=" << m_activeMachineProfileIndex << "\n";
@@ -437,6 +526,22 @@ void Config::removeRecentProject(const Path& path) {
 
 void Config::clearRecentProjects() {
     m_recentProjects.clear();
+}
+
+void Config::addRecentGCodeFile(const Path& path) {
+    // Remove if already present
+    m_recentGCodeFiles.erase(
+        std::remove(m_recentGCodeFiles.begin(), m_recentGCodeFiles.end(), path),
+        m_recentGCodeFiles.end());
+    // Insert at front
+    m_recentGCodeFiles.insert(m_recentGCodeFiles.begin(), path);
+    // Trim to max
+    if (static_cast<int>(m_recentGCodeFiles.size()) > MAX_RECENT_GCODE)
+        m_recentGCodeFiles.resize(MAX_RECENT_GCODE);
+}
+
+void Config::clearRecentGCodeFiles() {
+    m_recentGCodeFiles.clear();
 }
 
 void Config::initDefaultBindings() {

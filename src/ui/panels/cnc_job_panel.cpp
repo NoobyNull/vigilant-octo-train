@@ -5,6 +5,7 @@
 
 #include <imgui.h>
 
+#include "core/config/config.h"
 #include "ui/icons.h"
 #include "ui/theme.h"
 
@@ -118,6 +119,11 @@ void CncJobPanel::renderFeedDeviation() {
 
     ImGui::SeparatorText("Feed Rate");
 
+    auto& cfg = Config::instance();
+    bool metric = cfg.getDisplayUnitsMetric();
+    float uf = metric ? 1.0f : (1.0f / 25.4f);
+    const char* fu = metric ? "mm/min" : "in/min";
+
     // Show actual vs recommended
     float actual = m_status.feedRate;
     float recommended = m_recommendedFeedRate;
@@ -126,18 +132,18 @@ void CncJobPanel::renderFeedDeviation() {
 
     ImGui::Text("Actual:");
     ImGui::SameLine(120);
-    ImGui::Text("%.0f mm/min", static_cast<double>(actual));
+    ImGui::Text("%.0f %s", static_cast<double>(actual * uf), fu);
 
     ImGui::Text("Recommended:");
     ImGui::SameLine(120);
-    ImGui::Text("%.0f mm/min", static_cast<double>(recommended));
+    ImGui::Text("%.0f %s", static_cast<double>(recommended * uf), fu);
 
     // Show override-adjusted if override differs from 100%
     if (m_status.feedOverride != 100) {
         ImGui::Text("Adjusted:");
         ImGui::SameLine(120);
-        ImGui::TextDisabled("%.0f mm/min (%d%% override)",
-            static_cast<double>(effectiveRecommended), m_status.feedOverride);
+        ImGui::TextDisabled("%.0f %s (%d%% override)",
+            static_cast<double>(effectiveRecommended * uf), fu, m_status.feedOverride);
     }
 
     // Deviation display — only meaningful during Run state while streaming

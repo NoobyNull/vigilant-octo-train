@@ -152,6 +152,14 @@ const char* bindActionName(BindAction action) {
         return "Light Direction";
     case BindAction::LightIntensityDrag:
         return "Light Intensity";
+    case BindAction::FeedOverridePlus:
+        return "Feed Override +10%";
+    case BindAction::FeedOverrideMinus:
+        return "Feed Override -10%";
+    case BindAction::SpindleOverridePlus:
+        return "Spindle Override +10%";
+    case BindAction::SpindleOverrideMinus:
+        return "Spindle Override -10%";
     default:
         return "Unknown";
     }
@@ -163,6 +171,14 @@ InputBinding defaultBinding(BindAction action) {
         return {Mod_Alt, InputType::MouseButton, 0}; // Alt+LMB
     case BindAction::LightIntensityDrag:
         return {Mod_Alt | Mod_Shift, InputType::MouseButton, 2}; // Alt+Shift+MMB
+    case BindAction::FeedOverridePlus:
+        return {Mod_Ctrl, InputType::Key, ImGuiKey_Equal}; // Ctrl+=
+    case BindAction::FeedOverrideMinus:
+        return {Mod_Ctrl, InputType::Key, ImGuiKey_Minus}; // Ctrl+-
+    case BindAction::SpindleOverridePlus:
+        return {Mod_Ctrl | Mod_Shift, InputType::Key, ImGuiKey_Equal}; // Ctrl+Shift+=
+    case BindAction::SpindleOverrideMinus:
+        return {Mod_Ctrl | Mod_Shift, InputType::Key, ImGuiKey_Minus}; // Ctrl+Shift+-
     default:
         return {};
     }

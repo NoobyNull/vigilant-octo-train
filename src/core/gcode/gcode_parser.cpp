@@ -20,6 +20,7 @@ Program Parser::parse(const std::string& content) {
 
     Vec3 currentPos{0.0f, 0.0f, 0.0f};
     f32 currentFeedRate = 0.0f;
+    int currentTool = 0;
     CommandType modalMotion = CommandType::G0; // G-code modal group 1 (motion)
 
     while (std::getline(stream, line)) {
@@ -66,6 +67,11 @@ Program Parser::parse(const std::string& content) {
             program.positioning = PositioningMode::Absolute;
         } else if (cmd.type == CommandType::G91) {
             program.positioning = PositioningMode::Relative;
+        }
+
+        // Track tool changes (T-code)
+        if (cmd.t >= 0) {
+            currentTool = cmd.t;
         }
 
         // Update feed rate if specified
@@ -180,6 +186,7 @@ Program Parser::parse(const std::string& content) {
                     arcSeg.isRapid = false; // Arcs are cutting moves
                     arcSeg.feedRate = segFeedRate;
                     arcSeg.lineNumber = lineNumber;
+                    arcSeg.toolNumber = currentTool;
 
                     program.path.push_back(arcSeg);
                     updateBounds(point);
@@ -196,6 +203,7 @@ Program Parser::parse(const std::string& content) {
                 segment.isRapid = (cmd.type == CommandType::G0);
                 segment.feedRate = segFeedRate;
                 segment.lineNumber = lineNumber;
+                segment.toolNumber = currentTool;
 
                 program.path.push_back(segment);
 

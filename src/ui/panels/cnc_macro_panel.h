@@ -55,6 +55,9 @@ class CncMacroPanel : public Panel {
 
     // Execution state
     int m_executingId = -1;
+
+    // Drag-and-drop reorder state
+    int m_dragSourceIdx = -1;
 };
 
 } // namespace dw

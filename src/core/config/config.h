@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <string>
 #include <vector>
@@ -118,6 +119,13 @@ class Config {
     int getLogLevel() const { return m_logLevel; }
     void setLogLevel(int level) { m_logLevel = level; }
 
+    // Log to file (EXT-05)
+    bool getLogToFile() const { return m_logToFile; }
+    void setLogToFile(bool v) { m_logToFile = v; }
+
+    const Path& getLogFilePath() const { return m_logFilePath; }
+    void setLogFilePath(const Path& p) { m_logFilePath = p; }
+
     // Workspace state (panel visibility)
     bool getShowViewport() const { return m_wsShowViewport; }
     void setShowViewport(bool v) { m_wsShowViewport = v; }
@@ -198,6 +206,64 @@ class Config {
     const std::string& getGeminiApiKey() const { return m_geminiApiKey; }
     void setGeminiApiKey(const std::string& key) { m_geminiApiKey = key; }
 
+    // Display units (true=mm, false=inches) — display-only, commands always use mm
+    bool getDisplayUnitsMetric() const { return m_displayUnitsMetric; }
+    void setDisplayUnitsMetric(bool v) { m_displayUnitsMetric = v; }
+
+    // Advanced settings view (show raw firmware IDs)
+    bool getAdvancedSettingsView() const { return m_advancedSettingsView; }
+    void setAdvancedSettingsView(bool v) { m_advancedSettingsView = v; }
+
+    // CNC settings
+    int getStatusPollIntervalMs() const { return m_statusPollIntervalMs; }
+    void setStatusPollIntervalMs(int ms) { m_statusPollIntervalMs = std::clamp(ms, 50, 200); }
+
+    int getJogFeedSmall() const { return m_jogFeedSmall; }
+    void setJogFeedSmall(int f) { m_jogFeedSmall = std::clamp(f, 10, 2000); }
+
+    int getJogFeedMedium() const { return m_jogFeedMedium; }
+    void setJogFeedMedium(int f) { m_jogFeedMedium = std::clamp(f, 100, 5000); }
+
+    int getJogFeedLarge() const { return m_jogFeedLarge; }
+    void setJogFeedLarge(int f) { m_jogFeedLarge = std::clamp(f, 500, 10000); }
+
+    // Safety settings
+    bool getSafetyLongPressEnabled() const { return m_safetyLongPressEnabled; }
+    void setSafetyLongPressEnabled(bool v) { m_safetyLongPressEnabled = v; }
+
+    int getSafetyLongPressDurationMs() const { return m_safetyLongPressDurationMs; }
+    void setSafetyLongPressDurationMs(int v) { m_safetyLongPressDurationMs = v; }
+
+    bool getSafetyAbortLongPress() const { return m_safetyAbortLongPress; }
+    void setSafetyAbortLongPress(bool v) { m_safetyAbortLongPress = v; }
+
+    bool getSafetyDeadManEnabled() const { return m_safetyDeadManEnabled; }
+    void setSafetyDeadManEnabled(bool v) { m_safetyDeadManEnabled = v; }
+
+    int getSafetyDeadManTimeoutMs() const { return m_safetyDeadManTimeoutMs; }
+    void setSafetyDeadManTimeoutMs(int v) { m_safetyDeadManTimeoutMs = v; }
+
+    bool getSafetyDoorInterlockEnabled() const { return m_safetyDoorInterlockEnabled; }
+    void setSafetyDoorInterlockEnabled(bool v) { m_safetyDoorInterlockEnabled = v; }
+
+    bool getSafetySoftLimitCheckEnabled() const { return m_safetySoftLimitCheckEnabled; }
+    void setSafetySoftLimitCheckEnabled(bool v) { m_safetySoftLimitCheckEnabled = v; }
+
+    bool getSafetyPauseBeforeResetEnabled() const { return m_safetyPauseBeforeResetEnabled; }
+    void setSafetyPauseBeforeResetEnabled(bool v) { m_safetyPauseBeforeResetEnabled = v; }
+
+    // Recent G-code files (most recent first, max 10)
+    const std::vector<Path>& getRecentGCodeFiles() const { return m_recentGCodeFiles; }
+    void addRecentGCodeFile(const Path& path);
+    void clearRecentGCodeFiles();
+
+    // Job completion notification settings
+    bool getJobCompletionNotify() const { return m_jobCompletionNotify; }
+    void setJobCompletionNotify(bool v) { m_jobCompletionNotify = v; }
+
+    bool getJobCompletionFlash() const { return m_jobCompletionFlash; }
+    void setJobCompletionFlash(bool v) { m_jobCompletionFlash = v; }
+
     // Machine profiles
     const std::vector<gcode::MachineProfile>& getMachineProfiles() const { return m_machineProfiles; }
     void setMachineProfiles(const std::vector<gcode::MachineProfile>& profiles) { m_machineProfiles = profiles; }
@@ -240,6 +306,8 @@ class Config {
 
     // Logging
     int m_logLevel = 1; // Info
+    bool m_logToFile = false;
+    Path m_logFilePath; // Empty = default (app data dir / "digital_workshop.log")
 
     // Default paths
     Path m_lastImportDir;
@@ -288,6 +356,34 @@ class Config {
 
     // API keys
     std::string m_geminiApiKey;
+
+    // Display units
+    bool m_displayUnitsMetric = true;
+    bool m_advancedSettingsView = false;
+
+    // CNC settings
+    int m_statusPollIntervalMs = 200;
+    int m_jogFeedSmall = 200;    // mm/min for 0.01-0.1mm steps
+    int m_jogFeedMedium = 1000;  // mm/min for 1mm steps
+    int m_jogFeedLarge = 3000;   // mm/min for 10-100mm steps
+
+    // Safety settings
+    bool m_safetyLongPressEnabled = true;
+    int m_safetyLongPressDurationMs = 1000;
+    bool m_safetyAbortLongPress = false;
+    bool m_safetyDeadManEnabled = true;
+    int m_safetyDeadManTimeoutMs = 1000;
+    bool m_safetyDoorInterlockEnabled = true;
+    bool m_safetySoftLimitCheckEnabled = true;
+    bool m_safetyPauseBeforeResetEnabled = true;
+
+    // Recent G-code files (most recent first, max 10)
+    std::vector<Path> m_recentGCodeFiles;
+    static constexpr int MAX_RECENT_GCODE = 10;
+
+    // Job completion notification
+    bool m_jobCompletionNotify = true;
+    bool m_jobCompletionFlash = true;
 
     // Machine profiles
     std::vector<gcode::MachineProfile> m_machineProfiles;

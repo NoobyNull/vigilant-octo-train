@@ -43,6 +43,9 @@ class CncSafetyPanel : public Panel {
         m_hasBounds = true;
     }
 
+    // Door interlock query — true when door is active AND interlock is enabled
+    bool isDoorInterlockActive() const;
+
   private:
     void renderSafetyControls();
     void renderSensorDisplay();
@@ -55,6 +58,11 @@ class CncSafetyPanel : public Panel {
     bool m_connected = false;
     bool m_streaming = false;
     bool m_showAbortConfirm = false;
+    bool m_doorActive = false;
+
+    // Pause-before-reset abort sequence state
+    bool m_abortPending = false;
+    float m_abortTimer = 0.0f;
 
     // Program lines cached for resume-from-line feature
     std::vector<std::string> m_fullProgram;
@@ -74,6 +82,30 @@ class CncSafetyPanel : public Panel {
     bool m_hasBounds = false;
     float m_outlineSafeZ = 5.0f;     // Safe Z height for outline (mm above work zero)
     float m_outlineFeedRate = 1000.0f; // Feed rate for outline traverse (mm/min)
+
+    // Probe workflows (EXT-11, EXT-15, EXT-16)
+    void renderProbeDialog();
+    void renderZProbeTab();
+    void renderTlsTab();
+    void render3DProbeTab();
+    bool m_probeDialogOpen = false;
+
+    // Z-probe parameters
+    float m_probeApproachSpeed = 100.0f;
+    float m_probePlateThickness = 0.0f;
+    float m_probeRetractDist = 2.0f;
+    float m_probeSearchDist = 50.0f;
+
+    // TLS parameters
+    float m_tlsApproachSpeed = 50.0f;
+    float m_tlsSearchDist = 100.0f;
+    float m_tlsReferenceZ = 0.0f;
+
+    // 3D probe parameters
+    float m_3dProbeSpeed = 100.0f;
+    float m_3dProbeRetract = 5.0f;
+    float m_3dProbeSearchDist = 50.0f;
+    int m_3dProbeMode = 0;
 };
 
 } // namespace dw

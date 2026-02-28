@@ -8,6 +8,9 @@
 #include <imgui.h>
 
 #include "core/cnc/cnc_controller.h"
+#include "core/config/config.h"
+#include "core/paths/app_paths.h"
+#include "core/utils/log.h"
 #include "ui/dialogs/file_dialog.h"
 #include "ui/icons.h"
 #include "ui/theme.h"
@@ -23,177 +26,13 @@ const ImVec4 kDimColor{0.5f, 0.5f, 0.5f, 1.0f};
 const ImVec4 kAxisX{1.0f, 0.3f, 0.3f, 1.0f};
 const ImVec4 kAxisY{0.3f, 1.0f, 0.3f, 1.0f};
 const ImVec4 kAxisZ{0.3f, 0.5f, 1.0f, 1.0f};
-
-// Helper: render a checkbox for a boolean setting ($4, $5, $6, $13, $20, $21, $22, $32)
-// Returns true if value changed
-bool renderBoolSetting(GrblSettings& settings, int id, const char* label,
-                       const char* onLabel, const char* offLabel) {
-    const auto* s = settings.get(id);
-    if (!s) return false;
-
-    bool val = (s->value != 0.0f);
-    bool origVal = val;
-
-    char cbLabel[64];
-    std::snprintf(cbLabel, sizeof(cbLabel), "%s##bool%d", label, id);
-    ImGui::Checkbox(cbLabel, &val);
-
-    // Show on/off description
-    ImGui::SameLine();
-    if (val) {
-        ImGui::TextColored(kOkColor, "(%s)", onLabel);
-    } else {
-        ImGui::TextColored(kDimColor, "(%s)", offLabel);
-    }
-
-    if (val != origVal) {
-        settings.set(id, val ? 1.0f : 0.0f);
-        return true;
-    }
-    return false;
-}
-
-// Helper: render a 3-axis bitmask editor ($2, $3, $23)
-// Bits: 0=X, 1=Y, 2=Z
-bool renderBitmaskAxes(GrblSettings& settings, int id, const char* label) {
-    const auto* s = settings.get(id);
-    if (!s) return false;
-
-    int mask = static_cast<int>(s->value);
-    int origMask = mask;
-    bool bx = (mask & 1) != 0;
-    bool by = (mask & 2) != 0;
-    bool bz = (mask & 4) != 0;
-
-    ImGui::Text("%s", label);
-    ImGui::SameLine(200.0f);
-
-    char lbl[32];
-    std::snprintf(lbl, sizeof(lbl), "X##bm%d", id);
-    ImGui::TextColored(kAxisX, "X");
-    ImGui::SameLine();
-    ImGui::Checkbox(lbl, &bx);
-
-    ImGui::SameLine();
-    std::snprintf(lbl, sizeof(lbl), "Y##bm%d", id);
-    ImGui::TextColored(kAxisY, "Y");
-    ImGui::SameLine();
-    ImGui::Checkbox(lbl, &by);
-
-    ImGui::SameLine();
-    std::snprintf(lbl, sizeof(lbl), "Z##bm%d", id);
-    ImGui::TextColored(kAxisZ, "Z");
-    ImGui::SameLine();
-    ImGui::Checkbox(lbl, &bz);
-
-    mask = (bx ? 1 : 0) | (by ? 2 : 0) | (bz ? 4 : 0);
-    if (mask != origMask) {
-        settings.set(id, static_cast<float>(mask));
-        return true;
-    }
-    return false;
-}
-
-// Helper: render a numeric input for a setting
-bool renderNumericSetting(GrblSettings& settings, int id, const char* label,
-                          const char* units, float width,
-                          std::map<int, CncSettingsPanel::EditBuffer>& editBuffers) {
-    const auto* s = settings.get(id);
-    if (!s) return false;
-
-    auto& eb = editBuffers[id];
-    if (!eb.active) {
-        eb.id = id;
-        if (s->value == std::floor(s->value) && std::abs(s->value) < 1e6f) {
-            std::snprintf(eb.buf, sizeof(eb.buf), "%d", static_cast<int>(s->value));
-        } else {
-            std::snprintf(eb.buf, sizeof(eb.buf), "%.3f", static_cast<double>(s->value));
-        }
-        eb.active = true;
-    }
-
-    ImGui::Text("%s", label);
-    ImGui::SameLine(200.0f);
-    ImGui::PushItemWidth(width);
-    char inputLabel[32];
-    std::snprintf(inputLabel, sizeof(inputLabel), "##num%d", id);
-    bool changed = false;
-    if (ImGui::InputText(inputLabel, eb.buf, sizeof(eb.buf),
-                          ImGuiInputTextFlags_EnterReturnsTrue)) {
-        try {
-            float newVal = std::stof(eb.buf);
-            settings.set(id, newVal);
-            changed = true;
-        } catch (...) {}
-        eb.active = false;
-    }
-    ImGui::PopItemWidth();
-
-    if (units[0] != '\0') {
-        ImGui::SameLine();
-        ImGui::TextDisabled("%s", units);
-    }
-
-    if (s->modified) {
-        ImGui::SameLine();
-        ImGui::TextColored(kModifiedColor, "(modified)");
-    }
-
-    return changed;
-}
-
-// Helper: render a per-axis numeric group ($100-102, $110-112, etc.)
-void renderPerAxisGroup(GrblSettings& settings, const char* label, const char* units,
-                        int idX, int idY, int idZ,
-                        std::map<int, CncSettingsPanel::EditBuffer>& editBuffers) {
-    ImGui::SeparatorText(label);
-
-    const ImVec4* colors[] = {&kAxisX, &kAxisY, &kAxisZ};
-    const char* axes[] = {"X", "Y", "Z"};
-    int ids[] = {idX, idY, idZ};
-
-    for (int i = 0; i < 3; ++i) {
-        const auto* s = settings.get(ids[i]);
-        if (!s) continue;
-
-        auto& eb = editBuffers[ids[i]];
-        if (!eb.active) {
-            eb.id = ids[i];
-            if (s->value == std::floor(s->value) && std::abs(s->value) < 1e6f) {
-                std::snprintf(eb.buf, sizeof(eb.buf), "%d", static_cast<int>(s->value));
-            } else {
-                std::snprintf(eb.buf, sizeof(eb.buf), "%.3f", static_cast<double>(s->value));
-            }
-            eb.active = true;
-        }
-
-        ImGui::TextColored(*colors[i], "  %s", axes[i]);
-        ImGui::SameLine(200.0f);
-        ImGui::PushItemWidth(120.0f);
-        char lbl[32];
-        std::snprintf(lbl, sizeof(lbl), "##ax%d", ids[i]);
-        if (ImGui::InputText(lbl, eb.buf, sizeof(eb.buf),
-                              ImGuiInputTextFlags_EnterReturnsTrue)) {
-            try {
-                float newVal = std::stof(eb.buf);
-                settings.set(ids[i], newVal);
-            } catch (...) {}
-            eb.active = false;
-        }
-        ImGui::PopItemWidth();
-        ImGui::SameLine();
-        ImGui::TextDisabled("%s", units);
-
-        if (s->modified) {
-            ImGui::SameLine();
-            ImGui::TextColored(kModifiedColor, "(modified)");
-        }
-    }
-}
+const ImVec4 kChangedFromDefault{0.6f, 0.4f, 1.0f, 1.0f}; // Purple for FluidNC $SC
 
 } // namespace
 
-CncSettingsPanel::CncSettingsPanel() : Panel("Firmware Settings") {}
+CncSettingsPanel::CncSettingsPanel() : Panel("Firmware Settings") {
+    m_advancedView = Config::instance().getAdvancedSettingsView();
+}
 
 void CncSettingsPanel::render() {
     if (!m_open)
@@ -213,13 +52,13 @@ void CncSettingsPanel::render() {
         return;
     }
 
-    // Process write queue
+    // Process write queue (GRBL EEPROM-safe sequential writes)
     if (m_writing && m_writeIndex < static_cast<int>(m_writeQueue.size())) {
         m_writeTimer += ImGui::GetIO().DeltaTime;
         if (m_writeTimer >= WRITE_DELAY_SEC) {
             m_writeTimer = 0.0f;
             auto& item = m_writeQueue[static_cast<size_t>(m_writeIndex)];
-            applySettingToGrbl(item.id, item.value);
+            applySetting(item.key, item.value);
             ++m_writeIndex;
             if (m_writeIndex >= static_cast<int>(m_writeQueue.size())) {
                 m_writing = false;
@@ -244,8 +83,13 @@ void CncSettingsPanel::render() {
             renderTuningTab();
             ImGui::EndTabItem();
         }
-        if (ImGui::BeginTabItem("Raw")) {
+        if (ImGui::BeginTabItem("Safety")) {
             m_activeTab = 2;
+            renderSafetyTab();
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("Raw")) {
+            m_activeTab = 3;
             renderRawTab();
             ImGui::EndTabItem();
         }
@@ -259,6 +103,188 @@ void CncSettingsPanel::render() {
     ImGui::End();
 }
 
+// --- Advanced ID display ---
+
+void CncSettingsPanel::renderAdvancedId(const UnifiedSetting& s) {
+    if (!m_advancedView) return;
+
+    ImGui::SameLine();
+    if (m_firmwareType == FirmwareType::FluidNC && !s.fluidncPath.empty()) {
+        ImGui::TextColored(kDimColor, "[$%s]", s.fluidncPath.c_str());
+    } else if (s.grblId >= 0) {
+        ImGui::TextColored(kDimColor, "[$%d]", s.grblId);
+    }
+}
+
+// --- Unified rendering helpers ---
+
+void CncSettingsPanel::renderUnifiedBool(const std::string& key, const char* label,
+                                          const char* onLabel, const char* offLabel) {
+    const auto* s = m_settings.get(key);
+    if (!s || s->value.empty()) return;
+
+    float val = 0.0f;
+    try { val = std::stof(s->value); } catch (...) {}
+    bool bval = (val != 0.0f);
+    bool origVal = bval;
+
+    char cbLabel[128];
+    std::snprintf(cbLabel, sizeof(cbLabel), "%s##bool_%s", label, key.c_str());
+    ImGui::Checkbox(cbLabel, &bval);
+
+    ImGui::SameLine();
+    if (bval) {
+        ImGui::TextColored(kOkColor, "(%s)", onLabel);
+    } else {
+        ImGui::TextColored(kDimColor, "(%s)", offLabel);
+    }
+
+    renderAdvancedId(*s);
+
+    if (s->changedFromDefault) {
+        ImGui::SameLine();
+        ImGui::TextColored(kChangedFromDefault, "*");
+    }
+
+    if (bval != origVal) {
+        m_settings.set(key, bval ? "1" : "0");
+    }
+}
+
+void CncSettingsPanel::renderUnifiedBitmask(const std::string& key, const char* label) {
+    const auto* s = m_settings.get(key);
+    if (!s || s->value.empty()) return;
+
+    int mask = 0;
+    try { mask = std::stoi(s->value); } catch (...) {}
+    int origMask = mask;
+    bool bx = (mask & 1) != 0;
+    bool by = (mask & 2) != 0;
+    bool bz = (mask & 4) != 0;
+
+    ImGui::Text("%s", label);
+    renderAdvancedId(*s);
+    ImGui::SameLine(220.0f);
+
+    char lbl[64];
+    std::snprintf(lbl, sizeof(lbl), "X##bm_%s", key.c_str());
+    ImGui::TextColored(kAxisX, "X");
+    ImGui::SameLine();
+    ImGui::Checkbox(lbl, &bx);
+
+    ImGui::SameLine();
+    std::snprintf(lbl, sizeof(lbl), "Y##bm_%s", key.c_str());
+    ImGui::TextColored(kAxisY, "Y");
+    ImGui::SameLine();
+    ImGui::Checkbox(lbl, &by);
+
+    ImGui::SameLine();
+    std::snprintf(lbl, sizeof(lbl), "Z##bm_%s", key.c_str());
+    ImGui::TextColored(kAxisZ, "Z");
+    ImGui::SameLine();
+    ImGui::Checkbox(lbl, &bz);
+
+    if (s->changedFromDefault) {
+        ImGui::SameLine();
+        ImGui::TextColored(kChangedFromDefault, "*");
+    }
+
+    mask = (bx ? 1 : 0) | (by ? 2 : 0) | (bz ? 4 : 0);
+    if (mask != origMask) {
+        m_settings.set(key, std::to_string(mask));
+    }
+}
+
+void CncSettingsPanel::renderUnifiedNumeric(const std::string& key, const char* label,
+                                             const char* units, float width) {
+    const auto* s = m_settings.get(key);
+    if (!s || s->value.empty()) return;
+
+    auto& eb = m_editBuffers[key];
+    if (!eb.active) {
+        eb.key = key;
+        std::snprintf(eb.buf, sizeof(eb.buf), "%s", s->value.c_str());
+        eb.active = true;
+    }
+
+    ImGui::Text("%s", label);
+    renderAdvancedId(*s);
+    ImGui::SameLine(220.0f);
+    ImGui::PushItemWidth(width);
+    char inputLabel[64];
+    std::snprintf(inputLabel, sizeof(inputLabel), "##num_%s", key.c_str());
+    if (ImGui::InputText(inputLabel, eb.buf, sizeof(eb.buf),
+                          ImGuiInputTextFlags_EnterReturnsTrue)) {
+        m_settings.set(key, eb.buf);
+        eb.active = false;
+    }
+    ImGui::PopItemWidth();
+
+    if (units[0] != '\0') {
+        ImGui::SameLine();
+        ImGui::TextDisabled("%s", units);
+    }
+
+    if (s->modified) {
+        ImGui::SameLine();
+        ImGui::TextColored(kModifiedColor, "(modified)");
+    }
+
+    if (s->changedFromDefault) {
+        ImGui::SameLine();
+        ImGui::TextColored(kChangedFromDefault, "*");
+    }
+}
+
+void CncSettingsPanel::renderUnifiedPerAxisGroup(const char* label, const char* units,
+                                                  const std::string& keyX,
+                                                  const std::string& keyY,
+                                                  const std::string& keyZ) {
+    ImGui::SeparatorText(label);
+
+    const ImVec4* colors[] = {&kAxisX, &kAxisY, &kAxisZ};
+    const char* axes[] = {"X", "Y", "Z"};
+    const std::string* keys[] = {&keyX, &keyY, &keyZ};
+
+    for (int i = 0; i < 3; ++i) {
+        const auto* s = m_settings.get(*keys[i]);
+        if (!s || s->value.empty()) continue;
+
+        auto& eb = m_editBuffers[*keys[i]];
+        if (!eb.active) {
+            eb.key = *keys[i];
+            std::snprintf(eb.buf, sizeof(eb.buf), "%s", s->value.c_str());
+            eb.active = true;
+        }
+
+        ImGui::TextColored(*colors[i], "  %s", axes[i]);
+        renderAdvancedId(*s);
+        ImGui::SameLine(220.0f);
+        ImGui::PushItemWidth(120.0f);
+        char lbl[64];
+        std::snprintf(lbl, sizeof(lbl), "##ax_%s", keys[i]->c_str());
+        if (ImGui::InputText(lbl, eb.buf, sizeof(eb.buf),
+                              ImGuiInputTextFlags_EnterReturnsTrue)) {
+            m_settings.set(*keys[i], eb.buf);
+            eb.active = false;
+        }
+        ImGui::PopItemWidth();
+        ImGui::SameLine();
+        ImGui::TextDisabled("%s", units);
+
+        if (s->modified) {
+            ImGui::SameLine();
+            ImGui::TextColored(kModifiedColor, "(modified)");
+        }
+        if (s->changedFromDefault) {
+            ImGui::SameLine();
+            ImGui::TextColored(kChangedFromDefault, "*");
+        }
+    }
+}
+
+// --- Toolbar ---
+
 void CncSettingsPanel::renderToolbar() {
     bool canWrite =
         m_connected &&
@@ -271,8 +297,12 @@ void CncSettingsPanel::renderToolbar() {
     if (ImGui::Button(btnLabel)) {
         requestSettings();
     }
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("Query all GRBL settings ($$)");
+    if (ImGui::IsItemHovered()) {
+        if (m_firmwareType == FirmwareType::FluidNC)
+            ImGui::SetTooltip("Query all settings ($S + $SC)");
+        else
+            ImGui::SetTooltip("Query all GRBL settings ($$)");
+    }
 
     ImGui::SameLine();
 
@@ -281,9 +311,27 @@ void CncSettingsPanel::renderToolbar() {
     if (ImGui::Button(btnLabel)) {
         writeAllModified();
     }
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("Write all modified settings to GRBL (with EEPROM-safe delays)");
+    if (ImGui::IsItemHovered()) {
+        if (m_firmwareType == FirmwareType::FluidNC)
+            ImGui::SetTooltip("Write all modified settings to FluidNC (RAM)");
+        else
+            ImGui::SetTooltip("Write all modified settings to GRBL (with EEPROM-safe delays)");
+    }
     ImGui::EndDisabled();
+
+    // Save to Flash — FluidNC only
+    if (m_firmwareType == FirmwareType::FluidNC) {
+        ImGui::SameLine();
+        ImGui::BeginDisabled(!canWrite);
+        std::snprintf(btnLabel, sizeof(btnLabel), "%s Save to Flash", Icons::Save);
+        if (ImGui::Button(btnLabel)) {
+            saveToFlash();
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Persist RAM settings to flash\n"
+                              "($CD=config.yaml). Overwrites config.");
+        ImGui::EndDisabled();
+    }
 
     ImGui::SameLine();
 
@@ -303,6 +351,23 @@ void CncSettingsPanel::renderToolbar() {
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Import settings from JSON file");
 
+    ImGui::SameLine();
+
+    if (ImGui::Button("Export Text")) {
+        exportPlainText();
+    }
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Export settings as plain text");
+
+    // Advanced toggle
+    ImGui::SameLine();
+    if (ImGui::Checkbox("Advanced", &m_advancedView)) {
+        Config::instance().setAdvancedSettingsView(m_advancedView);
+        Config::instance().save();
+    }
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Show raw firmware identifiers ($N / $path)");
+
     if (m_writing) {
         ImGui::SameLine();
         ImGui::TextColored(kModifiedColor, "Writing %d/%d...",
@@ -317,11 +382,20 @@ void CncSettingsPanel::renderToolbar() {
         ImGui::SameLine();
         ImGui::TextColored(kErrorColor, "Alarm active -- unlock first ($X)");
     }
+
+    // Firmware info display
+    if (!m_firmwareInfo.empty()) {
+        ImGui::TextDisabled("Firmware:");
+        ImGui::SameLine();
+        ImGui::TextUnformatted(m_firmwareInfo.c_str());
+    }
 }
+
+// --- Settings Tab ---
 
 void CncSettingsPanel::renderSettingsTab() {
     if (m_settings.empty()) {
-        ImGui::TextDisabled("No settings loaded. Click 'Read' to query GRBL.");
+        ImGui::TextDisabled("No settings loaded. Click 'Read' to query firmware.");
         return;
     }
 
@@ -335,15 +409,15 @@ void CncSettingsPanel::renderSettingsTab() {
         ImGui::TextDisabled("Switch type: NC (normally closed) inverts the signal logic");
         ImGui::Spacing();
 
-        renderBoolSetting(m_settings, 5, "Limit switches", "NC (Normally Closed)",
-                          "NO (Normally Open)");
-        renderBoolSetting(m_settings, 6, "Probe pin", "NC (Normally Closed)",
-                          "NO (Normally Open)");
-        renderBoolSetting(m_settings, 4, "Step enable", "Inverted", "Normal");
+        renderUnifiedBool("limit_invert", "Limit switches",
+                          "NC (Normally Closed)", "NO (Normally Open)");
+        renderUnifiedBool("probe_invert", "Probe pin",
+                          "NC (Normally Closed)", "NO (Normally Open)");
+        renderUnifiedBool("step_enable_invert", "Step enable", "Inverted", "Normal");
 
         ImGui::Spacing();
-        renderBitmaskAxes(m_settings, 2, "Step pulse invert");
-        renderBitmaskAxes(m_settings, 3, "Direction invert");
+        renderUnifiedBitmask("step_pulse_invert", "Step pulse invert");
+        renderUnifiedBitmask("direction_invert", "Direction invert");
 
         ImGui::Spacing();
         ImGui::Unindent();
@@ -354,18 +428,18 @@ void CncSettingsPanel::renderSettingsTab() {
         ImGui::Indent();
         ImGui::Spacing();
 
-        renderBoolSetting(m_settings, 20, "Soft limits", "Enabled", "Disabled");
-        renderBoolSetting(m_settings, 21, "Hard limits", "Enabled", "Disabled");
-        renderBoolSetting(m_settings, 22, "Homing cycle", "Enabled", "Disabled");
+        renderUnifiedBool("soft_limits", "Soft limits", "Enabled", "Disabled");
+        renderUnifiedBool("hard_limits", "Hard limits", "Enabled", "Disabled");
+        renderUnifiedBool("homing_enable", "Homing cycle", "Enabled", "Disabled");
 
         ImGui::Spacing();
-        renderBitmaskAxes(m_settings, 23, "Homing direction invert");
+        renderUnifiedBitmask("homing_dir_invert", "Homing direction invert");
 
         ImGui::Spacing();
-        renderNumericSetting(m_settings, 24, "Homing feed rate", "mm/min", 100.0f, m_editBuffers);
-        renderNumericSetting(m_settings, 25, "Homing seek rate", "mm/min", 100.0f, m_editBuffers);
-        renderNumericSetting(m_settings, 26, "Homing debounce", "ms", 80.0f, m_editBuffers);
-        renderNumericSetting(m_settings, 27, "Homing pull-off", "mm", 80.0f, m_editBuffers);
+        renderUnifiedNumeric("homing_feed", "Homing feed rate", "mm/min", 100.0f);
+        renderUnifiedNumeric("homing_seek", "Homing seek rate", "mm/min", 100.0f);
+        renderUnifiedNumeric("homing_debounce", "Homing debounce", "ms", 80.0f);
+        renderUnifiedNumeric("homing_pulloff", "Homing pull-off", "mm", 80.0f);
 
         ImGui::Spacing();
         ImGui::Unindent();
@@ -376,9 +450,9 @@ void CncSettingsPanel::renderSettingsTab() {
         ImGui::Indent();
         ImGui::Spacing();
 
-        renderNumericSetting(m_settings, 30, "Max spindle speed", "RPM", 100.0f, m_editBuffers);
-        renderNumericSetting(m_settings, 31, "Min spindle speed", "RPM", 100.0f, m_editBuffers);
-        renderBoolSetting(m_settings, 32, "Laser mode", "Enabled", "Disabled");
+        renderUnifiedNumeric("max_spindle", "Max spindle speed", "RPM", 100.0f);
+        renderUnifiedNumeric("min_spindle", "Min spindle speed", "RPM", 100.0f);
+        renderUnifiedBool("laser_mode", "Laser mode", "Enabled", "Disabled");
 
         ImGui::Spacing();
         ImGui::Unindent();
@@ -389,13 +463,13 @@ void CncSettingsPanel::renderSettingsTab() {
         ImGui::Indent();
         ImGui::Spacing();
 
-        renderNumericSetting(m_settings, 0, "Step pulse time", "us", 80.0f, m_editBuffers);
-        renderNumericSetting(m_settings, 1, "Step idle delay", "ms", 80.0f, m_editBuffers);
+        renderUnifiedNumeric("step_pulse_time", "Step pulse time", "us", 80.0f);
+        renderUnifiedNumeric("step_idle_delay", "Step idle delay", "ms", 80.0f);
         ImGui::SameLine();
         ImGui::TextDisabled("(255 = always on)");
-        renderNumericSetting(m_settings, 11, "Junction deviation", "mm", 80.0f, m_editBuffers);
-        renderNumericSetting(m_settings, 12, "Arc tolerance", "mm", 80.0f, m_editBuffers);
-        renderBoolSetting(m_settings, 13, "Report in inches", "Inches", "Millimeters");
+        renderUnifiedNumeric("junction_deviation", "Junction deviation", "mm", 80.0f);
+        renderUnifiedNumeric("arc_tolerance", "Arc tolerance", "mm", 80.0f);
+        renderUnifiedBool("report_inches", "Report in inches", "Inches", "Millimeters");
 
         ImGui::Spacing();
         ImGui::Unindent();
@@ -406,9 +480,10 @@ void CncSettingsPanel::renderSettingsTab() {
         ImGui::Indent();
         ImGui::Spacing();
 
-        const auto* s10 = m_settings.get(10);
-        if (s10) {
-            int mask = static_cast<int>(s10->value);
+        const auto* s10 = m_settings.get("status_report");
+        if (s10 && !s10->value.empty()) {
+            int mask = 0;
+            try { mask = std::stoi(s10->value); } catch (...) {}
             int origMask = mask;
             bool workPos = (mask & 1) != 0;
             bool bufferData = (mask & 2) != 0;
@@ -420,11 +495,13 @@ void CncSettingsPanel::renderSettingsTab() {
             } else {
                 ImGui::TextColored(kOkColor, "(WPos active)");
             }
+            renderAdvancedId(*s10);
+
             ImGui::Checkbox("Report buffer state##sr1", &bufferData);
 
             mask = (workPos ? 1 : 0) | (bufferData ? 2 : 0);
             if (mask != origMask) {
-                m_settings.set(10, static_cast<float>(mask));
+                m_settings.set("status_report", std::to_string(mask));
             }
         }
 
@@ -436,50 +513,62 @@ void CncSettingsPanel::renderSettingsTab() {
     if (ImGui::CollapsingHeader("Per-Axis Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
 
-        renderPerAxisGroup(m_settings, "Steps per mm", "steps/mm", 100, 101, 102, m_editBuffers);
-        renderPerAxisGroup(m_settings, "Max Feed Rate", "mm/min", 110, 111, 112, m_editBuffers);
-        renderPerAxisGroup(m_settings, "Acceleration", "mm/s\xc2\xb2", 120, 121, 122, m_editBuffers);
-        renderPerAxisGroup(m_settings, "Max Travel", "mm", 130, 131, 132, m_editBuffers);
+        renderUnifiedPerAxisGroup("Steps per mm", "steps/mm",
+                                   "steps_per_mm_x", "steps_per_mm_y", "steps_per_mm_z");
+        renderUnifiedPerAxisGroup("Max Feed Rate", "mm/min",
+                                   "max_feed_x", "max_feed_y", "max_feed_z");
+        renderUnifiedPerAxisGroup("Acceleration", "mm/s\xc2\xb2",
+                                   "accel_x", "accel_y", "accel_z");
+        renderUnifiedPerAxisGroup("Max Travel", "mm",
+                                   "max_travel_x", "max_travel_y", "max_travel_z");
 
         ImGui::Spacing();
         ImGui::Unindent();
     }
 
-    // --- Unknown/extension settings ---
-    bool hasUnknown = false;
-    for (const auto& [id, setting] : m_settings.getAll()) {
-        if (grblSettingGroup(id) == GrblSettingGroup::Unknown) {
-            hasUnknown = true;
+    // --- Extension settings (unknown/firmware-specific) ---
+    bool hasExtension = false;
+    for (const auto& [key, s] : m_settings.getAll()) {
+        if (s.category == "extension" && !s.value.empty()) {
+            hasExtension = true;
             break;
         }
     }
 
-    if (hasUnknown && ImGui::CollapsingHeader("Extension Settings (grblHAL/FluidNC)")) {
+    if (hasExtension && ImGui::CollapsingHeader("Extension Settings")) {
         ImGui::Indent();
         ImGui::Spacing();
-        ImGui::TextDisabled("Settings not in standard GRBL -- shown as raw values");
+        if (m_firmwareType == FirmwareType::FluidNC)
+            ImGui::TextDisabled("FluidNC-specific settings not mapped to standard GRBL");
+        else
+            ImGui::TextDisabled("Settings not in standard GRBL -- shown as raw values");
         ImGui::Spacing();
 
-        for (const auto& [id, setting] : m_settings.getAll()) {
-            if (grblSettingGroup(id) != GrblSettingGroup::Unknown)
-                continue;
-
-            char label[64];
-            std::snprintf(label, sizeof(label), "$%d: %s", id, setting.description.c_str());
-            renderNumericSetting(m_settings, id, label,
-                                 setting.units.c_str(), 100.0f, m_editBuffers);
+        for (const auto& [key, s] : m_settings.getAll()) {
+            if (s.category != "extension" || s.value.empty()) continue;
+            renderUnifiedNumeric(key, s.displayName.c_str(), "", 100.0f);
         }
 
         ImGui::Spacing();
         ImGui::Unindent();
+    }
+
+    // FluidNC changed-from-default legend
+    if (m_firmwareType == FirmwareType::FluidNC) {
+        ImGui::Spacing();
+        ImGui::TextColored(kChangedFromDefault, "*");
+        ImGui::SameLine();
+        ImGui::TextDisabled("= changed from default (per $SC)");
     }
 
     ImGui::EndChild();
 }
 
+// --- Tuning Tab ---
+
 void CncSettingsPanel::renderTuningTab() {
     if (m_settings.empty()) {
-        ImGui::TextDisabled("No settings loaded. Click 'Read' to query GRBL.");
+        ImGui::TextDisabled("No settings loaded. Click 'Read' to query firmware.");
         return;
     }
 
@@ -488,17 +577,23 @@ void CncSettingsPanel::renderTuningTab() {
     ImGui::TextDisabled("Quick access to common machine tuning parameters");
     ImGui::Spacing();
 
-    renderPerAxisGroup(m_settings, "Steps per mm", "steps/mm", 100, 101, 102, m_editBuffers);
-    renderPerAxisGroup(m_settings, "Max Feed Rate", "mm/min", 110, 111, 112, m_editBuffers);
-    renderPerAxisGroup(m_settings, "Acceleration", "mm/s\xc2\xb2", 120, 121, 122, m_editBuffers);
-    renderPerAxisGroup(m_settings, "Max Travel", "mm", 130, 131, 132, m_editBuffers);
+    renderUnifiedPerAxisGroup("Steps per mm", "steps/mm",
+                               "steps_per_mm_x", "steps_per_mm_y", "steps_per_mm_z");
+    renderUnifiedPerAxisGroup("Max Feed Rate", "mm/min",
+                               "max_feed_x", "max_feed_y", "max_feed_z");
+    renderUnifiedPerAxisGroup("Acceleration", "mm/s\xc2\xb2",
+                               "accel_x", "accel_y", "accel_z");
+    renderUnifiedPerAxisGroup("Max Travel", "mm",
+                               "max_travel_x", "max_travel_y", "max_travel_z");
 
     ImGui::EndChild();
 }
 
+// --- Raw Tab ---
+
 void CncSettingsPanel::renderRawTab() {
     if (m_settings.empty()) {
-        ImGui::TextDisabled("No settings loaded. Click 'Read' to query GRBL.");
+        ImGui::TextDisabled("No settings loaded. Click 'Read' to query firmware.");
         return;
     }
 
@@ -508,57 +603,62 @@ void CncSettingsPanel::renderRawTab() {
         m_machineState != MachineState::Alarm &&
         !m_writing;
 
-    ImGui::TextDisabled("All settings as raw $N=value pairs");
+    ImGui::TextDisabled("All settings as raw key=value pairs");
     ImGui::Spacing();
 
-    ImGui::BeginTable("rawSettings", 5,
+    int colCount = m_advancedView ? 6 : 5;
+    ImGui::BeginTable("rawSettings", colCount,
                       ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
                           ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY,
                       ImVec2(0, 0));
-    ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed, 50.0f);
-    ImGui::TableSetupColumn("Description", ImGuiTableColumnFlags_WidthStretch);
+    if (m_advancedView) {
+        ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+    }
+    ImGui::TableSetupColumn("Setting", ImGuiTableColumnFlags_WidthStretch);
     ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthFixed, 120.0f);
     ImGui::TableSetupColumn("Units", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+    ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed, 80.0f);
     ImGui::TableSetupColumn("##apply", ImGuiTableColumnFlags_WidthFixed, 60.0f);
-    ImGui::TableHeadersRow();
     ImGui::TableSetupScrollFreeze(0, 1);
+    ImGui::TableHeadersRow();
 
-    for (const auto& [id, s] : m_settings.getAll()) {
+    for (const auto& [key, s] : m_settings.getAll()) {
+        if (s.value.empty()) continue;
+
         ImGui::TableNextRow();
 
-        ImGui::TableNextColumn();
-        ImGui::Text("$%d", s.id);
-
-        ImGui::TableNextColumn();
-        if (s.modified) {
-            ImGui::TextColored(kModifiedColor, "%s", s.description.c_str());
-        } else {
-            ImGui::TextUnformatted(s.description.c_str());
+        if (m_advancedView) {
+            ImGui::TableNextColumn();
+            if (m_firmwareType == FirmwareType::FluidNC && !s.fluidncPath.empty()) {
+                ImGui::TextDisabled("$%s", s.fluidncPath.c_str());
+            } else if (s.grblId >= 0) {
+                ImGui::Text("$%d", s.grblId);
+            } else {
+                ImGui::TextDisabled("--");
+            }
         }
 
         ImGui::TableNextColumn();
-        auto& eb = m_editBuffers[s.id];
+        if (s.modified) {
+            ImGui::TextColored(kModifiedColor, "%s", s.displayName.c_str());
+        } else {
+            ImGui::TextUnformatted(s.displayName.c_str());
+        }
+
+        ImGui::TableNextColumn();
+        auto& eb = m_editBuffers[key];
         if (!eb.active) {
-            eb.id = s.id;
-            if (s.isBoolean) {
-                std::snprintf(eb.buf, sizeof(eb.buf), "%d", static_cast<int>(s.value));
-            } else if (s.value == std::floor(s.value) && std::abs(s.value) < 1e6f) {
-                std::snprintf(eb.buf, sizeof(eb.buf), "%d", static_cast<int>(s.value));
-            } else {
-                std::snprintf(eb.buf, sizeof(eb.buf), "%.3f", static_cast<double>(s.value));
-            }
+            eb.key = key;
+            std::snprintf(eb.buf, sizeof(eb.buf), "%s", s.value.c_str());
             eb.active = true;
         }
 
         ImGui::PushItemWidth(-1);
-        char label[32];
-        std::snprintf(label, sizeof(label), "##val%d", s.id);
+        char label[64];
+        std::snprintf(label, sizeof(label), "##val_%s", key.c_str());
         if (ImGui::InputText(label, eb.buf, sizeof(eb.buf),
                               ImGuiInputTextFlags_EnterReturnsTrue)) {
-            try {
-                float newVal = std::stof(eb.buf);
-                m_settings.set(s.id, newVal);
-            } catch (...) {}
+            m_settings.set(key, eb.buf);
             eb.active = false;
         }
         ImGui::PopItemWidth();
@@ -567,17 +667,26 @@ void CncSettingsPanel::renderRawTab() {
         ImGui::TextDisabled("%s", s.units.c_str());
 
         ImGui::TableNextColumn();
+        if (s.modified) {
+            ImGui::TextColored(kModifiedColor, "modified");
+        } else if (s.changedFromDefault) {
+            ImGui::TextColored(kChangedFromDefault, "changed");
+        }
+
+        ImGui::TableNextColumn();
         ImGui::BeginDisabled(!canWrite || !s.modified);
-        char applyLabel[32];
-        std::snprintf(applyLabel, sizeof(applyLabel), "Apply##%d", s.id);
+        char applyLabel[64];
+        std::snprintf(applyLabel, sizeof(applyLabel), "Apply##%s", key.c_str());
         if (ImGui::SmallButton(applyLabel)) {
-            applySettingToGrbl(s.id, s.value);
+            applySetting(key, s.value);
         }
         ImGui::EndDisabled();
     }
 
     ImGui::EndTable();
 }
+
+// --- Diff Dialog ---
 
 void CncSettingsPanel::renderDiffDialog() {
     ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
@@ -599,16 +708,16 @@ void CncSettingsPanel::renderDiffDialog() {
         ImGui::TableSetupColumn("Description");
         ImGui::TableHeadersRow();
 
-        for (const auto& [current, backup] : m_diffEntries) {
+        for (const auto& entry : m_diffEntries) {
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
-            ImGui::Text("$%d", backup.id);
+            ImGui::TextUnformatted(entry.key.c_str());
             ImGui::TableNextColumn();
-            ImGui::Text("%.3f", static_cast<double>(current.value));
+            ImGui::TextUnformatted(entry.currentValue.c_str());
             ImGui::TableNextColumn();
-            ImGui::TextColored(kModifiedColor, "%.3f", static_cast<double>(backup.value));
+            ImGui::TextColored(kModifiedColor, "%s", entry.backupValue.c_str());
             ImGui::TableNextColumn();
-            ImGui::TextUnformatted(backup.description.c_str());
+            ImGui::TextUnformatted(entry.displayName.c_str());
         }
         ImGui::EndTable();
     }
@@ -620,9 +729,9 @@ void CncSettingsPanel::renderDiffDialog() {
     if (!m_diffEntries.empty()) {
         if (ImGui::Button("Apply All Changes")) {
             m_writeQueue.clear();
-            for (const auto& [current, backup] : m_diffEntries) {
-                m_writeQueue.push_back({backup.id, backup.value});
-                m_settings.set(backup.id, backup.value);
+            for (const auto& entry : m_diffEntries) {
+                m_writeQueue.push_back({entry.key, entry.backupValue});
+                m_settings.set(entry.key, entry.backupValue);
             }
             m_writeIndex = 0;
             m_writeTimer = 0.0f;
@@ -638,43 +747,195 @@ void CncSettingsPanel::renderDiffDialog() {
     ImGui::End();
 }
 
+// --- Safety Tab (unchanged from original) ---
+
+void CncSettingsPanel::renderSafetyTab() {
+    ImGui::BeginChild("SafetyScroll", ImVec2(0, 0), ImGuiChildFlags_None);
+
+    auto& cfg = Config::instance();
+
+    // --- Display Units ---
+    ImGui::SeparatorText("Display Units");
+    bool metric = cfg.getDisplayUnitsMetric();
+    if (ImGui::RadioButton("Millimeters (mm)", metric)) {
+        cfg.setDisplayUnitsMetric(true); cfg.save();
+    }
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Inches (in)", !metric)) {
+        cfg.setDisplayUnitsMetric(false); cfg.save();
+    }
+    ImGui::TextDisabled("Display-only -- G-code commands always use millimeters");
+
+    ImGui::Spacing();
+
+    // --- Long-Press Confirmation ---
+    ImGui::SeparatorText("Long-Press Confirmation");
+
+    bool longPressEnabled = cfg.getSafetyLongPressEnabled();
+    if (ImGui::Checkbox("Enable long-press for Home and Start buttons", &longPressEnabled)) {
+        cfg.setSafetyLongPressEnabled(longPressEnabled);
+        cfg.save();
+    }
+
+    if (longPressEnabled) {
+        ImGui::Indent();
+        int durationMs = cfg.getSafetyLongPressDurationMs();
+        ImGui::SetNextItemWidth(200.0f);
+        if (ImGui::SliderInt("Duration##longpress", &durationMs, 250, 3000, "%d ms")) {
+            cfg.setSafetyLongPressDurationMs(durationMs);
+            cfg.save();
+        }
+        ImGui::Unindent();
+    }
+
+    bool abortLongPress = cfg.getSafetyAbortLongPress();
+    if (ImGui::Checkbox("Use long-press for Abort (instead of confirmation dialog)",
+                        &abortLongPress)) {
+        cfg.setSafetyAbortLongPress(abortLongPress);
+        cfg.save();
+    }
+
+    ImGui::Spacing();
+
+    // --- Continuous Jog Watchdog ---
+    ImGui::SeparatorText("Continuous Jog Watchdog");
+
+    bool deadManEnabled = cfg.getSafetyDeadManEnabled();
+    if (ImGui::Checkbox("Enable dead-man watchdog", &deadManEnabled)) {
+        cfg.setSafetyDeadManEnabled(deadManEnabled);
+        cfg.save();
+    }
+
+    if (deadManEnabled) {
+        ImGui::Indent();
+        int timeoutMs = cfg.getSafetyDeadManTimeoutMs();
+        ImGui::SetNextItemWidth(200.0f);
+        if (ImGui::SliderInt("Timeout##deadman", &timeoutMs, 200, 5000, "%d ms")) {
+            cfg.setSafetyDeadManTimeoutMs(timeoutMs);
+            cfg.save();
+        }
+        ImGui::Unindent();
+    }
+
+    ImGui::Spacing();
+
+    // --- Machine Protection ---
+    ImGui::SeparatorText("Machine Protection");
+
+    bool doorInterlock = cfg.getSafetyDoorInterlockEnabled();
+    if (ImGui::Checkbox("Door interlock (block commands when door is active)",
+                        &doorInterlock)) {
+        cfg.setSafetyDoorInterlockEnabled(doorInterlock);
+        cfg.save();
+    }
+
+    bool softLimit = cfg.getSafetySoftLimitCheckEnabled();
+    if (ImGui::Checkbox("Soft limit pre-check (compare job bounds vs machine travel)",
+                        &softLimit)) {
+        cfg.setSafetySoftLimitCheckEnabled(softLimit);
+        cfg.save();
+    }
+
+    bool pauseBeforeReset = cfg.getSafetyPauseBeforeResetEnabled();
+    if (ImGui::Checkbox("Pause before reset (send feed hold before soft reset)",
+                        &pauseBeforeReset)) {
+        cfg.setSafetyPauseBeforeResetEnabled(pauseBeforeReset);
+        cfg.save();
+    }
+
+    ImGui::Spacing();
+
+    // --- Logging ---
+    ImGui::SeparatorText("Logging");
+
+    bool logToFile = cfg.getLogToFile();
+    if (ImGui::Checkbox("Log to file", &logToFile)) {
+        cfg.setLogToFile(logToFile);
+        if (logToFile) {
+            Path logPath = cfg.getLogFilePath();
+            if (logPath.empty()) {
+                logPath = paths::getDataDir() / "digital_workshop.log";
+                cfg.setLogFilePath(logPath);
+            }
+            log::setLogFile(logPath.string());
+        } else {
+            log::closeLogFile();
+        }
+        cfg.save();
+    }
+    if (logToFile) {
+        Path logPath = cfg.getLogFilePath();
+        ImGui::TextDisabled("Path: %s", logPath.string().c_str());
+    }
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    ImGui::TextDisabled("Changes take effect immediately");
+
+    ImGui::EndChild();
+}
+
 // --- Actions ---
 
 void CncSettingsPanel::requestSettings() {
     if (!m_cnc || !m_connected) return;
     m_collecting = true;
+    m_collectingSC = false;
     m_settings.clear();
     m_editBuffers.clear();
-    m_cnc->sendCommand("$$");
+
+    if (m_firmwareType == FirmwareType::FluidNC) {
+        m_cnc->sendCommand("$S");
+    } else {
+        m_cnc->sendCommand("$$");
+    }
 }
 
-void CncSettingsPanel::applySettingToGrbl(int id, float value) {
+void CncSettingsPanel::applySetting(const std::string& key, const std::string& value) {
     if (!m_cnc || !m_connected) return;
-    std::string cmd = GrblSettings::buildSetCommand(id, value);
-    if (!cmd.empty() && cmd.back() == '\n') cmd.pop_back();
+    std::string cmd = m_settings.buildSetCommand(key, value, m_firmwareType);
+    if (cmd.empty()) return;
     m_cnc->sendCommand(cmd);
 }
 
 void CncSettingsPanel::writeAllModified() {
+    auto modified = m_settings.getModified();
+    if (modified.empty()) return;
+
     m_writeQueue.clear();
-    for (const auto& [id, setting] : m_settings.getAll()) {
-        if (setting.modified) {
-            m_writeQueue.push_back({id, setting.value});
-        }
+    for (const auto* s : modified) {
+        m_writeQueue.push_back({s->key, s->value});
     }
-    if (m_writeQueue.empty()) return;
-    m_writeIndex = 0;
-    m_writeTimer = 0.0f;
-    m_writing = true;
+
+    if (m_firmwareType == FirmwareType::FluidNC) {
+        // FluidNC writes are instant (RAM), no EEPROM delay needed
+        for (auto& item : m_writeQueue) {
+            applySetting(item.key, item.value);
+        }
+        m_writeQueue.clear();
+        requestSettings();
+    } else {
+        // GRBL: sequential EEPROM-safe writes
+        m_writeIndex = 0;
+        m_writeTimer = 0.0f;
+        m_writing = true;
+    }
+}
+
+void CncSettingsPanel::saveToFlash() {
+    if (!m_cnc || !m_connected || m_firmwareType != FirmwareType::FluidNC) return;
+    m_cnc->sendCommand("$CD=config.yaml");
+    log::info("CNC", "FluidNC: persisting settings to flash ($CD=config.yaml)");
 }
 
 void CncSettingsPanel::backupToFile() {
     if (!m_fileDialog || m_settings.empty()) return;
     std::string json = m_settings.toJsonString();
     m_fileDialog->showSave(
-        "Backup GRBL Settings",
+        "Backup Settings",
         {{.name = "JSON Files", .extensions = "*.json"}},
-        "grbl_settings_backup.json",
+        "settings_backup.json",
         [json](const std::string& path) {
             std::ofstream ofs(path);
             if (ofs.is_open()) {
@@ -686,19 +947,37 @@ void CncSettingsPanel::backupToFile() {
 void CncSettingsPanel::restoreFromFile() {
     if (!m_fileDialog) return;
     m_fileDialog->showOpen(
-        "Restore GRBL Settings",
+        "Restore Settings",
         {{.name = "JSON Files", .extensions = "*.json"}},
         [this](const std::string& path) {
             std::ifstream ifs(path);
             if (!ifs.is_open()) return;
             std::string content((std::istreambuf_iterator<char>(ifs)),
                                  std::istreambuf_iterator<char>());
-            GrblSettings backup;
+            UnifiedSettingsMap backup;
             if (!backup.fromJsonString(content)) return;
 
             m_restoreSettings = backup;
             m_diffEntries = m_settings.diff(backup);
             m_showDiffDialog = true;
+        });
+}
+
+void CncSettingsPanel::exportPlainText() {
+    if (!m_fileDialog || m_settings.empty()) return;
+    std::string content = m_settings.exportPlainText(m_firmwareType);
+    std::string defaultName = (m_firmwareType == FirmwareType::FluidNC)
+                                  ? "fluidnc_settings.txt"
+                                  : "grbl_settings.txt";
+    m_fileDialog->showSave(
+        "Export Settings",
+        {{.name = "Text Files", .extensions = "*.txt"}},
+        defaultName,
+        [content](const std::string& path) {
+            std::ofstream ofs(path);
+            if (ofs.is_open()) {
+                ofs << content;
+            }
         });
 }
 
@@ -708,9 +987,19 @@ void CncSettingsPanel::onConnectionChanged(bool connected,
                                             const std::string& /*version*/) {
     m_connected = connected;
     if (connected) {
+        if (m_cnc) {
+            m_firmwareType = m_cnc->firmwareType();
+        }
         requestSettings();
+        // Query firmware info ($I)
+        if (m_cnc) {
+            m_cnc->sendCommand("$I");
+            m_requestingInfo = true;
+            m_firmwareInfo.clear();
+        }
     } else {
         m_collecting = false;
+        m_collectingSC = false;
         m_writing = false;
         m_writeQueue.clear();
     }
@@ -719,12 +1008,41 @@ void CncSettingsPanel::onConnectionChanged(bool connected,
 void CncSettingsPanel::onRawLine(const std::string& line, bool isSent) {
     if (isSent) return;
 
+    // Capture $I firmware info response
+    if (m_requestingInfo) {
+        if (line == "ok") {
+            m_requestingInfo = false;
+        } else if (line.substr(0, 5) != "error") {
+            if (!m_firmwareInfo.empty()) m_firmwareInfo += " | ";
+            m_firmwareInfo += line;
+        } else {
+            m_requestingInfo = false;
+        }
+    }
+
+    // Parse setting lines from $$ or $S response
     if (!line.empty() && line[0] == '$' && line.find('=') != std::string::npos) {
-        m_settings.parseLine(line);
+        if (m_collectingSC) {
+            // $SC response: mark changed-from-default
+            m_settings.markChangedFromDefault(line);
+        } else if (m_firmwareType == FirmwareType::FluidNC) {
+            m_settings.parseFluidNCLine(line);
+        } else {
+            m_settings.parseGrblLine(line);
+        }
         m_editBuffers.clear();
         m_collecting = true;
     } else if (m_collecting && (line == "ok" || line.substr(0, 5) == "error")) {
-        m_collecting = false;
+        if (m_collecting && !m_collectingSC &&
+            m_firmwareType == FirmwareType::FluidNC) {
+            // After $S completes, request $SC for changed-from-default
+            m_collecting = false;
+            m_collectingSC = true;
+            if (m_cnc) m_cnc->sendCommand("$SC");
+        } else {
+            m_collecting = false;
+            m_collectingSC = false;
+        }
     }
 }
 
