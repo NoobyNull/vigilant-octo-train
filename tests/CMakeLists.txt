@@ -65,6 +65,8 @@ set(DW_TEST_SOURCES
     test_macro_manager.cpp
     # Carve (Direct Carve pipeline)
     test_heightmap.cpp
+    test_model_fitter.cpp
+    test_carve_job.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
     # Tier 3 — workspace tests (no GL/SDL required)
@@ -137,6 +139,9 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/storage/storage_manager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/export/project_export_manager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/export/project_import.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/heightmap.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/model_fitter.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/carve_job.cpp
     ${CMAKE_SOURCE_DIR}/src/render/camera.cpp
     ${CMAKE_SOURCE_DIR}/src/app/workspace.cpp
 )

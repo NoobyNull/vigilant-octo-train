@@ -112,6 +112,8 @@ set(DW_SOURCES
 
     # Carve (Direct Carve pipeline)
     core/carve/heightmap.cpp
+    core/carve/model_fitter.cpp
+    core/carve/carve_job.cpp
 
     # Archive
     core/archive/archive.cpp
