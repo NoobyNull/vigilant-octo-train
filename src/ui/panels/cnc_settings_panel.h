@@ -5,6 +5,7 @@
 
 #include "../../core/cnc/cnc_types.h"
 #include "../../core/cnc/unified_settings.h"
+#include "../dialogs/machine_profile_dialog.h"
 #include "panel.h"
 
 namespace dw {
@@ -44,6 +45,7 @@ class CncSettingsPanel : public Panel {
 
   private:
     // Rendering sub-sections
+    void renderMachineProfileSection();
     void renderToolbar();
     void renderSettingsTab();
     void renderTuningTab();
@@ -101,6 +103,9 @@ class CncSettingsPanel : public Panel {
     bool m_writing = false;
     float m_writeTimer = 0.0f;
     static constexpr float WRITE_DELAY_SEC = 0.05f; // 50ms between EEPROM writes
+
+    // Machine profile dialog
+    MachineProfileDialog m_profileDialog;
 
     // Tab selection
     int m_activeTab = 0;

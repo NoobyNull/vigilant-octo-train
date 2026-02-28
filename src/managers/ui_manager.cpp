@@ -303,6 +303,17 @@ void UIManager::renderViewMenu() {
         ImGui::MenuItem("Firmware Settings", nullptr, &m_showCncSettings);
         ImGui::MenuItem("Macros", nullptr, &m_showCncMacros);
         ImGui::Separator();
+        if (ImGui::BeginMenu("Live Overlay")) {
+            auto& cfg = Config::instance();
+            bool dot = cfg.getCncShowToolDot();
+            if (ImGui::MenuItem("Tool Position", nullptr, &dot)) cfg.setCncShowToolDot(dot);
+            bool env = cfg.getCncShowWorkEnvelope();
+            if (ImGui::MenuItem("Work Envelope", nullptr, &env)) cfg.setCncShowWorkEnvelope(env);
+            bool dro = cfg.getCncShowDroOverlay();
+            if (ImGui::MenuItem("Position Readout", nullptr, &dro)) cfg.setCncShowDroOverlay(dro);
+            ImGui::EndMenu();
+        }
+        ImGui::Separator();
         if (ImGui::MenuItem("Show All")) {
             showCncPanels(true);
         }

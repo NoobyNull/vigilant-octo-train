@@ -74,6 +74,12 @@ class Renderer {
     // Render axis indicator
     void renderAxis(f32 length = 1.0f);
 
+    // Render a single point at the given position
+    void renderPoint(const Vec3& position, f32 pointSize, const Vec4& color);
+
+    // Render a wireframe box from min to max corners
+    void renderWireBox(const Vec3& min, const Vec3& max, const Vec4& color);
+
     // Upload mesh to GPU
     GPUMesh uploadMesh(const Mesh& mesh);
 
@@ -106,6 +112,12 @@ class Renderer {
     GPUMesh m_axisMesh;
 
     RenderSettings m_settings;
+
+    // Point rendering (lazy-init)
+    GLuint m_pointVAO = 0, m_pointVBO = 0;
+
+    // Wire box rendering (lazy-init)
+    GLuint m_wireBoxVAO = 0, m_wireBoxVBO = 0;
 
     // Mesh cache: hash -> uploaded GPU mesh
     std::unordered_map<u64, GPUMesh> m_meshCache;

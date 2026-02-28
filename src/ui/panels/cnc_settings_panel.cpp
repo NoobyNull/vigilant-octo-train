@@ -44,6 +44,9 @@ void CncSettingsPanel::render() {
         return;
     }
 
+    // Machine profile selector — always available regardless of connection
+    renderMachineProfileSection();
+
     if (!m_connected) {
         ImGui::Spacing();
         ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "%s Disconnected",
@@ -102,6 +105,46 @@ void CncSettingsPanel::render() {
     }
 
     ImGui::End();
+}
+
+// --- Machine profile selector ---
+
+void CncSettingsPanel::renderMachineProfileSection() {
+    auto& cfg = Config::instance();
+    const auto& profiles = cfg.getMachineProfiles();
+    int activeIdx = cfg.getActiveMachineProfileIndex();
+
+    ImGui::Text("%s Machine Profile", Icons::Settings);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x -
+                            ImGui::CalcTextSize("Edit").x -
+                            ImGui::GetStyle().FramePadding.x * 2.0f -
+                            ImGui::GetStyle().ItemSpacing.x);
+    const char* preview =
+        profiles[static_cast<size_t>(activeIdx)].name.c_str();
+    if (ImGui::BeginCombo("##MachineProfile", preview)) {
+        for (int i = 0; i < static_cast<int>(profiles.size()); ++i) {
+            bool selected = (i == activeIdx);
+            const auto& p = profiles[static_cast<size_t>(i)];
+            if (ImGui::Selectable(p.name.c_str(), selected)) {
+                cfg.setActiveMachineProfileIndex(i);
+                cfg.save();
+            }
+            if (selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Edit")) {
+        if (!m_profileDialog.isOpen()) {
+            m_profileDialog.open();
+        } else {
+            m_profileDialog.close();
+        }
+    }
+
+    m_profileDialog.render();
+    ImGui::Separator();
 }
 
 // --- Advanced ID display ---

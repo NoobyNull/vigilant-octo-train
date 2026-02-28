@@ -10,6 +10,7 @@
 #include "../../render/camera.h"
 #include "../../render/framebuffer.h"
 #include "../../render/renderer.h"
+#include "../../core/cnc/cnc_types.h"
 #include "../../render/texture.h"
 #include "panel.h"
 
@@ -58,6 +59,10 @@ class ViewportPanel : public Panel {
     void resetView();
     void fitToModel();
 
+    // CNC status updates
+    void onCncStatusUpdate(const MachineStatus& status) { m_machineStatus = status; }
+    void setCncConnected(bool connected) { m_cncConnected = connected; }
+
     // Context menu manager integration
     void setContextMenuManager(ContextMenuManager* manager) { m_contextMenuManager = manager; }
 
@@ -67,6 +72,7 @@ class ViewportPanel : public Panel {
     void renderViewport();
     void renderToolbar();
     void renderViewCube();
+    void renderCncDro();
 
     // ViewCube geometry cache — invalidated when camera orientation changes
     struct ViewCubeCache {
@@ -105,6 +111,10 @@ class ViewportPanel : public Panel {
 
     // ViewCube cache
     ViewCubeCache m_viewCubeCache;
+
+    // CNC live state
+    MachineStatus m_machineStatus;
+    bool m_cncConnected = false;
 
     // Context menu manager (not owned — managed by UIManager)
     ContextMenuManager* m_contextMenuManager = nullptr;

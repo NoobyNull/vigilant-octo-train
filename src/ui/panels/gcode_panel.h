@@ -255,6 +255,9 @@ class GCodePanel : public Panel {
     void renderSearchBar();
     void findNext();
     void gotoLineNumber(int lineNum);
+
+    // Live CNC overlay
+    void renderLiveDro();
 };
 
 } // namespace dw

@@ -1429,6 +1429,40 @@ void GCodePanel::renderPathView() {
         glEnable(GL_CULL_FACE);
     }
 
+    // Live CNC tool position (when connected, regardless of G-code loaded)
+    if (m_cncConnected) {
+        auto& cfg = Config::instance();
+        Vec3 wp = m_machineStatus.workPos;
+        Vec3 renderPos{wp.x, wp.z, wp.y};
+
+        // Expand far plane to encompass the work envelope
+        f32 savedFar = m_pathCamera.farPlane();
+        if (cfg.getCncShowWorkEnvelope()) {
+            const auto& profile = cfg.getActiveMachineProfile();
+            f32 envExtent = std::max({profile.maxTravelX, profile.maxTravelY,
+                                      profile.maxTravelZ});
+            f32 needed = (m_pathCamera.distance() + envExtent) * 2.0f;
+            if (needed > savedFar) {
+                m_pathCamera.setFarPlane(needed);
+                m_pathRenderer.setCamera(m_pathCamera);
+            }
+        }
+
+        if (cfg.getCncShowToolDot()) {
+            m_pathRenderer.renderPoint(renderPos, cfg.getCncToolDotSize(), cfg.getCncToolDotColor());
+        }
+        if (cfg.getCncShowWorkEnvelope()) {
+            const auto& profile = cfg.getActiveMachineProfile();
+            Vec3 envMax{profile.maxTravelX, profile.maxTravelZ, profile.maxTravelY};
+            m_pathRenderer.renderWireBox(Vec3{0, 0, 0}, envMax, cfg.getCncEnvelopeColor());
+        }
+
+        // Restore original far plane
+        if (m_pathCamera.farPlane() != savedFar) {
+            m_pathCamera.setFarPlane(savedFar);
+        }
+    }
+
     m_pathRenderer.endFrame();
     m_pathFramebuffer.unbind();
 
@@ -1437,6 +1471,11 @@ void GCodePanel::renderPathView() {
                  contentSize,
                  ImVec2(0, 1),
                  ImVec2(1, 0));
+
+    // Live DRO overlay
+    if (m_cncConnected && Config::instance().getCncShowDroOverlay()) {
+        renderLiveDro();
+    }
 }
 
 void GCodePanel::renderZClipSlider() {
@@ -1834,6 +1873,39 @@ void GCodePanel::renderJobHistory() {
     }
     ImGui::EndChild();
     ImGui::Separator();
+}
+
+void GCodePanel::renderLiveDro() {
+    ImVec2 rectMin = ImGui::GetItemRectMin();
+    ImVec2 rectMax = ImGui::GetItemRectMax();
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+
+    const auto& wp = m_machineStatus.workPos;
+    bool metric = Config::instance().getDisplayUnitsMetric();
+    const char* unit = metric ? "mm" : "in";
+    f32 scale = metric ? 1.0f : (1.0f / 25.4f);
+
+    char xBuf[32], yBuf[32], zBuf[32];
+    std::snprintf(xBuf, sizeof(xBuf), "X: %8.3f %s", static_cast<double>(wp.x * scale), unit);
+    std::snprintf(yBuf, sizeof(yBuf), "Y: %8.3f %s", static_cast<double>(wp.y * scale), unit);
+    std::snprintf(zBuf, sizeof(zBuf), "Z: %8.3f %s", static_cast<double>(wp.z * scale), unit);
+
+    f32 lineH = ImGui::GetTextLineHeightWithSpacing();
+    f32 padding = ImGui::GetStyle().FramePadding.x;
+    f32 textW = ImGui::CalcTextSize(xBuf).x;
+    f32 boxW = textW + padding * 2.0f;
+    f32 boxH = lineH * 3.0f + padding * 2.0f;
+
+    ImVec2 boxMin = {rectMin.x + padding, rectMax.y - boxH - padding};
+    ImVec2 boxMax = {boxMin.x + boxW, boxMin.y + boxH};
+
+    dl->AddRectFilled(boxMin, boxMax, IM_COL32(0, 0, 0, 160), 4.0f);
+
+    f32 textX = boxMin.x + padding;
+    f32 textY = boxMin.y + padding;
+    dl->AddText({textX, textY}, IM_COL32(255, 80, 80, 255), xBuf);
+    dl->AddText({textX, textY + lineH}, IM_COL32(80, 255, 80, 255), yBuf);
+    dl->AddText({textX, textY + lineH * 2.0f}, IM_COL32(80, 130, 255, 255), zBuf);
 }
 
 } // namespace dw

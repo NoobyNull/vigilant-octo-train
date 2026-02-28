@@ -215,6 +215,25 @@ class Config {
     bool getAdvancedSettingsView() const { return m_advancedSettingsView; }
     void setAdvancedSettingsView(bool v) { m_advancedSettingsView = v; }
 
+    // CNC overlay settings
+    bool getCncShowToolDot() const { return m_cncShowToolDot; }
+    void setCncShowToolDot(bool v) { m_cncShowToolDot = v; }
+
+    bool getCncShowWorkEnvelope() const { return m_cncShowWorkEnvelope; }
+    void setCncShowWorkEnvelope(bool v) { m_cncShowWorkEnvelope = v; }
+
+    bool getCncShowDroOverlay() const { return m_cncShowDroOverlay; }
+    void setCncShowDroOverlay(bool v) { m_cncShowDroOverlay = v; }
+
+    f32 getCncToolDotSize() const { return m_cncToolDotSize; }
+    void setCncToolDotSize(f32 v) { m_cncToolDotSize = v; }
+
+    Vec4 getCncToolDotColor() const { return m_cncToolDotColor; }
+    void setCncToolDotColor(const Vec4& v) { m_cncToolDotColor = v; }
+
+    Vec4 getCncEnvelopeColor() const { return m_cncEnvelopeColor; }
+    void setCncEnvelopeColor(const Vec4& v) { m_cncEnvelopeColor = v; }
+
     // CNC settings
     int getStatusPollIntervalMs() const { return m_statusPollIntervalMs; }
     void setStatusPollIntervalMs(int ms) { m_statusPollIntervalMs = std::clamp(ms, 50, 200); }
@@ -374,6 +393,14 @@ class Config {
     // Display units
     bool m_displayUnitsMetric = true;
     bool m_advancedSettingsView = false;
+
+    // CNC overlay settings
+    bool m_cncShowToolDot = true;
+    bool m_cncShowWorkEnvelope = false;
+    bool m_cncShowDroOverlay = true;
+    f32 m_cncToolDotSize = 8.0f;
+    Vec4 m_cncToolDotColor{1.0f, 0.2f, 0.2f, 1.0f};
+    Vec4 m_cncEnvelopeColor{1.0f, 0.67f, 0.2f, 0.6f};
 
     // CNC settings
     int m_statusPollIntervalMs = 200;

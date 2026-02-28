@@ -275,6 +275,30 @@ bool Config::load() {
                 m_displayUnitsMetric = (value != "in");
             } else if (key == "advanced_settings_view") {
                 m_advancedSettingsView = (value == "true" || value == "1");
+            } else if (key == "show_tool_dot") {
+                m_cncShowToolDot = (value == "true" || value == "1");
+            } else if (key == "show_work_envelope") {
+                m_cncShowWorkEnvelope = (value == "true" || value == "1");
+            } else if (key == "show_dro_overlay") {
+                m_cncShowDroOverlay = (value == "true" || value == "1");
+            } else if (key == "tool_dot_size") {
+                str::parseFloat(value, m_cncToolDotSize);
+            } else if (key == "tool_dot_color_r") {
+                str::parseFloat(value, m_cncToolDotColor.x);
+            } else if (key == "tool_dot_color_g") {
+                str::parseFloat(value, m_cncToolDotColor.y);
+            } else if (key == "tool_dot_color_b") {
+                str::parseFloat(value, m_cncToolDotColor.z);
+            } else if (key == "tool_dot_color_a") {
+                str::parseFloat(value, m_cncToolDotColor.w);
+            } else if (key == "envelope_color_r") {
+                str::parseFloat(value, m_cncEnvelopeColor.x);
+            } else if (key == "envelope_color_g") {
+                str::parseFloat(value, m_cncEnvelopeColor.y);
+            } else if (key == "envelope_color_b") {
+                str::parseFloat(value, m_cncEnvelopeColor.z);
+            } else if (key == "envelope_color_a") {
+                str::parseFloat(value, m_cncEnvelopeColor.w);
             }
         } else if (section == "recent_gcode") {
             if (str::startsWith(key, "file")) {
@@ -485,6 +509,18 @@ bool Config::save() {
     ss << "job_completion_flash=" << (m_jobCompletionFlash ? "true" : "false") << "\n";
     ss << "display_units=" << (m_displayUnitsMetric ? "mm" : "in") << "\n";
     ss << "advanced_settings_view=" << (m_advancedSettingsView ? "true" : "false") << "\n";
+    ss << "show_tool_dot=" << (m_cncShowToolDot ? "true" : "false") << "\n";
+    ss << "show_work_envelope=" << (m_cncShowWorkEnvelope ? "true" : "false") << "\n";
+    ss << "show_dro_overlay=" << (m_cncShowDroOverlay ? "true" : "false") << "\n";
+    ss << "tool_dot_size=" << m_cncToolDotSize << "\n";
+    ss << "tool_dot_color_r=" << m_cncToolDotColor.x << "\n";
+    ss << "tool_dot_color_g=" << m_cncToolDotColor.y << "\n";
+    ss << "tool_dot_color_b=" << m_cncToolDotColor.z << "\n";
+    ss << "tool_dot_color_a=" << m_cncToolDotColor.w << "\n";
+    ss << "envelope_color_r=" << m_cncEnvelopeColor.x << "\n";
+    ss << "envelope_color_g=" << m_cncEnvelopeColor.y << "\n";
+    ss << "envelope_color_b=" << m_cncEnvelopeColor.z << "\n";
+    ss << "envelope_color_a=" << m_cncEnvelopeColor.w << "\n";
     ss << "\n";
 
     // Recent G-code files section

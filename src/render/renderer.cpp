@@ -63,6 +63,12 @@ void Renderer::shutdown() {
     clearMeshCache();
     m_gridMesh.destroy();
     m_axisMesh.destroy();
+
+    if (m_pointVBO != 0) { glDeleteBuffers(1, &m_pointVBO); m_pointVBO = 0; }
+    if (m_pointVAO != 0) { glDeleteVertexArrays(1, &m_pointVAO); m_pointVAO = 0; }
+    if (m_wireBoxVBO != 0) { glDeleteBuffers(1, &m_wireBoxVBO); m_wireBoxVBO = 0; }
+    if (m_wireBoxVAO != 0) { glDeleteVertexArrays(1, &m_wireBoxVAO); m_wireBoxVAO = 0; }
+
     m_initialized = false;
 }
 
@@ -318,6 +324,90 @@ GPUMesh Renderer::uploadMesh(const Mesh& mesh) {
     gpuMesh.indexCount = mesh.indexCount();
 
     return gpuMesh;
+}
+
+void Renderer::renderPoint(const Vec3& position, f32 pointSize, const Vec4& color) {
+    // Lazy-init 1-vertex VAO/VBO
+    if (m_pointVAO == 0) {
+        glGenVertexArrays(1, &m_pointVAO);
+        glGenBuffers(1, &m_pointVBO);
+        glBindVertexArray(m_pointVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, m_pointVBO);
+        glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(f32), nullptr, GL_DYNAMIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(f32), nullptr);
+        glEnableVertexAttribArray(0);
+        glBindVertexArray(0);
+    }
+
+    // Update position data
+    f32 pos[3] = {position.x, position.y, position.z};
+    glBindBuffer(GL_ARRAY_BUFFER, m_pointVBO);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(pos), pos);
+
+    glDisable(GL_DEPTH_TEST);
+
+    m_flatShader.bind();
+    m_flatShader.setMat4("uMVP", m_camera.viewProjectionMatrix());
+    m_flatShader.setVec4("uColor", color);
+
+    glBindVertexArray(m_pointVAO);
+    glPointSize(pointSize);
+    glDrawArrays(GL_POINTS, 0, 1);
+    glBindVertexArray(0);
+
+    glEnable(GL_DEPTH_TEST);
+}
+
+void Renderer::renderWireBox(const Vec3& min, const Vec3& max, const Vec4& color) {
+    // Lazy-init 24-vertex VAO/VBO (12 edges)
+    if (m_wireBoxVAO == 0) {
+        glGenVertexArrays(1, &m_wireBoxVAO);
+        glGenBuffers(1, &m_wireBoxVBO);
+        glBindVertexArray(m_wireBoxVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, m_wireBoxVBO);
+        glBufferData(GL_ARRAY_BUFFER, 24 * 3 * sizeof(f32), nullptr, GL_DYNAMIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(f32), nullptr);
+        glEnableVertexAttribArray(0);
+        glBindVertexArray(0);
+    }
+
+    // Build 12 edges (24 vertices) from min/max corners
+    f32 verts[72]; // 24 * 3
+    auto v = [&](int i, f32 x, f32 y, f32 z) {
+        verts[i * 3] = x;
+        verts[i * 3 + 1] = y;
+        verts[i * 3 + 2] = z;
+    };
+    // Bottom face edges
+    v(0, min.x, min.y, min.z); v(1, max.x, min.y, min.z);
+    v(2, max.x, min.y, min.z); v(3, max.x, min.y, max.z);
+    v(4, max.x, min.y, max.z); v(5, min.x, min.y, max.z);
+    v(6, min.x, min.y, max.z); v(7, min.x, min.y, min.z);
+    // Top face edges
+    v(8, min.x, max.y, min.z);  v(9, max.x, max.y, min.z);
+    v(10, max.x, max.y, min.z); v(11, max.x, max.y, max.z);
+    v(12, max.x, max.y, max.z); v(13, min.x, max.y, max.z);
+    v(14, min.x, max.y, max.z); v(15, min.x, max.y, min.z);
+    // Vertical edges
+    v(16, min.x, min.y, min.z); v(17, min.x, max.y, min.z);
+    v(18, max.x, min.y, min.z); v(19, max.x, max.y, min.z);
+    v(20, max.x, min.y, max.z); v(21, max.x, max.y, max.z);
+    v(22, min.x, min.y, max.z); v(23, min.x, max.y, max.z);
+
+    glBindBuffer(GL_ARRAY_BUFFER, m_wireBoxVBO);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(verts), verts);
+
+    glDisable(GL_CULL_FACE);
+
+    m_flatShader.bind();
+    m_flatShader.setMat4("uMVP", m_camera.viewProjectionMatrix());
+    m_flatShader.setVec4("uColor", color);
+
+    glBindVertexArray(m_wireBoxVAO);
+    glDrawArrays(GL_LINES, 0, 24);
+    glBindVertexArray(0);
+
+    glEnable(GL_CULL_FACE);
 }
 
 void Renderer::clearMeshCache() {
