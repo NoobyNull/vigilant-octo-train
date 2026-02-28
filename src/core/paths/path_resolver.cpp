@@ -52,17 +52,13 @@ Path makeStorable(const Path& absolutePath, PathCategory cat) {
         return absolutePath;
     }
 
-    // Ensure root ends with separator for proper prefix matching
-    std::string rootStr = root.string();
-    if (rootStr.back() != '/') {
-        rootStr += '/';
+    // Use lexically_relative for cross-platform path comparison
+    Path relative = absolutePath.lexically_relative(root);
+    // lexically_relative returns "" on failure or starts with ".." if outside root
+    if (relative.empty() || *relative.begin() == "..") {
+        return absolutePath;
     }
-    std::string pathStr = absolutePath.string();
-
-    if (pathStr.substr(0, rootStr.size()) == rootStr) {
-        return Path(pathStr.substr(rootStr.size()));
-    }
-    return absolutePath;
+    return relative;
 }
 
 } // namespace PathResolver
