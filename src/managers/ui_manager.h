@@ -37,6 +37,7 @@ class CutOptimizerPanel;
 class MaterialsPanel;
 class StartPage;
 class ToolBrowserPanel;
+class DirectCarvePanel;
 
 // Forward declarations - dialogs
 class FileDialog;
@@ -138,6 +139,7 @@ class UIManager {
     CncSafetyPanel* cncSafetyPanel() { return m_cncSafetyPanel.get(); }
     CncSettingsPanel* cncSettingsPanel() { return m_cncSettingsPanel.get(); }
     CncMacroPanel* cncMacroPanel() { return m_cncMacroPanel.get(); }
+    DirectCarvePanel* directCarvePanel() { return m_directCarvePanel.get(); }
     FileDialog* fileDialog() { return m_fileDialog.get(); }
     LightingDialog* lightingDialog() { return m_lightingDialog.get(); }
     ImportSummaryDialog* importSummaryDialog() { return m_importSummaryDialog.get(); }
@@ -167,6 +169,7 @@ class UIManager {
     bool& showCncSafety() { return m_showCncSafety; }
     bool& showCncSettings() { return m_showCncSettings; }
     bool& showCncMacros() { return m_showCncMacros; }
+    bool& showDirectCarve() { return m_showDirectCarve; }
     bool& showStartPage() { return m_showStartPage; }
 
     // Workspace mode
@@ -243,6 +246,7 @@ class UIManager {
     std::unique_ptr<CncSafetyPanel> m_cncSafetyPanel;
     std::unique_ptr<CncSettingsPanel> m_cncSettingsPanel;
     std::unique_ptr<CncMacroPanel> m_cncMacroPanel;
+    std::unique_ptr<DirectCarvePanel> m_directCarvePanel;
 
     // Panel visibility
     bool m_showViewport = true;
@@ -263,6 +267,7 @@ class UIManager {
     bool m_showCncSafety = false;
     bool m_showCncSettings = false;
     bool m_showCncMacros = false;
+    bool m_showDirectCarve = false;
     bool m_showStartPage = true;
 
     // Panel registry for preset system

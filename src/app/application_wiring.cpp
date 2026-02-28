@@ -59,6 +59,7 @@
 #include "ui/panels/cnc_safety_panel.h"
 #include "ui/panels/cnc_settings_panel.h"
 #include "ui/panels/cnc_macro_panel.h"
+#include "ui/panels/direct_carve_panel.h"
 #include "ui/panels/tool_browser_panel.h"
 #include "ui/panels/viewport_panel.h"
 #include "ui/widgets/toast.h"
@@ -560,7 +561,14 @@ void Application::initWiring() {
         auto* safetyp = m_uiManager->cncSafetyPanel();
         auto* settsp = m_uiManager->cncSettingsPanel();
         auto* macrop = m_uiManager->cncMacroPanel();
+        auto* dcarvep = m_uiManager->directCarvePanel();
         auto* vpp = m_uiManager->viewportPanel();
+
+        // Wire Direct Carve panel dependencies
+        if (dcarvep) {
+            dcarvep->setCncController(m_cncController.get());
+            dcarvep->setToolDatabase(m_toolDatabase.get());
+        }
 
         // Set CncController on new panels
         if (csp) csp->setCncController(m_cncController.get());
@@ -579,7 +587,7 @@ void Application::initWiring() {
 
         CncCallbacks cncCb;
         cncCb.onConnectionChanged =
-            [this, gcp, csp, jogp, conp, wcsp, jobp, safetyp, settsp, macrop, vpp](
+            [this, gcp, csp, jogp, conp, wcsp, jobp, safetyp, settsp, macrop, dcarvep, vpp](
                 bool connected, const std::string& version) {
             gcp->onGrblConnected(connected, version);
             if (csp) csp->onConnectionChanged(connected, version);
@@ -594,6 +602,7 @@ void Application::initWiring() {
             }
             if (settsp) settsp->onConnectionChanged(connected, version);
             if (macrop) macrop->onConnectionChanged(connected, version);
+            if (dcarvep) dcarvep->onConnectionChanged(connected);
             if (vpp) vpp->setCncConnected(connected);
             // Sync CNC state to menu bar
             m_uiManager->setCncConnected(connected);
@@ -606,7 +615,7 @@ void Application::initWiring() {
             }
         };
         cncCb.onStatusUpdate =
-            [gcp, csp, jogp, wcsp, jobp, ctp, safetyp, settsp, macrop, vpp](
+            [gcp, csp, jogp, wcsp, jobp, ctp, safetyp, settsp, macrop, dcarvep, vpp](
                 const MachineStatus& status) {
             gcp->onGrblStatus(status);
             if (csp) csp->onStatusUpdate(status);
@@ -621,6 +630,7 @@ void Application::initWiring() {
             if (safetyp) safetyp->onStatusUpdate(status);
             if (settsp) settsp->onStatusUpdate(status);
             if (macrop) macrop->onStatusUpdate(status);
+            if (dcarvep) dcarvep->onStatusUpdate(status);
             if (vpp) vpp->onCncStatusUpdate(status);
         };
         cncCb.onLineAcked = [gcp](const LineAck& ack) {

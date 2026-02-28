@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-28T20:21:29.352Z"
+last_updated: "2026-02-28T20:31:19Z"
 progress:
   total_phases: 28
   completed_phases: 16
   total_plans: 55
-  completed_plans: 46
+  completed_plans: 47
 ---
 
 # Project State
@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-02-28)
 
 ## Current Position
 
-Phase: Phase 17 — Toolpath Generation (in progress)
-Plan: 17-01 — Raster Scan Generation (complete)
-Status: Phase 17 plan 01 complete (plans 02-03 also executed via linter)
-Last activity: 2026-02-28 — Raster scan toolpath generator with tool offset compensation and island clearing
+Phase: Phase 18 — Guided Workflow (in progress)
+Plan: 18-03 — Confirmation Summary, Commit Flow, Run Integration (complete)
+Status: Phase 18 plan 03 complete
+Last activity: 2026-02-28 — G-code export, wizard steps (ZeroConfirm, Commit, Running)
 
 ## Accumulated Context
 
@@ -64,6 +64,10 @@ Last activity: 2026-02-28 — Raster scan toolpath generator with tool offset co
 - [Phase 17]: V-bit 8-neighbor cone-gouge check, ball-nose drop-cutter, end-mill max-Z-within-radius for tool offset compensation
 - V-bit cone flares upward from tip -- offset only when neighbor is above cone body
 - Boundary-aware tool offset skips out-of-bounds neighbors to prevent defaultZ artifacts
+- [Phase 18]: generateGcode() returns string for testability, exportGcode() wraps with file I/O
+- Feed rate F word emitted only on first G1 move (modal G-code convention)
+- FileDialog showSave with callback pattern for G-code export
+- Abort sends Ctrl+X soft reset (0x18) for immediate machine stop
 
 ### Pending Todos
 None.
@@ -79,10 +83,10 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 17-01-PLAN.md (raster scan generation, tool offset, island clearing)
+Stopped at: Completed 18-03-PLAN.md (G-code export, wizard confirmation/commit/running steps)
 Resume file: None
-Next action: Execute Phase 17 plan 02 (G-code emitter)
+Next action: Execute Phase 19 (streaming integration)
 
 ---
 *State initialized: 2026-02-27*
-*Last updated: 2026-02-28T19:59:00Z*
+*Last updated: 2026-02-28T20:31:19Z*

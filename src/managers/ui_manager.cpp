@@ -44,6 +44,7 @@
 #include "ui/panels/cnc_safety_panel.h"
 #include "ui/panels/cnc_settings_panel.h"
 #include "ui/panels/cnc_macro_panel.h"
+#include "ui/panels/direct_carve_panel.h"
 #include "ui/panels/tool_browser_panel.h"
 #include "ui/panels/viewport_panel.h"
 #include "ui/widgets/status_bar.h"
@@ -88,6 +89,7 @@ void UIManager::init(LibraryManager* libraryManager,
     m_cncSafetyPanel = std::make_unique<CncSafetyPanel>();
     m_cncSettingsPanel = std::make_unique<CncSettingsPanel>();
     m_cncMacroPanel = std::make_unique<CncMacroPanel>();
+    m_directCarvePanel = std::make_unique<DirectCarvePanel>();
 
     // Create dialogs
     m_fileDialog = std::make_unique<FileDialog>();
@@ -168,6 +170,7 @@ void UIManager::shutdown() {
     m_cncSafetyPanel.reset();
     m_cncSettingsPanel.reset();
     m_cncMacroPanel.reset();
+    m_directCarvePanel.reset();
     m_startPage.reset();
 }
 
@@ -302,6 +305,8 @@ void UIManager::renderViewMenu() {
         ImGui::Separator();
         ImGui::MenuItem("Firmware Settings", nullptr, &m_showCncSettings);
         ImGui::MenuItem("Macros", nullptr, &m_showCncMacros);
+        ImGui::Separator();
+        ImGui::MenuItem("Direct Carve", nullptr, &m_showDirectCarve);
         ImGui::Separator();
         if (ImGui::BeginMenu("Live Overlay")) {
             auto& cfg = Config::instance();
@@ -493,6 +498,14 @@ void UIManager::renderPanels() {
         if (!m_cncMacroPanel->isOpen()) {
             m_showCncMacros = false;
             m_cncMacroPanel->setOpen(true);
+        }
+    }
+
+    if (m_showDirectCarve && m_directCarvePanel) {
+        m_directCarvePanel->render();
+        if (!m_directCarvePanel->isOpen()) {
+            m_showDirectCarve = false;
+            m_directCarvePanel->setOpen(true);
         }
     }
 
@@ -726,6 +739,7 @@ void UIManager::setupDefaultDockLayout(ImGuiID dockspaceId) {
     ImGui::DockBuilderDockWindow("Firmware", dockCenter);
     ImGui::DockBuilderDockWindow("Macros", dockCenter);
     ImGui::DockBuilderDockWindow("Job Progress", dockCenter);
+    ImGui::DockBuilderDockWindow("Direct Carve", dockCenter);
 
     ImGui::DockBuilderFinish(dockspaceId);
 }
@@ -874,6 +888,7 @@ void UIManager::buildPanelRegistry() {
         {"cnc_safety",     &m_showCncSafety,      "Safety Controls",   "Safety"},
         {"cnc_settings",   &m_showCncSettings,    "Firmware Settings",  "Firmware"},
         {"cnc_macros",     &m_showCncMacros,      "Macros",            "Macros"},
+        {"direct_carve",   &m_showDirectCarve,    "Direct Carve",      "Direct Carve"},
     };
 }
 
