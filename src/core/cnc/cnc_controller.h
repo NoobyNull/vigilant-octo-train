@@ -2,12 +2,13 @@
 
 #include <atomic>
 #include <deque>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
 
-#include "serial_port.h"
+#include "byte_stream.h"
 #include "cnc_types.h"
 #include "unified_settings.h"
 
@@ -89,7 +90,7 @@ class CncController {
     void simAdvancePosition(float dt);
 
     MainThreadQueue* m_mtq;
-    SerialPort m_port;
+    std::unique_ptr<IByteStream> m_port;
     CncCallbacks m_callbacks;
 
     // IO thread
