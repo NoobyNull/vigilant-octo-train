@@ -9,10 +9,10 @@ Requirements for the v0.3.0 Direct Carve milestone. Each maps to roadmap phases 
 
 ### Heightmap Engine
 
-- [ ] **DC-01**: STL model is rasterized to a 2D heightmap grid via ray-mesh intersection on the XY plane, with configurable resolution (points per mm)
-- [ ] **DC-02**: Heightmap supports uniform scaling (locked aspect ratio) with independent Z depth control from top surface
-- [ ] **DC-03**: Model can be positioned on the material stock (X/Y offset), with bounds checked against machine travel limits
-- [ ] **DC-04**: Heightmap computation runs on a background thread with progress reporting to the UI
+- [x] **DC-01**: STL model is rasterized to a 2D heightmap grid via ray-mesh intersection on the XY plane, with configurable resolution (points per mm)
+- [x] **DC-02**: Heightmap supports uniform scaling (locked aspect ratio) with independent Z depth control from top surface
+- [x] **DC-03**: Model can be positioned on the material stock (X/Y offset), with bounds checked against machine travel limits
+- [x] **DC-04**: Heightmap computation runs on a background thread with progress reporting to the UI
 
 ### Model Analysis
 
@@ -59,10 +59,10 @@ Requirements for the v0.3.0 Direct Carve milestone. Each maps to roadmap phases 
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DC-01 | Phase 14: Heightmap Engine | Planned |
-| DC-02 | Phase 14: Heightmap Engine | Planned |
-| DC-03 | Phase 14: Heightmap Engine | Planned |
-| DC-04 | Phase 14: Heightmap Engine | Planned |
+| DC-01 | Phase 14: Heightmap Engine | Complete |
+| DC-02 | Phase 14: Heightmap Engine | Complete |
+| DC-03 | Phase 14: Heightmap Engine | Complete |
+| DC-04 | Phase 14: Heightmap Engine | Complete |
 | DC-05 | Phase 15: Model Analysis | Planned |
 | DC-06 | Phase 15: Model Analysis | Planned |
 | DC-07 | Phase 15: Model Analysis | Planned |
