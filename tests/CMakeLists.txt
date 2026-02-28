@@ -74,6 +74,7 @@ set(DW_TEST_SOURCES
     test_toolpath_generator.cpp
     test_gcode_export.cpp
     test_carve_streamer.cpp
+    test_carve_integration.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
     # Tier 3 — workspace tests (no GL/SDL required)
