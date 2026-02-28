@@ -126,7 +126,7 @@ Plans:
   3. CncController has a connectTcp(host, port) method that creates a TCP connection and runs the same IO thread as serial
   4. Connection bar UI has a Serial/TCP mode selector, with host:port inputs for TCP mode
   5. All existing serial and simulator connections work identically through the new interface
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 13-01-PLAN.md -- Extract IByteStream interface, refactor SerialPort and CncController

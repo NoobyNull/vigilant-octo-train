@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.2.1
-milestone_name: FluidNC Config Editor
-status: defining_requirements
-last_updated: "2026-02-27T18:30:00.000Z"
+milestone: v0.1
+milestone_name: milestone
+status: unknown
+last_updated: "2026-02-28T15:15:41.344Z"
 progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 22
+  completed_phases: 12
+  total_plans: 41
+  completed_plans: 37
 ---
 
 # Project State
@@ -39,6 +39,9 @@ Last activity: 2026-02-27 — Milestone v0.2.1 started
 
 ### Pending Todos
 None.
+
+### Roadmap Evolution
+- Phase 13 added: TCP/IP byte stream transport for CNC connections
 
 ### Blockers/Concerns
 None.
