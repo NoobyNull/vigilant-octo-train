@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-28T20:35:34.571Z"
+last_updated: "2026-02-28T20:37:28Z"
 progress:
   total_phases: 28
   completed_phases: 17
   total_plans: 55
-  completed_plans: 49
+  completed_plans: 50
 ---
 
 # Project State
@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-02-28)
 
 ## Current Position
 
-Phase: Phase 18 — Guided Workflow (in progress)
-Plan: 18-03 — Confirmation Summary, Commit Flow, Run Integration (complete)
-Status: Phase 18 plan 03 complete
-Last activity: 2026-02-28 — G-code export, wizard steps (ZeroConfirm, Commit, Running)
+Phase: Phase 19 — Streaming Integration (in progress)
+Plan: 19-01 — On-the-Fly G-code Generation and Streaming Adapter (complete)
+Status: Phase 19 plan 01 complete
+Last activity: 2026-02-28 — CarveStreamer for on-the-fly G-code generation
 
 ## Accumulated Context
 
@@ -71,6 +71,12 @@ Last activity: 2026-02-28 — G-code export, wizard steps (ZeroConfirm, Commit, 
 - [Phase 18]: Panel hidden by default (m_open=false), shown via View > Sender > Direct Carve menu
 - [Phase 18]: Theme::Colors helper functions for all wizard status indicators (no hardcoded ImVec4)
 - [Phase 18]: Font-relative step indicator sizing for DPI awareness
+- [Phase 18-02]: CarveJob analysis/toolpath run synchronously on main thread (fast enough for interactive)
+- [Phase 18-02]: Scale slider range derived from stock/model ratio (not hardcoded)
+- [Phase 18-02]: ImDrawList polylines for toolpath preview with worldToScreen coordinate mapping
+- [Phase 19]: Phase-based state machine (Preamble/Clearing/Finishing/Postamble/Complete) for streaming dispatch
+- [Phase 19]: Modal feed rate optimization -- F word emitted only on change
+- [Phase 19]: Postamble split into 3 individual lines for GRBL buffer compatibility
 
 ### Pending Todos
 None.
@@ -86,10 +92,10 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 18-03-PLAN.md (G-code export, wizard confirmation/commit/running steps)
+Stopped at: Completed 19-01-PLAN.md (CarveStreamer on-the-fly G-code generation)
 Resume file: None
-Next action: Execute Phase 19 (streaming integration)
+Next action: Execute 19-02-PLAN.md (streaming UI integration)
 
 ---
 *State initialized: 2026-02-27*
-*Last updated: 2026-02-28T20:31:19Z*
+*Last updated: 2026-02-28T20:37:28Z*
