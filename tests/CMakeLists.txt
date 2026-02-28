@@ -67,6 +67,7 @@ set(DW_TEST_SOURCES
     test_heightmap.cpp
     test_model_fitter.cpp
     test_carve_job.cpp
+    test_surface_analysis.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
     # Tier 3 — workspace tests (no GL/SDL required)
@@ -142,6 +143,9 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/carve/heightmap.cpp
     ${CMAKE_SOURCE_DIR}/src/core/carve/model_fitter.cpp
     ${CMAKE_SOURCE_DIR}/src/core/carve/carve_job.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/surface_analysis.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/island_detector.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/analysis_overlay.cpp
     ${CMAKE_SOURCE_DIR}/src/render/camera.cpp
     ${CMAKE_SOURCE_DIR}/src/app/workspace.cpp
 )

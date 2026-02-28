@@ -114,6 +114,7 @@ set(DW_SOURCES
     core/carve/heightmap.cpp
     core/carve/model_fitter.cpp
     core/carve/carve_job.cpp
+    core/carve/surface_analysis.cpp
 
     # Archive
     core/archive/archive.cpp
