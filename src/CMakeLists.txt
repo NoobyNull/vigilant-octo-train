@@ -119,6 +119,7 @@ set(DW_SOURCES
     core/carve/analysis_overlay.cpp
     core/carve/tool_recommender.cpp
     core/carve/toolpath_generator.cpp
+    core/carve/gcode_export.cpp
 
     # Archive
     core/archive/archive.cpp
@@ -166,6 +167,7 @@ set(DW_SOURCES
     ui/panels/cnc_safety_panel.cpp
     ui/panels/cnc_settings_panel.cpp
     ui/panels/cnc_macro_panel.cpp
+    ui/panels/direct_carve_panel.cpp
 
     # UI Widgets
     ui/widgets/binding_recorder.cpp
