@@ -59,13 +59,21 @@ Requirements for the Sender Feature Parity milestone. Each maps to roadmap phase
 - [x] **EXT-15**: Tool length setter (TLS) workflow: measure tool offset, store per-tool, apply G43 compensation
 - [x] **EXT-16**: 3D probing workflows: edge finding, corner probing, center finding with approach/retract sequences
 
+### TCP/IP Transport
+
+- [x] **TCP-01**: Abstract IByteStream interface extracted from SerialPort with methods: close, isOpen, write, writeByte, readLine, drain, device, connectionState
+- [x] **TCP-02**: CncController uses unique_ptr<IByteStream> for polymorphic transport dispatch instead of concrete SerialPort member
+- [x] **TCP-03**: TcpSocket class implements IByteStream with POSIX TCP: non-blocking connect with timeout, TCP_NODELAY, disconnect detection via poll/read errors
+- [x] **TCP-04**: CncController::connectTcp(host, port) creates TcpSocket transport and runs same IO thread as serial
+- [x] **TCP-05**: Connection bar UI has Serial/TCP mode selector with host:port inputs for TCP mode
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
 
 ### Connectivity
 
-- **CON-01**: Ethernet/Telnet connection for network-attached CNC controllers
+- **CON-01**: ~~Ethernet/Telnet connection for network-attached CNC controllers~~ (superseded by TCP-01 through TCP-05)
 - **CON-02**: WebSocket protocol for FluidNC WiFi connectivity
 - **CON-03**: Windows serial port implementation (Win32 CreateFile/ReadFile/WriteFile)
 
@@ -135,10 +143,15 @@ Deferred to future release. Tracked but not in current roadmap.
 | EXT-14 | Phase 12: Extended | Complete |
 | EXT-15 | Phase 12: Extended | Complete |
 | EXT-16 | Phase 12: Extended | Complete |
+| TCP-01 | Phase 13: TCP/IP Transport | Planned |
+| TCP-02 | Phase 13: TCP/IP Transport | Planned |
+| TCP-03 | Phase 13: TCP/IP Transport | Planned |
+| TCP-04 | Phase 13: TCP/IP Transport | Planned |
+| TCP-05 | Phase 13: TCP/IP Transport | Planned |
 
 **Coverage:**
-- v1 requirements: 42 total
-- Mapped to phases: 42
+- v1 requirements: 42 total + 5 TCP requirements
+- Mapped to phases: 47
 - Unmapped: 0 ✓
 
 ---

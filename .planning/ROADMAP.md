@@ -115,6 +115,24 @@ Plans:
 | 11. Niceties | 3/3 | Complete    | 2026-02-27 | - |
 | 12. Extended | v0.2.0 | 0/5 | Planned | - |
 
+### Phase 13: TCP/IP byte stream transport for CNC connections
+
+**Goal:** Operator can connect to CNC controllers over TCP/IP in addition to serial, using an abstract byte stream interface that keeps all existing functionality working identically
+**Depends on:** Phase 12
+**Requirements**: TCP-01, TCP-02, TCP-03, TCP-04, TCP-05
+**Success Criteria** (what must be TRUE):
+  1. SerialPort implements an abstract IByteStream interface, and CncController uses it polymorphically via unique_ptr
+  2. TcpSocket class provides a raw TCP transport implementing the same IByteStream interface with non-blocking connect, TCP_NODELAY, and disconnect detection
+  3. CncController has a connectTcp(host, port) method that creates a TCP connection and runs the same IO thread as serial
+  4. Connection bar UI has a Serial/TCP mode selector, with host:port inputs for TCP mode
+  5. All existing serial and simulator connections work identically through the new interface
+**Plans:** 3 plans
+
+Plans:
+- [ ] 13-01-PLAN.md -- Extract IByteStream interface, refactor SerialPort and CncController
+- [ ] 13-02-PLAN.md -- Implement TcpSocket class, add connectTcp() to CncController, tests
+- [ ] 13-03-PLAN.md -- Connection bar UI with Serial/TCP mode selector
+
 ---
 *Roadmap created: 2026-02-24*
-*Last updated: 2026-02-27 -- Phase 12 Extended complete (5/5 plans, all 16 EXT requirements)*
+*Last updated: 2026-02-28 -- Phase 13 TCP/IP transport planned (3 plans, 5 TCP requirements)*
