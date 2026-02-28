@@ -5,10 +5,18 @@
 
 using namespace dw;
 
+// Cross-platform absolute path for testing
+#ifdef _WIN32
+static const Path kAbsTestPath("C:/some/absolute/path/file.stl");
+static const Path kAbsOtherPath("C:/completely/different/location/file.stl");
+#else
+static const Path kAbsTestPath("/some/absolute/path/file.stl");
+static const Path kAbsOtherPath("/completely/different/location/file.stl");
+#endif
+
 TEST(PathResolver, AbsolutePathPassesThrough) {
-    Path abs("/some/absolute/path/file.stl");
-    Path result = PathResolver::resolve(abs, PathCategory::Support);
-    EXPECT_EQ(result, abs);
+    Path result = PathResolver::resolve(kAbsTestPath, PathCategory::Support);
+    EXPECT_EQ(result, kAbsTestPath);
 }
 
 TEST(PathResolver, RelativePathGetsResolved) {
@@ -34,10 +42,9 @@ TEST(PathResolver, MakeStorableInsideRoot) {
 }
 
 TEST(PathResolver, MakeStorableOutsideRoot) {
-    Path absFile("/completely/different/location/file.stl");
-    Path stored = PathResolver::makeStorable(absFile, PathCategory::Support);
+    Path stored = PathResolver::makeStorable(kAbsOtherPath, PathCategory::Support);
     EXPECT_TRUE(stored.is_absolute());
-    EXPECT_EQ(stored, absFile);
+    EXPECT_EQ(stored, kAbsOtherPath);
 }
 
 TEST(PathResolver, RoundTrip) {
