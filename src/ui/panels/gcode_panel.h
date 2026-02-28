@@ -75,6 +75,12 @@ class GCodePanel : public Panel {
     void onGrblError(const std::string& message);
     void onGrblRawLine(const std::string& line, bool isSent);
 
+    // Direct Carve streaming — called by DirectCarvePanel
+    void onCarveStreamStart(int totalLines);
+    void onCarveStreamProgress(int currentLine, int totalLines, float elapsedSec);
+    void onCarveStreamComplete();
+    void onCarveStreamAborted();
+
     // Update simulation (call each frame with delta time)
     void updateSimulation(float dt);
 
@@ -258,6 +264,14 @@ class GCodePanel : public Panel {
 
     // Live CNC overlay
     void renderLiveDro();
+
+    // Direct Carve streaming state
+    void renderCarveProgress();
+    bool m_carveStreamActive = false;
+    int m_carveCurrentLine = 0;
+    int m_carveTotalLines = 0;
+    float m_carveElapsedSec = 0.0f;
+    bool m_carveAborted = false;
 };
 
 } // namespace dw

@@ -16,6 +16,7 @@ namespace dw {
 
 class CncController;
 class FileDialog;
+class GCodePanel;
 class ToolDatabase;
 
 namespace carve {
@@ -36,6 +37,7 @@ class DirectCarvePanel : public Panel {
     void setToolDatabase(ToolDatabase* db);
     void setCarveJob(carve::CarveJob* job);
     void setFileDialog(FileDialog* dlg);
+    void setGCodePanel(GCodePanel* gcp);
 
     // Callbacks
     void onConnectionChanged(bool connected);
@@ -90,6 +92,7 @@ class DirectCarvePanel : public Panel {
     ToolDatabase* m_toolDb = nullptr;
     carve::CarveJob* m_carveJob = nullptr;
     FileDialog* m_fileDialog = nullptr;
+    GCodePanel* m_gcodePanel = nullptr;
     MachineStatus m_machineStatus;
     bool m_cncConnected = false;
 
@@ -150,6 +153,13 @@ class DirectCarvePanel : public Panel {
     // Model/tool info for summary card
     std::string m_modelName;
     std::string m_materialName;
+
+    // G-code export
+    void showExportDialog();
+
+    // Long-press abort tracking
+    float m_abortHoldTime = 0.0f;
+    bool m_abortHolding = false;
 
     // Helper: format time as "Xm Ys"
     static std::string formatTime(f32 seconds);

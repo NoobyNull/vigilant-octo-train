@@ -12,11 +12,15 @@
 
 #include "core/carve/analysis_overlay.h"
 #include "core/carve/carve_job.h"
+#include "core/carve/gcode_export.h"
 #include "core/cnc/cnc_controller.h"
 #include "core/config/config.h"
 #include "core/gcode/machine_profile.h"
+#include "ui/dialogs/file_dialog.h"
 #include "ui/icons.h"
+#include "ui/panels/gcode_panel.h"
 #include "ui/theme.h"
+#include "ui/widgets/toast.h"
 
 namespace dw {
 
@@ -51,6 +55,8 @@ DirectCarvePanel::~DirectCarvePanel() = default;
 void DirectCarvePanel::setCncController(CncController* cnc) { m_cnc = cnc; }
 void DirectCarvePanel::setToolDatabase(ToolDatabase* db) { m_toolDb = db; }
 void DirectCarvePanel::setCarveJob(carve::CarveJob* job) { m_carveJob = job; }
+void DirectCarvePanel::setFileDialog(FileDialog* dlg) { m_fileDialog = dlg; }
+void DirectCarvePanel::setGCodePanel(GCodePanel* gcp) { m_gcodePanel = gcp; }
 
 void DirectCarvePanel::onConnectionChanged(bool connected) { m_cncConnected = connected; }
 void DirectCarvePanel::onStatusUpdate(const MachineStatus& status) { m_machineStatus = status; }
@@ -611,6 +617,13 @@ void DirectCarvePanel::renderCommit() {
     }
 
     ImGui::Spacing();
+
+    // G-code export button
+    float bw = ImGui::GetFontSize() * 10.0f;
+    if (ImGui::Button("Save as G-code", ImVec2(bw, 0)))
+        showExportDialog();
+
+    ImGui::Spacing();
     ImGui::PushStyleColor(ImGuiCol_Text, kYellow);
     ImGui::TextWrapped("This will begin streaming G-code to the machine. "
                        "Ensure the work area is clear and the spindle is ready.");
@@ -620,21 +633,147 @@ void DirectCarvePanel::renderCommit() {
 }
 
 void DirectCarvePanel::renderRunning() {
-    ImGui::TextUnformatted("Carve in Progress");
-    ImGui::Spacing();
-    ImGui::TextColored(kBright, "Streaming toolpath to machine...");
+    float fontSize = ImGui::GetFontSize();
+    float bw = fontSize * 8.0f;
+
+    // State label
+    const char* stateLabel = "Unknown";
+    ImVec4 stateColor = kDimmed;
+    switch (m_runState) {
+    case RunState::Active:
+        stateLabel = "Streaming";
+        stateColor = kGreen;
+        break;
+    case RunState::Paused:
+        stateLabel = "Paused (Feed Hold)";
+        stateColor = kYellow;
+        break;
+    case RunState::Completed:
+        stateLabel = "Complete";
+        stateColor = kGreen;
+        break;
+    case RunState::Aborted:
+        stateLabel = "Aborted";
+        stateColor = kRed;
+        break;
+    }
+
+    ImGui::TextColored(stateColor, "%s", stateLabel);
     ImGui::Spacing();
 
-    ImGui::Text("Machine state: %s",
-        m_machineStatus.state == MachineState::Run ? "Running" :
-        m_machineStatus.state == MachineState::Idle ? "Idle" :
-        m_machineStatus.state == MachineState::Hold ? "Hold" : "Other");
+    // Progress bar
+    if (m_runTotalLines > 0) {
+        float fraction = static_cast<float>(m_runCurrentLine) /
+                         static_cast<float>(m_runTotalLines);
+        float etaSec = 0.0f;
+        if (m_runCurrentLine > 0 && fraction < 1.0f && m_runElapsedSec > 0.0f) {
+            float rate = static_cast<float>(m_runCurrentLine) / m_runElapsedSec;
+            float remaining = static_cast<float>(m_runTotalLines - m_runCurrentLine);
+            etaSec = remaining / rate;
+        }
+        char overlay[128];
+        int etaMin = static_cast<int>(etaSec / 60.0f);
+        int etaS = static_cast<int>(etaSec) % 60;
+        std::snprintf(overlay, sizeof(overlay), "Line %d / %d  (%.0f%%)  ETA: %d:%02d",
+                      m_runCurrentLine, m_runTotalLines,
+                      static_cast<double>(fraction * 100.0f), etaMin, etaS);
+        ImGui::ProgressBar(fraction, ImVec2(-1, 0), overlay);
+    }
+
+    // Pass indicator and elapsed time
+    if (!m_runCurrentPass.empty())
+        ImGui::Text("Pass: %s", m_runCurrentPass.c_str());
+    ImGui::Text("Elapsed: %s", formatTime(m_runElapsedSec).c_str());
+
+    // Machine position
     ImGui::Text("Position: X%.3f Y%.3f Z%.3f",
                 static_cast<double>(m_machineStatus.workPos.x),
                 static_cast<double>(m_machineStatus.workPos.y),
                 static_cast<double>(m_machineStatus.workPos.z));
     ImGui::Spacing();
-    ImGui::TextWrapped("Use the Safety panel or keyboard smash to emergency stop.");
+
+    // Control buttons (active job only)
+    if (m_runState == RunState::Active || m_runState == RunState::Paused) {
+        // Pause / Resume
+        if (m_runState == RunState::Active) {
+            if (ImGui::Button("Pause", ImVec2(bw, 0))) {
+                if (m_cnc) m_cnc->feedHold();
+                m_runState = RunState::Paused;
+            }
+        } else {
+            if (ImGui::Button("Resume", ImVec2(bw, 0))) {
+                if (m_cnc) m_cnc->cycleStart();
+                m_runState = RunState::Active;
+            }
+        }
+
+        // Abort — long-press for safety
+        ImGui::SameLine();
+        ImGui::Button("Hold to Abort", ImVec2(bw * 1.2f, 0));
+        bool isHeld = ImGui::IsItemActive();
+        float requiredMs = 1500.0f;
+        if (isHeld) {
+            m_abortHoldTime += ImGui::GetIO().DeltaTime * 1000.0f;
+            float progress = std::min(m_abortHoldTime / requiredMs, 1.0f);
+            ImVec2 rmin = ImGui::GetItemRectMin();
+            ImVec2 rmax = ImGui::GetItemRectMax();
+            ImVec2 fillMax = {rmin.x + (rmax.x - rmin.x) * progress, rmax.y};
+            ImGui::GetWindowDrawList()->AddRectFilled(
+                rmin, fillMax, IM_COL32(255, 80, 80, 60), 3.0f);
+            m_abortHolding = true;
+            if (m_abortHoldTime >= requiredMs) {
+                // Execute abort sequence
+                if (m_cnc) {
+                    m_cnc->feedHold();
+                    m_cnc->softReset();
+                }
+                m_runState = RunState::Aborted;
+                if (m_gcodePanel) m_gcodePanel->onCarveStreamAborted();
+                m_abortHoldTime = 0.0f;
+                m_abortHolding = false;
+            }
+        } else {
+            if (m_abortHolding) { m_abortHolding = false; m_abortHoldTime = 0.0f; }
+        }
+    }
+
+    // Post-completion / post-abort UI
+    if (m_runState == RunState::Completed) {
+        ImGui::Spacing();
+        ImGui::TextColored(kGreen, "Carve completed successfully.");
+        if (ImGui::Button("Save G-code", ImVec2(bw, 0)))
+            showExportDialog();
+    }
+
+    if (m_runState == RunState::Aborted) {
+        ImGui::Spacing();
+        ImGui::PushStyleColor(ImGuiCol_Text, kRed);
+        ImGui::TextWrapped("Job aborted. Tool may be in workpiece -- "
+                           "jog Z up before moving XY.");
+        ImGui::PopStyleColor();
+        if (ImGui::Button("Save G-code", ImVec2(bw, 0)))
+            showExportDialog();
+    }
+}
+
+void DirectCarvePanel::showExportDialog() {
+    if (!m_fileDialog || !m_carveJob) return;
+    const auto& tp = m_carveJob->toolpath();
+    std::string modelName = m_modelName;
+    std::string toolName = m_finishTool.name_format;
+    carve::ToolpathConfig config = m_toolpathConfig;
+    m_fileDialog->showSave("Save G-code",
+        {{  "G-code Files", "*.nc;*.gcode;*.ngc"}},
+        "carve.nc",
+        [tp, config, modelName, toolName](const std::string& path) {
+            bool ok = carve::exportGcode(path, tp, config, modelName, toolName);
+            if (ok)
+                ToastManager::instance().show(ToastType::Success,
+                    "G-code Saved", path);
+            else
+                ToastManager::instance().show(ToastType::Error,
+                    "Export Failed", "Could not write " + path);
+        });
 }
 
 } // namespace dw
