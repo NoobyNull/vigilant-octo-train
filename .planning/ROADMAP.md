@@ -140,7 +140,7 @@ Plans:
 
 - [x] **Phase 14: Heightmap Engine** - Rasterize STL to 2D heightmap grid with configurable resolution, model fitting (scale/position/depth), background computation (completed 2026-02-28)
 - [x] **Phase 15: Model Analysis** - Minimum feature radius detection, island identification (enclosed depressions requiring clearing), visual annotation on heightmap preview (completed 2026-02-28)
-- [ ] **Phase 16: Tool Recommendation** - Automatic tool selection from database based on model analysis, V-bit/ball nose/TBN/clearing tool suggestions with feeds/speeds
+- [x] **Phase 16: Tool Recommendation** - Automatic tool selection from database based on model analysis, V-bit/ball nose/TBN/clearing tool suggestions with feeds/speeds (completed 2026-02-28)
 - [ ] **Phase 17: Toolpath Generation** - Raster scan toolpath with configurable axis, stepover presets, milling direction, safe Z, surgical island clearing
 - [ ] **Phase 18: Guided Workflow** - Step-by-step wizard: machine check, model fitting, tool selection, material setup, preview, outline test, zero, commit, run
 - [ ] **Phase 19: Streaming Integration** - Point-by-point streaming via CncController, pause/resume/abort, live progress, optional G-code file export
@@ -239,7 +239,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 14. Heightmap Engine | 2/2 | Complete    | 2026-02-28 | - |
 | 15. Model Analysis | 2/2 | Complete    | 2026-02-28 | - |
-| 16. Tool Recommendation | v0.3.0 | 0/2 | Planned | - |
+| 16. Tool Recommendation | 2/2 | Complete   | 2026-02-28 | - |
 | 17. Toolpath Generation | v0.3.0 | 0/3 | Planned | - |
 | 18. Guided Workflow | v0.3.0 | 0/3 | Planned | - |
 | 19. Streaming Integration | v0.3.0 | 0/2 | Planned | - |

@@ -26,8 +26,8 @@ Requirements for the v0.3.0 Direct Carve milestone. Each maps to roadmap phases 
 - [ ] **DC-09**: Automatic tool recommendation queries the tool database for compatible tools based on model analysis results
 - [ ] **DC-10**: V-bit recommended when model geometry allows taper-only finishing (no clearing needed outside islands)
 - [ ] **DC-11**: Ball nose / tapered ball nose recommended when minimum feature radius exceeds the tool tip radius
-- [ ] **DC-12**: Clearing tool recommended only for identified island regions, with diameter sized to island geometry
-- [ ] **DC-13**: Tool recommendation displays feed rate, spindle speed, and stepover from the tool database cutting data
+- [x] **DC-12**: Clearing tool recommended only for identified island regions, with diameter sized to island geometry
+- [x] **DC-13**: Tool recommendation displays feed rate, spindle speed, and stepover from the tool database cutting data
 
 ### Toolpath Generation
 
@@ -70,8 +70,8 @@ Requirements for the v0.3.0 Direct Carve milestone. Each maps to roadmap phases 
 | DC-09 | Phase 16: Tool Recommendation | Planned |
 | DC-10 | Phase 16: Tool Recommendation | Planned |
 | DC-11 | Phase 16: Tool Recommendation | Planned |
-| DC-12 | Phase 16: Tool Recommendation | Planned |
-| DC-13 | Phase 16: Tool Recommendation | Planned |
+| DC-12 | Phase 16: Tool Recommendation | Complete |
+| DC-13 | Phase 16: Tool Recommendation | Complete |
 | DC-14 | Phase 17: Toolpath Generation | Planned |
 | DC-15 | Phase 17: Toolpath Generation | Planned |
 | DC-16 | Phase 17: Toolpath Generation | Planned |
