@@ -163,5 +163,21 @@ const MultiPassToolpath& CarveJob::toolpath() const
     return m_toolpath;
 }
 
+void CarveJob::startStreaming(CncController* cnc)
+{
+    if (!m_analyzed || m_toolpath.finishing.points.empty()) {
+        return;
+    }
+
+    m_streamer = std::make_unique<CarveStreamer>();
+    m_streamer->setCncController(cnc);
+    m_streamer->start(m_toolpath, ToolpathConfig{});
+}
+
+CarveStreamer* CarveJob::streamer()
+{
+    return m_streamer.get();
+}
+
 } // namespace carve
 } // namespace dw

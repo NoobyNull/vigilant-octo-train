@@ -120,6 +120,7 @@ set(DW_SOURCES
     core/carve/tool_recommender.cpp
     core/carve/toolpath_generator.cpp
     core/carve/gcode_export.cpp
+    core/carve/carve_streamer.cpp
 
     # Archive
     core/archive/archive.cpp

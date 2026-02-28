@@ -7,10 +7,12 @@
 #include "island_detector.h"
 #include "model_fitter.h"
 #include "surface_analysis.h"
+#include "carve_streamer.h"
 #include "toolpath_types.h"
 
 #include <atomic>
 #include <future>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -62,6 +64,12 @@ public:
                           const VtdbToolGeometry* clearTool);
     const MultiPassToolpath& toolpath() const;
 
+    // Start streaming the generated toolpath
+    void startStreaming(CncController* cnc);
+
+    // Streaming state accessors
+    CarveStreamer* streamer();
+
 private:
     std::atomic<CarveJobState> m_state{CarveJobState::Idle};
     std::atomic<f32> m_progress{0.0f};
@@ -73,6 +81,7 @@ private:
     bool m_analyzed = false;
     std::string m_error;
     std::future<void> m_future;
+    std::unique_ptr<CarveStreamer> m_streamer;
 };
 
 } // namespace carve
