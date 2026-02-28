@@ -49,10 +49,10 @@ Requirements for the v0.3.0 Direct Carve milestone. Each maps to roadmap phases 
 
 ### Streaming Integration
 
-- [ ] **DC-26**: Toolpath streams point-by-point to CncController using existing character-counting protocol
+- [x] **DC-26**: Toolpath streams point-by-point to CncController using existing character-counting protocol
 - [ ] **DC-27**: Streaming supports pause/resume/abort with same safety guarantees as G-code job streaming
 - [ ] **DC-28**: Live progress shown in G-code panel (current line, percentage, elapsed/remaining time)
-- [ ] **DC-29**: Streaming generates G-code commands on the fly (G0/G1 with F rates) rather than pre-building a file
+- [x] **DC-29**: Streaming generates G-code commands on the fly (G0/G1 with F rates) rather than pre-building a file
 - [ ] **DC-30**: Job can optionally be saved as a .nc G-code file after generation for future replay without re-analysis
 
 ## Traceability
@@ -84,10 +84,10 @@ Requirements for the v0.3.0 Direct Carve milestone. Each maps to roadmap phases 
 | DC-23 | Phase 18: Guided Workflow | Planned |
 | DC-24 | Phase 18: Guided Workflow | Planned |
 | DC-25 | Phase 18: Guided Workflow | Planned |
-| DC-26 | Phase 19: Streaming Integration | Planned |
+| DC-26 | Phase 19: Streaming Integration | Complete |
 | DC-27 | Phase 19: Streaming Integration | Planned |
 | DC-28 | Phase 19: Streaming Integration | Planned |
-| DC-29 | Phase 19: Streaming Integration | Planned |
+| DC-29 | Phase 19: Streaming Integration | Complete |
 | DC-30 | Phase 19: Streaming Integration | Planned |
 
 **Coverage:**
