@@ -68,6 +68,8 @@ set(DW_TEST_SOURCES
     test_model_fitter.cpp
     test_carve_job.cpp
     test_surface_analysis.cpp
+    test_island_detector.cpp
+    test_analysis_overlay.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
     # Tier 3 — workspace tests (no GL/SDL required)
