@@ -136,7 +136,7 @@ void Heightmap::buildGrid(const std::vector<TriPos>& tris,
 
             const auto& bucket =
                 bins.bins[static_cast<usize>(binRow * bins.binCols + binCol)];
-            const f32 z = castRay(worldX, worldY, tris, bucket, m_boundsMin.z);
+            const f32 z = castRay(worldX, worldY, tris, bucket, m_defaultZ);
 
             m_grid[static_cast<usize>(row * m_cols + col)] = z;
             if (z < m_minZ) m_minZ = z;
@@ -158,6 +158,7 @@ void Heightmap::build(const std::vector<Vertex>& vertices,
     m_boundsMin = boundsMin;
     m_boundsMax = boundsMax;
     m_resolution = config.resolutionMm;
+    m_defaultZ = config.defaultZ;
 
     const f32 spanX = boundsMax.x - boundsMin.x;
     const f32 spanY = boundsMax.y - boundsMin.y;
@@ -206,6 +207,10 @@ f32 Heightmap::at(int col, int row) const {
 f32 Heightmap::atMm(f32 x, f32 y) const {
     if (empty())
         return 0.0f;
+
+    // Single-cell grid: no neighbors for bilinear interpolation
+    if (m_cols < 2 || m_rows < 2)
+        return m_grid[0];
 
     // Convert world coords to fractional grid coords
     const f32 fx = (x - m_boundsMin.x) / m_resolution;

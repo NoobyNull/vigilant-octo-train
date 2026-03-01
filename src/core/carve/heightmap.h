@@ -90,6 +90,7 @@ class Heightmap {
     Vec3 m_boundsMax{0.0f};
     f32 m_minZ = 0.0f;
     f32 m_maxZ = 0.0f;
+    f32 m_defaultZ = 0.0f;
 };
 
 } // namespace carve

@@ -150,9 +150,14 @@ void CarveJob::generateToolpath(const ToolpathConfig& config,
 
     ToolpathGenerator gen;
 
+    // Use flat_diameter when available (end mills); fall back to full diameter
+    // for V-bits and ball noses where flat_diameter is 0
+    const f32 tipDia = (finishTool.flat_diameter > 0.0)
+        ? static_cast<f32>(finishTool.flat_diameter)
+        : static_cast<f32>(finishTool.diameter);
+
     m_toolpath.finishing = gen.generateFinishing(
-        m_heightmap, config,
-        static_cast<f32>(finishTool.flat_diameter), finishTool);
+        m_heightmap, config, tipDia, finishTool);
 
     if (clearTool && !m_islands.islands.empty()) {
         m_toolpath.clearing = gen.generateClearing(
