@@ -15,6 +15,7 @@ void PropertiesPanel::render() {
         return;
     }
 
+    applyMinSize(16, 10);
     if (ImGui::Begin(m_title.c_str(), &m_open)) {
         if (m_mesh && m_mesh->isValid()) {
             renderMeshInfo();
@@ -446,7 +447,9 @@ void PropertiesPanel::renderMaterialInfo() {
                 }
 
                 ImGui::PushID(i);
-                if (ImGui::ColorButton(presets[i].name, imColor, 0, ImVec2(24, 24))) {
+                float swatchSize = ImGui::GetFrameHeight();
+                if (ImGui::ColorButton(presets[i].name, imColor, 0,
+                        ImVec2(swatchSize, swatchSize))) {
                     m_objectColor = c;
                     if (m_onColorChanged) {
                         m_onColorChanged(m_objectColor);

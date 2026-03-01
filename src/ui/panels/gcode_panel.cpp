@@ -84,6 +84,7 @@ void GCodePanel::render() {
     gcodeClass.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoUndocking;
     ImGui::SetNextWindowClass(&gcodeClass);
 
+    applyMinSize(24, 12);
     if (ImGui::Begin(m_title.c_str(), &m_open)) {
         // Job completion flash bar
         if (m_jobFlashTimer > 0.0f) {
@@ -146,6 +147,7 @@ void GCodePanel::render() {
                     renderMachineStatus();
                     renderPlaybackControls();
                     renderProgressBar();
+                    renderCarveProgress();
                     renderFeedOverride();
                 }
             } else if (m_mode == GCodePanelMode::View) {
@@ -158,7 +160,8 @@ void GCodePanel::render() {
             float availWidth = ImGui::GetContentRegionAvail().x;
 
             if (availWidth < 420.0f) {
-                ImGui::BeginChild("Stats", ImVec2(0, 250), true);
+                float statsH = ImGui::GetContentRegionAvail().y * 0.4f;
+                ImGui::BeginChild("Stats", ImVec2(0, statsH), true);
                 renderStatistics();
                 ImGui::EndChild();
 
@@ -166,7 +169,8 @@ void GCodePanel::render() {
                 renderPathView();
                 ImGui::EndChild();
             } else {
-                float statsWidth = std::min(250.0f, availWidth * 0.4f);
+                float statsWidth = availWidth * 0.35f;
+                float spacing = ImGui::GetStyle().ItemSpacing.x;
 
                 ImGui::BeginChild("Stats", ImVec2(statsWidth, 0), true);
                 renderStatistics();
@@ -180,7 +184,7 @@ void GCodePanel::render() {
 
                 ImGui::SameLine();
 
-                ImGui::BeginChild("PathView", ImVec2(availWidth - statsWidth - 8, 0), true);
+                ImGui::BeginChild("PathView", ImVec2(availWidth - statsWidth - spacing, 0), true);
                 renderPathView();
                 ImGui::EndChild();
             }
@@ -198,7 +202,7 @@ void GCodePanel::render() {
 }
 
 void GCodePanel::renderModeTabs() {
-    if (ImGui::BeginTabBar("##GCodeModeTabs")) {
+    if (ImGui::BeginTabBar("##GCodeModeTabs", ImGuiTabBarFlags_FittingPolicyScroll)) {
         if (ImGui::BeginTabItem("View")) {
             m_mode = GCodePanelMode::View;
             ImGui::EndTabItem();
@@ -564,7 +568,7 @@ void GCodePanel::renderConnectionBar() {
         ImGui::SameLine();
 
         // Port combo
-        ImGui::SetNextItemWidth(150);
+        ImGui::SetNextItemWidth(ImGui::CalcTextSize("/dev/ttyUSB0000").x + ImGui::GetStyle().FramePadding.x * 2);
         if (m_availablePorts.empty()) {
             ImGui::BeginDisabled();
             if (ImGui::BeginCombo("##Port", "No ports found")) {
@@ -587,7 +591,7 @@ void GCodePanel::renderConnectionBar() {
 
         // Baud combo
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(80);
+        ImGui::SetNextItemWidth(ImGui::CalcTextSize("115200").x + ImGui::GetStyle().FramePadding.x * 2);
         char baudLabel[16];
         snprintf(baudLabel, sizeof(baudLabel), "%d", BAUD_RATES[m_selectedBaud]);
         if (ImGui::BeginCombo("##Baud", baudLabel)) {
@@ -604,10 +608,10 @@ void GCodePanel::renderConnectionBar() {
         }
     } else {
         // TCP mode: Host input + Port input
-        ImGui::SetNextItemWidth(150);
+        ImGui::SetNextItemWidth(ImGui::CalcTextSize("/dev/ttyUSB0000").x + ImGui::GetStyle().FramePadding.x * 2);
         ImGui::InputText("##TcpHost", m_tcpHost, sizeof(m_tcpHost));
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(60);
+        ImGui::SetNextItemWidth(ImGui::CalcTextSize("00000").x + ImGui::GetStyle().FramePadding.x * 2);
         ImGui::InputInt("##TcpPort", &m_tcpPort, 0, 0);
         if (m_tcpPort < 1)
             m_tcpPort = 1;
@@ -690,7 +694,7 @@ void GCodePanel::renderMachineStatus() {
     }
 
     ImGui::TextColored(stateColor, "%s", stateText);
-    ImGui::SameLine(0, 20);
+    ImGui::SameLine(0, ImGui::GetStyle().ItemSpacing.x * 3);
 
     const auto& mp = m_machineStatus.machinePos;
     const auto& wp = m_machineStatus.workPos;
@@ -810,12 +814,61 @@ void GCodePanel::renderProgressBar() {
     }
 }
 
+// --- Direct Carve streaming ---
+
+void GCodePanel::onCarveStreamStart(int totalLines) {
+    m_carveStreamActive = true;
+    m_carveCurrentLine = 0;
+    m_carveTotalLines = totalLines;
+    m_carveElapsedSec = 0.0f;
+    m_carveAborted = false;
+}
+
+void GCodePanel::onCarveStreamProgress(int currentLine, int totalLines, float elapsedSec) {
+    m_carveCurrentLine = currentLine;
+    m_carveTotalLines = totalLines;
+    m_carveElapsedSec = elapsedSec;
+}
+
+void GCodePanel::onCarveStreamComplete() {
+    m_carveStreamActive = false;
+}
+
+void GCodePanel::onCarveStreamAborted() {
+    m_carveStreamActive = false;
+    m_carveAborted = true;
+}
+
+void GCodePanel::renderCarveProgress() {
+    if (!m_carveStreamActive || m_carveTotalLines <= 0) return;
+
+    float fraction = static_cast<float>(m_carveCurrentLine) /
+                     static_cast<float>(m_carveTotalLines);
+
+    // ETA from line rate
+    float etaSec = 0.0f;
+    if (m_carveCurrentLine > 0 && fraction < 1.0f) {
+        float rate = static_cast<float>(m_carveCurrentLine) / m_carveElapsedSec;
+        float remaining = static_cast<float>(m_carveTotalLines - m_carveCurrentLine);
+        etaSec = remaining / rate;
+    }
+
+    int etaMin = static_cast<int>(etaSec / 60.0f);
+    int etaS = static_cast<int>(etaSec) % 60;
+    char overlay[128];
+    snprintf(overlay, sizeof(overlay), "Carve: %d / %d  (%.0f%%)  ETA: %d:%02d",
+             m_carveCurrentLine, m_carveTotalLines,
+             static_cast<double>(fraction * 100.0f), etaMin, etaS);
+
+    ImGui::ProgressBar(fraction, ImVec2(-1, 0), overlay);
+}
+
 // --- Feed override ---
 
 void GCodePanel::renderFeedOverride() {
     ImGui::Text("Feed Override:");
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(120);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.15f);
     if (ImGui::SliderInt("##FeedOvr", &m_feedOverridePercent, 10, 200, "%d%%")) {
         if (m_cnc)
             m_cnc->setFeedOverride(m_feedOverridePercent);
@@ -828,7 +881,7 @@ void GCodePanel::renderFeedOverride() {
     }
 
     // Rapid override buttons
-    ImGui::SameLine(0, 20);
+    ImGui::SameLine(0, ImGui::GetStyle().ItemSpacing.x * 3);
     ImGui::Text("Rapid:");
     ImGui::SameLine();
     if (ImGui::SmallButton("25%")) {
@@ -852,7 +905,7 @@ void GCodePanel::renderConsole() {
 
     float consoleHeight = ImGui::GetContentRegionAvail().y;
     if (consoleHeight < 50.0f)
-        consoleHeight = 100.0f;
+        consoleHeight = ImGui::GetTextLineHeightWithSpacing() * 5;
 
     ImGui::BeginChild("##Console", ImVec2(0, consoleHeight), false);
     for (const auto& line : m_consoleLines) {
@@ -897,10 +950,10 @@ void GCodePanel::renderSimulationControls() {
     }
 
     // Speed selector
-    ImGui::SameLine(0, 20);
+    ImGui::SameLine(0, ImGui::GetStyle().ItemSpacing.x * 3);
     ImGui::Text("Speed:");
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(80);
+    ImGui::SetNextItemWidth(ImGui::CalcTextSize("000000").x + ImGui::GetStyle().FramePadding.x * 2);
     static const float speeds[] = {0.5f, 1.0f, 2.0f, 5.0f, 10.0f};
     static const char* speedLabels[] = {"0.5x", "1x", "2x", "5x", "10x"};
     int currentSpeedIdx = 1;
@@ -1426,6 +1479,40 @@ void GCodePanel::renderPathView() {
         glEnable(GL_CULL_FACE);
     }
 
+    // Live CNC tool position (when connected, regardless of G-code loaded)
+    if (m_cncConnected) {
+        auto& cfg = Config::instance();
+        Vec3 wp = m_machineStatus.workPos;
+        Vec3 renderPos{wp.x, wp.z, wp.y};
+
+        // Expand far plane to encompass the work envelope
+        f32 savedFar = m_pathCamera.farPlane();
+        if (cfg.getCncShowWorkEnvelope()) {
+            const auto& profile = cfg.getActiveMachineProfile();
+            f32 envExtent = std::max({profile.maxTravelX, profile.maxTravelY,
+                                      profile.maxTravelZ});
+            f32 needed = (m_pathCamera.distance() + envExtent) * 2.0f;
+            if (needed > savedFar) {
+                m_pathCamera.setFarPlane(needed);
+                m_pathRenderer.setCamera(m_pathCamera);
+            }
+        }
+
+        if (cfg.getCncShowToolDot()) {
+            m_pathRenderer.renderPoint(renderPos, cfg.getCncToolDotSize(), cfg.getCncToolDotColor());
+        }
+        if (cfg.getCncShowWorkEnvelope()) {
+            const auto& profile = cfg.getActiveMachineProfile();
+            Vec3 envMax{profile.maxTravelX, profile.maxTravelZ, profile.maxTravelY};
+            m_pathRenderer.renderWireBox(Vec3{0, 0, 0}, envMax, cfg.getCncEnvelopeColor());
+        }
+
+        // Restore original far plane
+        if (m_pathCamera.farPlane() != savedFar) {
+            m_pathCamera.setFarPlane(savedFar);
+        }
+    }
+
     m_pathRenderer.endFrame();
     m_pathFramebuffer.unbind();
 
@@ -1434,6 +1521,11 @@ void GCodePanel::renderPathView() {
                  contentSize,
                  ImVec2(0, 1),
                  ImVec2(1, 0));
+
+    // Live DRO overlay
+    if (m_cncConnected && Config::instance().getCncShowDroOverlay()) {
+        renderLiveDro();
+    }
 }
 
 void GCodePanel::renderZClipSlider() {
@@ -1644,7 +1736,7 @@ void GCodePanel::renderSearchBar() {
     if (!m_searchActive) return;
 
     ImGui::Separator();
-    ImGui::SetNextItemWidth(200);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.25f);
     bool searchChanged = ImGui::InputText("##Search", m_searchBuf, sizeof(m_searchBuf),
                                            ImGuiInputTextFlags_EnterReturnsTrue);
 
@@ -1654,7 +1746,7 @@ void GCodePanel::renderSearchBar() {
     }
 
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(80);
+    ImGui::SetNextItemWidth(ImGui::CalcTextSize("000000").x + ImGui::GetStyle().FramePadding.x * 2);
     if (ImGui::InputInt("##Goto", &m_gotoLine, 0, 0,
                          ImGuiInputTextFlags_EnterReturnsTrue)) {
         gotoLineNumber(m_gotoLine);
@@ -1737,17 +1829,21 @@ void GCodePanel::renderJobHistory() {
         return;
     }
 
-    float historyHeight = std::min(300.0f, ImGui::GetContentRegionAvail().y * 0.5f);
+    float historyHeight = std::min(ImGui::GetContentRegionAvail().y * 0.4f, ImGui::GetContentRegionAvail().y * 0.5f);
     if (ImGui::BeginChild("JobHistoryList", ImVec2(0, historyHeight), true)) {
         if (ImGui::BeginTable("Jobs", 6,
                               ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH |
                                   ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY)) {
-            ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+            float colStatus = ImGui::CalcTextSize("Status__").x;
+            float colLines = ImGui::CalcTextSize("00000/00000").x;
+            float colDur = ImGui::CalcTextSize("00:00:00").x;
+            float colDate = ImGui::CalcTextSize("2026-02-28 12:00").x;
+            ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed, colStatus);
             ImGui::TableSetupColumn("File", ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn("Lines", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-            ImGui::TableSetupColumn("Duration", ImGuiTableColumnFlags_WidthFixed, 70.0f);
-            ImGui::TableSetupColumn("Date", ImGuiTableColumnFlags_WidthFixed, 120.0f);
-            ImGui::TableSetupColumn("##Actions", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+            ImGui::TableSetupColumn("Lines", ImGuiTableColumnFlags_WidthFixed, colLines);
+            ImGui::TableSetupColumn("Duration", ImGuiTableColumnFlags_WidthFixed, colDur);
+            ImGui::TableSetupColumn("Date", ImGuiTableColumnFlags_WidthFixed, colDate);
+            ImGui::TableSetupColumn("##Actions", ImGuiTableColumnFlags_WidthFixed, colStatus);
             ImGui::TableHeadersRow();
 
             i64 removeId = -1;
@@ -1827,6 +1923,39 @@ void GCodePanel::renderJobHistory() {
     }
     ImGui::EndChild();
     ImGui::Separator();
+}
+
+void GCodePanel::renderLiveDro() {
+    ImVec2 rectMin = ImGui::GetItemRectMin();
+    ImVec2 rectMax = ImGui::GetItemRectMax();
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+
+    const auto& wp = m_machineStatus.workPos;
+    bool metric = Config::instance().getDisplayUnitsMetric();
+    const char* unit = metric ? "mm" : "in";
+    f32 scale = metric ? 1.0f : (1.0f / 25.4f);
+
+    char xBuf[32], yBuf[32], zBuf[32];
+    std::snprintf(xBuf, sizeof(xBuf), "X: %8.3f %s", static_cast<double>(wp.x * scale), unit);
+    std::snprintf(yBuf, sizeof(yBuf), "Y: %8.3f %s", static_cast<double>(wp.y * scale), unit);
+    std::snprintf(zBuf, sizeof(zBuf), "Z: %8.3f %s", static_cast<double>(wp.z * scale), unit);
+
+    f32 lineH = ImGui::GetTextLineHeightWithSpacing();
+    f32 padding = ImGui::GetStyle().FramePadding.x;
+    f32 textW = ImGui::CalcTextSize(xBuf).x;
+    f32 boxW = textW + padding * 2.0f;
+    f32 boxH = lineH * 3.0f + padding * 2.0f;
+
+    ImVec2 boxMin = {rectMin.x + padding, rectMax.y - boxH - padding};
+    ImVec2 boxMax = {boxMin.x + boxW, boxMin.y + boxH};
+
+    dl->AddRectFilled(boxMin, boxMax, IM_COL32(0, 0, 0, 160), 4.0f);
+
+    f32 textX = boxMin.x + padding;
+    f32 textY = boxMin.y + padding;
+    dl->AddText({textX, textY}, IM_COL32(255, 80, 80, 255), xBuf);
+    dl->AddText({textX, textY + lineH}, IM_COL32(80, 255, 80, 255), yBuf);
+    dl->AddText({textX, textY + lineH * 2.0f}, IM_COL32(80, 130, 255, 255), zBuf);
 }
 
 } // namespace dw

@@ -17,12 +17,15 @@ void StartPage::render() {
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse;
 
     // Default size and centered position on first launch
-    ImVec2 viewportSize = ImGui::GetMainViewport()->Size;
-    ImGui::SetNextWindowSize(ImVec2(790, 410), ImGuiCond_FirstUseEver);
+    const auto* viewport = ImGui::GetMainViewport();
+    ImVec2 viewportSize = viewport->Size;
+    ImVec2 startSize(viewport->WorkSize.x * 0.55f, viewport->WorkSize.y * 0.45f);
+    ImGui::SetNextWindowSize(startSize, ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowPos(ImVec2(viewportSize.x * 0.5f, viewportSize.y * 0.5f),
                             ImGuiCond_FirstUseEver,
                             ImVec2(0.5f, 0.5f));
 
+    applyMinSize(20, 10);
     if (ImGui::Begin(m_title.c_str(), &m_open, flags)) {
         // Header
         ImGui::Text("Digital Workshop");
@@ -34,7 +37,7 @@ void StartPage::render() {
         ImGui::Spacing();
 
         // Two-column layout — reserve space for checkbox at bottom
-        float checkboxHeight = ImGui::GetFrameHeightWithSpacing() + 8.0f;
+        float checkboxHeight = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
         float contentHeight = ImGui::GetContentRegionAvail().y - checkboxHeight;
         float availWidth = ImGui::GetContentRegionAvail().x;
         float leftWidth = availWidth * 0.6f;
@@ -79,7 +82,9 @@ void StartPage::renderRecentProjects() {
                 name = projectPath.filename().string();
             }
 
-            if (ImGui::Selectable(name.c_str(), false, ImGuiSelectableFlags_None, ImVec2(0, 24))) {
+            float rowH = ImGui::GetTextLineHeightWithSpacing();
+            if (ImGui::Selectable(name.c_str(), false,
+                    ImGuiSelectableFlags_None, ImVec2(0, rowH))) {
                 if (m_onOpenRecentProject) {
                     m_onOpenRecentProject(projectPath);
                 }
@@ -102,8 +107,8 @@ void StartPage::renderQuickActions() {
     ImGui::Text("Quick Actions");
     ImGui::Spacing();
 
-    float buttonWidth = ImGui::GetContentRegionAvail().x - 16.0f;
-    float buttonHeight = 32.0f;
+    float buttonWidth = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().WindowPadding.x * 2;
+    float buttonHeight = ImGui::GetFrameHeight() * 1.4f;
 
     if (ImGui::Button("New Project", ImVec2(buttonWidth, buttonHeight))) {
         if (m_onNewProject)

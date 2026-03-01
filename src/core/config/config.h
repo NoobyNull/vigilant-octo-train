@@ -8,6 +8,7 @@
 #include "../gcode/machine_profile.h"
 #include "../types.h"
 #include "input_binding.h"
+#include "layout_preset.h"
 
 namespace dw {
 
@@ -154,6 +155,33 @@ class Config {
     bool getShowToolBrowser() const { return m_wsShowToolBrowser; }
     void setShowToolBrowser(bool v) { m_wsShowToolBrowser = v; }
 
+    // CNC panel visibility
+    bool getShowCncStatus() const { return m_wsShowCncStatus; }
+    void setShowCncStatus(bool v) { m_wsShowCncStatus = v; }
+    bool getShowCncJog() const { return m_wsShowCncJog; }
+    void setShowCncJog(bool v) { m_wsShowCncJog = v; }
+    bool getShowCncConsole() const { return m_wsShowCncConsole; }
+    void setShowCncConsole(bool v) { m_wsShowCncConsole = v; }
+    bool getShowCncWcs() const { return m_wsShowCncWcs; }
+    void setShowCncWcs(bool v) { m_wsShowCncWcs = v; }
+
+    // WCS aliases (G54-G59 user-defined names)
+    static constexpr int NUM_WCS = 6;
+    const std::string& getWcsAlias(int idx) const { return m_wcsAliases[idx]; }
+    void setWcsAlias(int idx, const std::string& alias) { if (idx >= 0 && idx < NUM_WCS) m_wcsAliases[idx] = alias; }
+    bool getShowCncTool() const { return m_wsShowCncTool; }
+    void setShowCncTool(bool v) { m_wsShowCncTool = v; }
+    bool getShowCncJob() const { return m_wsShowCncJob; }
+    void setShowCncJob(bool v) { m_wsShowCncJob = v; }
+    bool getShowCncSafety() const { return m_wsShowCncSafety; }
+    void setShowCncSafety(bool v) { m_wsShowCncSafety = v; }
+    bool getShowCncSettings() const { return m_wsShowCncSettings; }
+    void setShowCncSettings(bool v) { m_wsShowCncSettings = v; }
+    bool getShowCncMacros() const { return m_wsShowCncMacros; }
+    void setShowCncMacros(bool v) { m_wsShowCncMacros = v; }
+    bool getShowDirectCarve() const { return m_wsShowDirectCarve; }
+    void setShowDirectCarve(bool v) { m_wsShowDirectCarve = v; }
+
     bool getShowStartPage() const { return m_wsShowStartPage; }
     void setShowStartPage(bool v) { m_wsShowStartPage = v; }
 
@@ -213,6 +241,25 @@ class Config {
     // Advanced settings view (show raw firmware IDs)
     bool getAdvancedSettingsView() const { return m_advancedSettingsView; }
     void setAdvancedSettingsView(bool v) { m_advancedSettingsView = v; }
+
+    // CNC overlay settings
+    bool getCncShowToolDot() const { return m_cncShowToolDot; }
+    void setCncShowToolDot(bool v) { m_cncShowToolDot = v; }
+
+    bool getCncShowWorkEnvelope() const { return m_cncShowWorkEnvelope; }
+    void setCncShowWorkEnvelope(bool v) { m_cncShowWorkEnvelope = v; }
+
+    bool getCncShowDroOverlay() const { return m_cncShowDroOverlay; }
+    void setCncShowDroOverlay(bool v) { m_cncShowDroOverlay = v; }
+
+    f32 getCncToolDotSize() const { return m_cncToolDotSize; }
+    void setCncToolDotSize(f32 v) { m_cncToolDotSize = v; }
+
+    Vec4 getCncToolDotColor() const { return m_cncToolDotColor; }
+    void setCncToolDotColor(const Vec4& v) { m_cncToolDotColor = v; }
+
+    Vec4 getCncEnvelopeColor() const { return m_cncEnvelopeColor; }
+    void setCncEnvelopeColor(const Vec4& v) { m_cncEnvelopeColor = v; }
 
     // CNC settings
     int getStatusPollIntervalMs() const { return m_statusPollIntervalMs; }
@@ -274,6 +321,15 @@ class Config {
     void removeMachineProfile(int index);
     void updateMachineProfile(int index, const gcode::MachineProfile& profile);
 
+    // Layout presets
+    const std::vector<LayoutPreset>& getLayoutPresets() const { return m_layoutPresets; }
+    void setLayoutPresets(const std::vector<LayoutPreset>& presets) { m_layoutPresets = presets; }
+    int getActiveLayoutPresetIndex() const { return m_activeLayoutPresetIndex; }
+    void setActiveLayoutPresetIndex(int index);
+    void addLayoutPreset(const LayoutPreset& preset);
+    void removeLayoutPreset(int index);
+    void updateLayoutPreset(int index, const LayoutPreset& preset);
+
   private:
     Config();
     void initDefaultBindings();
@@ -329,6 +385,17 @@ class Config {
     bool m_wsShowCutOptimizer = false;
     bool m_wsShowCostEstimator = false;
     bool m_wsShowToolBrowser = false;
+    bool m_wsShowCncStatus = false;
+    bool m_wsShowCncJog = false;
+    bool m_wsShowCncConsole = false;
+    bool m_wsShowCncWcs = false;
+    std::string m_wcsAliases[6]; // User-defined names for G54-G59
+    bool m_wsShowCncTool = false;
+    bool m_wsShowCncJob = false;
+    bool m_wsShowCncSafety = false;
+    bool m_wsShowCncSettings = false;
+    bool m_wsShowCncMacros = false;
+    bool m_wsShowDirectCarve = false;
     bool m_wsShowStartPage = true;
     i64 m_wsLastSelectedModelId = -1;
     f32 m_wsLibraryThumbSize = 96.0f;
@@ -349,7 +416,11 @@ class Config {
     Path m_gcodeDir;
     Path m_supportDir;
     bool m_showImportErrorToasts = true;
+#ifdef _WIN32
+    bool m_enableFloatingWindows = true;
+#else
     bool m_enableFloatingWindows = false;
+#endif
 
     // Default material
     i64 m_defaultMaterialId = -1;
@@ -360,6 +431,14 @@ class Config {
     // Display units
     bool m_displayUnitsMetric = true;
     bool m_advancedSettingsView = false;
+
+    // CNC overlay settings
+    bool m_cncShowToolDot = true;
+    bool m_cncShowWorkEnvelope = false;
+    bool m_cncShowDroOverlay = true;
+    f32 m_cncToolDotSize = 8.0f;
+    Vec4 m_cncToolDotColor{1.0f, 0.2f, 0.2f, 1.0f};
+    Vec4 m_cncEnvelopeColor{1.0f, 0.67f, 0.2f, 0.6f};
 
     // CNC settings
     int m_statusPollIntervalMs = 200;
@@ -388,6 +467,11 @@ class Config {
     // Machine profiles
     std::vector<gcode::MachineProfile> m_machineProfiles;
     int m_activeMachineProfileIndex = 0;
+    std::string m_activeProfileName; // Temp: used during load to resolve name->index
+
+    // Layout presets
+    std::vector<LayoutPreset> m_layoutPresets;
+    int m_activeLayoutPresetIndex = 0;
 };
 
 } // namespace dw

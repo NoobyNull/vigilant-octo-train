@@ -3,56 +3,102 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-28T15:15:41.344Z"
+last_updated: "2026-02-28T20:43:38Z"
 progress:
-  total_phases: 22
-  completed_phases: 12
-  total_plans: 41
-  completed_plans: 37
+  total_phases: 28
+  completed_phases: 19
+  total_plans: 55
+  completed_plans: 55
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-27)
+See: .planning/PROJECT.md (updated 2026-02-28)
 
-**Core value:** A woodworker can go from selecting a piece of wood and a cutting tool to safely running a CNC job with optimized feeds and speeds -- all without leaving the application.
-**Current focus:** Milestone v0.2.1 FluidNC Config Editor -- defining requirements
+**Core value:** A woodworker can load an STL model, select a tool and material, and stream a 2.5D carving toolpath directly to the CNC machine — no G-code files, no external CAM software.
+**Current focus:** Milestone v0.3.0 Direct Carve — COMPLETE
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-27 — Milestone v0.2.1 started
+Phase: All phases complete
+Plan: All plans complete
+Status: v0.3.0 Direct Carve milestone complete (6 phases, 14 plans, 30 requirements)
+Last activity: 2026-02-28 — Phase 19 streaming integration complete
 
 ## Accumulated Context
 
 ### Decisions
-- Branch: Sender-dev (continuing)
-- FluidNC detected via banner parsing in cnc_controller.cpp:288
-- Settings panel has onRawLine() infrastructure for capturing serial responses
-- FluidNC $S output format: $path=value (one per line)
-- Changes go to RAM only; $CD=config.yaml persists to flash
-- Existing GRBL numeric settings ($0-$132) must continue working for non-FluidNC
+- Coverage fraction scoring for clearing tool value (% of islands it can clear)
+- End mill type bonus for clearing over ball nose (flat bottom = faster)
+- Card-based ImGui widget with color badges per tool type for recommendations
+- BFS propagation from accessible cells for accurate burial mask computation
+- BFS from island boundary inward for minimum clearing tool diameter
+- HSV color space with 37-degree hue rotation per island for visually distinct overlays
+- Noise threshold for curvature analysis: 0.001/res^2 (plan's 2.0/res^2 too aggressive)
+- 2+ concave neighbor requirement filters isolated noise spikes
+- Free functions for stateless curvature analysis (no class needed)
+- Vertex transformation done eagerly before async launch to avoid shared mutable state
+- CarveJob destructor calls cancel+wait for clean shutdown
+- Cancellation via atomic bool checked in heightmap progress callback
+- Heightmap API adapted to Vertex+indices (not Triangle vector) matching existing Mesh class
+- XY barycentric projection for vertical ray intersection (avoids INF origin issues)
+- 64-bucket spatial grid for triangle binning acceleration
+- dw::carve namespace established for Direct Carve pipeline
+- Branch: feature/direct-carve (from main at commit 9719dd3)
+- Pure 2.5D top-down heightmap approach (no undercuts, no 3D CAM)
+- V-bit primary finishing tool (taper geometry eliminates need for roughing)
+- Ball nose / TBN secondary when minimum feature radius >= tip radius
+- Surgical island clearing only (not full surface)
+- Stepover presets: Ultra Fine 1%, Fine 8%, Basic 12%, Rough 25%, Roughing 40%
+- Scan axis options: X only, Y only, X then Y, Y then X
+- Milling direction: climb, conventional, alternating
+- Guided wizard workflow enforcing safety at each step
+- Model fitting: uniform scale (locked aspect), independent Z depth, XY position
+- Streaming via existing CncController character-counting protocol
+- 40% stepover for roughing clearing passes (standard CNC roughing practice)
+- Stepdown equals tool diameter for multi-depth island clearing passes
+- 0.2mm margin above island floor prevents over-cutting
+- Lead-in/out ramp distance from config (not hardcoded)
+- [Phase 17]: V-bit 8-neighbor cone-gouge check, ball-nose drop-cutter, end-mill max-Z-within-radius for tool offset compensation
+- V-bit cone flares upward from tip -- offset only when neighbor is above cone body
+- Boundary-aware tool offset skips out-of-bounds neighbors to prevent defaultZ artifacts
+- [Phase 18]: generateGcode() returns string for testability, exportGcode() wraps with file I/O
+- Feed rate F word emitted only on first G1 move (modal G-code convention)
+- FileDialog showSave with callback pattern for G-code export
+- Abort sends Ctrl+X soft reset (0x18) for immediate machine stop
+- [Phase 18]: Panel hidden by default (m_open=false), shown via View > Sender > Direct Carve menu
+- [Phase 18]: Theme::Colors helper functions for all wizard status indicators (no hardcoded ImVec4)
+- [Phase 18]: Font-relative step indicator sizing for DPI awareness
+- [Phase 18-02]: CarveJob analysis/toolpath run synchronously on main thread (fast enough for interactive)
+- [Phase 18-02]: Scale slider range derived from stock/model ratio (not hardcoded)
+- [Phase 18-02]: ImDrawList polylines for toolpath preview with worldToScreen coordinate mapping
+- [Phase 19]: Phase-based state machine (Preamble/Clearing/Finishing/Postamble/Complete) for streaming dispatch
+- [Phase 19]: Modal feed rate optimization -- F word emitted only on change
+- [Phase 19]: Postamble split into 3 individual lines for GRBL buffer compatibility
+- [Phase 19-02]: Progress delegation via push (DirectCarvePanel -> GCodePanel) rather than polling
+- [Phase 19-02]: 1.5s long-press abort with red fill overlay for safety
+- [Phase 19-02]: Abort sequence: feed hold + soft reset + retract Z warning
 
 ### Pending Todos
 None.
 
 ### Roadmap Evolution
-- Phase 13 added: TCP/IP byte stream transport for CNC connections
+- Phases 14-19 added for Direct Carve milestone
+- 30 new requirements (DC-01 through DC-30)
+- 14 plan files across 6 phases
 
 ### Blockers/Concerns
 None.
 
 ## Session Continuity
 
-Last session: 2026-02-27
-Stopped at: Milestone initialization
+Last session: 2026-02-28
+Stopped at: Milestone v0.3.0 Direct Carve complete
 Resume file: None
-Next action: Define requirements and create roadmap
+Next action: Plan next milestone or verify/audit v0.3.0
 
 ---
 *State initialized: 2026-02-27*
-*Last updated: 2026-02-27*
+*Last updated: 2026-02-28T20:37:28Z*

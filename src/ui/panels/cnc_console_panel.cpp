@@ -42,6 +42,7 @@ void CncConsolePanel::render() {
     if (!m_open)
         return;
 
+    applyMinSize(18, 8);
     if (!ImGui::Begin(m_title.c_str(), &m_open)) {
         ImGui::End();
         return;
@@ -56,7 +57,7 @@ void CncConsolePanel::render() {
     }
 
     // Response area — scrollable region above input
-    float inputHeight = ImGui::GetFrameHeightWithSpacing() + 4.0f;
+    float inputHeight = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y * 0.5f;
     if (ImGui::BeginChild("ConsoleOutput", ImVec2(0, -inputHeight), ImGuiChildFlags_Borders)) {
         for (const auto& line : m_lines) {
             // Source tag in source-specific color

@@ -54,6 +54,7 @@ void CncJogPanel::render() {
     if (!m_open)
         return;
 
+    applyMinSize(14, 10);
     if (!ImGui::Begin(m_title.c_str(), &m_open)) {
         ImGui::End();
         return;
@@ -121,8 +122,9 @@ void CncJogPanel::renderJogButtons() {
     bool canJog = m_cnc && (m_status.state == MachineState::Idle ||
                             m_status.state == MachineState::Jog);
 
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(12, 12));
-    float buttonSize = 48.0f;
+    float jogPad = ImGui::GetFontSize() * 0.75f;
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(jogPad, jogPad));
+    float buttonSize = ImGui::GetFontSize() * 3.0f;
 
     // Helper lambda for single-axis jog buttons
     auto jogButton = [&](const char* label, int axis, float dir) {

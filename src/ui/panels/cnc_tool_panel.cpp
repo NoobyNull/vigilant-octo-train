@@ -62,6 +62,7 @@ void CncToolPanel::render() {
         m_needsRefresh = false;
     }
 
+    applyMinSize(16, 8);
     if (!ImGui::Begin(m_title.c_str(), &m_open)) {
         ImGui::End();
         return;
@@ -340,25 +341,42 @@ void CncToolPanel::renderResults() {
     // Main parameters with green highlighting
     ImVec4 valueColor(0.4f, 0.8f, 0.4f, 1.0f);
 
-    ImGui::Text("RPM:");
-    ImGui::SameLine(130);
-    ImGui::TextColored(valueColor, "%d", m_calcResult.rpm);
+    if (ImGui::BeginTable("##toolparams", 2, ImGuiTableFlags_None)) {
+        ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthStretch, 0.35f);
+        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch, 0.65f);
 
-    ImGui::Text("Feed Rate:");
-    ImGui::SameLine(130);
-    ImGui::TextColored(valueColor, "%.1f %s", m_calcResult.feed_rate, feedUnit);
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("RPM:");
+        ImGui::TableNextColumn();
+        ImGui::TextColored(valueColor, "%d", m_calcResult.rpm);
 
-    ImGui::Text("Plunge Rate:");
-    ImGui::SameLine(130);
-    ImGui::TextColored(valueColor, "%.1f %s", m_calcResult.plunge_rate, feedUnit);
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("Feed Rate:");
+        ImGui::TableNextColumn();
+        ImGui::TextColored(valueColor, "%.1f %s", m_calcResult.feed_rate, feedUnit);
 
-    ImGui::Text("Stepdown:");
-    ImGui::SameLine(130);
-    ImGui::TextColored(valueColor, "%.4f %s", m_calcResult.stepdown, unit);
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("Plunge Rate:");
+        ImGui::TableNextColumn();
+        ImGui::TextColored(valueColor, "%.1f %s", m_calcResult.plunge_rate, feedUnit);
 
-    ImGui::Text("Stepover:");
-    ImGui::SameLine(130);
-    ImGui::TextColored(valueColor, "%.4f %s", m_calcResult.stepover, unit);
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("Stepdown:");
+        ImGui::TableNextColumn();
+        ImGui::TextColored(valueColor, "%.4f %s", m_calcResult.stepdown, unit);
+
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("Stepover:");
+        ImGui::TableNextColumn();
+        ImGui::TextColored(valueColor, "%.4f %s", m_calcResult.stepover, unit);
+
+        ImGui::EndTable();
+    }
 
     ImGui::Spacing();
     ImGui::Separator();

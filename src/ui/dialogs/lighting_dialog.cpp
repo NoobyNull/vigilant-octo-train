@@ -11,7 +11,8 @@ void LightingDialog::render() {
         return;
     }
 
-    ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_FirstUseEver);
+    const auto* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x * 0.25f, viewport->WorkSize.y * 0.4f), ImGuiCond_FirstUseEver);
 
     if (ImGui::Begin("Lighting Settings", &m_open)) {
         // Light direction (as angles for easier manipulation)

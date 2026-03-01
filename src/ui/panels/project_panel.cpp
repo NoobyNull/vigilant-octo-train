@@ -32,6 +32,7 @@ void ProjectPanel::render() {
         return;
     }
 
+    applyMinSize(14, 8);
     if (ImGui::Begin(m_title.c_str(), &m_open)) {
         if (m_projectManager && m_projectManager->currentProject()) {
             renderProjectInfo();
@@ -142,20 +143,21 @@ void ProjectPanel::renderProjectInfo() {
             ImGui::TextDisabled("You have unsaved changes in this project.");
             ImGui::Spacing();
 
-            if (ImGui::Button("Save & Close", ImVec2(150, 0))) {
+            float projBtnW = ImGui::CalcTextSize("Save & Close").x + ImGui::GetStyle().FramePadding.x * 4;
+            if (ImGui::Button("Save & Close", ImVec2(projBtnW, 0))) {
                 m_projectManager->save(*project);
                 m_projectManager->close(*project);
                 m_projectManager->setCurrentProject(nullptr);
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
-            if (ImGui::Button("Discard", ImVec2(150, 0))) {
+            if (ImGui::Button("Discard", ImVec2(projBtnW, 0))) {
                 m_projectManager->close(*project);
                 m_projectManager->setCurrentProject(nullptr);
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
-            if (ImGui::Button("Cancel", ImVec2(150, 0))) {
+            if (ImGui::Button("Cancel", ImVec2(projBtnW, 0))) {
                 ImGui::CloseCurrentPopup();
             }
             ImGui::EndPopup();
@@ -429,7 +431,7 @@ void ProjectPanel::renderNoProject() {
             }
 
             if (ImGui::Selectable(name.c_str(), false, ImGuiSelectableFlags_None,
-                                  ImVec2(0, 24))) {
+                                  ImVec2(0, ImGui::GetTextLineHeightWithSpacing()))) {
                 if (m_onOpenRecentProject) {
                     m_onOpenRecentProject(projectPath);
                 }

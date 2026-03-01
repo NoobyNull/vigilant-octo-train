@@ -40,6 +40,12 @@ constexpr const char* ICON_WARNING = "\xef\x81\xb1";  // f071 triangle-exclamati
 constexpr const char* ICON_ERROR = "\xef\x81\x97";    // f057 circle-xmark
 constexpr const char* ICON_QUESTION = "\xef\x81\x99"; // f059 circle-question
 
+// Status marks
+constexpr const char* ICON_CHECK = "\xef\x80\x8c"; // f00c check
+
+// Toolbox / favorites
+constexpr const char* ICON_STAR = "\xef\x80\x85"; // f005 star
+
 // View modes
 constexpr const char* ICON_LIST = "\xef\x80\x8b"; // f00b list
 
@@ -61,6 +67,7 @@ constexpr const char* ICON_ARROW_DOWN = "\xef\x81\xa3";  // f063 arrow-down
 constexpr const char* ICON_ARROW_LEFT = "\xef\x81\xa0";  // f060 arrow-left
 constexpr const char* ICON_ARROW_RIGHT = "\xef\x81\xa1"; // f061 arrow-right
 constexpr const char* ICON_HOME = "\xef\x80\x95";        // f015 house
+constexpr const char* ICON_LOCK = "\xef\x80\xa3";         // f023 lock
 constexpr const char* ICON_LOCK_OPEN = "\xef\x82\x9c";   // f09c lock-open
 
 // Playback / sender
@@ -99,6 +106,8 @@ struct Icons {
     static constexpr const char* Warning = icons::ICON_WARNING;
     static constexpr const char* Error = icons::ICON_ERROR;
     static constexpr const char* Question = icons::ICON_QUESTION;
+    static constexpr const char* Check = icons::ICON_CHECK;
+    static constexpr const char* Star = icons::ICON_STAR;
     static constexpr const char* List = icons::ICON_LIST;
     static constexpr const char* GCode = icons::ICON_GCODE;
     static constexpr const char* Material = icons::ICON_MATERIAL;
@@ -113,6 +122,7 @@ struct Icons {
     static constexpr const char* ArrowLeft = icons::ICON_ARROW_LEFT;
     static constexpr const char* ArrowRight = icons::ICON_ARROW_RIGHT;
     static constexpr const char* Home = icons::ICON_HOME;
+    static constexpr const char* Lock = icons::ICON_LOCK;
     static constexpr const char* LockOpen = icons::ICON_LOCK_OPEN;
     static constexpr const char* Play = icons::ICON_PLAY;
     static constexpr const char* Pause = icons::ICON_PAUSE;

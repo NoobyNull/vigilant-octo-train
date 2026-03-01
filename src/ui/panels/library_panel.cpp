@@ -139,6 +139,7 @@ void LibraryPanel::render() {
         }
     }
 
+    applyMinSize(18, 12);
     if (ImGui::Begin(m_title.c_str(), &m_open)) {
         renderToolbar();
         ImGui::Separator();
@@ -151,7 +152,18 @@ void LibraryPanel::render() {
         // Side-by-side layout: category sidebar + content
         float availH = ImGui::GetContentRegionAvail().y;
 
-        ImGui::BeginChild("CategorySidebar", ImVec2(160, availH), true);
+        // Fit sidebar to widest category name
+        const auto& style = ImGui::GetStyle();
+        float sidebarW = ImGui::CalcTextSize("All Models").x;
+        float indent = style.IndentSpacing;
+        for (const auto& cat : m_categories) {
+            float w = ImGui::CalcTextSize(cat.name.c_str()).x;
+            if (cat.parentId.has_value())
+                w += indent; // child items are indented
+            sidebarW = std::max(sidebarW, w);
+        }
+        sidebarW += style.WindowPadding.x * 2 + style.FramePadding.x * 2;
+        ImGui::BeginChild("CategorySidebar", ImVec2(sidebarW, availH), true);
         renderCategoryFilter();
         ImGui::EndChild();
 
@@ -315,7 +327,7 @@ void LibraryPanel::renderToolbar() {
 }
 
 void LibraryPanel::renderTabs() {
-    if (ImGui::BeginTabBar("LibraryTabs")) {
+    if (ImGui::BeginTabBar("LibraryTabs", ImGuiTabBarFlags_FittingPolicyScroll)) {
         if (ImGui::BeginTabItem("All")) {
             m_activeTab = ViewTab::All;
             ImGui::EndTabItem();
@@ -435,13 +447,14 @@ void LibraryPanel::renderCategoryAssignDialog() {
 
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_Appearing);
+    const auto* vp = ImGui::GetMainViewport();
+    ImGui::SetNextWindowSize(ImVec2(vp->WorkSize.x * 0.25f, vp->WorkSize.y * 0.4f), ImGuiCond_Appearing);
 
     if (ImGui::BeginPopupModal("Assign Category", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("Select categories for model:");
         ImGui::Separator();
 
-        ImGui::BeginChild("CatList", ImVec2(0, 250), true);
+        ImGui::BeginChild("CatList", ImVec2(0, ImGui::GetContentRegionAvail().y * 0.6f), true);
 
         // Show categories as checkable tree
         for (auto& cat : m_categories) {
@@ -476,7 +489,7 @@ void LibraryPanel::renderCategoryAssignDialog() {
 
         // Quick add new category
         ImGui::Separator();
-        ImGui::SetNextItemWidth(200);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.6f);
         ImGui::InputTextWithHint(
             "##NewCat", "New category name...", m_newCategoryName, sizeof(m_newCategoryName));
         ImGui::SameLine();
@@ -493,7 +506,8 @@ void LibraryPanel::renderCategoryAssignDialog() {
         }
 
         ImGui::Separator();
-        if (ImGui::Button("Apply", ImVec2(120, 0))) {
+        float dlgBtnW = ImGui::CalcTextSize("Cancel").x + ImGui::GetStyle().FramePadding.x * 4;
+        if (ImGui::Button("Apply", ImVec2(dlgBtnW, 0))) {
             // Apply category assignments for selected model(s)
             if (m_library) {
                 for (int64_t modelId : m_selectedModelIds) {
@@ -521,7 +535,7 @@ void LibraryPanel::renderCategoryAssignDialog() {
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        if (ImGui::Button("Cancel", ImVec2(dlgBtnW, 0))) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
@@ -541,11 +555,12 @@ void LibraryPanel::renderDeleteConfirm() {
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
     if (ImGui::BeginPopupModal("Delete Item?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        float dlgBtnW = ImGui::CalcTextSize("Cancel").x + ImGui::GetStyle().FramePadding.x * 4;
         ImGui::Text("Delete \"%s\"?", m_deleteItemName.c_str());
         ImGui::TextDisabled("This action cannot be undone.");
         ImGui::Spacing();
 
-        if (ImGui::Button("Delete", ImVec2(120, 0))) {
+        if (ImGui::Button("Delete", ImVec2(dlgBtnW, 0))) {
             if (m_library) {
                 for (int64_t id : m_deleteItemIds) {
                     if (m_deleteIsGCode) {
@@ -586,7 +601,7 @@ void LibraryPanel::renderDeleteConfirm() {
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        if (ImGui::Button("Cancel", ImVec2(dlgBtnW, 0))) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
@@ -601,9 +616,10 @@ void LibraryPanel::renderRenameDialog() {
 
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(350, 0), ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize(ImVec2(ImGui::GetMainViewport()->WorkSize.x * 0.25f, 0), ImGuiCond_Appearing);
 
     if (ImGui::BeginPopupModal("Rename Model", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        float dlgBtnW = ImGui::CalcTextSize("Cancel").x + ImGui::GetStyle().FramePadding.x * 4;
         ImGui::Text("Enter new name:");
         ImGui::SetNextItemWidth(-1);
 
@@ -619,9 +635,9 @@ void LibraryPanel::renderRenameDialog() {
 
         ImGui::Spacing();
 
-        bool okPressed = ImGui::Button("OK", ImVec2(120, 0));
+        bool okPressed = ImGui::Button("OK", ImVec2(dlgBtnW, 0));
         ImGui::SameLine();
-        bool cancelPressed = ImGui::Button("Cancel", ImVec2(120, 0));
+        bool cancelPressed = ImGui::Button("Cancel", ImVec2(dlgBtnW, 0));
 
         if (okPressed || enterPressed) {
             std::string newName(m_renameBuffer);

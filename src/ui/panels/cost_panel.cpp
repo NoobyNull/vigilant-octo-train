@@ -22,6 +22,7 @@ void CostPanel::render() {
         return;
     }
 
+    applyMinSize(22, 10);
     if (!ImGui::Begin(m_title.c_str(), &m_open)) {
         ImGui::End();
         return;
@@ -31,7 +32,7 @@ void CostPanel::render() {
     ImGui::Separator();
 
     // Two-column layout: list (left) | editor (right)
-    float listWidth = 220.0f;
+    float listWidth = ImGui::GetContentRegionAvail().x * 0.22f;
     ImVec2 avail = ImGui::GetContentRegionAvail();
 
     if (ImGui::BeginChild("EstimateList", ImVec2(listWidth, avail.y), true)) {
@@ -151,11 +152,11 @@ void CostPanel::renderEstimateEditor() {
                           ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
                               ImGuiTableFlags_Resizable)) {
         ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn("Category", ImGuiTableColumnFlags_WidthFixed, 90.0f);
-        ImGui::TableSetupColumn("Qty", ImGuiTableColumnFlags_WidthFixed, 60.0f);
-        ImGui::TableSetupColumn("Rate", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-        ImGui::TableSetupColumn("Total", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-        ImGui::TableSetupColumn("##Del", ImGuiTableColumnFlags_WidthFixed, 30.0f);
+        ImGui::TableSetupColumn("Category", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("Material__").x);
+        ImGui::TableSetupColumn("Qty", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("0000.00").x);
+        ImGui::TableSetupColumn("Rate", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("$00000.00").x);
+        ImGui::TableSetupColumn("Total", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("$00000.00").x);
+        ImGui::TableSetupColumn("##Del", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("X__").x);
         ImGui::TableHeadersRow();
 
         int deleteIdx = -1;
@@ -226,10 +227,10 @@ void CostPanel::renderEstimateEditor() {
     ImGui::Spacing();
 
     // Tax and discount
-    ImGui::SetNextItemWidth(100.0f);
+    ImGui::SetNextItemWidth(ImGui::CalcTextSize("100.00%").x + ImGui::GetStyle().FramePadding.x * 2);
     ImGui::InputFloat("Tax %", &m_editTaxRate, 0, 0, "%.2f");
-    ImGui::SameLine(0, 20.0f);
-    ImGui::SetNextItemWidth(100.0f);
+    ImGui::SameLine(0, ImGui::GetStyle().ItemSpacing.x * 3);
+    ImGui::SetNextItemWidth(ImGui::CalcTextSize("100.00%").x + ImGui::GetStyle().FramePadding.x * 2);
     ImGui::InputFloat("Discount %", &m_editDiscountRate, 0, 0, "%.2f");
 
     // Calculate totals
@@ -260,7 +261,8 @@ void CostPanel::renderEstimateEditor() {
 
     // Save button
     std::string saveLabel = std::string(Icons::Save) + " Save";
-    if (ImGui::Button(saveLabel.c_str(), ImVec2(100, 0))) {
+    float saveBtnW = ImGui::CalcTextSize(saveLabel.c_str()).x + ImGui::GetStyle().FramePadding.x * 4;
+    if (ImGui::Button(saveLabel.c_str(), ImVec2(saveBtnW, 0))) {
         m_editBuffer.name = m_editName;
         m_editBuffer.notes = m_editNotes;
 

@@ -63,6 +63,18 @@ set(DW_TEST_SOURCES
     test_tool_calculator.cpp
     test_grbl_settings.cpp
     test_macro_manager.cpp
+    # Carve (Direct Carve pipeline)
+    test_heightmap.cpp
+    test_model_fitter.cpp
+    test_carve_job.cpp
+    test_surface_analysis.cpp
+    test_island_detector.cpp
+    test_analysis_overlay.cpp
+    test_tool_recommender.cpp
+    test_toolpath_generator.cpp
+    test_gcode_export.cpp
+    test_carve_streamer.cpp
+    test_carve_integration.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
     # Tier 3 — workspace tests (no GL/SDL required)
@@ -99,6 +111,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/cnc/tool_calculator.cpp
     ${CMAKE_SOURCE_DIR}/src/core/cnc/grbl_settings.cpp
     ${CMAKE_SOURCE_DIR}/src/core/cnc/macro_manager.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/heightmap.cpp
     ${CMAKE_SOURCE_DIR}/src/core/optimizer/cut_optimizer.cpp
     ${CMAKE_SOURCE_DIR}/src/core/optimizer/bin_packer.cpp
     ${CMAKE_SOURCE_DIR}/src/core/optimizer/guillotine.cpp
@@ -112,7 +125,9 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/database/gcode_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/cut_plan_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/tool_database.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/database/toolbox_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/project/project.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/project/project_directory.cpp
     ${CMAKE_SOURCE_DIR}/src/core/export/model_exporter.cpp
     ${CMAKE_SOURCE_DIR}/src/core/archive/archive.cpp
     ${CMAKE_SOURCE_DIR}/src/core/materials/material_archive.cpp
@@ -128,11 +143,22 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/config/config.cpp
     ${CMAKE_SOURCE_DIR}/src/core/config/config_watcher.cpp
     ${CMAKE_SOURCE_DIR}/src/core/config/input_binding.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/config/layout_preset.cpp
     ${CMAKE_SOURCE_DIR}/src/core/paths/app_paths.cpp
     ${CMAKE_SOURCE_DIR}/src/core/paths/path_resolver.cpp
     ${CMAKE_SOURCE_DIR}/src/core/storage/storage_manager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/export/project_export_manager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/export/project_import.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/heightmap.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/model_fitter.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/carve_job.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/surface_analysis.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/island_detector.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/analysis_overlay.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/tool_recommender.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/toolpath_generator.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/gcode_export.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/carve_streamer.cpp
     ${CMAKE_SOURCE_DIR}/src/render/camera.cpp
     ${CMAKE_SOURCE_DIR}/src/app/workspace.cpp
 )

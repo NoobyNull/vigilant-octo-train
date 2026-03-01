@@ -138,4 +138,10 @@ struct VtdbToolView {
     VtdbMachine machine;
 };
 
+// Resolve a VTDB name_format template string using actual geometry values.
+// Tokens: {Tool Type}, {Diameter}, {Diameter|F}, {Included Angle}, {Included Angle|.0},
+//         {Side Angle|.0}, {Tip Radius}, {Units Short}, {Flutes}, {Flat Diameter}
+// Unrecognized tokens are left as-is.
+std::string resolveToolNameFormat(const VtdbToolGeometry& g);
+
 } // namespace dw

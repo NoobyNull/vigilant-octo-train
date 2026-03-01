@@ -12,63 +12,73 @@ bool BindingRecorder::renderBindingRow(
     bool changed = false;
     ImGui::PushID(static_cast<int>(action));
 
-    // Action label
-    ImGui::Text("%s", bindActionName(action));
-    ImGui::SameLine(180.0f);
+    if (ImGui::BeginTable("##bindingrow", 2, ImGuiTableFlags_None)) {
+        ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthStretch, 0.35f);
+        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch, 0.65f);
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
 
-    bool isRecordingThis = recording && recordingAction == action;
+        // Action label
+        ImGui::Text("%s", bindActionName(action));
 
-    if (isRecordingThis) {
-        // Recording mode: show prompt and capture input
-        ImGui::SetNextFrameWantCaptureKeyboard(true);
-        ImGui::SetNextFrameWantCaptureMouse(true);
+        ImGui::TableNextColumn();
 
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.2f, 0.2f, 1.0f));
-        ImGui::Button(">>> Press key/button <<<", ImVec2(200, 0));
-        ImGui::PopStyleColor();
+        bool isRecordingThis = recording && recordingAction == action;
 
-        // Try to capture
-        InputBinding captured;
-        if (captureInput(captured)) {
-            // Check for conflicts
-            if (checkConflict(action, captured, allBindings)) {
-                conflictMessage = "Conflict: \"" + captured.displayName() +
-                                  "\" is already bound to \"" + bindActionName(recordingAction) +
-                                  "\"";
-            } else {
-                binding = captured;
-                conflictMessage.clear();
-                changed = true;
+        if (isRecordingThis) {
+            // Recording mode: show prompt and capture input
+            ImGui::SetNextFrameWantCaptureKeyboard(true);
+            ImGui::SetNextFrameWantCaptureMouse(true);
+
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.2f, 0.2f, 1.0f));
+            ImGui::Button(">>> Press key/button <<<", ImVec2(200, 0));
+            ImGui::PopStyleColor();
+
+            // Try to capture
+            InputBinding captured;
+            if (captureInput(captured)) {
+                // Check for conflicts
+                if (checkConflict(action, captured, allBindings)) {
+                    conflictMessage = "Conflict: \"" + captured.displayName() +
+                                      "\" is already bound to \"" + bindActionName(recordingAction) +
+                                      "\"";
+                } else {
+                    binding = captured;
+                    conflictMessage.clear();
+                    changed = true;
+                }
+                recording = false;
             }
-            recording = false;
+
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel")) {
+                recording = false;
+                conflictMessage.clear();
+            }
+        } else {
+            // Display current binding
+            std::string label = "[" + binding.displayName() + "]";
+            ImGui::Button(label.c_str(), ImVec2(200, 0));
+
+            ImGui::SameLine();
+            if (ImGui::Button("+")) {
+                recording = true;
+                recordingAction = action;
+                conflictMessage.clear();
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Click to record a new binding");
+            }
         }
 
         ImGui::SameLine();
-        if (ImGui::Button("Cancel")) {
-            recording = false;
+        if (ImGui::Button("Reset")) {
+            binding = defaultBinding(action);
             conflictMessage.clear();
+            changed = true;
         }
-    } else {
-        // Display current binding
-        std::string label = "[" + binding.displayName() + "]";
-        ImGui::Button(label.c_str(), ImVec2(200, 0));
 
-        ImGui::SameLine();
-        if (ImGui::Button("+")) {
-            recording = true;
-            recordingAction = action;
-            conflictMessage.clear();
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Click to record a new binding");
-        }
-    }
-
-    ImGui::SameLine();
-    if (ImGui::Button("Reset")) {
-        binding = defaultBinding(action);
-        conflictMessage.clear();
-        changed = true;
+        ImGui::EndTable();
     }
 
     ImGui::PopID();

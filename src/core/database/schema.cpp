@@ -362,6 +362,17 @@ bool Schema::createTables(Database& db) {
     )");
 
 
+    // Toolbox tools table (user's curated tool subset from .vtdb library)
+    if (!db.execute(R"(
+        CREATE TABLE IF NOT EXISTS toolbox_tools (
+            geometry_id TEXT NOT NULL PRIMARY KEY,
+            added_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            display_name TEXT DEFAULT ''
+        )
+    )")) {
+        return false;
+    }
+
     // CNC job history table
     if (!db.execute(R"(
         CREATE TABLE IF NOT EXISTS cnc_jobs (
@@ -641,6 +652,17 @@ bool Schema::migrate(Database& db, int fromVersion) {
         (void)db.execute(
             "CREATE INDEX IF NOT EXISTS idx_cnc_jobs_status ON cnc_jobs(status)");
         log::info("Schema", "v13: Added cnc_jobs table");
+    }
+
+    if (fromVersion < 14) {
+        (void)db.execute(R"(
+            CREATE TABLE IF NOT EXISTS toolbox_tools (
+                geometry_id TEXT NOT NULL PRIMARY KEY,
+                added_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                display_name TEXT DEFAULT ''
+            )
+        )");
+        log::info("Schema", "v14: Added toolbox_tools table");
     }
 
     if (!setVersion(db, CURRENT_VERSION)) {

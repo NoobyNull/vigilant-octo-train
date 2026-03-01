@@ -4,19 +4,20 @@
 
 namespace dw {
 
-void Theme::applyBaseStyle() {
+void Theme::applyBaseStyle(float fontSize) {
     ImGuiStyle& style = ImGui::GetStyle();
 
-    // Spacing and sizing
-    style.WindowPadding = ImVec2(10.0f, 10.0f);
-    style.FramePadding = ImVec2(8.0f, 5.0f);
-    style.CellPadding = ImVec2(6.0f, 4.0f);
-    style.ItemSpacing = ImVec2(8.0f, 6.0f);
-    style.ItemInnerSpacing = ImVec2(6.0f, 4.0f);
+    // Spacing and sizing — derived from base font size for proportional scaling
+    const float f = fontSize;
+    style.WindowPadding = ImVec2(f * 0.625f, f * 0.625f);
+    style.FramePadding = ImVec2(f * 0.5f, f * 0.3125f);
+    style.CellPadding = ImVec2(f * 0.375f, f * 0.25f);
+    style.ItemSpacing = ImVec2(f * 0.5f, f * 0.375f);
+    style.ItemInnerSpacing = ImVec2(f * 0.375f, f * 0.25f);
     style.TouchExtraPadding = ImVec2(0.0f, 0.0f);
-    style.IndentSpacing = 20.0f;
-    style.ScrollbarSize = 14.0f;
-    style.GrabMinSize = 12.0f;
+    style.IndentSpacing = f * 1.25f;
+    style.ScrollbarSize = f * 0.875f;
+    style.GrabMinSize = f * 0.75f;
 
     // Rounded corners — modernized for consistency
     style.WindowRounding = 6.0f;

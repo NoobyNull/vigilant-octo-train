@@ -28,22 +28,25 @@ void CutOptimizerPanel::render() {
     if (!m_open)
         return;
 
+    applyMinSize(28, 14);
     if (ImGui::Begin(m_title.c_str(), &m_open)) {
         renderToolbar();
         ImGui::Separator();
 
         float avail = ImGui::GetContentRegionAvail().x;
-        float leftW = 220.0f;
-        float rightW = 200.0f;
-        float centerW = avail - leftW - rightW - 16.0f; // 2×8px spacing
+        float availH = ImGui::GetContentRegionAvail().y;
+        float spacing = ImGui::GetStyle().ItemSpacing.x;
+        float leftW = avail * 0.22f;
+        float rightW = avail * 0.16f;
+        float centerW = avail - leftW - rightW - spacing * 2;
 
-        if (centerW < 200.0f) {
+        if (centerW < avail * 0.2f) {
             // Too narrow for 3-column — fall back to stacked
-            centerW = avail;
-            leftW = avail;
-            rightW = avail;
+            float stackH = availH * 0.35f;
+            float centerH = availH * 0.4f;
+            float rightH = availH * 0.2f;
 
-            ImGui::BeginChild("Left", ImVec2(leftW, 300), ImGuiChildFlags_Borders);
+            ImGui::BeginChild("Left", ImVec2(0, stackH), ImGuiChildFlags_Borders);
             renderCutListTable();
             ImGui::Separator();
             renderStockSheets();
@@ -51,7 +54,7 @@ void CutOptimizerPanel::render() {
             renderSettings();
             ImGui::EndChild();
 
-            ImGui::BeginChild("Center", ImVec2(0, 400), ImGuiChildFlags_Borders);
+            ImGui::BeginChild("Center", ImVec2(0, centerH), ImGuiChildFlags_Borders);
             if (m_hasResults) {
                 renderVisualization();
             } else {
@@ -60,7 +63,7 @@ void CutOptimizerPanel::render() {
             ImGui::EndChild();
 
             if (m_hasResults) {
-                ImGui::BeginChild("Right", ImVec2(0, 200), ImGuiChildFlags_Borders);
+                ImGui::BeginChild("Right", ImVec2(0, rightH), ImGuiChildFlags_Borders);
                 renderLayoutsSidebar();
                 ImGui::Separator();
                 renderResultsPanel();
@@ -230,7 +233,7 @@ void CutOptimizerPanel::renderToolbar() {
     ImGui::SameLine();
 
     // Algorithm combo
-    ImGui::SetNextItemWidth(110);
+    ImGui::SetNextItemWidth(ImGui::CalcTextSize("Guillotine__").x + ImGui::GetStyle().FramePadding.x * 2);
     const char* algorithms[] = {"First Fit", "Guillotine"};
     int algoIdx = static_cast<int>(m_algorithm);
     if (ImGui::Combo("##algo", &algoIdx, algorithms, 2))
@@ -300,14 +303,15 @@ void CutOptimizerPanel::renderCutListTable() {
         ImGui::BeginTable("##parts", 7,
                           ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV |
                               ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY,
-                          ImVec2(0, 150))) {
+                          ImVec2(0, ImGui::GetTextLineHeightWithSpacing() * 8))) {
+        float charW = ImGui::CalcTextSize("0").x;
         ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn("W", ImGuiTableColumnFlags_WidthFixed, 40);
-        ImGui::TableSetupColumn("H", ImGuiTableColumnFlags_WidthFixed, 40);
-        ImGui::TableSetupColumn("Qty", ImGuiTableColumnFlags_WidthFixed, 32);
-        ImGui::TableSetupColumn("$", ImGuiTableColumnFlags_WidthFixed, 40);
-        ImGui::TableSetupColumn("R", ImGuiTableColumnFlags_WidthFixed, 20);
-        ImGui::TableSetupColumn("##del", ImGuiTableColumnFlags_WidthFixed, 20);
+        ImGui::TableSetupColumn("W", ImGuiTableColumnFlags_WidthFixed, charW * 5);
+        ImGui::TableSetupColumn("H", ImGuiTableColumnFlags_WidthFixed, charW * 5);
+        ImGui::TableSetupColumn("Qty", ImGuiTableColumnFlags_WidthFixed, charW * 3);
+        ImGui::TableSetupColumn("$", ImGuiTableColumnFlags_WidthFixed, charW * 5);
+        ImGui::TableSetupColumn("R", ImGuiTableColumnFlags_WidthFixed, charW * 2);
+        ImGui::TableSetupColumn("##del", ImGuiTableColumnFlags_WidthFixed, charW * 2);
         ImGui::TableHeadersRow();
 
         int toRemove = -1;
@@ -388,13 +392,13 @@ void CutOptimizerPanel::renderCutListTable() {
     }
 
     // Add row
-    ImGui::SetNextItemWidth(50);
+    ImGui::SetNextItemWidth(ImGui::CalcTextSize("0000.0").x + ImGui::GetStyle().FramePadding.x * 2);
     ImGui::InputFloat("##nw", &m_newPartWidth, 0, 0, "%.0f");
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(50);
+    ImGui::SetNextItemWidth(ImGui::CalcTextSize("0000.0").x + ImGui::GetStyle().FramePadding.x * 2);
     ImGui::InputFloat("##nh", &m_newPartHeight, 0, 0, "%.0f");
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(30);
+    ImGui::SetNextItemWidth(ImGui::CalcTextSize("000").x + ImGui::GetStyle().FramePadding.x * 2);
     ImGui::InputInt("##nq", &m_newPartQuantity, 0);
     if (m_newPartQuantity < 1) m_newPartQuantity = 1;
     ImGui::SameLine();
@@ -435,19 +439,19 @@ void CutOptimizerPanel::renderStockSheets() {
     ImGui::NewLine();
 
     // Editable current sheet fields
-    ImGui::SetNextItemWidth(130);
+    ImGui::SetNextItemWidth(-1);
     if (ImGui::InputText("Name##sheet", m_sheetName, sizeof(m_sheetName)))
         m_sheet.name = m_sheetName;
 
-    ImGui::SetNextItemWidth(65);
+    ImGui::SetNextItemWidth(ImGui::CalcTextSize("00000.00").x + ImGui::GetStyle().FramePadding.x * 2);
     if (ImGui::InputFloat("W##sheet", &m_sheet.width, 0, 0, "%.0f"))
         m_hasResults = false;
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(65);
+    ImGui::SetNextItemWidth(ImGui::CalcTextSize("00000.00").x + ImGui::GetStyle().FramePadding.x * 2);
     if (ImGui::InputFloat("H##sheet", &m_sheet.height, 0, 0, "%.0f"))
         m_hasResults = false;
 
-    ImGui::SetNextItemWidth(65);
+    ImGui::SetNextItemWidth(ImGui::CalcTextSize("00000.00").x + ImGui::GetStyle().FramePadding.x * 2);
     ImGui::InputFloat("$/sheet", &m_sheet.cost, 0, 0, "%.2f");
 
     // Grain direction indicator
@@ -463,11 +467,11 @@ void CutOptimizerPanel::renderStockSheets() {
 void CutOptimizerPanel::renderSettings() {
     ImGui::Text("%s SETTINGS", Icons::Settings);
 
-    ImGui::SetNextItemWidth(65);
+    ImGui::SetNextItemWidth(ImGui::CalcTextSize("00000.00").x + ImGui::GetStyle().FramePadding.x * 2);
     if (ImGui::InputFloat("Kerf", &m_kerf, 0, 0, "%.1f"))
         m_hasResults = false;
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(65);
+    ImGui::SetNextItemWidth(ImGui::CalcTextSize("00000.00").x + ImGui::GetStyle().FramePadding.x * 2);
     if (ImGui::InputFloat("Padding", &m_margin, 0, 0, "%.1f"))
         m_hasResults = false;
 
@@ -476,7 +480,7 @@ void CutOptimizerPanel::renderSettings() {
     // Full-width Optimize button
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.18f, 0.50f, 0.33f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.22f, 0.60f, 0.40f, 1.0f));
-    if (ImGui::Button("Optimize", ImVec2(-1, 30)))
+    if (ImGui::Button("Optimize", ImVec2(-1, ImGui::GetFrameHeight() * 1.3f)))
         runOptimization();
     ImGui::PopStyleColor(2);
 }
@@ -592,7 +596,7 @@ void CutOptimizerPanel::renderLayoutsSidebar() {
         }
 
         // Piece count + efficiency on same line
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 55);
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize("00pc 100%").x);
         ImGui::Text("%dpc %d%%", pieces, static_cast<int>(eff * 100));
 
         // Color-coded progress bar
@@ -745,7 +749,9 @@ void CutOptimizerPanel::renderImportPopup() {
         ImGui::Text("Projection: XZ plane (top-down bounding box)");
         ImGui::Separator();
 
-        if (ImGui::BeginChild("ModelList", ImVec2(400, 300), ImGuiChildFlags_Borders)) {
+        const auto* vp = ImGui::GetMainViewport();
+        ImVec2 listSize(vp->WorkSize.x * 0.3f, vp->WorkSize.y * 0.3f);
+        if (ImGui::BeginChild("ModelList", listSize, ImGuiChildFlags_Borders)) {
             for (size_t i = 0; i < modelIds.size(); ++i) {
                 auto record = m_modelRepo->findById(modelIds[i]);
                 if (!record)

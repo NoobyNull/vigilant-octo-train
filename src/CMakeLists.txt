@@ -35,6 +35,7 @@ set(DW_SOURCES
     core/config/config.cpp
     core/config/config_watcher.cpp
     core/config/input_binding.cpp
+    core/config/layout_preset.cpp
 
     # Database
     core/database/database.cpp
@@ -49,6 +50,7 @@ set(DW_SOURCES
     core/database/cost_repository.cpp
     core/database/cut_plan_repository.cpp
     core/database/tool_database.cpp
+    core/database/toolbox_repository.cpp
 
     # Graph
     core/graph/graph_manager.cpp
@@ -67,6 +69,7 @@ set(DW_SOURCES
 
     # Project
     core/project/project.cpp
+    core/project/project_directory.cpp
 
     # Storage
     core/storage/storage_manager.cpp
@@ -93,6 +96,7 @@ set(DW_SOURCES
     core/gcode/machine_profile.cpp
 
     # CNC Controller (multi-firmware support)
+    core/cnc/cnc_tool.cpp
     core/cnc/serial_port.cpp
     core/cnc/tcp_socket.cpp
     core/cnc/cnc_controller.cpp
@@ -108,6 +112,18 @@ set(DW_SOURCES
     core/optimizer/cut_list_file.cpp
     core/optimizer/bin_packer.cpp
     core/optimizer/guillotine.cpp
+
+    # Carve (Direct Carve pipeline)
+    core/carve/heightmap.cpp
+    core/carve/model_fitter.cpp
+    core/carve/carve_job.cpp
+    core/carve/surface_analysis.cpp
+    core/carve/island_detector.cpp
+    core/carve/analysis_overlay.cpp
+    core/carve/tool_recommender.cpp
+    core/carve/toolpath_generator.cpp
+    core/carve/gcode_export.cpp
+    core/carve/carve_streamer.cpp
 
     # Archive
     core/archive/archive.cpp
@@ -155,11 +171,13 @@ set(DW_SOURCES
     ui/panels/cnc_safety_panel.cpp
     ui/panels/cnc_settings_panel.cpp
     ui/panels/cnc_macro_panel.cpp
+    ui/panels/direct_carve_panel.cpp
 
     # UI Widgets
     ui/widgets/binding_recorder.cpp
     ui/widgets/status_bar.cpp
     ui/widgets/toast.cpp
+    ui/widgets/tool_recommendation_widget.cpp
 
     # UI Dialogs
     ui/dialogs/message_dialog.cpp

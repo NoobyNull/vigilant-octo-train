@@ -54,6 +54,9 @@ class Camera {
     f32 fov() const { return m_fov; }
     void setFov(f32 fov) { m_fov = fov; }
 
+    f32 farPlane() const { return m_farPlane; }
+    void setFarPlane(f32 fp) { m_farPlane = fp; }
+
     // Get camera position
     Vec3 position() const;
 

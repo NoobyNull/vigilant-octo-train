@@ -74,8 +74,6 @@ void Camera::reset() {
     if (m_hasBounds) {
         m_target = m_lastBoundsCenter;
         m_distance = m_lastBoundsExtent * 2.0f;
-        m_nearPlane = m_distance * 0.01f;
-        m_farPlane = m_distance * 100.0f;
     } else {
         m_target = Vec3{0.0f, 0.0f, 0.0f};
         m_distance = 5.0f;
@@ -97,10 +95,6 @@ void Camera::fitToBounds(const Vec3& min, const Vec3& max) {
     // Pan to center and zoom to fit — preserve current orientation
     m_target = center;
     m_distance = maxExtent * 2.0f;
-
-    // Ensure reasonable clip planes
-    m_nearPlane = m_distance * 0.01f;
-    m_farPlane = m_distance * 100.0f;
 
     updateVectors();
 }
@@ -132,6 +126,10 @@ void Camera::updateVectors() {
                 std::cos(yawRad) * std::cos(pitchRad) * m_distance};
 
     m_cachedPosition = m_target + offset;
+
+    // Keep clip planes proportional to distance so zooming never causes clipping
+    m_nearPlane = m_distance * 0.01f;
+    m_farPlane = m_distance * 100.0f;
 }
 
 } // namespace dw

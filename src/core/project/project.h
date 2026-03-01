@@ -12,6 +12,7 @@ namespace dw {
 
 // Forward declarations
 class Database;
+class ProjectDirectory;
 
 // Project class - represents an open project
 class Project {
@@ -75,6 +76,11 @@ class ProjectManager {
     std::shared_ptr<Project> currentProject() const { return m_currentProject; }
     void setCurrentProject(std::shared_ptr<Project> project) { m_currentProject = project; }
 
+    // On-disk project directory
+    std::shared_ptr<ProjectDirectory> ensureProjectForModel(
+        const std::string& modelName, const Path& modelSourcePath);
+    std::shared_ptr<ProjectDirectory> currentDirectory() const { return m_currentDir; }
+
     // Model operations within current project
     bool addModelToProject(i64 modelId);
     bool removeModelFromProject(i64 modelId);
@@ -83,6 +89,7 @@ class ProjectManager {
     Database& m_db;
     ProjectRepository m_projectRepo;
     std::shared_ptr<Project> m_currentProject;
+    std::shared_ptr<ProjectDirectory> m_currentDir;
 };
 
 } // namespace dw

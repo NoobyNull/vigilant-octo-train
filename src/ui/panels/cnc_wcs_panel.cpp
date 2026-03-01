@@ -10,12 +10,13 @@
 
 namespace dw {
 
-CncWcsPanel::CncWcsPanel() : Panel("Work Zero / WCS") {}
+CncWcsPanel::CncWcsPanel() : Panel("WCS") {}
 
 void CncWcsPanel::render() {
     if (!m_open)
         return;
 
+    applyMinSize(16, 8);
     if (!ImGui::Begin(m_title.c_str(), &m_open)) {
         ImGui::End();
         return;
@@ -57,7 +58,8 @@ void CncWcsPanel::renderZeroButtons() {
     int pNum = m_activeWcs + 1; // P1=G54, P2=G55, etc.
 
     // Zero X
-    if (ImGui::Button("Zero X", ImVec2(80, 0))) {
+    float zeroBtnW = ImGui::CalcTextSize("Zero X").x + ImGui::GetStyle().FramePadding.x * 4;
+    if (ImGui::Button("Zero X", ImVec2(zeroBtnW, 0))) {
         char cmd[64];
         std::snprintf(cmd, sizeof(cmd), "G10 L20 P%d X0", pNum);
         m_confirmZeroCmd = cmd;
@@ -71,7 +73,7 @@ void CncWcsPanel::renderZeroButtons() {
     ImGui::SameLine();
 
     // Zero Y
-    if (ImGui::Button("Zero Y", ImVec2(80, 0))) {
+    if (ImGui::Button("Zero Y", ImVec2(zeroBtnW, 0))) {
         char cmd[64];
         std::snprintf(cmd, sizeof(cmd), "G10 L20 P%d Y0", pNum);
         m_confirmZeroCmd = cmd;
@@ -85,7 +87,7 @@ void CncWcsPanel::renderZeroButtons() {
     ImGui::SameLine();
 
     // Zero Z
-    if (ImGui::Button("Zero Z", ImVec2(80, 0))) {
+    if (ImGui::Button("Zero Z", ImVec2(zeroBtnW, 0))) {
         char cmd[64];
         std::snprintf(cmd, sizeof(cmd), "G10 L20 P%d Z0", pNum);
         m_confirmZeroCmd = cmd;
@@ -101,7 +103,8 @@ void CncWcsPanel::renderZeroButtons() {
     // Zero All — slightly wider, warning color
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.2f, 0.2f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
-    if (ImGui::Button("Zero All", ImVec2(90, 0))) {
+    float zeroAllBtnW = ImGui::CalcTextSize("Zero All").x + ImGui::GetStyle().FramePadding.x * 4;
+    if (ImGui::Button("Zero All", ImVec2(zeroAllBtnW, 0))) {
         char cmd[64];
         std::snprintf(cmd, sizeof(cmd), "G10 L20 P%d X0 Y0 Z0", pNum);
         m_confirmZeroCmd = cmd;
@@ -139,7 +142,8 @@ void CncWcsPanel::renderWcsSelector() {
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.6f, 0.9f, 1.0f));
         }
 
-        if (ImGui::Button(WCS_NAMES[i], ImVec2(50, 0))) {
+        float wcsBtnW = ImGui::CalcTextSize("G59").x + ImGui::GetStyle().FramePadding.x * 4;
+        if (ImGui::Button(WCS_NAMES[i], ImVec2(wcsBtnW, 0))) {
             if (m_cnc) {
                 m_cnc->sendCommand(WCS_NAMES[i]);
                 m_activeWcs = i;
@@ -170,7 +174,9 @@ void CncWcsPanel::renderOffsetDisplay() {
 
     if (ImGui::BeginTable("wcs_offsets", 4, ImGuiTableFlags_BordersInnerH |
                                               ImGuiTableFlags_RowBg)) {
-        ImGui::TableSetupColumn("WCS", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+        const auto& style = ImGui::GetStyle();
+        float wcsColW = ImGui::CalcTextSize("G59").x + style.FramePadding.x * 2;
+        ImGui::TableSetupColumn("WCS", ImGuiTableColumnFlags_WidthFixed, wcsColW);
         ImGui::TableSetupColumn("X", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableSetupColumn("Y", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableSetupColumn("Z", ImGuiTableColumnFlags_WidthStretch);
@@ -223,7 +229,8 @@ void CncWcsPanel::renderConfirmationPopup() {
         // Confirm button with warning color
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
-        if (ImGui::Button("Confirm", ImVec2(120, 0))) {
+        float confirmBtnW = ImGui::CalcTextSize("Confirm").x + ImGui::GetStyle().FramePadding.x * 4;
+        if (ImGui::Button("Confirm", ImVec2(confirmBtnW, 0))) {
             if (m_cnc) {
                 m_cnc->sendCommand(m_confirmZeroCmd);
                 requestOffsets(); // Refresh offsets after zeroing
@@ -234,7 +241,7 @@ void CncWcsPanel::renderConfirmationPopup() {
 
         ImGui::SameLine();
 
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        if (ImGui::Button("Cancel", ImVec2(confirmBtnW, 0))) {
             ImGui::CloseCurrentPopup();
         }
 

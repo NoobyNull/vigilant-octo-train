@@ -33,6 +33,7 @@ void CncMacroPanel::refreshMacros() {
 void CncMacroPanel::render() {
     if (!m_open) return;
 
+    applyMinSize(14, 8);
     if (!ImGui::Begin(m_title.c_str(), &m_open)) {
         ImGui::End();
         return;
@@ -88,7 +89,7 @@ void CncMacroPanel::renderMacroList() {
         ImGui::PushID(macro.id);
 
         // Drag handle
-        ImGui::Button("=##drag", ImVec2(20, 0));
+        ImGui::Button("=##drag", ImVec2(ImGui::GetFrameHeight(), 0));
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
             m_dragSourceIdx = static_cast<int>(i);
             ImGui::SetDragDropPayload("MACRO_REORDER", &m_dragSourceIdx, sizeof(int));
@@ -198,7 +199,7 @@ void CncMacroPanel::renderEditArea() {
     ImGui::InputTextMultiline("##gcode", m_editGcode, sizeof(m_editGcode),
                               ImVec2(-1, ImGui::GetTextLineHeight() * 6));
 
-    ImGui::SetNextItemWidth(150);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
     ImGui::InputText("Shortcut", m_editShortcut, sizeof(m_editShortcut));
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Optional keyboard shortcut (e.g. Ctrl+1)");

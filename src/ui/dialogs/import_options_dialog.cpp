@@ -2,6 +2,8 @@
 
 #include "ui/dialogs/import_options_dialog.h"
 
+#include <algorithm>
+
 #include <imgui.h>
 
 #include "ui/icons.h"
@@ -44,9 +46,10 @@ void ImportOptionsDialog::render() {
     if (!m_open)
         return;
 
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    const auto* viewport = ImGui::GetMainViewport();
+    ImVec2 center = viewport->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(520, 0), ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x * 0.35f, 0), ImGuiCond_Appearing);
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse;
 
@@ -140,7 +143,10 @@ void ImportOptionsDialog::render() {
         ImGui::Spacing();
 
         // Action buttons
-        if (ImGui::Button("Import", ImVec2(120, 0))) {
+        float importDlgBtnW = ImGui::CalcTextSize("Import").x + ImGui::GetStyle().FramePadding.x * 4;
+        float cancelDlgBtnW = ImGui::CalcTextSize("Cancel").x + ImGui::GetStyle().FramePadding.x * 4;
+        float dlgBtnW = std::max(importDlgBtnW, cancelDlgBtnW);
+        if (ImGui::Button("Import", ImVec2(dlgBtnW, 0))) {
             if (m_onConfirm) {
                 m_onConfirm(static_cast<FileHandlingMode>(m_selectedMode), m_queueForTagging, m_paths);
             }
@@ -148,7 +154,7 @@ void ImportOptionsDialog::render() {
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        if (ImGui::Button("Cancel", ImVec2(dlgBtnW, 0))) {
             m_open = false;
             ImGui::CloseCurrentPopup();
         }

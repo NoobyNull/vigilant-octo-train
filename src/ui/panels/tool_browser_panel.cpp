@@ -7,6 +7,7 @@
 #include <imgui.h>
 
 #include "core/database/tool_database.h"
+#include "core/database/toolbox_repository.h"
 #include "core/materials/material_manager.h"
 #include "core/utils/log.h"
 #include "ui/dialogs/file_dialog.h"
@@ -28,6 +29,14 @@ static const char* toolTypeName(VtdbToolType type) {
     case VtdbToolType::DiamondDrag: return "Diamond Drag";
     default: return "Unknown";
     }
+}
+
+// Auto-format a display name from tool geometry when tree entry name is empty
+static std::string autoFormatToolName(const VtdbToolGeometry& g) {
+    char buf[128];
+    std::snprintf(buf, sizeof(buf), "%s %.3gmm %d-flute",
+                  toolTypeName(g.tool_type), g.diameter, g.num_flutes);
+    return buf;
 }
 
 static constexpr int kToolTypeCount = 9;
@@ -53,6 +62,7 @@ void ToolBrowserPanel::render() {
         m_needsRefresh = false;
     }
 
+    applyMinSize(22, 10);
     if (!ImGui::Begin(m_title.c_str(), &m_open)) {
         ImGui::End();
         return;
@@ -68,8 +78,44 @@ void ToolBrowserPanel::render() {
     ImGui::Separator();
 
     // Two-column layout: tree (left) | detail (right)
-    float treeWidth = 260.0f;
+    // Calculate minimum tree width from content so labels aren't truncated
     ImVec2 avail = ImGui::GetContentRegionAvail();
+    float maxLabelW = 0.0f;
+    float indent = ImGui::GetTreeNodeToLabelSpacing();
+    for (const auto& entry : m_treeEntries) {
+        // Estimate nesting depth by counting ancestors
+        int depth = 0;
+        std::string pid = entry.parent_group_id;
+        while (!pid.empty() && depth < 8) {
+            ++depth;
+            bool found = false;
+            for (const auto& e : m_treeEntries) {
+                if (e.id == pid) { pid = e.parent_group_id; found = true; break; }
+            }
+            if (!found) break;
+        }
+
+        std::string displayName = entry.name;
+        if (displayName.empty() && !entry.tool_geometry_id.empty()) {
+            for (const auto& g : m_geometries) {
+                if (g.id == entry.tool_geometry_id) {
+                    displayName = autoFormatToolName(g);
+                    break;
+                }
+            }
+        }
+        if (!displayName.empty()) {
+            float textW = ImGui::CalcTextSize(displayName.c_str()).x;
+            float totalW = indent * static_cast<float>(depth + 1) + textW
+                         + ImGui::GetFontSize() * 2.0f; // icon + padding
+            maxLabelW = std::max(maxLabelW, totalW);
+        }
+    }
+    // Clamp: at least 20% of panel, at most 60%, with scrollbar padding
+    float scrollbarW = ImGui::GetStyle().ScrollbarSize;
+    float minTreeW = avail.x * 0.2f;
+    float maxTreeW = avail.x * 0.6f;
+    float treeWidth = std::clamp(maxLabelW + scrollbarW, minTreeW, maxTreeW);
 
     if (ImGui::BeginChild("ToolTree", ImVec2(treeWidth, avail.y), ImGuiChildFlags_Borders)) {
         renderTree();
@@ -133,6 +179,28 @@ void ToolBrowserPanel::renderToolbar() {
         }
     }
     ImGui::SameLine();
+    // Toolbox toggle button
+    if (!m_selectedGeometryId.empty() && m_toolboxRepo) {
+        bool inToolbox = m_toolboxIds.count(m_selectedGeometryId) > 0;
+        char starLabel[64];
+        std::snprintf(starLabel, sizeof(starLabel), "%s %s",
+                      Icons::Star, inToolbox ? "Remove from Toolbox" : "Add to Toolbox");
+        if (inToolbox) {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.5f, 0.1f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.6f, 0.15f, 1.0f));
+        }
+        if (ImGui::Button(starLabel)) {
+            if (inToolbox) {
+                m_toolboxRepo->removeTool(m_selectedGeometryId);
+                m_toolboxIds.erase(m_selectedGeometryId);
+            } else {
+                m_toolboxRepo->addTool(m_selectedGeometryId);
+                m_toolboxIds.insert(m_selectedGeometryId);
+            }
+        }
+        if (inToolbox) ImGui::PopStyleColor(2);
+        ImGui::SameLine();
+    }
     if (ImGui::Button(icons::ICON_REFRESH)) {
         refresh();
     }
@@ -140,6 +208,8 @@ void ToolBrowserPanel::renderToolbar() {
 
 // Recursive tree rendering helper
 static void renderTreeNode(const std::vector<VtdbTreeEntry>& entries,
+                           const std::vector<VtdbToolGeometry>& geometries,
+                           const std::set<std::string>& toolboxIds,
                            const std::string& parentId,
                            std::string& selectedId,
                            std::string& selectedGeomId) {
@@ -153,8 +223,23 @@ static void renderTreeNode(const std::vector<VtdbTreeEntry>& entries,
         if (isSelected) flags |= ImGuiTreeNodeFlags_Selected;
         if (!isGroup) flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
+        // Resolve display name — auto-format from geometry when entry name is empty
+        std::string displayName = entry.name;
+        if (displayName.empty() && !entry.tool_geometry_id.empty()) {
+            for (const auto& g : geometries) {
+                if (g.id == entry.tool_geometry_id) {
+                    displayName = autoFormatToolName(g);
+                    break;
+                }
+            }
+            if (displayName.empty()) displayName = "(unnamed tool)";
+        }
+
         const char* icon = isGroup ? Icons::Folder : Icons::Settings;
-        std::string label = std::string(icon) + " " + entry.name + "###" + entry.id;
+        bool inToolbox = !isGroup && toolboxIds.count(entry.tool_geometry_id) > 0;
+        std::string prefix = std::string(icon);
+        if (inToolbox) prefix += " " + std::string(Icons::Star);
+        std::string label = prefix + " " + displayName + "###" + entry.id;
 
         if (isGroup) {
             bool nodeOpen = ImGui::TreeNodeEx(label.c_str(), flags);
@@ -163,7 +248,7 @@ static void renderTreeNode(const std::vector<VtdbTreeEntry>& entries,
                 selectedGeomId.clear();
             }
             if (nodeOpen) {
-                renderTreeNode(entries, entry.id, selectedId, selectedGeomId);
+                renderTreeNode(entries, geometries, toolboxIds, entry.id, selectedId, selectedGeomId);
                 ImGui::TreePop();
             }
         } else {
@@ -177,16 +262,29 @@ static void renderTreeNode(const std::vector<VtdbTreeEntry>& entries,
 }
 
 void ToolBrowserPanel::renderTree() {
-    renderTreeNode(m_treeEntries, "", m_selectedTreeEntryId, m_selectedGeometryId);
-
-    // Root-level entries that have no parent
-    // (already handled by passing "" as parentId above)
+    renderTreeNode(m_treeEntries, m_geometries, m_toolboxIds,
+                   "", m_selectedTreeEntryId, m_selectedGeometryId);
 }
 
 void ToolBrowserPanel::renderToolDetail() {
     if (m_selectedGeometryId.empty()) {
         ImGui::TextDisabled("Select a tool to view details");
         return;
+    }
+
+    // Toolbox toggle
+    if (m_toolboxRepo) {
+        bool inToolbox = m_toolboxIds.count(m_selectedGeometryId) > 0;
+        if (ImGui::Checkbox("In My Toolbox", &inToolbox)) {
+            if (inToolbox) {
+                m_toolboxRepo->addTool(m_selectedGeometryId);
+                m_toolboxIds.insert(m_selectedGeometryId);
+            } else {
+                m_toolboxRepo->removeTool(m_selectedGeometryId);
+                m_toolboxIds.erase(m_selectedGeometryId);
+            }
+        }
+        ImGui::Spacing();
     }
 
     // Geometry section
@@ -359,7 +457,8 @@ void ToolBrowserPanel::renderToolDetail() {
     ImGui::Spacing();
     char saveBtnLabel[64];
     std::snprintf(saveBtnLabel, sizeof(saveBtnLabel), "%s Save Changes", Icons::Save);
-    if (ImGui::Button(saveBtnLabel, ImVec2(150, 0))) {
+    float saveBtnW = ImGui::CalcTextSize(saveBtnLabel).x + ImGui::GetStyle().FramePadding.x * 4;
+    if (ImGui::Button(saveBtnLabel, ImVec2(saveBtnW, 0))) {
         m_toolDatabase->updateGeometry(m_editGeometry);
         if (m_hasCuttingData) {
             m_toolDatabase->updateCuttingData(m_editCuttingData);
@@ -423,7 +522,8 @@ void ToolBrowserPanel::renderAddToolPopup() {
         }
 
         ImGui::Spacing();
-        if (ImGui::Button("Create", ImVec2(120, 0))) {
+        float toolDlgBtnW = ImGui::CalcTextSize("Cancel").x + ImGui::GetStyle().FramePadding.x * 4;
+        if (ImGui::Button("Create", ImVec2(toolDlgBtnW, 0))) {
             // Auto-generate name if empty
             if (m_addToolName.empty()) {
                 char autoName[128];
@@ -449,7 +549,7 @@ void ToolBrowserPanel::renderAddToolPopup() {
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        if (ImGui::Button("Cancel", ImVec2(toolDlgBtnW, 0))) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
@@ -490,7 +590,8 @@ void ToolBrowserPanel::renderAddGroupPopup() {
         }
 
         ImGui::Spacing();
-        if (ImGui::Button("Create", ImVec2(120, 0))) {
+        float grpBtnW = ImGui::CalcTextSize("Cancel").x + ImGui::GetStyle().FramePadding.x * 4;
+        if (ImGui::Button("Create", ImVec2(grpBtnW, 0))) {
             if (!m_addGroupName.empty()) {
                 VtdbTreeEntry te;
                 te.parent_group_id = m_addGroupParentId;
@@ -502,7 +603,7 @@ void ToolBrowserPanel::renderAddGroupPopup() {
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        if (ImGui::Button("Cancel", ImVec2(grpBtnW, 0))) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
@@ -520,6 +621,12 @@ void ToolBrowserPanel::loadData() {
     m_materials = m_toolDatabase->findAllMaterials();
     m_machines = m_toolDatabase->findAllMachines();
     m_geometries = m_toolDatabase->findAllGeometries();
+
+    // Load toolbox state
+    if (m_toolboxRepo) {
+        auto ids = m_toolboxRepo->getAllGeometryIds();
+        m_toolboxIds = std::set<std::string>(ids.begin(), ids.end());
+    }
 
     // Sort tree entries by sibling_order
     std::sort(m_treeEntries.begin(), m_treeEntries.end(),
@@ -625,7 +732,8 @@ void ToolBrowserPanel::renderCalculator() {
     // Calculate button
     char calcBtnLabel[64];
     std::snprintf(calcBtnLabel, sizeof(calcBtnLabel), "%s Calculate", Icons::Settings);
-    if (ImGui::Button(calcBtnLabel, ImVec2(150, 0))) {
+    float calcBtnW = ImGui::CalcTextSize(calcBtnLabel).x + ImGui::GetStyle().FramePadding.x * 4;
+    if (ImGui::Button(calcBtnLabel, ImVec2(calcBtnW, 0))) {
         runCalculation();
     }
 
