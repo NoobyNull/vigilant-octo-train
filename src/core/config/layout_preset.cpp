@@ -55,7 +55,7 @@ LayoutPreset LayoutPreset::modelDefault() {
         {"cnc_console", false},   {"cnc_wcs", false},
         {"cnc_tool", false},      {"cnc_job", false},
         {"cnc_safety", false},    {"cnc_settings", false},
-        {"cnc_macros", false},
+        {"cnc_macros", false},    {"direct_carve", false},
     };
     return p;
 }
@@ -75,7 +75,7 @@ LayoutPreset LayoutPreset::cncDefault() {
         {"cnc_console", true},    {"cnc_wcs", true},
         {"cnc_tool", true},       {"cnc_job", true},
         {"cnc_safety", true},     {"cnc_settings", true},
-        {"cnc_macros", true},
+        {"cnc_macros", true},     {"direct_carve", true},
     };
     return p;
 }

@@ -4,6 +4,7 @@
 #include "../types.h"
 
 #include <functional>
+#include <string>
 #include <vector>
 
 namespace dw {
@@ -44,6 +45,16 @@ class Heightmap {
     // Statistics
     f32 minZ() const { return m_minZ; }
     f32 maxZ() const { return m_maxZ; }
+
+    // Persistence — binary .dwhm format (Digital Workshop HeightMap)
+    // Header: magic(4) + version(4) + cols(4) + rows(4) + resolution(4)
+    //         + boundsMin(12) + boundsMax(12) + minZ(4) + maxZ(4) = 52 bytes
+    // Body:   cols * rows * sizeof(f32) raw grid data
+    bool save(const std::string& path) const;
+    bool load(const std::string& path);
+
+    // Export as 16-bit grayscale PNG for visualization / external use
+    bool exportPng(const std::string& path) const;
 
   private:
     // Internal triangle representation with pre-resolved positions

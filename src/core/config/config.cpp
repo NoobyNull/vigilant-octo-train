@@ -16,11 +16,7 @@ namespace dw {
 
 Config::Config() : m_parallelismTier(ParallelismTier::Auto) {
     initDefaultBindings();
-    m_machineProfiles = {
-        gcode::MachineProfile::defaultProfile(),
-        gcode::MachineProfile::shapeoko4(),
-        gcode::MachineProfile::longmillMK2(),
-    };
+    m_machineProfiles = gcode::MachineProfile::allBuiltInPresets();
     m_layoutPresets = {
         LayoutPreset::modelDefault(),
         LayoutPreset::cncDefault(),
@@ -173,6 +169,26 @@ bool Config::load() {
                 m_wsShowCostEstimator = (value == "true" || value == "1");
             } else if (key == "show_tool_browser") {
                 m_wsShowToolBrowser = (value == "true" || value == "1");
+            } else if (key == "show_cnc_status") {
+                m_wsShowCncStatus = (value == "true" || value == "1");
+            } else if (key == "show_cnc_jog") {
+                m_wsShowCncJog = (value == "true" || value == "1");
+            } else if (key == "show_cnc_console") {
+                m_wsShowCncConsole = (value == "true" || value == "1");
+            } else if (key == "show_cnc_wcs") {
+                m_wsShowCncWcs = (value == "true" || value == "1");
+            } else if (key == "show_cnc_tool") {
+                m_wsShowCncTool = (value == "true" || value == "1");
+            } else if (key == "show_cnc_job") {
+                m_wsShowCncJob = (value == "true" || value == "1");
+            } else if (key == "show_cnc_safety") {
+                m_wsShowCncSafety = (value == "true" || value == "1");
+            } else if (key == "show_cnc_settings") {
+                m_wsShowCncSettings = (value == "true" || value == "1");
+            } else if (key == "show_cnc_macros") {
+                m_wsShowCncMacros = (value == "true" || value == "1");
+            } else if (key == "show_direct_carve") {
+                m_wsShowDirectCarve = (value == "true" || value == "1");
             } else if (key == "show_start_page") {
                 m_wsShowStartPage = (value == "true" || value == "1");
             } else if (key == "last_selected_model") {
@@ -300,6 +316,15 @@ bool Config::load() {
             } else if (key == "envelope_color_a") {
                 str::parseFloat(value, m_cncEnvelopeColor.w);
             }
+        } else if (section == "wcs_aliases") {
+            for (int wi = 0; wi < NUM_WCS; ++wi) {
+                char wkey[8];
+                std::snprintf(wkey, sizeof(wkey), "g%d", 54 + wi);
+                if (key == wkey) {
+                    m_wcsAliases[wi] = value;
+                    break;
+                }
+            }
         } else if (section == "recent_gcode") {
             if (str::startsWith(key, "file")) {
                 if (!value.empty()) {
@@ -308,7 +333,12 @@ bool Config::load() {
             }
         } else if (section == "machine_profiles") {
             if (key == "active_profile") {
-                str::parseInt(value, m_activeMachineProfileIndex);
+                // Try as name first, fall back to index for backwards compat
+                int idx = -1;
+                if (str::parseInt(value, idx) && idx >= 0)
+                    m_activeMachineProfileIndex = idx;
+                else
+                    m_activeProfileName = value;
             } else if (str::startsWith(key, "profile")) {
                 auto profile = gcode::MachineProfile::fromJsonString(value);
                 if (!profile.name.empty()) {
@@ -331,9 +361,30 @@ bool Config::load() {
         }
     }
 
-    // Replace defaults with loaded profiles if any were found
+    // Built-in presets are always present; append any user-created profiles from config
+    // m_machineProfiles already contains allBuiltInPresets() from constructor
     if (loadedMachineProfiles && !loadedMachineProfiles->empty()) {
-        m_machineProfiles = std::move(*loadedMachineProfiles);
+        for (auto& lp : *loadedMachineProfiles) {
+            // Skip any that duplicate a built-in by name
+            bool isDuplicate = false;
+            for (const auto& bp : m_machineProfiles) {
+                if (bp.name == lp.name) { isDuplicate = true; break; }
+            }
+            if (!isDuplicate) {
+                lp.builtIn = false;
+                m_machineProfiles.push_back(std::move(lp));
+            }
+        }
+    }
+    // Resolve active profile by name if stored, otherwise by index
+    if (!m_activeProfileName.empty()) {
+        for (int i = 0; i < static_cast<int>(m_machineProfiles.size()); ++i) {
+            if (m_machineProfiles[static_cast<size_t>(i)].name == m_activeProfileName) {
+                m_activeMachineProfileIndex = i;
+                break;
+            }
+        }
+        m_activeProfileName.clear();
     }
     if (m_activeMachineProfileIndex < 0 ||
         m_activeMachineProfileIndex >= static_cast<int>(m_machineProfiles.size())) {
@@ -437,6 +488,16 @@ bool Config::save() {
     ss << "show_cut_optimizer=" << (m_wsShowCutOptimizer ? "true" : "false") << "\n";
     ss << "show_cost_estimator=" << (m_wsShowCostEstimator ? "true" : "false") << "\n";
     ss << "show_tool_browser=" << (m_wsShowToolBrowser ? "true" : "false") << "\n";
+    ss << "show_cnc_status=" << (m_wsShowCncStatus ? "true" : "false") << "\n";
+    ss << "show_cnc_jog=" << (m_wsShowCncJog ? "true" : "false") << "\n";
+    ss << "show_cnc_console=" << (m_wsShowCncConsole ? "true" : "false") << "\n";
+    ss << "show_cnc_wcs=" << (m_wsShowCncWcs ? "true" : "false") << "\n";
+    ss << "show_cnc_tool=" << (m_wsShowCncTool ? "true" : "false") << "\n";
+    ss << "show_cnc_job=" << (m_wsShowCncJob ? "true" : "false") << "\n";
+    ss << "show_cnc_safety=" << (m_wsShowCncSafety ? "true" : "false") << "\n";
+    ss << "show_cnc_settings=" << (m_wsShowCncSettings ? "true" : "false") << "\n";
+    ss << "show_cnc_macros=" << (m_wsShowCncMacros ? "true" : "false") << "\n";
+    ss << "show_direct_carve=" << (m_wsShowDirectCarve ? "true" : "false") << "\n";
     ss << "show_start_page=" << (m_wsShowStartPage ? "true" : "false") << "\n";
     ss << "last_selected_model=" << m_wsLastSelectedModelId << "\n";
     ss << "library_thumb_size=" << m_wsLibraryThumbSize << "\n";
@@ -523,6 +584,14 @@ bool Config::save() {
     ss << "envelope_color_a=" << m_cncEnvelopeColor.w << "\n";
     ss << "\n";
 
+    // WCS aliases section
+    ss << "[wcs_aliases]\n";
+    for (int i = 0; i < NUM_WCS; ++i) {
+        if (!m_wcsAliases[i].empty())
+            ss << "g" << (54 + i) << "=" << m_wcsAliases[i] << "\n";
+    }
+    ss << "\n";
+
     // Recent G-code files section
     ss << "[recent_gcode]\n";
     for (size_t i = 0; i < m_recentGCodeFiles.size(); ++i) {
@@ -542,11 +611,13 @@ bool Config::save() {
     ss << "pause_before_reset_enabled=" << (m_safetyPauseBeforeResetEnabled ? "true" : "false") << "\n";
     ss << "\n";
 
-    // Machine profiles section
+    // Machine profiles section — save active by name, only persist user-created profiles
     ss << "[machine_profiles]\n";
-    ss << "active_profile=" << m_activeMachineProfileIndex << "\n";
-    for (size_t i = 0; i < m_machineProfiles.size(); ++i) {
-        ss << "profile" << i << "=" << m_machineProfiles[i].toJsonString() << "\n";
+    ss << "active_profile=" << m_machineProfiles[static_cast<size_t>(m_activeMachineProfileIndex)].name << "\n";
+    int userIdx = 0;
+    for (const auto& prof : m_machineProfiles) {
+        if (!prof.builtIn)
+            ss << "profile" << userIdx++ << "=" << prof.toJsonString() << "\n";
     }
     ss << "\n";
 

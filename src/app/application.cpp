@@ -28,11 +28,13 @@
 #include "core/database/job_repository.h"
 #include "core/database/model_repository.h"
 #include "core/database/tool_database.h"
+#include "core/database/toolbox_repository.h"
 #include "core/database/schema.h"
 #include "core/export/project_export_manager.h"
 #include "core/cnc/cnc_controller.h"
 #include "core/cnc/serial_port.h"
 #include "core/cnc/gamepad_input.h"
+#include "core/carve/carve_job.h"
 #include "core/cnc/macro_manager.h"
 #include "core/graph/graph_manager.h"
 #include "core/import/background_tagger.h"
@@ -260,6 +262,9 @@ bool Application::init() {
     // Project export/import manager (.dwproj archives) (EXPORT-01/02)
     m_projectExportManager = std::make_unique<ProjectExportManager>(*m_database);
 
+    // My Toolbox (curated tool subset from .vtdb library)
+    m_toolboxRepo = std::make_unique<ToolboxRepository>(*m_database);
+
     // CNC tool database (Vectric .vtdb format)
     m_toolDatabase = std::make_unique<ToolDatabase>();
     if (!m_toolDatabase->open(paths::getToolDatabasePath())) {
@@ -277,6 +282,9 @@ bool Application::init() {
     // CNC gamepad input (SDL_GameController for jog/actions)
     m_gamepadInput = std::make_unique<GamepadInput>();
     m_gamepadInput->setCncController(m_cncController.get());
+
+    // Direct Carve job (heightmap, analysis, toolpath generation, streaming)
+    m_carveJob = std::make_unique<carve::CarveJob>();
 
     m_importQueue = std::make_unique<ImportQueue>(*m_connectionPool,
                                                   m_libraryManager.get(),
@@ -431,20 +439,25 @@ void Application::update() {
     u64 ticks = SDL_GetTicks64();
     if (ticks - m_lastPortScanMs >= 2000) {
         m_lastPortScanMs = ticks;
-        auto ports = listSerialPorts();
+        auto detailedPorts = listSerialPortsDetailed();
+
+        // Build simple port list for existing UI (Connect dropdown)
+        std::vector<std::string> ports;
+        for (const auto& p : detailedPorts)
+            ports.push_back(p.device);
         m_uiManager->setAvailablePorts(ports);
 
-        // Notify user once when a new device appears during simulation
-        if (!ports.empty() && m_cncController->isSimulating() && m_lastConnectedPort.empty()) {
-            std::string portList;
-            for (const auto& p : ports) {
-                if (!portList.empty()) portList += ", ";
-                portList += p;
+        // Only toast for devices that look like CNC controllers
+        if (m_cncController->isSimulating() && m_lastConnectedPort.empty()) {
+            for (const auto& p : detailedPorts) {
+                if (!p.likelyCnc) continue;
+                std::string desc = p.device;
+                if (!p.product.empty()) desc += " (" + p.product + ")";
+                ToastManager::instance().show(
+                    ToastType::Info, "CNC Controller Detected", desc, 5.0f);
+                m_lastConnectedPort = "__notified__";
+                break; // Only toast once
             }
-            ToastManager::instance().show(
-                ToastType::Info, "CNC Device Detected", portList, 5.0f);
-            // Set sentinel so we only toast once per appearance
-            m_lastConnectedPort = "__notified__";
         }
         if (ports.empty() && m_lastConnectedPort == "__notified__") {
             m_lastConnectedPort.clear();
@@ -525,6 +538,7 @@ void Application::shutdown() {
 
     // Destroy core systems
     m_gamepadInput.reset();  // Must be destroyed before CncController
+    m_toolboxRepo.reset();
     m_toolDatabase.reset();
     m_cncController.reset();
     m_descriptorService.reset();

@@ -51,6 +51,12 @@ public:
     // Cancel in-progress computation
     void cancel();
 
+    // Force state to Ready (used when loading a saved heightmap)
+    void setReady();
+
+    // Load a previously saved heightmap from disk
+    bool loadHeightmap(const std::string& path);
+
     // Analysis results (available after heightmap)
     const CurvatureResult& curvatureResult() const;
     const IslandResult& islandResult() const;

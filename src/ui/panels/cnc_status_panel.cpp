@@ -423,19 +423,78 @@ void CncStatusPanel::renderWcsSelector() {
 
     if (!canSwitch) ImGui::BeginDisabled();
 
-    float wcsComboW = ImGui::CalcTextSize("G59").x + ImGui::GetStyle().FramePadding.x * 4;
+    auto& config = Config::instance();
+
+    // Build display label for active WCS
+    const auto& activeAlias = config.getWcsAlias(m_activeWcs);
+    char activeLabel[80];
+    if (!activeAlias.empty())
+        std::snprintf(activeLabel, sizeof(activeLabel), "%s: %s",
+                      WCS_NAMES[m_activeWcs], activeAlias.c_str());
+    else
+        std::snprintf(activeLabel, sizeof(activeLabel), "%s", WCS_NAMES[m_activeWcs]);
+
+    // Size combo to fit the active label
+    float wcsComboW = ImGui::CalcTextSize(activeLabel).x + ImGui::GetStyle().FramePadding.x * 4;
+    float minW = ImGui::CalcTextSize("G59").x + ImGui::GetStyle().FramePadding.x * 4;
+    if (wcsComboW < minW) wcsComboW = minW;
+
     ImGui::SameLine(ImGui::GetContentRegionAvail().x - wcsComboW);
     ImGui::SetNextItemWidth(wcsComboW);
-    if (ImGui::BeginCombo("##WCS", WCS_NAMES[m_activeWcs], ImGuiComboFlags_NoArrowButton)) {
+    if (ImGui::BeginCombo("##WCS", activeLabel, ImGuiComboFlags_NoArrowButton)) {
         for (int i = 0; i < NUM_WCS; ++i) {
             bool selected = (m_activeWcs == i);
-            if (ImGui::Selectable(WCS_NAMES[i], selected)) {
+            const auto& alias = config.getWcsAlias(i);
+
+            // Inline rename on double-click
+            if (m_editingWcsIdx == i) {
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                char editId[32];
+                std::snprintf(editId, sizeof(editId), "##wcsEdit%d", i);
+                if (ImGui::InputText(editId, m_wcsAliasBuf, sizeof(m_wcsAliasBuf),
+                                     ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll)) {
+                    config.setWcsAlias(i, m_wcsAliasBuf);
+                    config.save();
+                    m_editingWcsIdx = -1;
+                }
+                // Cancel on Escape or losing focus
+                if (ImGui::IsKeyPressed(ImGuiKey_Escape) ||
+                    (!ImGui::IsItemActive() && m_editingWcsIdx == i && ImGui::IsMouseClicked(0))) {
+                    m_editingWcsIdx = -1;
+                }
+                // Auto-focus the input on first frame
+                if (ImGui::IsItemDeactivated()) m_editingWcsIdx = -1;
+                continue;
+            }
+
+            char itemLabel[80];
+            if (!alias.empty())
+                std::snprintf(itemLabel, sizeof(itemLabel), "%s: %s", WCS_NAMES[i], alias.c_str());
+            else
+                std::snprintf(itemLabel, sizeof(itemLabel), "%s", WCS_NAMES[i]);
+
+            if (ImGui::Selectable(itemLabel, selected)) {
                 m_activeWcs = i;
                 if (m_cnc) {
                     m_cnc->sendCommand(WCS_NAMES[i]);
                 }
             }
             if (selected) ImGui::SetItemDefaultFocus();
+
+            // Right-click context menu for rename / clear alias
+            char ctxId[32];
+            std::snprintf(ctxId, sizeof(ctxId), "##wcsCtx%d", i);
+            if (ImGui::BeginPopupContextItem(ctxId)) {
+                if (ImGui::MenuItem("Rename")) {
+                    m_editingWcsIdx = i;
+                    std::snprintf(m_wcsAliasBuf, sizeof(m_wcsAliasBuf), "%s", alias.c_str());
+                }
+                if (!alias.empty() && ImGui::MenuItem("Clear alias")) {
+                    config.setWcsAlias(i, "");
+                    config.save();
+                }
+                ImGui::EndPopup();
+            }
         }
         ImGui::EndCombo();
     }

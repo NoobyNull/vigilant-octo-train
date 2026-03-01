@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
+#include <fstream>
 #include <limits>
 
 namespace dw {
@@ -232,6 +234,99 @@ f32 Heightmap::atMm(f32 x, f32 y) const {
     const f32 top = z00 * (1.0f - tx) + z10 * tx;
     const f32 bot = z01 * (1.0f - tx) + z11 * tx;
     return top * (1.0f - ty) + bot * ty;
+}
+
+// ---- Persistence: binary .dwhm format ----
+
+static constexpr u32 DWHM_MAGIC   = 0x4D485744; // "DWHM"
+static constexpr u32 DWHM_VERSION = 1;
+
+bool Heightmap::save(const std::string& path) const {
+    if (m_grid.empty()) return false;
+
+    std::ofstream f(path, std::ios::binary);
+    if (!f.is_open()) return false;
+
+    // Header
+    f.write(reinterpret_cast<const char*>(&DWHM_MAGIC), 4);
+    f.write(reinterpret_cast<const char*>(&DWHM_VERSION), 4);
+    f.write(reinterpret_cast<const char*>(&m_cols), 4);
+    f.write(reinterpret_cast<const char*>(&m_rows), 4);
+    f.write(reinterpret_cast<const char*>(&m_resolution), 4);
+    f.write(reinterpret_cast<const char*>(&m_boundsMin), sizeof(Vec3));
+    f.write(reinterpret_cast<const char*>(&m_boundsMax), sizeof(Vec3));
+    f.write(reinterpret_cast<const char*>(&m_minZ), 4);
+    f.write(reinterpret_cast<const char*>(&m_maxZ), 4);
+
+    // Grid data
+    f.write(reinterpret_cast<const char*>(m_grid.data()),
+            static_cast<std::streamsize>(m_grid.size() * sizeof(f32)));
+
+    return f.good();
+}
+
+bool Heightmap::load(const std::string& path) {
+    std::ifstream f(path, std::ios::binary);
+    if (!f.is_open()) return false;
+
+    u32 magic = 0, version = 0;
+    f.read(reinterpret_cast<char*>(&magic), 4);
+    f.read(reinterpret_cast<char*>(&version), 4);
+    if (magic != DWHM_MAGIC || version != DWHM_VERSION) return false;
+
+    f.read(reinterpret_cast<char*>(&m_cols), 4);
+    f.read(reinterpret_cast<char*>(&m_rows), 4);
+    f.read(reinterpret_cast<char*>(&m_resolution), 4);
+    f.read(reinterpret_cast<char*>(&m_boundsMin), sizeof(Vec3));
+    f.read(reinterpret_cast<char*>(&m_boundsMax), sizeof(Vec3));
+    f.read(reinterpret_cast<char*>(&m_minZ), 4);
+    f.read(reinterpret_cast<char*>(&m_maxZ), 4);
+
+    if (m_cols <= 0 || m_rows <= 0) return false;
+
+    auto count = static_cast<size_t>(m_cols) * static_cast<size_t>(m_rows);
+    m_grid.resize(count);
+    f.read(reinterpret_cast<char*>(m_grid.data()),
+           static_cast<std::streamsize>(count * sizeof(f32)));
+
+    return f.good();
+}
+
+bool Heightmap::exportPng(const std::string& path) const {
+    if (m_grid.empty()) return false;
+
+    // Export as PGM (Portable GrayMap) — universally readable, no library deps.
+    // If path ends in .png, we still write PGM since stb isn't linked here.
+    std::string actualPath = path;
+    // Ensure .pgm extension for clarity
+    auto dotPos = actualPath.rfind('.');
+    if (dotPos != std::string::npos)
+        actualPath = actualPath.substr(0, dotPos) + ".pgm";
+    else
+        actualPath += ".pgm";
+
+    std::ofstream f(actualPath, std::ios::binary);
+    if (!f.is_open()) return false;
+
+    f32 range = m_maxZ - m_minZ;
+    if (range < 1e-6f) range = 1.0f;
+
+    // P5 binary PGM header
+    f << "P5\n" << m_cols << " " << m_rows << "\n65535\n";
+
+    // 16-bit big-endian pixel data
+    for (int i = 0; i < static_cast<int>(m_grid.size()); ++i) {
+        f32 normalized = (m_grid[static_cast<size_t>(i)] - m_minZ) / range;
+        normalized = std::clamp(normalized, 0.0f, 1.0f);
+        u16 val = static_cast<u16>(normalized * 65535.0f);
+        // PGM is big-endian
+        u8 hi = static_cast<u8>(val >> 8);
+        u8 lo = static_cast<u8>(val & 0xFF);
+        f.put(static_cast<char>(hi));
+        f.put(static_cast<char>(lo));
+    }
+
+    return f.good();
 }
 
 } // namespace carve

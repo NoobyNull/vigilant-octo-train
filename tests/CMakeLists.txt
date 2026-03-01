@@ -125,7 +125,9 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/database/gcode_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/cut_plan_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/tool_database.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/database/toolbox_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/project/project.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/project/project_directory.cpp
     ${CMAKE_SOURCE_DIR}/src/core/export/model_exporter.cpp
     ${CMAKE_SOURCE_DIR}/src/core/archive/archive.cpp
     ${CMAKE_SOURCE_DIR}/src/core/materials/material_archive.cpp

@@ -107,6 +107,19 @@ void CarveJob::cancel()
     m_cancelled.store(true, std::memory_order_release);
 }
 
+void CarveJob::setReady()
+{
+    m_state.store(CarveJobState::Ready, std::memory_order_release);
+    m_progress.store(1.0f, std::memory_order_release);
+}
+
+bool CarveJob::loadHeightmap(const std::string& path)
+{
+    if (!m_heightmap.load(path)) return false;
+    setReady();
+    return true;
+}
+
 const CurvatureResult& CarveJob::curvatureResult() const
 {
     return m_curvature;

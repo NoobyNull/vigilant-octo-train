@@ -84,6 +84,7 @@ class CncSettingsPanel : public Panel {
     bool m_collecting = false;    // True while collecting response lines
     bool m_collectingSC = false;  // True while collecting $SC response
     bool m_advancedView = false;  // Show raw firmware IDs
+    bool m_locked = true;         // Prevent accidental setting changes
 
     // Editing state
     std::map<std::string, EditBuffer> m_editBuffers;

@@ -50,6 +50,7 @@ set(DW_SOURCES
     core/database/cost_repository.cpp
     core/database/cut_plan_repository.cpp
     core/database/tool_database.cpp
+    core/database/toolbox_repository.cpp
 
     # Graph
     core/graph/graph_manager.cpp
@@ -68,6 +69,7 @@ set(DW_SOURCES
 
     # Project
     core/project/project.cpp
+    core/project/project_directory.cpp
 
     # Storage
     core/storage/storage_manager.cpp
@@ -94,6 +96,7 @@ set(DW_SOURCES
     core/gcode/machine_profile.cpp
 
     # CNC Controller (multi-firmware support)
+    core/cnc/cnc_tool.cpp
     core/cnc/serial_port.cpp
     core/cnc/tcp_socket.cpp
     core/cnc/cnc_controller.cpp

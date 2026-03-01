@@ -2,6 +2,7 @@
 
 #include "ui/widgets/tool_recommendation_widget.h"
 
+#include "core/cnc/cnc_tool.h"
 #include "ui/theme.h"
 
 #include <imgui.h>
@@ -107,13 +108,8 @@ bool ToolRecommendationWidget::renderToolCard(
         ImGui::PopStyleColor(3);
 
         ImGui::SameLine();
-        if (!tool.geometry.name_format.empty()) {
-            ImGui::TextUnformatted(tool.geometry.name_format.c_str());
-        } else {
-            ImGui::Text("%s %.1fmm",
-                        toolTypeLabel(tool.geometry.tool_type),
-                        tool.geometry.diameter);
-        }
+        std::string resolved = resolveToolNameFormat(tool.geometry);
+        ImGui::TextUnformatted(resolved.c_str());
     }
 
     // Row 2: Key specs in columns

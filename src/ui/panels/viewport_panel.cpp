@@ -483,7 +483,6 @@ void ViewportPanel::renderViewport() {
     }
 
     // Live CNC tool position and work envelope
-    // Viewport renders models in native file coordinates (Z-up, same as G-code) — no axis swap
     if (m_cncConnected) {
         auto& cfg = Config::instance();
         const Vec3& renderPos = m_machineStatus.workPos;

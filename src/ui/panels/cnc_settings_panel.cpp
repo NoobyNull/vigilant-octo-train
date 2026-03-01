@@ -82,7 +82,7 @@ void CncSettingsPanel::render() {
             renderSettingsTab();
             ImGui::EndTabItem();
         }
-        if (ImGui::BeginTabItem("Machine Tuning")) {
+        if (ImGui::BeginTabItem("Movement")) {
             m_activeTab = 1;
             renderTuningTab();
             ImGui::EndTabItem();
@@ -172,9 +172,11 @@ void CncSettingsPanel::renderUnifiedBool(const std::string& key, const char* lab
     bool bval = (val != 0.0f);
     bool origVal = bval;
 
+    if (m_locked) ImGui::BeginDisabled();
     char cbLabel[128];
     std::snprintf(cbLabel, sizeof(cbLabel), "%s##bool_%s", label, key.c_str());
     ImGui::Checkbox(cbLabel, &bval);
+    if (m_locked) ImGui::EndDisabled();
 
     ImGui::SameLine();
     if (bval) {
@@ -206,6 +208,7 @@ void CncSettingsPanel::renderUnifiedBitmask(const std::string& key, const char* 
     bool by = (mask & 2) != 0;
     bool bz = (mask & 4) != 0;
 
+    if (m_locked) ImGui::BeginDisabled();
     char tableId[64];
     std::snprintf(tableId, sizeof(tableId), "##bitmask_%s", key.c_str());
     if (ImGui::BeginTable(tableId, 2, ImGuiTableFlags_None)) {
@@ -241,6 +244,7 @@ void CncSettingsPanel::renderUnifiedBitmask(const std::string& key, const char* 
         }
         ImGui::EndTable();
     }
+    if (m_locked) ImGui::EndDisabled();
 
     mask = (bx ? 1 : 0) | (by ? 2 : 0) | (bz ? 4 : 0);
     if (mask != origMask) {
@@ -260,6 +264,7 @@ void CncSettingsPanel::renderUnifiedNumeric(const std::string& key, const char* 
         eb.active = true;
     }
 
+    if (m_locked) ImGui::BeginDisabled();
     char numTableId[64];
     std::snprintf(numTableId, sizeof(numTableId), "##numeric_%s", key.c_str());
     if (ImGui::BeginTable(numTableId, 2, ImGuiTableFlags_None)) {
@@ -296,6 +301,7 @@ void CncSettingsPanel::renderUnifiedNumeric(const std::string& key, const char* 
         }
         ImGui::EndTable();
     }
+    if (m_locked) ImGui::EndDisabled();
 }
 
 void CncSettingsPanel::renderUnifiedPerAxisGroup(const char* label, const char* units,
@@ -308,6 +314,7 @@ void CncSettingsPanel::renderUnifiedPerAxisGroup(const char* label, const char* 
     const char* axes[] = {"X", "Y", "Z"};
     const std::string* keys[] = {&keyX, &keyY, &keyZ};
 
+    if (m_locked) ImGui::BeginDisabled();
     for (int i = 0; i < 3; ++i) {
         const auto* s = m_settings.get(*keys[i]);
         if (!s || s->value.empty()) continue;
@@ -352,6 +359,7 @@ void CncSettingsPanel::renderUnifiedPerAxisGroup(const char* label, const char* 
             ImGui::EndTable();
         }
     }
+    if (m_locked) ImGui::EndDisabled();
 }
 
 // --- Toolbar ---
@@ -359,6 +367,7 @@ void CncSettingsPanel::renderUnifiedPerAxisGroup(const char* label, const char* 
 void CncSettingsPanel::renderToolbar() {
     bool canWrite =
         m_connected &&
+        !m_locked &&
         m_machineState != MachineState::Run &&
         m_machineState != MachineState::Alarm &&
         !m_writing;
@@ -433,12 +442,14 @@ void CncSettingsPanel::renderToolbar() {
     std::snprintf(nextLabel, sizeof(nextLabel), "%s Restore", Icons::Import);
     sameLineIfFits(nextLabel);
 
+    ImGui::BeginDisabled(m_locked);
     std::snprintf(btnLabel, sizeof(btnLabel), "%s Restore", Icons::Import);
     if (ImGui::Button(btnLabel)) {
         restoreFromFile();
     }
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("Import settings from JSON file");
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+        ImGui::SetTooltip(m_locked ? "Unlock to restore settings" : "Import settings from JSON file");
+    ImGui::EndDisabled();
 
     sameLineIfFits("Export Text");
 
@@ -447,6 +458,23 @@ void CncSettingsPanel::renderToolbar() {
     }
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Export settings as plain text");
+
+    // Lock toggle — prevents accidental changes
+    const char* lockIcon = m_locked ? Icons::Lock : Icons::LockOpen;
+    char lockLabel[64];
+    std::snprintf(lockLabel, sizeof(lockLabel), "%s##settingsLock", lockIcon);
+    sameLineIfFits(lockLabel);
+    ImVec4 lockColor = m_locked
+        ? ImVec4(0.6f, 0.6f, 0.6f, 1.0f)
+        : ImVec4(1.0f, 0.8f, 0.2f, 1.0f);
+    ImGui::PushStyleColor(ImGuiCol_Text, lockColor);
+    if (ImGui::Button(lockLabel)) {
+        m_locked = !m_locked;
+    }
+    ImGui::PopStyleColor();
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip(m_locked ? "Unlock to allow editing firmware settings"
+                                   : "Lock to prevent accidental changes");
 
     // Advanced toggle
     sameLineIfFits("Advanced");
@@ -598,23 +626,6 @@ void CncSettingsPanel::renderSettingsTab() {
         ImGui::Unindent();
     }
 
-    // --- Per-axis parameters ---
-    if (ImGui::CollapsingHeader("Per-Axis Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::Indent();
-
-        renderUnifiedPerAxisGroup("Steps per mm", "steps/mm",
-                                   "steps_per_mm_x", "steps_per_mm_y", "steps_per_mm_z");
-        renderUnifiedPerAxisGroup("Max Feed Rate", "mm/min",
-                                   "max_feed_x", "max_feed_y", "max_feed_z");
-        renderUnifiedPerAxisGroup("Acceleration", "mm/s\xc2\xb2",
-                                   "accel_x", "accel_y", "accel_z");
-        renderUnifiedPerAxisGroup("Max Travel", "mm",
-                                   "max_travel_x", "max_travel_y", "max_travel_z");
-
-        ImGui::Spacing();
-        ImGui::Unindent();
-    }
-
     // --- Extension settings (unknown/firmware-specific) ---
     bool hasExtension = false;
     for (const auto& [key, s] : m_settings.getAll()) {
@@ -653,7 +664,7 @@ void CncSettingsPanel::renderSettingsTab() {
     ImGui::EndChild();
 }
 
-// --- Tuning Tab ---
+// --- Movement Tab ---
 
 void CncSettingsPanel::renderTuningTab() {
     if (m_settings.empty()) {
@@ -663,7 +674,7 @@ void CncSettingsPanel::renderTuningTab() {
 
     ImGui::BeginChild("TuningScroll", ImVec2(0, 0), ImGuiChildFlags_None);
 
-    ImGui::TextDisabled("Quick access to common machine tuning parameters");
+    ImGui::TextDisabled("Per-axis motion parameters");
     ImGui::Spacing();
 
     renderUnifiedPerAxisGroup("Steps per mm", "steps/mm",
@@ -688,6 +699,7 @@ void CncSettingsPanel::renderRawTab() {
 
     bool canWrite =
         m_connected &&
+        !m_locked &&
         m_machineState != MachineState::Run &&
         m_machineState != MachineState::Alarm &&
         !m_writing;

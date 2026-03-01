@@ -11,6 +11,7 @@
 #include "core/database/connection_pool.h"
 #include "core/database/model_repository.h"
 #include "core/database/tool_database.h"
+#include "core/database/toolbox_repository.h"
 #include "core/database/cut_plan_repository.h"
 #include "core/optimizer/cut_list_file.h"
 #include "core/database/gcode_repository.h"
@@ -568,8 +569,15 @@ void Application::initWiring() {
         if (dcarvep) {
             dcarvep->setCncController(m_cncController.get());
             dcarvep->setToolDatabase(m_toolDatabase.get());
+            dcarvep->setToolboxRepository(m_toolboxRepo.get());
+            dcarvep->setMaterialManager(m_materialManager.get());
+            dcarvep->setCarveJob(m_carveJob.get());
             dcarvep->setFileDialog(m_uiManager->fileDialog());
             dcarvep->setGCodePanel(gcp);
+            dcarvep->setProjectManager(m_projectManager.get());
+            dcarvep->setOpenToolBrowserCallback([this]() {
+                m_uiManager->showToolBrowser() = true;
+            });
         }
 
         // Set CncController on new panels
@@ -738,6 +746,7 @@ void Application::initWiring() {
     }
     if (auto* tbp = m_uiManager->toolBrowserPanel()) {
         tbp->setToolDatabase(m_toolDatabase.get());
+        tbp->setToolboxRepository(m_toolboxRepo.get());
         tbp->setMaterialManager(m_materialManager.get());
         tbp->setFileDialog(m_uiManager->fileDialog());
     }
@@ -930,7 +939,7 @@ void Application::onModelSelected(int64_t modelId) {
                 }
             }
             auto mesh = loadResult.mesh;
-            m_mainThreadQueue->enqueue([this, mesh, name, gen, orientYaw, storedCamera]() {
+            m_mainThreadQueue->enqueue([this, mesh, name, filePath, gen, orientYaw, storedCamera]() {
                 if (gen != m_loadingState.generation.load()) return;
                 m_loadingState.reset();
                 m_workspace->setFocusedMesh(mesh);
@@ -940,6 +949,11 @@ void Application::onModelSelected(int64_t modelId) {
                     m_uiManager->propertiesPanel()->setMesh(mesh, name);
                 if (m_uiManager->materialsPanel())
                     m_uiManager->materialsPanel()->setModelLoaded(true);
+                if (m_uiManager->directCarvePanel() && mesh)
+                    m_uiManager->directCarvePanel()->onModelLoaded(
+                        mesh->vertices(), mesh->indices(),
+                        mesh->bounds().min, mesh->bounds().max,
+                        name, filePath);
             });
         });
 }

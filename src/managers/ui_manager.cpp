@@ -759,6 +759,18 @@ void UIManager::restoreVisibilityFromConfig() {
     m_showToolBrowser = cfg.getShowToolBrowser();
     m_showStartPage = cfg.getShowStartPage();
 
+    // CNC panels
+    m_showCncStatus = cfg.getShowCncStatus();
+    m_showCncJog = cfg.getShowCncJog();
+    m_showCncConsole = cfg.getShowCncConsole();
+    m_showCncWcs = cfg.getShowCncWcs();
+    m_showCncTool = cfg.getShowCncTool();
+    m_showCncJob = cfg.getShowCncJob();
+    m_showCncSafety = cfg.getShowCncSafety();
+    m_showCncSettings = cfg.getShowCncSettings();
+    m_showCncMacros = cfg.getShowCncMacros();
+    m_showDirectCarve = cfg.getShowDirectCarve();
+
     // Restore active layout preset index
     m_activePresetIndex = cfg.getActiveLayoutPresetIndex();
 }
@@ -775,6 +787,19 @@ void UIManager::saveVisibilityToConfig() {
     cfg.setShowCostEstimator(m_showCostEstimator);
     cfg.setShowToolBrowser(m_showToolBrowser);
     cfg.setShowStartPage(m_showStartPage);
+
+    // CNC panels
+    cfg.setShowCncStatus(m_showCncStatus);
+    cfg.setShowCncJog(m_showCncJog);
+    cfg.setShowCncConsole(m_showCncConsole);
+    cfg.setShowCncWcs(m_showCncWcs);
+    cfg.setShowCncTool(m_showCncTool);
+    cfg.setShowCncJob(m_showCncJob);
+    cfg.setShowCncSafety(m_showCncSafety);
+    cfg.setShowCncSettings(m_showCncSettings);
+    cfg.setShowCncMacros(m_showCncMacros);
+    cfg.setShowDirectCarve(m_showDirectCarve);
+
     cfg.setActiveLayoutPresetIndex(m_activePresetIndex);
 }
 
