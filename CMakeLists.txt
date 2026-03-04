@@ -19,6 +19,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Export compile_commands.json for clang tools
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Static CRT on MSVC so users don't need VC++ redistributable
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 # Options
 option(DW_BUILD_TESTS "Build test suite" ON)
 option(DW_BUILD_TOOLS "Build developer tools (matgen, etc.)" OFF)
