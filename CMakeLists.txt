@@ -66,7 +66,8 @@ if(WIN32)
     set(CPACK_WIX_UPGRADE_GUID "8F4E2A1B-3C5D-4E6F-A7B8-9C0D1E2F3A4B")
     # set(CPACK_WIX_PRODUCT_ICON "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/icon.ico")
     set(CPACK_WIX_PROGRAM_MENU_FOLDER "Digital Workshop")
-    set(CPACK_WIX_PROPERTY_ARPHELPLINK "https://github.com/NoobyNull/vigilant-octo-train")
+    set(CPACK_WIX_PATCH_FILE "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/wix_patch.xml")
+    set(CPACK_WIX_PROPERTY_ARPHELPLINK "https://github.com/NoobyNull/The-Digital-Workshop")
 
 elseif(APPLE)
     # macOS: DMG disk image

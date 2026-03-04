@@ -72,12 +72,12 @@ package.json
 *.temp
 
 # Claude/Ralph directories
-!.claude/
+.claude/
+CLAUDE.md
 !.ralph/
 
-# Planning artifacts (session state only - .planning/ is tracked)
-.planning/debug/
-.planning/codebase/
+# Planning artifacts
+.planning/
 .session-summary.md
 CHECKPOINT.md
 PHASE_01_SUMMARY.md
@@ -85,3 +85,12 @@ PHASE_01_VERIFICATION.md
 
 # Clangd index cache
 .cache/
+
+# Rulebook
+rulebook/
+
+# Documentation
+docs/
+
+# Tools
+tools/

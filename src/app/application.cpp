@@ -79,9 +79,11 @@ bool Application::init() {
     log::setLevel(static_cast<log::Level>(Config::instance().getLogLevel()));
 
     // Multi-viewport requires X11 — Wayland SDL2 backend lacks platform viewport support
+#ifdef __linux__
     if (Config::instance().getEnableFloatingWindows()) {
         SDL_SetHint(SDL_HINT_VIDEODRIVER, "x11");
     }
+#endif
 
     // Request per-monitor DPI awareness on Windows
     SDL_SetHint(SDL_HINT_WINDOWS_DPI_AWARENESS, "permonitorv2");
