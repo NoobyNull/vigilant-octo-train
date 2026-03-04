@@ -175,7 +175,8 @@ TEST(GcodeExport, FileWritable)
     EXPECT_FALSE(content.empty());
     EXPECT_NE(content.find("G90 G21"), std::string::npos);
 
-    // Cleanup
+    // Close before removing — Windows locks open files
+    file.close();
     std::filesystem::remove(tmpPath);
 }
 
