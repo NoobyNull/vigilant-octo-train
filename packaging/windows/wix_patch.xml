@@ -1,7 +1,7 @@
 <CPackWiXPatch>
 
-  <!-- Add desktop and start menu shortcuts -->
-  <CPackWiXFragment Id="CM_CP_bin.digital_workshop.exe">
+  <!-- Desktop and Start Menu shortcuts (injected into Product element) -->
+  <CPackWiXFragment Id="#PRODUCT">
     <DirectoryRef Id="TARGETDIR">
       <Directory Id="DesktopFolder" Name="Desktop">
         <Component Id="DesktopShortcut" Guid="A1B2C3D4-E5F6-4789-ABCD-EF0123456789">
@@ -43,6 +43,12 @@
         </Directory>
       </Directory>
     </DirectoryRef>
+  </CPackWiXFragment>
+
+  <!-- Include shortcut components in the main feature -->
+  <CPackWiXFragment Id="#PRODUCTFEATURE">
+    <ComponentRef Id="DesktopShortcut" />
+    <ComponentRef Id="StartMenuShortcut" />
   </CPackWiXFragment>
 
 </CPackWiXPatch>
