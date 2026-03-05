@@ -5,36 +5,6 @@
 using namespace dw;
 using namespace dw::optimizer;
 
-namespace {
-
-// Helper: create a CutPlan with a single placement on one sheet
-CutPlan makeSinglePartPlan(f32 partW, f32 partH, f32 sheetW, f32 sheetH) {
-    Part p(partW, partH, 1);
-
-    SheetResult sr;
-    sr.sheetIndex = 0;
-    Placement pl;
-    pl.part = &p; // Will be fixed below
-    pl.partIndex = 0;
-    pl.instanceIndex = 0;
-    pl.x = 0.0f;
-    pl.y = 0.0f;
-    pl.rotated = false;
-    sr.placements.push_back(pl);
-    sr.usedArea = partW * partH;
-    sr.wasteArea = (sheetW * sheetH) - (partW * partH);
-
-    CutPlan plan;
-    plan.sheets.push_back(sr);
-    plan.totalUsedArea = sr.usedArea;
-    plan.totalWasteArea = sr.wasteArea;
-    plan.sheetsUsed = 1;
-    plan.totalCost = 0.0f;
-    return plan;
-}
-
-} // anonymous namespace
-
 TEST(WasteBreakdown, SinglePartOnSheet) {
     // Use the real optimizer to get a valid CutPlan with correct part pointers
     auto opt = CutOptimizer::create(Algorithm::Guillotine);
