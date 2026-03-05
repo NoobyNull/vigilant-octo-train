@@ -21,10 +21,17 @@ inline void fillBuffer(char (&buf)[N], const std::string& value) {
 }
 
 /// Fill a fixed-size char buffer using printf-style formatting, clearing first.
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#endif
 template <size_t N, typename... Args>
 inline void formatBuffer(char (&buf)[N], const char* fmt, Args... args) {
     std::memset(buf, 0, N);
     std::snprintf(buf, N, fmt, args...);
 }
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 } // namespace dw
