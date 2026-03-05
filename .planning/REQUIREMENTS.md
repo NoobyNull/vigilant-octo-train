@@ -21,7 +21,7 @@ Requirements for Shared Materials & Project Costing milestone. Each maps to road
 - [x] **CLO-02**: User sees itemized waste breakdown: usable scrap pieces, kerf loss (blade width * cut length), and unusable waste
 - [x] **CLO-03**: User can optimize parts across multiple stock sizes in the same run
 - [x] **CLO-04**: User can track usable scrap pieces and flag them for reuse in future optimizations
-- [ ] **CLO-05**: CLO results automatically push material costs, waste, and sheet count into project costing
+- [x] **CLO-05**: CLO results automatically push material costs, waste, and sheet count into project costing
 
 ### Project Costing (COST)
 
@@ -33,7 +33,7 @@ Requirements for Shared Materials & Project Costing milestone. Each maps to road
 - [x] **COST-06**: Overhead entries (user-defined line items)
 - [x] **COST-07**: Each cost line shows estimated and actual columns; actual is manual entry
 - [ ] **COST-08**: User can set a sale price; margin (sale price minus total cost) is calculated and displayed
-- [ ] **COST-09**: Project panel shows total estimated cost, total actual cost, and margin aggregated from all entries
+- [x] **COST-09**: Project panel shows total estimated cost, total actual cost, and margin aggregated from all entries
 - [x] **COST-10**: Cost categories: Material, Tooling, Consumable, Labor, Overhead
 - [ ] **COST-11**: User can toggle between Estimate view (working/editable) and Order view (finalized receipt)
 - [ ] **COST-12**: User can print the estimate or order as a formatted document
@@ -111,7 +111,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLO-02 | Phase 23 | Complete |
 | CLO-03 | Phase 23 | Complete |
 | CLO-04 | Phase 23 | Complete |
-| CLO-05 | Phase 25 | Pending |
+| CLO-05 | Phase 25 | Complete |
 | COST-01 | Phase 20 | Pending |
 | COST-02 | Phase 24 | Complete |
 | COST-03 | Phase 22 | Complete |
@@ -120,7 +120,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | COST-06 | Phase 24 | Complete |
 | COST-07 | Phase 24 | Complete |
 | COST-08 | Phase 26 | Pending |
-| COST-09 | Phase 25 | Pending |
+| COST-09 | Phase 25 | Complete |
 | COST-10 | Phase 24 | Complete |
 | COST-11 | Phase 26 | Pending |
 | COST-12 | Phase 26 | Pending |
