@@ -11,10 +11,12 @@ namespace dw {
 static const char* kCategoryNames[] = {"Material", "Labor", "Tool", "Other"};
 static constexpr int kCategoryCount = 4;
 
-CostingPanel::CostingPanel(CostRepository* repo) : Panel("Project Costing"), m_repo(repo) {
+CostingPanel::CostingPanel(CostRepository* repo, RateCategoryRepository* rateCatRepo)
+    : Panel("Project Costing"), m_repo(repo), m_rateCatRepo(rateCatRepo) {
     if (m_repo) {
         m_records = m_repo->findAll();
     }
+    refreshRateCategories();
 }
 
 void CostingPanel::render() {
@@ -66,6 +68,7 @@ void CostingPanel::renderToolbar() {
         m_editDiscountRate = 0.0f;
         m_isNewRecord = true;
         m_selectedIndex = -1; // Will be set after insert
+        refreshRateCategories();
     }
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("New Record");
@@ -84,6 +87,7 @@ void CostingPanel::renderToolbar() {
                 m_records = m_repo->findAll();
                 m_selectedIndex = -1;
                 m_isNewRecord = false;
+                refreshRateCategories();
             } else {
                 ToastManager::instance().show(ToastType::Error, "Delete Failed");
             }
@@ -101,6 +105,7 @@ void CostingPanel::renderToolbar() {
             m_records = m_repo->findAll();
             m_selectedIndex = -1;
             m_isNewRecord = false;
+            refreshRateCategories();
         }
     }
     if (ImGui::IsItemHovered()) {
@@ -125,6 +130,7 @@ void CostingPanel::renderRecordList() {
             std::snprintf(m_editNotes, sizeof(m_editNotes), "%s", rec.notes.c_str());
             m_editTaxRate = static_cast<float>(rec.taxRate);
             m_editDiscountRate = static_cast<float>(rec.discountRate);
+            refreshRateCategories();
         }
     }
 
@@ -292,6 +298,215 @@ void CostingPanel::renderRecordEditor() {
             ToastManager::instance().show(ToastType::Error, "Save Failed");
         }
     }
+
+    // Rate categories section (after record editor)
+    ImGui::Spacing();
+    ImGui::Separator();
+    renderRateCategories();
+}
+
+void CostingPanel::renderRateCategories() {
+    if (!m_rateCatRepo) {
+        return;
+    }
+
+    if (!ImGui::CollapsingHeader("Rate Categories", m_showRateCategories ? ImGuiTreeNodeFlags_DefaultOpen : 0)) {
+        return;
+    }
+
+    // Determine project context
+    i64 activeProjectId = 0;
+    if (m_selectedIndex >= 0 && m_selectedIndex < static_cast<int>(m_records.size())) {
+        activeProjectId = m_editBuffer.projectId;
+    }
+
+    // Project volume input
+    ImGui::Text("Project Volume (cubic units):");
+    ImGui::SameLine();
+    float volWidth = ImGui::CalcTextSize("00000000.00").x + ImGui::GetStyle().FramePadding.x * 2;
+    ImGui::SetNextItemWidth(volWidth);
+    double volInput = m_projectVolumeCuUnits;
+    if (ImGui::InputDouble("##ProjVol", &volInput, 0, 0, "%.2f")) {
+        m_projectVolumeCuUnits = volInput;
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Bounding volume of the project in cubic units.\nRate x Volume = Computed Cost");
+    }
+
+    ImGui::Spacing();
+
+    // Rate categories table
+    if (ImGui::BeginTable("RateCats",
+                          5,
+                          ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
+                              ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp)) {
+        ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Rate/cu unit", ImGuiTableColumnFlags_WidthFixed,
+                                ImGui::CalcTextSize("$00000.00__").x);
+        ImGui::TableSetupColumn("Computed Cost", ImGuiTableColumnFlags_WidthFixed,
+                                ImGui::CalcTextSize("$00000.00__").x);
+        ImGui::TableSetupColumn("Source", ImGuiTableColumnFlags_WidthFixed,
+                                ImGui::CalcTextSize("Override__").x);
+        ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed,
+                                ImGui::CalcTextSize("Edit Delete__").x);
+        ImGui::TableHeadersRow();
+
+        f64 rateCategoryTotal = 0.0;
+        int deleteRateIdx = -1;
+
+        for (int i = 0; i < static_cast<int>(m_effectiveRates.size()); ++i) {
+            auto& rate = m_effectiveRates[static_cast<size_t>(i)];
+            f64 computedCost = rate.computeCost(m_projectVolumeCuUnits);
+            rateCategoryTotal += computedCost;
+
+            ImGui::PushID(1000 + i); // Offset to avoid ID collision with line items
+            ImGui::TableNextRow();
+
+            if (m_editingRateIndex == i) {
+                // Inline edit mode
+                ImGui::TableNextColumn();
+                ImGui::SetNextItemWidth(-1);
+                ImGui::InputText("##EditRName", m_editRateName, sizeof(m_editRateName));
+
+                ImGui::TableNextColumn();
+                ImGui::SetNextItemWidth(-1);
+                ImGui::InputFloat("##EditRRate", &m_editRatePerCuUnit, 0, 0, "%.2f");
+
+                ImGui::TableNextColumn();
+                ImGui::Text("$%.2f", static_cast<double>(m_editRatePerCuUnit) * m_projectVolumeCuUnits);
+
+                ImGui::TableNextColumn();
+                ImGui::TextDisabled("--");
+
+                ImGui::TableNextColumn();
+                if (ImGui::SmallButton("OK")) {
+                    rate.name = m_editRateName;
+                    rate.ratePerCuUnit = static_cast<f64>(m_editRatePerCuUnit);
+                    rate.notes = m_editRateNotes;
+                    m_rateCatRepo->update(rate);
+                    m_editingRateIndex = -1;
+                    refreshRateCategories();
+                }
+                ImGui::SameLine();
+                if (ImGui::SmallButton("Cancel")) {
+                    m_editingRateIndex = -1;
+                }
+            } else {
+                // Display mode
+                ImGui::TableNextColumn();
+                ImGui::Text("%s", rate.name.c_str());
+
+                ImGui::TableNextColumn();
+                ImGui::Text("$%.2f", rate.ratePerCuUnit);
+
+                ImGui::TableNextColumn();
+                ImGui::Text("$%.2f", computedCost);
+
+                ImGui::TableNextColumn();
+                bool isProjectOverride = (rate.projectId > 0);
+                if (isProjectOverride) {
+                    ImGui::TextColored(ImVec4(0.4f, 0.7f, 1.0f, 1.0f), "Override");
+                } else {
+                    ImGui::TextDisabled("Global");
+                }
+
+                ImGui::TableNextColumn();
+                if (ImGui::SmallButton("Edit")) {
+                    m_editingRateIndex = i;
+                    std::memset(m_editRateName, 0, sizeof(m_editRateName));
+                    std::snprintf(m_editRateName, sizeof(m_editRateName), "%s", rate.name.c_str());
+                    m_editRatePerCuUnit = static_cast<float>(rate.ratePerCuUnit);
+                    std::memset(m_editRateNotes, 0, sizeof(m_editRateNotes));
+                    std::snprintf(m_editRateNotes, sizeof(m_editRateNotes), "%s", rate.notes.c_str());
+                }
+                ImGui::SameLine();
+                if (ImGui::SmallButton("Del")) {
+                    deleteRateIdx = i;
+                }
+            }
+
+            ImGui::PopID();
+        }
+
+        // Delete rate if requested
+        if (deleteRateIdx >= 0 && deleteRateIdx < static_cast<int>(m_effectiveRates.size())) {
+            m_rateCatRepo->remove(m_effectiveRates[static_cast<size_t>(deleteRateIdx)].id);
+            m_editingRateIndex = -1;
+            refreshRateCategories();
+        }
+
+        // Add new rate row
+        ImGui::PushID(2000);
+        ImGui::TableNextRow();
+
+        ImGui::TableNextColumn();
+        ImGui::SetNextItemWidth(-1);
+        ImGui::InputText("##NewRName", m_newRateName, sizeof(m_newRateName));
+
+        ImGui::TableNextColumn();
+        ImGui::SetNextItemWidth(-1);
+        ImGui::InputFloat("##NewRRate", &m_newRatePerCuUnit, 0, 0, "%.2f");
+
+        ImGui::TableNextColumn();
+        ImGui::Text("$%.2f", static_cast<double>(m_newRatePerCuUnit) * m_projectVolumeCuUnits);
+
+        ImGui::TableNextColumn();
+        // Override checkbox for project context
+        if (activeProjectId > 0) {
+            ImGui::Checkbox("##Override", &m_newRateIsOverride);
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Insert as project-specific override");
+            }
+        } else {
+            ImGui::TextDisabled("Global");
+        }
+
+        ImGui::TableNextColumn();
+        if (ImGui::SmallButton("Add")) {
+            if (m_newRateName[0] != '\0') {
+                RateCategory newCat;
+                newCat.name = m_newRateName;
+                newCat.ratePerCuUnit = static_cast<f64>(m_newRatePerCuUnit);
+                newCat.notes = m_newRateNotes;
+                newCat.projectId = (activeProjectId > 0 && m_newRateIsOverride) ? activeProjectId : 0;
+
+                m_rateCatRepo->insert(newCat);
+
+                // Reset input fields
+                std::memset(m_newRateName, 0, sizeof(m_newRateName));
+                m_newRatePerCuUnit = 0.0f;
+                std::memset(m_newRateNotes, 0, sizeof(m_newRateNotes));
+                m_newRateIsOverride = false;
+
+                refreshRateCategories();
+            }
+        }
+
+        ImGui::PopID();
+
+        ImGui::EndTable();
+
+        // Total from rate categories
+        ImGui::Spacing();
+        ImGui::Text("Rate Category Total: $%.2f", rateCategoryTotal);
+    }
+}
+
+void CostingPanel::refreshRateCategories() {
+    if (!m_rateCatRepo) {
+        return;
+    }
+
+    i64 activeProjectId = 0;
+    if (m_selectedIndex >= 0 && m_selectedIndex < static_cast<int>(m_records.size())) {
+        activeProjectId = m_editBuffer.projectId;
+    }
+
+    if (activeProjectId > 0) {
+        m_effectiveRates = m_rateCatRepo->getEffectiveRates(activeProjectId);
+    } else {
+        m_effectiveRates = m_rateCatRepo->findGlobal();
+    }
 }
 
 void CostingPanel::renderNewItemRow() {
@@ -362,6 +577,7 @@ void CostingPanel::selectRecord(i64 recordId) {
                 m_editNotes, sizeof(m_editNotes), "%s", m_editBuffer.notes.c_str());
             m_editTaxRate = static_cast<float>(m_editBuffer.taxRate);
             m_editDiscountRate = static_cast<float>(m_editBuffer.discountRate);
+            refreshRateCategories();
             return;
         }
     }

@@ -21,6 +21,7 @@
 #include "core/config/config.h"
 #include "core/database/connection_pool.h"
 #include "core/database/cost_repository.h"
+#include "core/database/rate_category_repository.h"
 #include "core/database/cut_plan_repository.h"
 #include "core/optimizer/cut_list_file.h"
 #include "core/database/database.h"
@@ -242,6 +243,7 @@ bool Application::init() {
     m_cutListFile = std::make_unique<CutListFile>();
     m_cutListFile->setDirectory(paths::getDataDir() / "cutlists");
     m_costRepo = std::make_unique<CostRepository>(*m_database);
+    m_rateCatRepo = std::make_unique<RateCategoryRepository>(*m_database);
     m_geminiService = std::make_unique<GeminiMaterialService>();
     m_descriptorService = std::make_unique<GeminiDescriptorService>();
     m_workspace = std::make_unique<Workspace>();
@@ -302,7 +304,8 @@ bool Application::init() {
     m_uiManager = std::make_unique<UIManager>();
     m_uiManager->init(
         m_libraryManager.get(), m_projectManager.get(), m_materialManager.get(),
-        m_costRepo.get(), m_modelRepo.get(), m_gcodeRepo.get(), m_cutPlanRepo.get());
+        m_costRepo.get(), m_rateCatRepo.get(), m_modelRepo.get(), m_gcodeRepo.get(),
+        m_cutPlanRepo.get());
 
     m_fileIOManager = std::make_unique<FileIOManager>(m_database.get(),
                                                       m_libraryManager.get(),
@@ -546,6 +549,7 @@ void Application::shutdown() {
     m_descriptorService.reset();
     m_geminiService.reset();
     m_costRepo.reset();
+    m_rateCatRepo.reset();
     m_cutPlanRepo.reset();
     m_cutListFile.reset();
     m_jobRepo.reset();

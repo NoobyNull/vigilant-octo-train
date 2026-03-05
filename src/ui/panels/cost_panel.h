@@ -6,6 +6,7 @@
 #include <imgui.h>
 
 #include "../../core/database/cost_repository.h"
+#include "../../core/database/rate_category_repository.h"
 #include "panel.h"
 
 namespace dw {
@@ -13,7 +14,7 @@ namespace dw {
 // Project costing panel for creating and managing cost records
 class CostingPanel : public Panel {
   public:
-    explicit CostingPanel(CostRepository* repo);
+    explicit CostingPanel(CostRepository* repo, RateCategoryRepository* rateCatRepo = nullptr);
     ~CostingPanel() override = default;
 
     void render() override;
@@ -26,11 +27,16 @@ class CostingPanel : public Panel {
     void renderRecordList();
     void renderRecordEditor();
     void renderNewItemRow();
+    void renderRateCategories();
 
     // Recalculate edit buffer totals from items
     void recalculateEditBuffer();
 
+    // Reload effective rates from DB based on current context
+    void refreshRateCategories();
+
     CostRepository* m_repo;
+    RateCategoryRepository* m_rateCatRepo;
     std::vector<CostingRecord> m_records;
     int m_selectedIndex = -1;
 
@@ -51,6 +57,19 @@ class CostingPanel : public Panel {
     float m_editDiscountRate = 0.0f;
 
     bool m_isNewRecord = false;
+
+    // Rate category state
+    std::vector<RateCategory> m_effectiveRates;
+    f64 m_projectVolumeCuUnits = 0.0;
+    char m_newRateName[256]{};
+    float m_newRatePerCuUnit = 0.0f;
+    char m_newRateNotes[256]{};
+    bool m_showRateCategories = true;
+    int m_editingRateIndex = -1;      // Which rate row is being edited (-1 = none)
+    char m_editRateName[256]{};
+    float m_editRatePerCuUnit = 0.0f;
+    char m_editRateNotes[256]{};
+    bool m_newRateIsOverride = false;  // For project context: insert as project override?
 };
 
 } // namespace dw

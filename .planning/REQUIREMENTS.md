@@ -12,7 +12,7 @@ Requirements for Shared Materials & Project Costing milestone. Each maps to road
 - [ ] **MATL-01**: User can add stock size entries to any material with dimensions (WxH*thickness) and per-unit price
 - [ ] **MATL-02**: User can add, edit, and delete stock sizes from the Materials panel
 - [ ] **MATL-03**: User sees auto-suggested common sizes when adding stock (4x8, 5x5 for sheets; 2x4, 1x6 for lumber)
-- [ ] **MATL-04**: User can view board foot calculation and cost-per-board-foot derived from stock dimensions and price
+- [x] **MATL-04**: User can view board foot calculation and cost-per-board-foot derived from stock dimensions and price
 - [x] **MATL-05**: User can create consumable items (sandpaper, finish, glue) with per-unit pricing and unit-of-measure
 
 ### Cut List Optimizer (CLO)
@@ -105,7 +105,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MATL-01 | Phase 21 | Pending |
 | MATL-02 | Phase 21 | Pending |
 | MATL-03 | Phase 21 | Pending |
-| MATL-04 | Phase 21 | Pending |
+| MATL-04 | Phase 21 | Complete |
 | MATL-05 | Phase 22 | Complete |
 | CLO-01 | Phase 23 | Pending |
 | CLO-02 | Phase 23 | Pending |

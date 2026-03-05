@@ -30,6 +30,7 @@ class MainThreadQueue;
 class StorageManager;
 class MaterialManager;
 class CostRepository;
+class RateCategoryRepository;
 class GraphManager;
 class ModelRepository;
 class GCodeRepository;
@@ -140,6 +141,9 @@ class Application {
 
     // Cost estimation repository
     std::unique_ptr<CostRepository> m_costRepo;
+
+    // Rate category repository (consumable/tool cost rates)
+    std::unique_ptr<RateCategoryRepository> m_rateCatRepo;
 
     // Graph query engine (Cypher via GraphQLite extension)
     std::unique_ptr<GraphManager> m_graphManager;

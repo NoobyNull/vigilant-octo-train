@@ -61,6 +61,7 @@ class ModelRepository;
 class GCodeRepository;
 class CutPlanRepository;
 class CostRepository;
+class RateCategoryRepository;
 class ImportQueue;
 class Workspace;
 
@@ -95,6 +96,7 @@ class UIManager {
               ProjectManager* projectManager,
               MaterialManager* materialManager,
               CostRepository* costRepo = nullptr,
+              RateCategoryRepository* rateCatRepo = nullptr,
               ModelRepository* modelRepo = nullptr,
               GCodeRepository* gcodeRepo = nullptr,
               CutPlanRepository* cutPlanRepo = nullptr);

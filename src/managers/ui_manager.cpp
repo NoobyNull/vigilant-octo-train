@@ -63,6 +63,7 @@ void UIManager::init(LibraryManager* libraryManager,
                      ProjectManager* projectManager,
                      MaterialManager* materialManager,
                      CostRepository* costRepo,
+                     RateCategoryRepository* rateCatRepo,
                      ModelRepository* modelRepo,
                      GCodeRepository* gcodeRepo,
                      CutPlanRepository* cutPlanRepo) {
@@ -76,7 +77,7 @@ void UIManager::init(LibraryManager* libraryManager,
     m_cutOptimizerPanel = std::make_unique<CutOptimizerPanel>();
     m_materialsPanel = std::make_unique<MaterialsPanel>(materialManager);
     if (costRepo) {
-        m_costPanel = std::make_unique<CostingPanel>(costRepo);
+        m_costPanel = std::make_unique<CostingPanel>(costRepo, rateCatRepo);
     }
     m_startPage = std::make_unique<StartPage>();
     m_toolBrowserPanel = std::make_unique<ToolBrowserPanel>();
