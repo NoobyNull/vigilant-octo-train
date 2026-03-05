@@ -22,6 +22,7 @@ set(DW_SOURCES
     core/utils/file_utils.cpp
     core/utils/string_utils.cpp
     core/utils/gemini_http.cpp
+    core/utils/unit_conversion.cpp
 
     # Threading
     core/threading/main_thread_queue.cpp

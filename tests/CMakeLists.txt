@@ -77,6 +77,7 @@ set(DW_TEST_SOURCES
     test_gcode_export.cpp
     test_carve_streamer.cpp
     test_carve_integration.cpp
+    test_unit_conversion.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
     # Tier 3 — workspace tests (no GL/SDL required)
@@ -95,6 +96,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/utils/log.cpp
     ${CMAKE_SOURCE_DIR}/src/core/utils/string_utils.cpp
     ${CMAKE_SOURCE_DIR}/src/core/utils/file_utils.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/utils/unit_conversion.cpp
     ${CMAKE_SOURCE_DIR}/src/core/mesh/mesh.cpp
     ${CMAKE_SOURCE_DIR}/src/core/mesh/hash.cpp
     ${CMAKE_SOURCE_DIR}/src/core/loaders/stl_loader.cpp
