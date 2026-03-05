@@ -9,18 +9,18 @@ Requirements for Shared Materials & Project Costing milestone. Each maps to road
 
 ### Materials & Stock (MATL)
 
-- [ ] **MATL-01**: User can add stock size entries to any material with dimensions (WxH*thickness) and per-unit price
-- [ ] **MATL-02**: User can add, edit, and delete stock sizes from the Materials panel
-- [ ] **MATL-03**: User sees auto-suggested common sizes when adding stock (4x8, 5x5 for sheets; 2x4, 1x6 for lumber)
+- [x] **MATL-01**: User can add stock size entries to any material with dimensions (WxH*thickness) and per-unit price
+- [x] **MATL-02**: User can add, edit, and delete stock sizes from the Materials panel
+- [x] **MATL-03**: User sees auto-suggested common sizes when adding stock (4x8, 5x5 for sheets; 2x4, 1x6 for lumber)
 - [x] **MATL-04**: User can view board foot calculation and cost-per-board-foot derived from stock dimensions and price
 - [x] **MATL-05**: User can create consumable items (sandpaper, finish, glue) with per-unit pricing and unit-of-measure
 
 ### Cut List Optimizer (CLO)
 
-- [ ] **CLO-01**: User selects material and stock size from the shared material system instead of hardcoded presets
-- [ ] **CLO-02**: User sees itemized waste breakdown: usable scrap pieces, kerf loss (blade width * cut length), and unusable waste
-- [ ] **CLO-03**: User can optimize parts across multiple stock sizes in the same run
-- [ ] **CLO-04**: User can track usable scrap pieces and flag them for reuse in future optimizations
+- [x] **CLO-01**: User selects material and stock size from the shared material system instead of hardcoded presets
+- [x] **CLO-02**: User sees itemized waste breakdown: usable scrap pieces, kerf loss (blade width * cut length), and unusable waste
+- [x] **CLO-03**: User can optimize parts across multiple stock sizes in the same run
+- [x] **CLO-04**: User can track usable scrap pieces and flag them for reuse in future optimizations
 - [ ] **CLO-05**: CLO results automatically push material costs, waste, and sheet count into project costing
 
 ### Project Costing (COST)
@@ -44,7 +44,7 @@ Requirements for Shared Materials & Project Costing milestone. Each maps to road
 - [ ] **DATA-01**: Stock sizes stored in DB table with FK to materials (single source of truth for current prices)
 - [ ] **DATA-02**: Project-specific costs (captured material prices, actuals, sale price) stored in project folder as JSON
 - [x] **DATA-03**: Live pricing (tools, consumables) reads directly from DB -- changes propagate automatically
-- [ ] **DATA-04**: CLO results stored in project folder with references to stock_size IDs
+- [x] **DATA-04**: CLO results stored in project folder with references to stock_size IDs
 
 ## Design Decisions
 
@@ -102,15 +102,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MATL-01 | Phase 21 | Pending |
-| MATL-02 | Phase 21 | Pending |
-| MATL-03 | Phase 21 | Pending |
+| MATL-01 | Phase 21 | Complete |
+| MATL-02 | Phase 21 | Complete |
+| MATL-03 | Phase 21 | Complete |
 | MATL-04 | Phase 21 | Complete |
 | MATL-05 | Phase 22 | Complete |
-| CLO-01 | Phase 23 | Pending |
-| CLO-02 | Phase 23 | Pending |
-| CLO-03 | Phase 23 | Pending |
-| CLO-04 | Phase 23 | Pending |
+| CLO-01 | Phase 23 | Complete |
+| CLO-02 | Phase 23 | Complete |
+| CLO-03 | Phase 23 | Complete |
+| CLO-04 | Phase 23 | Complete |
 | CLO-05 | Phase 25 | Pending |
 | COST-01 | Phase 20 | Pending |
 | COST-02 | Phase 24 | Pending |
@@ -128,7 +128,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-01 | Phase 20 | Pending |
 | DATA-02 | Phase 20 | Pending |
 | DATA-03 | Phase 22 | Complete |
-| DATA-04 | Phase 23 | Pending |
+| DATA-04 | Phase 23 | Complete |
 
 **Coverage:**
 - v0.4.0 requirements: 27 total
