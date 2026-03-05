@@ -158,6 +158,17 @@ void CostingPanel::renderRecordList() {
 }
 
 void CostingPanel::renderRecordEditor() {
+    // View mode toggle
+    renderViewModeToggle();
+
+    ImGui::Spacing();
+
+    // Order view: read-only display of selected order
+    if (m_viewMode == CostViewMode::Order) {
+        renderOrderView();
+        return;
+    }
+
     // Name input
     ImGui::Text("Name:");
     ImGui::SameLine();
@@ -182,6 +193,9 @@ void CostingPanel::renderRecordEditor() {
 
     // Summary totals
     renderCostingSummary();
+
+    // Sale price and margin display
+    renderSalePriceAndMargin();
 
     ImGui::Spacing();
 
@@ -214,6 +228,13 @@ void CostingPanel::renderRecordEditor() {
     if (ImGui::Button(saveLabel.c_str(), ImVec2(saveBtnW, 0))) {
         m_editBuffer.name = m_editName;
         m_editBuffer.notes = m_editNotes;
+
+        // Sync sale price to active estimate
+        if (m_activeEstimateIndex >= 0 &&
+            m_activeEstimateIndex < static_cast<int>(m_estimates.size())) {
+            m_estimates[static_cast<size_t>(m_activeEstimateIndex)].salePrice =
+                static_cast<f64>(m_salePrice);
+        }
 
         bool ok = false;
         if (m_isNewRecord) {
@@ -891,7 +912,9 @@ void CostingPanel::setCostingDir(const Path& dir) {
     if (!m_estimates.empty()) {
         m_activeEstimateIndex = 0;
         m_engine.setEntries(m_estimates[0].entries);
+        m_salePrice = static_cast<float>(m_estimates[0].salePrice);
     }
+    loadOrdersFromDisk();
 }
 
 void CostingPanel::loadFromDisk() {
@@ -949,6 +972,269 @@ void CostingPanel::syncEstimateFromEngine() {
     char buf[32];
     std::strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S", std::localtime(&time));
     est.modifiedAt = buf;
+}
+
+// --- View Mode & Order Support ---
+
+void CostingPanel::renderViewModeToggle() {
+    const auto& style = ImGui::GetStyle();
+    ImVec2 estSize = ImGui::CalcTextSize("Estimate");
+    ImVec2 ordSize = ImGui::CalcTextSize("Order");
+    float btnW = (estSize.x > ordSize.x ? estSize.x : ordSize.x) + style.FramePadding.x * 4;
+
+    // Estimate button
+    if (m_viewMode == CostViewMode::Estimate) {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+    }
+    if (ImGui::Button("Estimate", ImVec2(btnW, 0))) {
+        m_viewMode = CostViewMode::Estimate;
+    }
+    if (m_viewMode == CostViewMode::Estimate) {
+        ImGui::PopStyleColor();
+    }
+
+    ImGui::SameLine();
+
+    // Order button
+    if (m_viewMode == CostViewMode::Order) {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+    }
+    if (ImGui::Button("Order", ImVec2(btnW, 0))) {
+        m_viewMode = CostViewMode::Order;
+    }
+    if (m_viewMode == CostViewMode::Order) {
+        ImGui::PopStyleColor();
+    }
+
+    // Show indicator when viewing a specific order
+    if (m_viewMode == CostViewMode::Order && m_selectedOrderIndex >= 0) {
+        ImGui::SameLine();
+        ImGui::TextDisabled("(viewing order)");
+    }
+}
+
+void CostingPanel::renderSalePriceAndMargin() {
+    const auto& style = ImGui::GetStyle();
+
+    ImGui::Spacing();
+
+    // Sale price input
+    float priceFieldW = ImGui::CalcTextSize("$000000.00").x + style.FramePadding.x * 2;
+    ImGui::BeginDisabled(m_viewMode == CostViewMode::Order);
+    ImGui::SetNextItemWidth(priceFieldW);
+    if (ImGui::InputFloat("Sale Price", &m_salePrice, 0, 0, "$%.2f")) {
+        // Sync to active estimate
+        if (m_activeEstimateIndex >= 0 &&
+            m_activeEstimateIndex < static_cast<int>(m_estimates.size())) {
+            m_estimates[static_cast<size_t>(m_activeEstimateIndex)].salePrice =
+                static_cast<f64>(m_salePrice);
+        }
+    }
+    ImGui::EndDisabled();
+
+    // Margin calculation and display
+    f64 totalEst = m_engine.totalEstimated();
+    f64 margin = static_cast<f64>(m_salePrice) - totalEst;
+    f64 marginPct = (m_salePrice > 0.0f)
+                        ? (margin / static_cast<f64>(m_salePrice)) * 100.0
+                        : 0.0;
+
+    // Color coding: derive from theme style like the variance display
+    if (margin >= 0.0) {
+        ImVec4 greenColor = ImGui::GetStyleColorVec4(ImGuiCol_PlotHistogram);
+        greenColor.x = 0.3f; greenColor.y = 0.85f; greenColor.z = 0.3f;
+        ImGui::TextColored(greenColor, "Margin: $%.2f (%.1f%%)", margin, marginPct);
+    } else {
+        ImVec4 redColor = ImGui::GetStyleColorVec4(ImGuiCol_PlotHistogram);
+        redColor.x = 0.95f; redColor.y = 0.3f; redColor.z = 0.3f;
+        ImGui::TextColored(redColor, "Margin: -$%.2f (%.1f%%)", -margin, marginPct);
+    }
+}
+
+void CostingPanel::renderOrderView() {
+    if (m_orders.empty()) {
+        ImGui::TextDisabled("No orders yet. Convert an estimate to create one.");
+        ImGui::Spacing();
+        ImGui::BeginDisabled(m_activeEstimateIndex < 0);
+        if (ImGui::Button("Convert Current Estimate to Order")) {
+            convertEstimateToOrder();
+        }
+        ImGui::EndDisabled();
+        return;
+    }
+
+    const auto& style = ImGui::GetStyle();
+
+    // Order selector combo
+    {
+        std::string previewLabel = (m_selectedOrderIndex >= 0 &&
+                                    m_selectedOrderIndex < static_cast<int>(m_orders.size()))
+                                       ? m_orders[static_cast<size_t>(m_selectedOrderIndex)].name
+                                       : "Select an order...";
+        ImGui::SetNextItemWidth(ImGui::CalcTextSize("MMMMMMMMMMMMMMMMMMMMMMMMM").x +
+                                style.FramePadding.x * 2);
+        if (ImGui::BeginCombo("##OrderSelect", previewLabel.c_str())) {
+            for (int i = 0; i < static_cast<int>(m_orders.size()); ++i) {
+                const auto& ord = m_orders[static_cast<size_t>(i)];
+                std::string label = ord.name + " (" + ord.finalizedAt + ")";
+                bool selected = (i == m_selectedOrderIndex);
+                if (ImGui::Selectable(label.c_str(), selected)) {
+                    m_selectedOrderIndex = i;
+                }
+            }
+            ImGui::EndCombo();
+        }
+    }
+
+    ImGui::SameLine();
+    ImGui::BeginDisabled(m_activeEstimateIndex < 0);
+    if (ImGui::Button("Convert Current Estimate to Order")) {
+        convertEstimateToOrder();
+    }
+    ImGui::EndDisabled();
+
+    if (m_selectedOrderIndex < 0 ||
+        m_selectedOrderIndex >= static_cast<int>(m_orders.size())) {
+        return;
+    }
+
+    const auto& order = m_orders[static_cast<size_t>(m_selectedOrderIndex)];
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // Order header info (read-only)
+    ImGui::Text("Order: %s", order.name.c_str());
+    ImGui::TextDisabled("Finalized: %s", order.finalizedAt.c_str());
+    ImGui::TextDisabled("Source estimate: %s", order.sourceEstimateName.c_str());
+
+    ImGui::Spacing();
+
+    // Group entries by category and display read-only
+    static const char* catOrder[] = {CostCat::Material, CostCat::Tooling,
+                                      CostCat::Consumable, CostCat::Labor, CostCat::Overhead};
+
+    f64 grandTotal = 0.0;
+
+    for (const char* cat : catOrder) {
+        std::vector<const CostingEntry*> catEntries;
+        for (const auto& e : order.entries) {
+            if (e.category == cat) {
+                catEntries.push_back(&e);
+            }
+        }
+        if (catEntries.empty()) continue;
+
+        const char* displayName = categoryDisplayName(cat);
+        if (!ImGui::CollapsingHeader(displayName, ImGuiTreeNodeFlags_DefaultOpen)) {
+            // Still accumulate totals even when collapsed
+            for (const auto* e : catEntries) {
+                grandTotal += e->estimatedTotal;
+            }
+            continue;
+        }
+
+        float nameColW = ImGui::CalcTextSize("MMMMMMMMMMMMMMMMMMMM").x;
+        float numColW = ImGui::CalcTextSize("00000.00").x + style.FramePadding.x * 2;
+        float moneyColW = ImGui::CalcTextSize("$000000.00").x + style.FramePadding.x * 2;
+
+        std::string tableId = std::string("OrderCat_") + cat;
+        if (ImGui::BeginTable(tableId.c_str(), 4,
+                              ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+            ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch, nameColW);
+            ImGui::TableSetupColumn("Qty", ImGuiTableColumnFlags_WidthFixed, numColW);
+            ImGui::TableSetupColumn("Rate", ImGuiTableColumnFlags_WidthFixed, moneyColW);
+            ImGui::TableSetupColumn("Total", ImGuiTableColumnFlags_WidthFixed, moneyColW);
+            ImGui::TableHeadersRow();
+
+            f64 catTotal = 0.0;
+            for (const auto* e : catEntries) {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Text("%s", e->name.c_str());
+                ImGui::TableNextColumn();
+                ImGui::Text("%.2f", e->quantity);
+                ImGui::TableNextColumn();
+                ImGui::Text("$%.2f", e->unitRate);
+                ImGui::TableNextColumn();
+                ImGui::Text("$%.2f", e->estimatedTotal);
+                catTotal += e->estimatedTotal;
+            }
+            ImGui::EndTable();
+
+            ImGui::Text("Subtotal: $%.2f", catTotal);
+            grandTotal += catTotal;
+        }
+
+        ImGui::Spacing();
+    }
+
+    // Summary
+    ImGui::Separator();
+    ImGui::Spacing();
+    ImGui::Text("Total: $%.2f", grandTotal);
+
+    // Sale price and margin (read-only)
+    ImGui::Text("Sale Price: $%.2f", order.salePrice);
+    f64 margin = order.salePrice - grandTotal;
+    f64 marginPct = (order.salePrice > 0.0)
+                        ? (margin / order.salePrice) * 100.0
+                        : 0.0;
+    if (margin >= 0.0) {
+        ImVec4 greenColor = ImGui::GetStyleColorVec4(ImGuiCol_PlotHistogram);
+        greenColor.x = 0.3f; greenColor.y = 0.85f; greenColor.z = 0.3f;
+        ImGui::TextColored(greenColor, "Margin: $%.2f (%.1f%%)", margin, marginPct);
+    } else {
+        ImVec4 redColor = ImGui::GetStyleColorVec4(ImGuiCol_PlotHistogram);
+        redColor.x = 0.95f; redColor.y = 0.3f; redColor.z = 0.3f;
+        ImGui::TextColored(redColor, "Margin: -$%.2f (%.1f%%)", -margin, marginPct);
+    }
+}
+
+void CostingPanel::convertEstimateToOrder() {
+    if (m_activeEstimateIndex < 0 ||
+        m_activeEstimateIndex >= static_cast<int>(m_estimates.size())) {
+        ToastManager::instance().show(ToastType::Error, "No active estimate to convert");
+        return;
+    }
+
+    // Sync current engine state to the estimate
+    syncEstimateFromEngine();
+
+    // Set the estimate's salePrice from m_salePrice
+    m_estimates[static_cast<size_t>(m_activeEstimateIndex)].salePrice =
+        static_cast<f64>(m_salePrice);
+
+    // Convert
+    auto order = ProjectCostingIO::convertToOrder(
+        m_estimates[static_cast<size_t>(m_activeEstimateIndex)]);
+    m_orders.push_back(std::move(order));
+
+    // Persist
+    saveOrdersToDisk();
+
+    ToastManager::instance().show(ToastType::Success, "Order created from estimate");
+
+    // Switch to order view and select the new order
+    m_viewMode = CostViewMode::Order;
+    m_selectedOrderIndex = static_cast<int>(m_orders.size()) - 1;
+}
+
+void CostingPanel::loadOrdersFromDisk() {
+    if (m_costingDir.empty()) {
+        return;
+    }
+    m_orders = ProjectCostingIO::loadOrders(m_costingDir);
+}
+
+void CostingPanel::saveOrdersToDisk() {
+    if (m_costingDir.empty()) {
+        return;
+    }
+    if (!ProjectCostingIO::saveOrders(m_costingDir, m_orders)) {
+        log::errorf("CostingPanel", "Failed to save orders to %s", m_costingDir.c_str());
+    }
 }
 
 } // namespace dw

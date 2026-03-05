@@ -13,6 +13,9 @@
 
 namespace dw {
 
+// View mode for the costing panel editor
+enum class CostViewMode { Estimate, Order };
+
 // Project costing panel for creating and managing cost records
 class CostingPanel : public Panel {
   public:
@@ -46,6 +49,14 @@ class CostingPanel : public Panel {
     void renderAddOverheadForm();
     void renderAddMaterialForm();
 
+    // Estimate/Order view support
+    void renderSalePriceAndMargin();
+    void renderViewModeToggle();
+    void renderOrderView();
+    void convertEstimateToOrder();
+    void loadOrdersFromDisk();
+    void saveOrdersToDisk();
+
     // Sync between CostingEngine and CostingRecord
     void syncEngineFromRecord();
     void syncRecordFromEngine();
@@ -73,6 +84,16 @@ class CostingPanel : public Panel {
     Path m_costingDir;
     std::vector<CostingEstimate> m_estimates;
     int m_activeEstimateIndex = -1;
+
+    // View mode
+    CostViewMode m_viewMode = CostViewMode::Estimate;
+
+    // Sale price (editable in estimate mode)
+    float m_salePrice = 0.0f;
+
+    // Order state
+    std::vector<CostingOrder> m_orders;
+    int m_selectedOrderIndex = -1;
 
     // Edit buffer for selected record
     CostingRecord m_editBuffer;
