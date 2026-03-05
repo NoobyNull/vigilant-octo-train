@@ -177,7 +177,7 @@ Plans:
 | 23. CLO Material Integration | 3/3 | Complete    | 2026-03-05 | - |
 | 24. Project Costing Engine | 3/3 | Complete    | 2026-03-05 | - |
 | 25. CLO-to-Costing Pipeline | 1/1 | Complete    | 2026-03-05 | - |
-| 26. Estimate & Order Views | v0.4.0 | 0/2 | Not started | - |
+| 26. Estimate & Order Views | 1/2 | In Progress|  | - |
 
 ---
 *Roadmap created: 2026-02-24*
