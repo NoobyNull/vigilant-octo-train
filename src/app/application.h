@@ -93,7 +93,16 @@ class Application {
     void update();
     void render();
     void shutdown();
-    void initWiring(); // Panel/callback wiring — implemented in application_wiring.cpp
+    // Panel/callback wiring — decomposed into domain-specific functions
+    void initWiring();           // Dispatcher — calls all wire* functions below
+    void wireImportPipeline();   // Import queue, options dialog, re-import
+    void wireStartPage();        // Start page buttons
+    void wireLibraryPanel();     // Library panel: selection, thumbnails, tagging
+    void wireProjectPanel();     // Project panel: navigation, cross-panel links
+    void wireCncPanels();        // GCode, CNC status/jog/console, DirectCarve, tools
+    void wirePropertiesPanel();  // Properties: mesh, color, grain, material
+    void wireMaterialsPanel();   // Materials: assignment, AI generation
+    void wireMenuActions();      // File/Tools menu, maintenance, relocator, quit
 
     // Callbacks (business logic stays in Application)
     void onModelSelected(int64_t modelId);

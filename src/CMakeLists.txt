@@ -6,6 +6,8 @@ set(DW_SOURCES
     main.cpp
     app/application.cpp
     app/application_wiring.cpp
+    app/application_wiring_cnc.cpp
+    app/application_callbacks.cpp
     app/window.cpp
     app/workspace.cpp
 
