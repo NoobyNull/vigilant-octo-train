@@ -5,6 +5,406 @@
 
 namespace dw {
 
+// ---------------------------------------------------------------------------
+// Per-table builder functions (file-local)
+// Each returns false on failure, true on success.
+// ---------------------------------------------------------------------------
+namespace {
+
+bool createSchemaVersionTable(Database& db) {
+    return db.execute(R"(
+        CREATE TABLE IF NOT EXISTS schema_version (
+            version INTEGER NOT NULL
+        )
+    )");
+}
+
+bool createMaterialsTable(Database& db) {
+    return db.execute(R"(
+        CREATE TABLE IF NOT EXISTS materials (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            category TEXT NOT NULL DEFAULT 'hardwood',
+            archive_path TEXT,
+            janka_hardness REAL DEFAULT 0,
+            feed_rate REAL DEFAULT 0,
+            spindle_speed REAL DEFAULT 0,
+            depth_of_cut REAL DEFAULT 0,
+            grain_direction_deg REAL DEFAULT 0,
+            thumbnail_path TEXT,
+            imported_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            is_bundled INTEGER DEFAULT 0,
+            is_hidden INTEGER DEFAULT 0
+        )
+    )");
+}
+
+bool createStockSizesTable(Database& db) {
+    return db.execute(R"(
+        CREATE TABLE IF NOT EXISTS stock_sizes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            material_id INTEGER NOT NULL,
+            name TEXT DEFAULT '',
+            width_mm REAL DEFAULT NULL,
+            height_mm REAL DEFAULT NULL,
+            thickness_mm REAL NOT NULL DEFAULT 0,
+            price_per_unit REAL NOT NULL DEFAULT 0,
+            unit_label TEXT NOT NULL DEFAULT 'sheet',
+            FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE
+        )
+    )");
+}
+
+bool createModelsTable(Database& db) {
+    return db.execute(R"(
+        CREATE TABLE IF NOT EXISTS models (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            hash TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            file_format TEXT NOT NULL,
+            file_size INTEGER DEFAULT 0,
+            vertex_count INTEGER DEFAULT 0,
+            triangle_count INTEGER DEFAULT 0,
+            bounds_min_x REAL DEFAULT 0,
+            bounds_min_y REAL DEFAULT 0,
+            bounds_min_z REAL DEFAULT 0,
+            bounds_max_x REAL DEFAULT 0,
+            bounds_max_y REAL DEFAULT 0,
+            bounds_max_z REAL DEFAULT 0,
+            thumbnail_path TEXT,
+            imported_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            tags TEXT DEFAULT '[]',
+            material_id INTEGER DEFAULT NULL,
+            orient_yaw REAL DEFAULT NULL,
+            orient_matrix TEXT DEFAULT NULL,
+            camera_distance REAL DEFAULT NULL,
+            camera_pitch REAL DEFAULT NULL,
+            camera_yaw REAL DEFAULT NULL,
+            camera_target_x REAL DEFAULT NULL,
+            camera_target_y REAL DEFAULT NULL,
+            camera_target_z REAL DEFAULT NULL,
+            descriptor_title TEXT DEFAULT NULL,
+            descriptor_description TEXT DEFAULT NULL,
+            descriptor_hover TEXT DEFAULT NULL,
+            tag_status INTEGER DEFAULT 0
+        )
+    )");
+}
+
+bool createProjectsTable(Database& db) {
+    return db.execute(R"(
+        CREATE TABLE IF NOT EXISTS projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            file_path TEXT,
+            notes TEXT DEFAULT '',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            modified_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    )");
+}
+
+bool createProjectModelsTable(Database& db) {
+    return db.execute(R"(
+        CREATE TABLE IF NOT EXISTS project_models (
+            project_id INTEGER NOT NULL,
+            model_id INTEGER NOT NULL,
+            sort_order INTEGER DEFAULT 0,
+            added_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (project_id, model_id),
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+            FOREIGN KEY (model_id) REFERENCES models(id) ON DELETE CASCADE
+        )
+    )");
+}
+
+bool createCostingRecordsTable(Database& db) {
+    return db.execute(R"(
+        CREATE TABLE IF NOT EXISTS costing_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            project_id INTEGER,
+            items TEXT DEFAULT '[]',
+            subtotal REAL DEFAULT 0,
+            tax_rate REAL DEFAULT 0,
+            tax_amount REAL DEFAULT 0,
+            discount_rate REAL DEFAULT 0,
+            discount_amount REAL DEFAULT 0,
+            total REAL DEFAULT 0,
+            notes TEXT DEFAULT '',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            modified_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+        )
+    )");
+}
+
+bool createProjectGcodeTable(Database& db) {
+    return db.execute(R"(
+        CREATE TABLE IF NOT EXISTS project_gcode (
+            project_id INTEGER NOT NULL,
+            gcode_id INTEGER NOT NULL,
+            sort_order INTEGER DEFAULT 0,
+            added_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (project_id, gcode_id),
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+            FOREIGN KEY (gcode_id) REFERENCES gcode_files(id) ON DELETE CASCADE
+        )
+    )");
+}
+
+bool createCutPlansTable(Database& db) {
+    return db.execute(R"(
+        CREATE TABLE IF NOT EXISTS cut_plans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER,
+            name TEXT NOT NULL,
+            algorithm TEXT NOT NULL,
+            sheet_config TEXT NOT NULL,
+            parts TEXT NOT NULL,
+            result TEXT NOT NULL,
+            allow_rotation INTEGER DEFAULT 1,
+            kerf REAL DEFAULT 0,
+            margin REAL DEFAULT 0,
+            sheets_used INTEGER DEFAULT 0,
+            efficiency REAL DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            modified_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+        )
+    )");
+}
+
+bool createGcodeFilesTable(Database& db) {
+    return db.execute(R"(
+        CREATE TABLE IF NOT EXISTS gcode_files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            hash TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            file_size INTEGER DEFAULT 0,
+            bounds_min_x REAL DEFAULT 0,
+            bounds_min_y REAL DEFAULT 0,
+            bounds_min_z REAL DEFAULT 0,
+            bounds_max_x REAL DEFAULT 0,
+            bounds_max_y REAL DEFAULT 0,
+            bounds_max_z REAL DEFAULT 0,
+            total_distance REAL DEFAULT 0,
+            estimated_time REAL DEFAULT 0,
+            feed_rates TEXT DEFAULT '[]',
+            tool_numbers TEXT DEFAULT '[]',
+            imported_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            thumbnail_path TEXT
+        )
+    )");
+}
+
+bool createOperationGroupsTable(Database& db) {
+    return db.execute(R"(
+        CREATE TABLE IF NOT EXISTS operation_groups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            model_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            sort_order INTEGER DEFAULT 0,
+            FOREIGN KEY (model_id) REFERENCES models(id) ON DELETE CASCADE
+        )
+    )");
+}
+
+bool createGcodeGroupMembersTable(Database& db) {
+    return db.execute(R"(
+        CREATE TABLE IF NOT EXISTS gcode_group_members (
+            group_id INTEGER NOT NULL,
+            gcode_id INTEGER NOT NULL,
+            sort_order INTEGER DEFAULT 0,
+            PRIMARY KEY (group_id, gcode_id),
+            FOREIGN KEY (group_id) REFERENCES operation_groups(id) ON DELETE CASCADE,
+            FOREIGN KEY (gcode_id) REFERENCES gcode_files(id) ON DELETE CASCADE
+        )
+    )");
+}
+
+bool createGcodeTemplatesTable(Database& db) {
+    return db.execute(R"(
+        CREATE TABLE IF NOT EXISTS gcode_templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            groups TEXT NOT NULL
+        )
+    )");
+}
+
+bool seedGcodeTemplates(Database& db) {
+    return db.execute(R"(
+        INSERT OR IGNORE INTO gcode_templates (name, groups)
+        VALUES ('CNC Router Basic', '["Roughing","Finishing","Profiling","Drilling"]')
+    )");
+}
+
+bool createCategoriesTable(Database& db) {
+    return db.execute(R"(
+        CREATE TABLE IF NOT EXISTS categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            parent_id INTEGER DEFAULT NULL REFERENCES categories(id) ON DELETE CASCADE,
+            sort_order INTEGER DEFAULT 0,
+            UNIQUE(name, parent_id)
+        )
+    )");
+}
+
+bool createModelCategoriesTable(Database& db) {
+    return db.execute(R"(
+        CREATE TABLE IF NOT EXISTS model_categories (
+            model_id INTEGER NOT NULL REFERENCES models(id) ON DELETE CASCADE,
+            category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+            PRIMARY KEY (model_id, category_id)
+        )
+    )");
+}
+
+bool createModelsFtsTable(Database& db) {
+    return db.execute(R"(
+        CREATE VIRTUAL TABLE IF NOT EXISTS models_fts USING fts5(
+            name,
+            tags,
+            content='models',
+            content_rowid='id',
+            tokenize='unicode61'
+        )
+    )");
+}
+
+void createModelsFtsTriggers(Database& db) {
+    // AFTER INSERT: add to FTS
+    (void)db.execute(R"(
+        CREATE TRIGGER IF NOT EXISTS models_fts_ai AFTER INSERT ON models BEGIN
+            INSERT INTO models_fts(rowid, name, tags) VALUES (new.id, new.name, new.tags);
+        END
+    )");
+
+    // BEFORE UPDATE: delete old tokens (MUST be BEFORE, not AFTER -- see Pitfall 2)
+    (void)db.execute(R"(
+        CREATE TRIGGER IF NOT EXISTS models_fts_bu BEFORE UPDATE ON models BEGIN
+            INSERT INTO models_fts(models_fts, rowid, name, tags)
+            VALUES ('delete', old.id, old.name, old.tags);
+        END
+    )");
+
+    // AFTER UPDATE: insert new tokens
+    (void)db.execute(R"(
+        CREATE TRIGGER IF NOT EXISTS models_fts_au AFTER UPDATE ON models BEGIN
+            INSERT INTO models_fts(rowid, name, tags) VALUES (new.id, new.name, new.tags);
+        END
+    )");
+
+    // AFTER DELETE: delete tokens
+    (void)db.execute(R"(
+        CREATE TRIGGER IF NOT EXISTS models_fts_ad AFTER DELETE ON models BEGIN
+            INSERT INTO models_fts(models_fts, rowid, name, tags)
+            VALUES ('delete', old.id, old.name, old.tags);
+        END
+    )");
+}
+
+bool createRateCategoriesTable(Database& db) {
+    return db.execute(R"(
+        CREATE TABLE IF NOT EXISTS rate_categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            rate_per_cu_unit REAL NOT NULL DEFAULT 0,
+            project_id INTEGER DEFAULT 0,
+            notes TEXT DEFAULT ''
+        )
+    )");
+}
+
+bool createToolboxToolsTable(Database& db) {
+    return db.execute(R"(
+        CREATE TABLE IF NOT EXISTS toolbox_tools (
+            geometry_id TEXT NOT NULL PRIMARY KEY,
+            added_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            display_name TEXT DEFAULT ''
+        )
+    )");
+}
+
+bool createCncJobsTable(Database& db) {
+    return db.execute(R"(
+        CREATE TABLE IF NOT EXISTS cnc_jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            file_name TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            total_lines INTEGER NOT NULL,
+            last_acked_line INTEGER DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'running',
+            error_count INTEGER DEFAULT 0,
+            elapsed_seconds REAL DEFAULT 0,
+            modal_distance_mode TEXT DEFAULT 'G90',
+            modal_coordinate_system TEXT DEFAULT 'G54',
+            modal_units TEXT DEFAULT 'G21',
+            modal_spindle_state TEXT DEFAULT 'M5',
+            modal_coolant_state TEXT DEFAULT 'M9',
+            modal_feed_rate REAL DEFAULT 0,
+            modal_spindle_speed REAL DEFAULT 0,
+            started_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            ended_at TEXT
+        )
+    )");
+}
+
+void createIndexes(Database& db) {
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_materials_name ON materials(name)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_materials_category ON materials(category)");
+    (void)db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_stock_sizes_material ON stock_sizes(material_id)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_models_hash ON models(hash)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_models_name ON models(name)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_models_format ON models(file_format)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_project_models_project ON "
+                     "project_models(project_id)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_project_models_model ON "
+                     "project_models(model_id)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_costing_records_project ON "
+                     "costing_records(project_id)");
+    (void)db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_project_gcode_project ON project_gcode(project_id)");
+    (void)db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_project_gcode_gcode ON project_gcode(gcode_id)");
+    (void)db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_cut_plans_project ON cut_plans(project_id)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_gcode_hash ON gcode_files(hash)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_gcode_name ON gcode_files(name)");
+    (void)db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_operation_groups_model ON operation_groups(model_id)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_gcode_group_members_group ON "
+                     "gcode_group_members(group_id)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_model_categories_model ON "
+                     "model_categories(model_id)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_model_categories_category ON "
+                     "model_categories(category_id)");
+    (void)db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_models_tag_status ON models(tag_status)");
+    (void)db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_cnc_jobs_started ON cnc_jobs(started_at)");
+    (void)db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_cnc_jobs_status ON cnc_jobs(status)");
+    (void)db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_rate_categories_project ON rate_categories(project_id)");
+    (void)db.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_rate_categories_name_project ON "
+        "rate_categories(name, project_id)");
+}
+
+} // anonymous namespace
+
+// ---------------------------------------------------------------------------
+// Schema public/private interface
+// ---------------------------------------------------------------------------
+
 bool Schema::initialize(Database& db) {
     if (!db.isOpen()) {
         log::error("Schema", "Cannot initialize: database not open");
@@ -63,413 +463,37 @@ bool Schema::setVersion(Database& db, int version) {
 bool Schema::createTables(Database& db) {
     Transaction txn(db);
 
-    // Schema version table
-    if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS schema_version (
-            version INTEGER NOT NULL
-        )
-    )")) {
-        return false;
-    }
+    // Core tables
+    if (!createSchemaVersionTable(db)) return false;
+    if (!createMaterialsTable(db)) return false;
+    if (!createStockSizesTable(db)) return false;
+    if (!createModelsTable(db)) return false;
+    if (!createProjectsTable(db)) return false;
+    if (!createProjectModelsTable(db)) return false;
+    if (!createCostingRecordsTable(db)) return false;
+    if (!createProjectGcodeTable(db)) return false;
+    if (!createCutPlansTable(db)) return false;
 
-    // Materials table - wood species and material properties
-    if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS materials (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            category TEXT NOT NULL DEFAULT 'hardwood',
-            archive_path TEXT,
-            janka_hardness REAL DEFAULT 0,
-            feed_rate REAL DEFAULT 0,
-            spindle_speed REAL DEFAULT 0,
-            depth_of_cut REAL DEFAULT 0,
-            grain_direction_deg REAL DEFAULT 0,
-            thumbnail_path TEXT,
-            imported_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            is_bundled INTEGER DEFAULT 0,
-            is_hidden INTEGER DEFAULT 0
-        )
-    )")) {
-        return false;
-    }
+    // G-code subsystem
+    if (!createGcodeFilesTable(db)) return false;
+    if (!createOperationGroupsTable(db)) return false;
+    if (!createGcodeGroupMembersTable(db)) return false;
+    if (!createGcodeTemplatesTable(db)) return false;
+    if (!seedGcodeTemplates(db)) return false;
 
-    // Stock sizes table - purchasable dimensions of materials
-    if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS stock_sizes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            material_id INTEGER NOT NULL,
-            name TEXT DEFAULT '',
-            width_mm REAL DEFAULT NULL,
-            height_mm REAL DEFAULT NULL,
-            thickness_mm REAL NOT NULL DEFAULT 0,
-            price_per_unit REAL NOT NULL DEFAULT 0,
-            unit_label TEXT NOT NULL DEFAULT 'sheet',
-            FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE
-        )
-    )")) {
-        return false;
-    }
+    // Categories and full-text search
+    if (!createCategoriesTable(db)) return false;
+    if (!createModelCategoriesTable(db)) return false;
+    if (!createModelsFtsTable(db)) return false;
+    createModelsFtsTriggers(db);
 
-    // Models table - the library backbone
-    if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS models (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            hash TEXT UNIQUE NOT NULL,
-            name TEXT NOT NULL,
-            file_path TEXT NOT NULL,
-            file_format TEXT NOT NULL,
-            file_size INTEGER DEFAULT 0,
-            vertex_count INTEGER DEFAULT 0,
-            triangle_count INTEGER DEFAULT 0,
-            bounds_min_x REAL DEFAULT 0,
-            bounds_min_y REAL DEFAULT 0,
-            bounds_min_z REAL DEFAULT 0,
-            bounds_max_x REAL DEFAULT 0,
-            bounds_max_y REAL DEFAULT 0,
-            bounds_max_z REAL DEFAULT 0,
-            thumbnail_path TEXT,
-            imported_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            tags TEXT DEFAULT '[]',
-            material_id INTEGER DEFAULT NULL,
-            orient_yaw REAL DEFAULT NULL,
-            orient_matrix TEXT DEFAULT NULL,
-            camera_distance REAL DEFAULT NULL,
-            camera_pitch REAL DEFAULT NULL,
-            camera_yaw REAL DEFAULT NULL,
-            camera_target_x REAL DEFAULT NULL,
-            camera_target_y REAL DEFAULT NULL,
-            camera_target_z REAL DEFAULT NULL,
-            descriptor_title TEXT DEFAULT NULL,
-            descriptor_description TEXT DEFAULT NULL,
-            descriptor_hover TEXT DEFAULT NULL,
-            tag_status INTEGER DEFAULT 0
-        )
-    )")) {
-        return false;
-    }
+    // Auxiliary tables
+    if (!createRateCategoriesTable(db)) return false;
+    if (!createToolboxToolsTable(db)) return false;
+    if (!createCncJobsTable(db)) return false;
 
-    // Projects table
-    if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS projects (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            description TEXT DEFAULT '',
-            file_path TEXT,
-            notes TEXT DEFAULT '',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            modified_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    )")) {
-        return false;
-    }
-
-    // Project-Model junction table
-    if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS project_models (
-            project_id INTEGER NOT NULL,
-            model_id INTEGER NOT NULL,
-            sort_order INTEGER DEFAULT 0,
-            added_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (project_id, model_id),
-            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-            FOREIGN KEY (model_id) REFERENCES models(id) ON DELETE CASCADE
-        )
-    )")) {
-        return false;
-    }
-
-    // Costing records table (renamed from cost_estimates in v0.4.0)
-    if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS costing_records (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            project_id INTEGER,
-            items TEXT DEFAULT '[]',
-            subtotal REAL DEFAULT 0,
-            tax_rate REAL DEFAULT 0,
-            tax_amount REAL DEFAULT 0,
-            discount_rate REAL DEFAULT 0,
-            discount_amount REAL DEFAULT 0,
-            total REAL DEFAULT 0,
-            notes TEXT DEFAULT '',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            modified_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
-        )
-    )")) {
-        return false;
-    }
-
-    // Project-GCode junction table
-    if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS project_gcode (
-            project_id INTEGER NOT NULL,
-            gcode_id INTEGER NOT NULL,
-            sort_order INTEGER DEFAULT 0,
-            added_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (project_id, gcode_id),
-            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-            FOREIGN KEY (gcode_id) REFERENCES gcode_files(id) ON DELETE CASCADE
-        )
-    )")) {
-        return false;
-    }
-
-    // Cut plans table
-    if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS cut_plans (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            project_id INTEGER,
-            name TEXT NOT NULL,
-            algorithm TEXT NOT NULL,
-            sheet_config TEXT NOT NULL,
-            parts TEXT NOT NULL,
-            result TEXT NOT NULL,
-            allow_rotation INTEGER DEFAULT 1,
-            kerf REAL DEFAULT 0,
-            margin REAL DEFAULT 0,
-            sheets_used INTEGER DEFAULT 0,
-            efficiency REAL DEFAULT 0,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            modified_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
-        )
-    )")) {
-        return false;
-    }
-
-    // G-code files table
-    if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS gcode_files (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            hash TEXT UNIQUE NOT NULL,
-            name TEXT NOT NULL,
-            file_path TEXT NOT NULL,
-            file_size INTEGER DEFAULT 0,
-            bounds_min_x REAL DEFAULT 0,
-            bounds_min_y REAL DEFAULT 0,
-            bounds_min_z REAL DEFAULT 0,
-            bounds_max_x REAL DEFAULT 0,
-            bounds_max_y REAL DEFAULT 0,
-            bounds_max_z REAL DEFAULT 0,
-            total_distance REAL DEFAULT 0,
-            estimated_time REAL DEFAULT 0,
-            feed_rates TEXT DEFAULT '[]',
-            tool_numbers TEXT DEFAULT '[]',
-            imported_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            thumbnail_path TEXT
-        )
-    )")) {
-        return false;
-    }
-
-    // Operation groups table (hierarchy: model -> groups -> ordered gcode)
-    if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS operation_groups (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            model_id INTEGER NOT NULL,
-            name TEXT NOT NULL,
-            sort_order INTEGER DEFAULT 0,
-            FOREIGN KEY (model_id) REFERENCES models(id) ON DELETE CASCADE
-        )
-    )")) {
-        return false;
-    }
-
-    // G-code group members junction table
-    if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS gcode_group_members (
-            group_id INTEGER NOT NULL,
-            gcode_id INTEGER NOT NULL,
-            sort_order INTEGER DEFAULT 0,
-            PRIMARY KEY (group_id, gcode_id),
-            FOREIGN KEY (group_id) REFERENCES operation_groups(id) ON DELETE CASCADE,
-            FOREIGN KEY (gcode_id) REFERENCES gcode_files(id) ON DELETE CASCADE
-        )
-    )")) {
-        return false;
-    }
-
-    // G-code templates table
-    if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS gcode_templates (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE,
-            groups TEXT NOT NULL
-        )
-    )")) {
-        return false;
-    }
-
-    // Seed CNC Router Basic template
-    if (!db.execute(R"(
-        INSERT OR IGNORE INTO gcode_templates (name, groups)
-        VALUES ('CNC Router Basic', '["Roughing","Finishing","Profiling","Drilling"]')
-    )")) {
-        return false;
-    }
-
-    // Categories table (2-level hierarchy via parent_id)
-    if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS categories (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            parent_id INTEGER DEFAULT NULL REFERENCES categories(id) ON DELETE CASCADE,
-            sort_order INTEGER DEFAULT 0,
-            UNIQUE(name, parent_id)
-        )
-    )")) {
-        return false;
-    }
-
-    // Model-categories junction table (many-to-many)
-    if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS model_categories (
-            model_id INTEGER NOT NULL REFERENCES models(id) ON DELETE CASCADE,
-            category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
-            PRIMARY KEY (model_id, category_id)
-        )
-    )")) {
-        return false;
-    }
-
-    // FTS5 virtual table (external content from models)
-    if (!db.execute(R"(
-        CREATE VIRTUAL TABLE IF NOT EXISTS models_fts USING fts5(
-            name,
-            tags,
-            content='models',
-            content_rowid='id',
-            tokenize='unicode61'
-        )
-    )")) {
-        return false;
-    }
-
-    // FTS5 triggers -- keep index in sync with models table
-    // AFTER INSERT: add to FTS
-    (void)db.execute(R"(
-        CREATE TRIGGER IF NOT EXISTS models_fts_ai AFTER INSERT ON models BEGIN
-            INSERT INTO models_fts(rowid, name, tags) VALUES (new.id, new.name, new.tags);
-        END
-    )");
-
-    // BEFORE UPDATE: delete old tokens (MUST be BEFORE, not AFTER -- see Pitfall 2)
-    (void)db.execute(R"(
-        CREATE TRIGGER IF NOT EXISTS models_fts_bu BEFORE UPDATE ON models BEGIN
-            INSERT INTO models_fts(models_fts, rowid, name, tags)
-            VALUES ('delete', old.id, old.name, old.tags);
-        END
-    )");
-
-    // AFTER UPDATE: insert new tokens
-    (void)db.execute(R"(
-        CREATE TRIGGER IF NOT EXISTS models_fts_au AFTER UPDATE ON models BEGIN
-            INSERT INTO models_fts(rowid, name, tags) VALUES (new.id, new.name, new.tags);
-        END
-    )");
-
-    // AFTER DELETE: delete tokens
-    (void)db.execute(R"(
-        CREATE TRIGGER IF NOT EXISTS models_fts_ad AFTER DELETE ON models BEGIN
-            INSERT INTO models_fts(models_fts, rowid, name, tags)
-            VALUES ('delete', old.id, old.name, old.tags);
-        END
-    )");
-
-
-    // Rate categories table (volume-scaled cost items)
-    // project_id=0 means global default (no FK for sentinel value)
-    if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS rate_categories (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            rate_per_cu_unit REAL NOT NULL DEFAULT 0,
-            project_id INTEGER DEFAULT 0,
-            notes TEXT DEFAULT ''
-        )
-    )")) {
-        return false;
-    }
-
-    // Toolbox tools table (user's curated tool subset from .vtdb library)
-    if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS toolbox_tools (
-            geometry_id TEXT NOT NULL PRIMARY KEY,
-            added_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            display_name TEXT DEFAULT ''
-        )
-    )")) {
-        return false;
-    }
-
-    // CNC job history table
-    if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS cnc_jobs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            file_name TEXT NOT NULL,
-            file_path TEXT NOT NULL,
-            total_lines INTEGER NOT NULL,
-            last_acked_line INTEGER DEFAULT 0,
-            status TEXT NOT NULL DEFAULT 'running',
-            error_count INTEGER DEFAULT 0,
-            elapsed_seconds REAL DEFAULT 0,
-            modal_distance_mode TEXT DEFAULT 'G90',
-            modal_coordinate_system TEXT DEFAULT 'G54',
-            modal_units TEXT DEFAULT 'G21',
-            modal_spindle_state TEXT DEFAULT 'M5',
-            modal_coolant_state TEXT DEFAULT 'M9',
-            modal_feed_rate REAL DEFAULT 0,
-            modal_spindle_speed REAL DEFAULT 0,
-            started_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            ended_at TEXT
-        )
-    )")) {
-        return false;
-    }
-
-    // Create indexes for common queries (best-effort)
-    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_materials_name ON materials(name)");
-    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_materials_category ON materials(category)");
-    (void)db.execute(
-        "CREATE INDEX IF NOT EXISTS idx_stock_sizes_material ON stock_sizes(material_id)");
-    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_models_hash ON models(hash)");
-    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_models_name ON models(name)");
-    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_models_format ON models(file_format)");
-    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_project_models_project ON "
-                     "project_models(project_id)");
-    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_project_models_model ON "
-                     "project_models(model_id)");
-    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_costing_records_project ON "
-                     "costing_records(project_id)");
-    (void)db.execute(
-        "CREATE INDEX IF NOT EXISTS idx_project_gcode_project ON project_gcode(project_id)");
-    (void)db.execute(
-        "CREATE INDEX IF NOT EXISTS idx_project_gcode_gcode ON project_gcode(gcode_id)");
-    (void)db.execute(
-        "CREATE INDEX IF NOT EXISTS idx_cut_plans_project ON cut_plans(project_id)");
-    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_gcode_hash ON gcode_files(hash)");
-    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_gcode_name ON gcode_files(name)");
-    (void)db.execute(
-        "CREATE INDEX IF NOT EXISTS idx_operation_groups_model ON operation_groups(model_id)");
-    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_gcode_group_members_group ON "
-                     "gcode_group_members(group_id)");
-    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id)");
-    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_model_categories_model ON "
-                     "model_categories(model_id)");
-    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_model_categories_category ON "
-                     "model_categories(category_id)");
-    (void)db.execute(
-        "CREATE INDEX IF NOT EXISTS idx_models_tag_status ON models(tag_status)");
-    (void)db.execute(
-        "CREATE INDEX IF NOT EXISTS idx_cnc_jobs_started ON cnc_jobs(started_at)");
-    (void)db.execute(
-        "CREATE INDEX IF NOT EXISTS idx_cnc_jobs_status ON cnc_jobs(status)");
-    (void)db.execute(
-        "CREATE INDEX IF NOT EXISTS idx_rate_categories_project ON rate_categories(project_id)");
-    (void)db.execute(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_rate_categories_name_project ON "
-        "rate_categories(name, project_id)");
+    // Indexes (best-effort, failures non-fatal)
+    createIndexes(db);
 
     // Set schema version
     if (!setVersion(db, CURRENT_VERSION)) {
