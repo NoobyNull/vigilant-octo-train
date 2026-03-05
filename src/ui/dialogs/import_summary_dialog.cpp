@@ -8,6 +8,7 @@
 
 #include "core/utils/file_utils.h"
 #include "ui/icons.h"
+#include "ui/ui_colors.h"
 
 namespace dw {
 
@@ -38,7 +39,7 @@ void ImportSummaryDialog::render() {
     if (ImGui::BeginPopupModal(m_title.c_str(), &m_open, flags)) {
         // Header
         if (m_summary.hasIssues()) {
-            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Import Complete (with issues)");
+            ImGui::TextColored(colors::kWarning, "Import Complete (with issues)");
         } else {
             ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "Import Complete");
         }
@@ -51,13 +52,13 @@ void ImportSummaryDialog::render() {
         ImGui::Text("Successfully imported: %d", m_summary.successCount);
 
         if (m_summary.duplicateCount > 0) {
-            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f),
+            ImGui::TextColored(colors::kWarning,
                                "Duplicates found: %d",
                                m_summary.duplicateCount);
         }
 
         if (m_summary.failedCount > 0) {
-            ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Errors: %d", m_summary.failedCount);
+            ImGui::TextColored(colors::kErrorText, "Errors: %d", m_summary.failedCount);
         }
 
         ImGui::Spacing();
@@ -138,7 +139,7 @@ void ImportSummaryDialog::render() {
             if (ImGui::CollapsingHeader("Errors", ImGuiTreeNodeFlags_DefaultOpen)) {
                 ImGui::Indent();
                 for (const auto& [filename, error] : m_summary.errors) {
-                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_Text, colors::kErrorText);
                     ImGui::BulletText("%s", filename.c_str());
                     ImGui::PopStyleColor();
                     ImGui::Indent();

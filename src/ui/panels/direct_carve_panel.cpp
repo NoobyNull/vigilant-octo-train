@@ -27,18 +27,19 @@
 #include "ui/icons.h"
 #include "ui/panels/gcode_panel.h"
 #include "ui/theme.h"
+#include "ui/ui_colors.h"
 #include "ui/widgets/toast.h"
 
 namespace dw {
 
-namespace {
+// Aliases for concise usage within this file
+static constexpr auto& kGreen = colors::kSuccess;
+static constexpr auto& kRed = colors::kError;
+static constexpr auto& kYellow = colors::kWarning;
+static constexpr auto& kDimmed = colors::kDimmed;
+static constexpr auto& kBright = colors::kInfo;
 
-// Status indicator colors
-constexpr ImVec4 kGreen{0.3f, 0.8f, 0.3f, 1.0f};
-constexpr ImVec4 kRed{1.0f, 0.3f, 0.3f, 1.0f};
-constexpr ImVec4 kYellow{1.0f, 0.8f, 0.2f, 1.0f};
-constexpr ImVec4 kDimmed{0.5f, 0.5f, 0.5f, 1.0f};
-constexpr ImVec4 kBright{0.4f, 0.7f, 1.0f, 1.0f};
+namespace {
 
 // ProgressBar with centered overlay text (ImGui default left-aligns within filled area)
 void CenteredProgressBar(float fraction, const ImVec2& size, const char* overlay) {

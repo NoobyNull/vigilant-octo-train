@@ -13,6 +13,7 @@
 #include "core/gcode/gcode_modal_scanner.h"
 #include "ui/icons.h"
 #include "ui/theme.h"
+#include "ui/ui_colors.h"
 
 namespace dw {
 
@@ -237,7 +238,7 @@ void CncSafetyPanel::renderAbortConfirmDialog() {
 
     if (ImGui::BeginPopupModal("Abort Running Job?", nullptr,
                                 ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f),
+        ImGui::TextColored(colors::kErrorText,
                            "%s WARNING", Icons::Warning);
         ImGui::Spacing();
         ImGui::TextWrapped(
@@ -401,7 +402,7 @@ void CncSafetyPanel::renderSensorDisplay() {
 
     // Door interlock warning banner
     if (isDoorInterlockActive()) {
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, colors::kWarning);
         ImGui::TextWrapped("%s DOOR INTERLOCK ACTIVE -- Rapid moves and spindle "
                            "commands are blocked until door is closed", Icons::Warning);
         ImGui::PopStyleColor();
@@ -416,7 +417,7 @@ void CncSafetyPanel::renderSensorDisplay() {
     };
 
     // Limit switches (red when active -- indicates potential issue)
-    ImVec4 limitColor(1.0f, 0.3f, 0.3f, 1.0f);
+    ImVec4 limitColor = colors::kError;
     if (ImGui::BeginTable("##limitpins", 3, ImGuiTableFlags_None)) {
         ImGui::TableSetupColumn("X", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableSetupColumn("Y", ImGuiTableColumnFlags_WidthStretch);
@@ -432,8 +433,8 @@ void CncSafetyPanel::renderSensorDisplay() {
     }
 
     // Probe (green when active) and Door (yellow when active)
-    ImVec4 probeColor(0.3f, 0.8f, 0.3f, 1.0f);
-    ImVec4 doorColor(1.0f, 0.8f, 0.2f, 1.0f);
+    ImVec4 probeColor = colors::kSuccess;
+    ImVec4 doorColor = colors::kWarning;
     if (ImGui::BeginTable("##otherpins", 3, ImGuiTableFlags_None)) {
         ImGui::TableSetupColumn("Col1", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableSetupColumn("Col2", ImGuiTableColumnFlags_WidthStretch);
@@ -528,11 +529,11 @@ void CncSafetyPanel::renderResumeDialog() {
             if (issue.severity == PreflightIssue::Error) {
                 hasErrors = true;
                 ImGui::TextColored(
-                    ImVec4(1.0f, 0.3f, 0.3f, 1.0f),
+                    colors::kError,
                     "%s %s", Icons::Error, issue.message.c_str());
             } else {
                 ImGui::TextColored(
-                    ImVec4(1.0f, 0.8f, 0.2f, 1.0f),
+                    colors::kWarning,
                     "%s %s", Icons::Warning, issue.message.c_str());
             }
         }

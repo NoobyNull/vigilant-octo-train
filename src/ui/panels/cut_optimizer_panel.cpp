@@ -15,6 +15,7 @@
 #include "../../core/optimizer/waste_breakdown.h"
 #include "../../core/project/project.h"
 #include "../icons.h"
+#include "../ui_colors.h"
 #include "../widgets/toast.h"
 
 namespace dw {
@@ -818,7 +819,7 @@ void CutOptimizerPanel::renderResultsPanel() {
         // Unplaced warning for this group
         if (!grp.plan.unplacedParts.empty()) {
             ImGui::Spacing();
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, colors::kErrorText);
             ImGui::TextWrapped("%zu parts could not be placed!",
                                grp.plan.unplacedParts.size());
             ImGui::PopStyleColor();
@@ -875,7 +876,7 @@ void CutOptimizerPanel::renderResultsPanel() {
         // Unplaced warning
         if (!m_result.unplacedParts.empty()) {
             ImGui::Spacing();
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, colors::kErrorText);
             ImGui::TextWrapped("%zu parts could not be placed!",
                                m_result.unplacedParts.size());
             ImGui::PopStyleColor();

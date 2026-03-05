@@ -8,6 +8,7 @@
 #include "core/config/config.h"
 #include "ui/icons.h"
 #include "ui/theme.h"
+#include "ui/ui_colors.h"
 
 namespace dw {
 
@@ -31,16 +32,16 @@ const char* machineStateName(MachineState state) {
 
 ImVec4 machineStateColor(MachineState state) {
     switch (state) {
-    case MachineState::Idle: return ImVec4(0.3f, 0.8f, 0.3f, 1.0f);   // Green
+    case MachineState::Idle: return colors::kSuccess;                   // Green
     case MachineState::Run: return ImVec4(0.3f, 0.5f, 1.0f, 1.0f);    // Blue
-    case MachineState::Hold: return ImVec4(1.0f, 0.8f, 0.2f, 1.0f);   // Yellow
+    case MachineState::Hold: return colors::kWarning;                   // Yellow
     case MachineState::Jog: return ImVec4(0.3f, 0.7f, 1.0f, 1.0f);    // Light blue
-    case MachineState::Alarm: return ImVec4(1.0f, 0.3f, 0.3f, 1.0f);  // Red
+    case MachineState::Alarm: return colors::kError;                    // Red
     case MachineState::Door: return ImVec4(1.0f, 0.5f, 0.2f, 1.0f);   // Orange
     case MachineState::Check: return ImVec4(0.6f, 0.6f, 0.8f, 1.0f);  // Lavender
     case MachineState::Home: return ImVec4(0.5f, 0.8f, 1.0f, 1.0f);   // Cyan
-    case MachineState::Sleep: return ImVec4(0.5f, 0.5f, 0.5f, 1.0f);  // Gray
-    default: return ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
+    case MachineState::Sleep: return colors::kDimmed;                   // Gray
+    default: return colors::kDimmed;
     }
 }
 
@@ -67,7 +68,7 @@ void CncStatusPanel::render() {
 
     if (!m_connected) {
         ImGui::Spacing();
-        ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "%s Disconnected", Icons::Unlink);
+        ImGui::TextColored(colors::kDimmed, "%s Disconnected", Icons::Unlink);
         if (!m_version.empty())
             ImGui::TextDisabled("Last firmware: %s", m_version.c_str());
         else
@@ -153,9 +154,9 @@ void CncStatusPanel::renderDRO() {
     static const char* axisNames[] = {"X", "Y", "Z"};
     static const char axisLetters[] = {'X', 'Y', 'Z'};
     static const ImVec4 axisColors[] = {
-        ImVec4(1.0f, 0.3f, 0.3f, 1.0f), // X = Red
-        ImVec4(0.3f, 1.0f, 0.3f, 1.0f), // Y = Green
-        ImVec4(0.3f, 0.5f, 1.0f, 1.0f), // Z = Blue
+        colors::kAxisX, // X = Red
+        colors::kAxisY, // Y = Green
+        colors::kAxisZ, // Z = Blue
     };
     float workPos[] = {m_status.workPos.x * uf, m_status.workPos.y * uf, m_status.workPos.z * uf};
     float machPos[] = {m_status.machinePos.x * uf, m_status.machinePos.y * uf, m_status.machinePos.z * uf};
@@ -405,7 +406,7 @@ void CncStatusPanel::renderAlarmBanner() {
         for (int i = 0; i < count; ++i) {
             bool isActive = (entries[i].code == m_lastAlarmCode);
             if (isActive)
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.3f, 0.3f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_Text, colors::kError);
             ImGui::Text("ALARM %d: %s -- %s", entries[i].code,
                          entries[i].name, entries[i].description);
             if (isActive)

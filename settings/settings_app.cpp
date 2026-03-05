@@ -14,6 +14,7 @@
 #include "../src/core/utils/file_utils.h"
 #include "../src/core/utils/log.h"
 #include "../src/ui/theme.h"
+#include "../src/ui/ui_colors.h"
 
 #include <cstring>
 #include <filesystem>
@@ -571,7 +572,7 @@ void SettingsApp::renderPathsTab() {
         // Validate
         Path p(buf);
         if (!p.empty() && std::filesystem::exists(p) && std::filesystem::is_directory(p)) {
-            ImGui::TextColored(ImVec4(0.3f, 0.8f, 0.3f, 1.0f), "[OK]");
+            ImGui::TextColored(colors::kSuccess, "[OK]");
         } else if (p.empty()) {
             ImGui::TextDisabled("[default]");
         } else {
@@ -660,7 +661,7 @@ void SettingsApp::renderBindingsTab() {
 
     if (!m_bindingRecorder.conflictMessage.empty()) {
         ImGui::Spacing();
-        ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "%s",
+        ImGui::TextColored(colors::kErrorText, "%s",
                            m_bindingRecorder.conflictMessage.c_str());
     }
 

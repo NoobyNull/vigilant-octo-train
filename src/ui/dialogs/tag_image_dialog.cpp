@@ -5,6 +5,7 @@
 
 #include <imgui.h>
 
+#include "ui/ui_colors.h"
 #include "ui/widgets/edit_buffer.h"
 
 namespace dw {
@@ -148,7 +149,7 @@ void TagImageDialog::render() {
     }
 
     if (!m_error.empty()) {
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.3f, 0.3f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, colors::kError);
         ImGui::TextWrapped("Error: %s", m_error.c_str());
         ImGui::PopStyleColor();
         ImGui::Spacing();

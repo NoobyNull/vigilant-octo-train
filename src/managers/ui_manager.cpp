@@ -47,6 +47,7 @@
 #include "ui/panels/direct_carve_panel.h"
 #include "ui/panels/tool_browser_panel.h"
 #include "ui/panels/viewport_panel.h"
+#include "ui/ui_colors.h"
 #include "ui/widgets/status_bar.h"
 #include "ui/widgets/toast.h"
 #include "version.h"
@@ -230,7 +231,7 @@ void UIManager::renderMenuBar() {
                 float textWidth = ImGui::CalcTextSize(label).x;
                 cursorX -= textWidth + ImGui::GetStyle().ItemSpacing.x * 2;
                 ImGui::SetCursorPosX(cursorX);
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_Text, colors::kDimmed);
                 ImGui::TextUnformatted(label);
                 ImGui::PopStyleColor();
             }

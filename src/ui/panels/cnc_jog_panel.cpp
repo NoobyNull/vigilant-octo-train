@@ -7,6 +7,7 @@
 #include "core/cnc/cnc_controller.h"
 #include "core/config/config.h"
 #include "ui/icons.h"
+#include "ui/ui_colors.h"
 
 namespace dw {
 
@@ -62,7 +63,7 @@ void CncJogPanel::render() {
 
     if (!m_connected) {
         ImGui::Spacing();
-        ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "%s Disconnected", Icons::Unlink);
+        ImGui::TextColored(colors::kDimmed, "%s Disconnected", Icons::Unlink);
         ImGui::TextDisabled("Connect a CNC machine to jog");
         ImGui::End();
         return;
@@ -215,7 +216,8 @@ void CncJogPanel::renderHomingSection() {
         char homeLabel[64];
         std::snprintf(homeLabel, sizeof(homeLabel), "%s Hold to Home", Icons::Home);
         float durationMs = static_cast<float>(cfg.getSafetyLongPressDurationMs());
-        if (s_homeLongPress.render(homeLabel, ImVec2(140, 0), durationMs, canHome)) {
+        float homeBtnW = ImGui::CalcTextSize(homeLabel).x + ImGui::GetStyle().FramePadding.x * 2;
+        if (s_homeLongPress.render(homeLabel, ImVec2(homeBtnW, 0), durationMs, canHome)) {
             if (m_cnc)
                 m_cnc->sendCommand("$H");
         }
@@ -227,7 +229,8 @@ void CncJogPanel::renderHomingSection() {
             ImGui::BeginDisabled();
         char homeLabel[64];
         std::snprintf(homeLabel, sizeof(homeLabel), "%s Home All", Icons::Home);
-        if (ImGui::Button(homeLabel, ImVec2(120, 0))) {
+        float homeBtnW = ImGui::CalcTextSize(homeLabel).x + ImGui::GetStyle().FramePadding.x * 2;
+        if (ImGui::Button(homeLabel, ImVec2(homeBtnW, 0))) {
             if (m_cnc)
                 m_cnc->sendCommand("$H");
         }
@@ -243,7 +246,8 @@ void CncJogPanel::renderHomingSection() {
         ImGui::BeginDisabled();
     char unlockLabel[64];
     std::snprintf(unlockLabel, sizeof(unlockLabel), "%s Unlock", Icons::LockOpen);
-    if (ImGui::Button(unlockLabel, ImVec2(100, 0))) {
+    float unlockBtnW = ImGui::CalcTextSize(unlockLabel).x + ImGui::GetStyle().FramePadding.x * 2;
+    if (ImGui::Button(unlockLabel, ImVec2(unlockBtnW, 0))) {
         if (m_cnc)
             m_cnc->unlock();
     }
@@ -251,7 +255,7 @@ void CncJogPanel::renderHomingSection() {
         ImGui::EndDisabled();
 
     if (m_status.state == MachineState::Alarm) {
-        ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f),
+        ImGui::TextColored(colors::kError,
                             "Machine is in ALARM state. Home or Unlock to clear.");
     }
 }

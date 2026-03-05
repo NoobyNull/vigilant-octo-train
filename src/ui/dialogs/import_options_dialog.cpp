@@ -7,6 +7,7 @@
 #include <imgui.h>
 
 #include "ui/icons.h"
+#include "ui/ui_colors.h"
 
 namespace dw {
 
@@ -60,7 +61,7 @@ void ImportOptionsDialog::render() {
 
         // Network source warning
         if (m_detectedLocation == StorageLocation::Network) {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, colors::kWarning);
             ImGui::Text("%s Source appears to be a network/remote drive "
                         "(NAS, cloud sync, etc.)",
                         Icons::Warning);
@@ -106,7 +107,7 @@ void ImportOptionsDialog::render() {
 
         // Network-specific recommendations
         if (m_detectedLocation == StorageLocation::Network) {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, colors::kWarning);
             ImGui::TextWrapped("Recommended: Copy to library. Network files should be "
                                "copied locally for reliable access.");
             ImGui::PopStyleColor();
@@ -114,7 +115,7 @@ void ImportOptionsDialog::render() {
             // Extra warning if user selects Move on a network drive
             if (m_selectedMode == moveToLib) {
                 ImGui::Spacing();
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_Text, colors::kErrorText);
                 ImGui::TextWrapped("%s Moving files from a network drive is not recommended "
                                    "-- connection drops can cause data loss.",
                                    Icons::Warning);

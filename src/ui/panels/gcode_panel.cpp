@@ -19,6 +19,7 @@
 #include "../../render/gl_utils.h"
 #include "../dialogs/file_dialog.h"
 #include "../icons.h"
+#include "../ui_colors.h"
 #include "../widgets/toast.h"
 
 namespace dw {
@@ -662,12 +663,12 @@ void GCodePanel::renderConnectionBar() {
 void GCodePanel::renderMachineStatus() {
     // State badge with color coding
     const char* stateText = "Unknown";
-    ImVec4 stateColor(0.5f, 0.5f, 0.5f, 1.0f);
+    ImVec4 stateColor = colors::kDimmed;
 
     switch (m_machineStatus.state) {
     case MachineState::Idle:
         stateText = "IDLE";
-        stateColor = ImVec4(0.3f, 0.8f, 0.3f, 1.0f);
+        stateColor = colors::kSuccess;
         break;
     case MachineState::Run:
         stateText = "RUN";
@@ -675,7 +676,7 @@ void GCodePanel::renderMachineStatus() {
         break;
     case MachineState::Hold:
         stateText = "HOLD";
-        stateColor = ImVec4(1.0f, 0.8f, 0.2f, 1.0f);
+        stateColor = colors::kWarning;
         break;
     case MachineState::Alarm:
         stateText = "ALARM";
@@ -804,7 +805,7 @@ void GCodePanel::renderProgressBar() {
     ImGui::ProgressBar(fraction, ImVec2(-1, 0), overlay);
 
     if (m_streamProgress.errorCount > 0) {
-        ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "Errors: %d",
+        ImGui::TextColored(colors::kError, "Errors: %d",
                            m_streamProgress.errorCount);
     }
 }
@@ -906,9 +907,9 @@ void GCodePanel::renderConsole() {
     for (const auto& line : m_consoleLines) {
         ImVec4 color(0.7f, 0.7f, 0.7f, 1.0f);
         switch (line.type) {
-        case ConsoleLine::Sent: color = ImVec4(0.5f, 0.5f, 0.5f, 1.0f); break;
-        case ConsoleLine::Ok: color = ImVec4(0.3f, 0.8f, 0.3f, 1.0f); break;
-        case ConsoleLine::Error: color = ImVec4(1.0f, 0.3f, 0.3f, 1.0f); break;
+        case ConsoleLine::Sent: color = colors::kDimmed; break;
+        case ConsoleLine::Ok: color = colors::kSuccess; break;
+        case ConsoleLine::Error: color = colors::kError; break;
         case ConsoleLine::Status: color = ImVec4(0.3f, 0.6f, 1.0f, 1.0f); break;
         case ConsoleLine::Info: color = ImVec4(0.7f, 0.7f, 0.7f, 1.0f); break;
         }
@@ -1851,11 +1852,11 @@ void GCodePanel::renderJobHistory() {
                 if (job.status == "completed") {
                     ImGui::TextColored(ImVec4(0.3f, 0.9f, 0.3f, 1.0f), "Done");
                 } else if (job.status == "aborted") {
-                    ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "Abort");
+                    ImGui::TextColored(colors::kError, "Abort");
                 } else if (job.status == "interrupted") {
                     ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.1f, 1.0f), "Crash");
                 } else {
-                    ImGui::TextColored(ImVec4(0.4f, 0.7f, 1.0f, 1.0f), "Run");
+                    ImGui::TextColored(colors::kInfo, "Run");
                 }
 
                 // File name

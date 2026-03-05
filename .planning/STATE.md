@@ -44,6 +44,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 29 P02 | 3min | 1 tasks | 3 files |
+| Phase 29 P03 | 6min | 1 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -54,6 +55,7 @@ Progress: [░░░░░░░░░░] 0%
 - No research phase -- internal codebase work only
 - 4 phases: Bug Fixes -> Splits -> Dedup -> Quality Polish (sequential dependency chain)
 - [Phase 29]: LabelValueTable RAII helper -- only replaced identical 0.35/0.65 stretch tables, left interactive/fixed-width tables untouched
+- [Phase 29]: edit_buffer.h utility -- clearBuffer/fillBuffer/formatBuffer replacing raw memset+snprintf pairs
 
 ### Pending Todos
 None.
@@ -64,7 +66,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Roadmap created -- ready to plan Phase 27
+Stopped at: Completed 29-03-PLAN (edit buffer consolidation)
 Resume file: None
 Next action: `/gsd:plan-phase 27`
 

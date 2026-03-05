@@ -7,6 +7,7 @@
 
 #include "core/cnc/cnc_controller.h"
 #include "ui/icons.h"
+#include "ui/ui_colors.h"
 
 namespace dw {
 
@@ -24,7 +25,7 @@ void CncWcsPanel::render() {
 
     if (!m_connected) {
         ImGui::Spacing();
-        ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "%s Disconnected", Icons::Unlink);
+        ImGui::TextColored(colors::kDimmed, "%s Disconnected", Icons::Unlink);
         ImGui::TextDisabled("Connect a CNC machine to set work zero");
         ImGui::End();
         return;

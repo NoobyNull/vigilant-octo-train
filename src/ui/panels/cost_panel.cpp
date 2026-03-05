@@ -6,6 +6,7 @@
 #include <ctime>
 
 #include "ui/icons.h"
+#include "ui/ui_colors.h"
 #include "ui/widgets/edit_buffer.h"
 #include "ui/widgets/toast.h"
 
@@ -752,7 +753,7 @@ void CostingPanel::renderRateCategories() {
                 ImGui::TableNextColumn();
                 bool isProjectOverride = (rate.projectId > 0);
                 if (isProjectOverride) {
-                    ImGui::TextColored(ImVec4(0.4f, 0.7f, 1.0f, 1.0f), "Override");
+                    ImGui::TextColored(colors::kInfo, "Override");
                 } else {
                     ImGui::TextDisabled("Global");
                 }

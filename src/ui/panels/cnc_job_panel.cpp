@@ -8,6 +8,7 @@
 #include "core/config/config.h"
 #include "ui/icons.h"
 #include "ui/theme.h"
+#include "ui/ui_colors.h"
 #include "ui/widgets/table_helpers.h"
 
 namespace dw {
@@ -59,9 +60,9 @@ void CncJobPanel::renderProgressBar() {
     // Color-coded percentage text below bar
     ImVec4 pctColor;
     if (fraction >= 0.75f)
-        pctColor = ImVec4(0.3f, 0.8f, 0.3f, 1.0f); // Green
+        pctColor = colors::kSuccess; // Green
     else if (fraction >= 0.25f)
-        pctColor = ImVec4(1.0f, 0.8f, 0.2f, 1.0f); // Yellow
+        pctColor = colors::kWarning; // Yellow
     else
         pctColor = ImVec4(0.8f, 0.8f, 0.8f, 1.0f); // White/gray
 
@@ -79,7 +80,7 @@ void CncJobPanel::renderLineInfo() {
     }
 
     if (m_progress.errorCount > 0) {
-        ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f),
+        ImGui::TextColored(colors::kError,
                            "%s Errors: %d", Icons::Error, m_progress.errorCount);
     }
 }
@@ -147,7 +148,7 @@ void CncJobPanel::renderFeedDeviation() {
         if (m_feedDeviationWarning) {
             // Red warning for >20% deviation
             ImGui::Spacing();
-            ImVec4 warningColor(1.0f, 0.3f, 0.3f, 1.0f);
+            ImVec4 warningColor = colors::kError;
             ImGui::TextColored(warningColor, "%s Feed Deviation: %.0f%%",
                 Icons::Warning, static_cast<double>(deviationPct));
 
@@ -160,7 +161,7 @@ void CncJobPanel::renderFeedDeviation() {
                 min, max, IM_COL32(255, 60, 60, 40), 3.0f);
         } else {
             // Normal — green indicator
-            ImGui::TextColored(ImVec4(0.3f, 0.8f, 0.3f, 1.0f),
+            ImGui::TextColored(colors::kSuccess,
                 "Deviation: %.0f%% (OK)", static_cast<double>(deviationPct));
         }
     } else if (!m_streaming) {

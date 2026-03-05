@@ -7,6 +7,7 @@
 
 #include "core/cnc/cnc_controller.h"
 #include "ui/icons.h"
+#include "ui/ui_colors.h"
 
 namespace dw {
 
@@ -29,7 +30,7 @@ static ImVec4 sourceColor(MS source) {
     case MS::JOB:   return ImVec4(0.3f, 0.7f, 1.0f, 1.0f);   // Blue
     case MS::MDI:   return ImVec4(0.4f, 0.8f, 1.0f, 1.0f);   // Cyan
     case MS::MACRO: return ImVec4(0.8f, 0.6f, 1.0f, 1.0f);   // Purple
-    case MS::SYS:   return ImVec4(1.0f, 0.8f, 0.2f, 1.0f);   // Yellow
+    case MS::SYS:   return colors::kWarning;                    // Yellow
     }
     return ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
 }
@@ -50,7 +51,7 @@ void CncConsolePanel::render() {
 
     if (!m_connected) {
         ImGui::Spacing();
-        ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "%s Disconnected", Icons::Unlink);
+        ImGui::TextColored(colors::kDimmed, "%s Disconnected", Icons::Unlink);
         ImGui::TextDisabled("Connect a CNC machine to use console");
         ImGui::End();
         return;
@@ -76,10 +77,10 @@ void CncConsolePanel::render() {
                 color = ImVec4(0.9f, 0.9f, 0.9f, 1.0f); // White
                 break;
             case ConsoleLine::Error:
-                color = ImVec4(1.0f, 0.3f, 0.3f, 1.0f); // Red
+                color = colors::kError; // Red
                 break;
             case ConsoleLine::Info:
-                color = ImVec4(1.0f, 0.8f, 0.2f, 1.0f); // Yellow
+                color = colors::kWarning; // Yellow
                 break;
             }
             ImGui::TextColored(color, "%s%s", prefix, line.text.c_str());
