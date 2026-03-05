@@ -103,21 +103,49 @@ TEST(WasteBreakdown, DollarValues) {
 }
 
 TEST(WasteBreakdown, MultipleSheets) {
-    auto opt = CutOptimizer::create(Algorithm::Guillotine);
-    opt->setKerf(0.0f);
-    opt->setMargin(0.0f);
-    opt->setAllowRotation(false);
+    // Construct a 2-sheet CutPlan directly to test waste breakdown across sheets
+    // Each sheet 1000x1000, one 500x500 part placed on each
+    static Part p1(500.0f, 500.0f, 1);
+    static Part p2(400.0f, 400.0f, 1);
 
-    // Parts that require 2 sheets (each 800x800 on 1000x1000 -- only one fits per sheet)
-    std::vector<Part> parts = {
-        Part(800.0f, 800.0f, 1),
-        Part(800.0f, 800.0f, 1),
-    };
+    CutPlan plan;
+
+    // Sheet 0: one 500x500 part
+    SheetResult sr0;
+    sr0.sheetIndex = 0;
+    Placement pl0;
+    pl0.part = &p1;
+    pl0.partIndex = 0;
+    pl0.instanceIndex = 0;
+    pl0.x = 0.0f;
+    pl0.y = 0.0f;
+    pl0.rotated = false;
+    sr0.placements.push_back(pl0);
+    sr0.usedArea = 500.0f * 500.0f;
+    sr0.wasteArea = 1000.0f * 1000.0f - sr0.usedArea;
+    plan.sheets.push_back(sr0);
+
+    // Sheet 1: one 400x400 part
+    SheetResult sr1;
+    sr1.sheetIndex = 1;
+    Placement pl1;
+    pl1.part = &p2;
+    pl1.partIndex = 1;
+    pl1.instanceIndex = 0;
+    pl1.x = 0.0f;
+    pl1.y = 0.0f;
+    pl1.rotated = false;
+    sr1.placements.push_back(pl1);
+    sr1.usedArea = 400.0f * 400.0f;
+    sr1.wasteArea = 1000.0f * 1000.0f - sr1.usedArea;
+    plan.sheets.push_back(sr1);
+
+    plan.totalUsedArea = sr0.usedArea + sr1.usedArea;
+    plan.totalWasteArea = sr0.wasteArea + sr1.wasteArea;
+    plan.sheetsUsed = 2;
+    plan.totalCost = 100.0f;
+
     Sheet sheet(1000.0f, 1000.0f, 50.0f);
-    CutPlan plan = opt->optimize(parts, {sheet});
-
-    ASSERT_EQ(plan.sheetsUsed, 2);
-
     WasteBreakdown wb = computeWasteBreakdown(plan, sheet, 0.0f);
 
     // Scrap pieces from both sheets should be collected
