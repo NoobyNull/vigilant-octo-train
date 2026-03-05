@@ -45,6 +45,7 @@ bool ProjectDirectory::createSubdirs() {
     ok &= file::createDirectories(heightmapsDir());
     ok &= file::createDirectories(gcodeDir());
     ok &= file::createDirectories(imagesDir());
+    ok &= file::createDirectories(costingDir());
     return ok;
 }
 

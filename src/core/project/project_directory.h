@@ -59,6 +59,7 @@ class ProjectDirectory {
     Path heightmapsDir() const { return m_root / "heightmaps"; }
     Path gcodeDir() const { return m_root / "gcode"; }
     Path imagesDir() const { return m_root / "images"; }
+    Path costingDir() const { return m_root / "costing"; }
 
     const std::string& name() const { return m_name; }
     const std::string& description() const { return m_description; }
