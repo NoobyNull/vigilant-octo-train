@@ -827,6 +827,18 @@ void CostingPanel::recalculateEditBuffer() {
                          m_editBuffer.discountAmount;
 }
 
+// --- CLO Integration ---
+
+void CostingPanel::addCloEntry(const CostingEntry& entry) {
+    m_engine.addEntry(entry);
+    syncEstimateFromEngine();
+    syncRecordFromEngine();
+}
+
+void CostingPanel::save() {
+    saveToDisk();
+}
+
 // --- Persistence ---
 
 void CostingPanel::setCostingDir(const Path& dir) {

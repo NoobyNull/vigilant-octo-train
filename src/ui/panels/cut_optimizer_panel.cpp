@@ -1,6 +1,7 @@
 #include "cut_optimizer_panel.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <map>
@@ -881,14 +882,56 @@ void CutOptimizerPanel::renderResultsPanel() {
     ImGui::Spacing();
     if (!m_onAddToCost)
         ImGui::BeginDisabled();
-    float totalCost = m_hasMultiResults ? m_multiResult.totalCost
-                                        : static_cast<float>(m_result.sheetsUsed) * m_sheet.cost;
     if (ImGui::Button("Add to Costing", ImVec2(-1, 0))) {
         if (m_onAddToCost) {
-            m_onAddToCost(m_sheet.name.empty() ? "Cut Plan Sheets" : m_sheet.name,
-                          m_hasMultiResults ? m_multiResult.totalSheetsUsed : m_result.sheetsUsed,
-                          m_sheet.cost,
-                          totalCost);
+            std::vector<CloGroupCostData> groups;
+
+            if (m_hasMultiResults) {
+                // Multi-stock: one entry per material group
+                for (const auto& gr : m_multiResult.groups) {
+                    CloGroupCostData data;
+                    data.materialName = gr.materialName;
+
+                    // Format dimensions from usedSheet
+                    char dimBuf[64];
+                    std::snprintf(dimBuf, sizeof(dimBuf), "%.0fx%.0fmm",
+                                  static_cast<double>(gr.usedSheet.width),
+                                  static_cast<double>(gr.usedSheet.height));
+                    data.dimensions = dimBuf;
+
+                    data.sheetsUsed = gr.plan.sheetsUsed;
+                    data.costPerSheet = static_cast<f64>(gr.usedSheet.cost);
+                    data.totalCost = data.costPerSheet * data.sheetsUsed;
+
+                    // Look up StockSize DB ID from m_stockSizes by matching dimensions
+                    for (const auto& ss : m_stockSizes) {
+                        if (std::abs(static_cast<f32>(ss.widthMm) - gr.usedSheet.width) < 1.0f &&
+                            std::abs(static_cast<f32>(ss.heightMm) - gr.usedSheet.height) < 1.0f) {
+                            data.stockSizeDbId = ss.id;
+                            break;
+                        }
+                    }
+
+                    groups.push_back(std::move(data));
+                }
+            } else if (m_hasResults) {
+                // Single-sheet mode: one entry
+                CloGroupCostData data;
+                data.materialName = m_sheet.name.empty() ? "Cut Plan Sheets" : m_sheet.name;
+
+                char dimBuf[64];
+                std::snprintf(dimBuf, sizeof(dimBuf), "%.0fx%.0fmm",
+                              static_cast<double>(m_sheet.width),
+                              static_cast<double>(m_sheet.height));
+                data.dimensions = dimBuf;
+
+                data.sheetsUsed = m_result.sheetsUsed;
+                data.costPerSheet = static_cast<f64>(m_sheet.cost);
+                data.totalCost = data.costPerSheet * data.sheetsUsed;
+                groups.push_back(std::move(data));
+            }
+
+            m_onAddToCost(groups);
             ToastManager::instance().show(ToastType::Success, "Added",
                                           "Cut plan cost added to costing");
         }

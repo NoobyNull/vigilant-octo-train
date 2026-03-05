@@ -27,6 +27,12 @@ class CostingPanel : public Panel {
     // Set the project costing directory for persistence
     void setCostingDir(const Path& dir);
 
+    // External CLO auto-push: add a material entry from cut optimizer
+    void addCloEntry(const CostingEntry& entry);
+
+    // Persist current engine state to project costing directory
+    void save();
+
   private:
     void renderToolbar();
     void renderRecordList();

@@ -528,22 +528,29 @@ void Application::initWiring() {
         cop->setProjectManager(m_projectManager.get());
         cop->setModelRepository(m_modelRepo.get());
         cop->setMaterialManager(m_materialManager.get());
-        cop->setOnAddToCost([this](const std::string& name, int qty, float rate, float total) {
-            if (!m_costRepo) return;
-            // Create a new costing record with the cut plan material cost
-            CostingRecord record;
-            record.name = "Cut Plan \xe2\x80\x94 " + name;
-            if (m_projectManager && m_projectManager->currentProject())
-                record.projectId = m_projectManager->currentProject()->id();
-            CostItem item;
-            item.name = name + " sheets";
-            item.category = CostCategory::Material;
-            item.quantity = static_cast<f64>(qty);
-            item.rate = static_cast<f64>(rate);
-            item.total = static_cast<f64>(total);
-            record.items.push_back(item);
-            record.recalculate();
-            m_costRepo->insert(record);
+        cop->setOnAddToCost([this](const std::vector<CutOptimizerPanel::CloGroupCostData>& groups) {
+            auto* costPanel = m_uiManager->costPanel();
+            if (!costPanel) return;
+
+            for (const auto& group : groups) {
+                // Skip groups with no pricing
+                if (group.costPerSheet <= 0.0) {
+                    ToastManager::instance().show(ToastType::Warning, "Skipped",
+                        group.materialName + " -- no pricing available");
+                    continue;
+                }
+
+                auto entry = CostingEngine::createMaterialEntry(
+                    group.materialName,
+                    group.stockSizeDbId,
+                    group.dimensions,
+                    group.costPerSheet,
+                    static_cast<f64>(group.sheetsUsed),
+                    "sheet");
+                entry.notes = "[auto:clo]";
+                costPanel->addCloEntry(entry);
+            }
+            costPanel->save();
         });
     }
     if (auto* gcp = m_uiManager->gcodePanel()) {

@@ -42,11 +42,18 @@ class CutOptimizerPanel : public Panel {
     void setModelRepository(ModelRepository* repo) { m_modelRepo = repo; }
     void setMaterialManager(MaterialManager* mm);
 
-    // Cost integration callback
-    using AddToCostCallback = std::function<void(const std::string& name,
-                                                  int sheetsUsed,
-                                                  float costPerSheet,
-                                                  float totalCost)>;
+    // Each CLO material group to push as a cost entry
+    struct CloGroupCostData {
+        std::string materialName;  // e.g. "Baltic Birch Plywood"
+        std::string dimensions;    // e.g. "1220x2440x19mm" from usedSheet
+        i64 stockSizeDbId = 0;     // StockSize.id for snapshot
+        int sheetsUsed = 0;
+        f64 costPerSheet = 0.0;
+        f64 totalCost = 0.0;
+    };
+
+    // Cost integration callback -- passes per-group material data
+    using AddToCostCallback = std::function<void(const std::vector<CloGroupCostData>& groups)>;
     void setOnAddToCost(AddToCostCallback cb) { m_onAddToCost = std::move(cb); }
 
   private:
