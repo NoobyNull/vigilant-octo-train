@@ -13,7 +13,7 @@ class CostingEngineTest : public ::testing::Test {
 TEST_F(CostingEngineTest, AddEntry_AssignsId) {
     CostingEntry e;
     e.name = "Test item";
-    e.category = CostCategory::Material;
+    e.category = CostCat::Material;
     engine.addEntry(e);
 
     const auto& entries = engine.entries();
@@ -43,7 +43,7 @@ TEST_F(CostingEngineTest, RemoveEntry_ById) {
 TEST_F(CostingEngineTest, FindEntry_ById) {
     CostingEntry e;
     e.name = "Findable";
-    e.category = CostCategory::Labor;
+    e.category = CostCat::Labor;
     engine.addEntry(e);
 
     std::string id = engine.entries()[0].id;
@@ -56,7 +56,7 @@ TEST_F(CostingEngineTest, CreateMaterialEntry_SnapshotsPrice) {
     auto entry = CostingEngine::createMaterialEntry(
         "Plywood 4x8", 42, "1220x2440x19mm", 45.0, 2.0, "sheet");
 
-    EXPECT_EQ(entry.category, CostCategory::Material);
+    EXPECT_EQ(entry.category, CostCat::Material);
     EXPECT_EQ(entry.snapshot.dbId, 42);
     EXPECT_DOUBLE_EQ(entry.snapshot.priceAtCapture, 45.0);
     EXPECT_DOUBLE_EQ(entry.estimatedTotal, 90.0);  // 2 * 45
@@ -73,7 +73,7 @@ TEST_F(CostingEngineTest, CreateMaterialEntry_CategoryIsCorrect) {
 TEST_F(CostingEngineTest, CreateLaborEntry) {
     auto entry = CostingEngine::createLaborEntry("Assembly", 25.0, 3.5);
 
-    EXPECT_EQ(entry.category, CostCategory::Labor);
+    EXPECT_EQ(entry.category, CostCat::Labor);
     EXPECT_EQ(entry.unit, "hour");
     EXPECT_DOUBLE_EQ(entry.estimatedTotal, 87.50);
     EXPECT_DOUBLE_EQ(entry.quantity, 3.5);
@@ -83,7 +83,7 @@ TEST_F(CostingEngineTest, CreateLaborEntry) {
 TEST_F(CostingEngineTest, CreateOverheadEntry) {
     auto entry = CostingEngine::createOverheadEntry("Shop rent", 50.0, "Monthly allocation");
 
-    EXPECT_EQ(entry.category, CostCategory::Overhead);
+    EXPECT_EQ(entry.category, CostCat::Overhead);
     EXPECT_DOUBLE_EQ(entry.estimatedTotal, 50.0);
     EXPECT_EQ(entry.notes, "Monthly allocation");
 }
@@ -91,7 +91,7 @@ TEST_F(CostingEngineTest, CreateOverheadEntry) {
 TEST_F(CostingEngineTest, Recalculate_UpdatesEstimatedTotals) {
     CostingEntry e;
     e.name = "Widget";
-    e.category = CostCategory::Material;
+    e.category = CostCat::Material;
     e.quantity = 3.0;
     e.unitRate = 10.0;
     e.estimatedTotal = 0.0;  // Not yet calculated
@@ -161,15 +161,15 @@ TEST_F(CostingEngineTest, CategoryTotals_GroupsByCategory) {
     bool foundLabor = false;
     bool foundOverhead = false;
     for (const auto& ct : totals) {
-        if (ct.category == CostCategory::Material) {
+        if (ct.category == CostCat::Material) {
             EXPECT_DOUBLE_EQ(ct.estimatedTotal, 50.0);
             EXPECT_EQ(ct.entryCount, 1);
             foundMaterial = true;
-        } else if (ct.category == CostCategory::Labor) {
+        } else if (ct.category == CostCat::Labor) {
             EXPECT_DOUBLE_EQ(ct.estimatedTotal, 60.0);
             EXPECT_EQ(ct.entryCount, 1);
             foundLabor = true;
-        } else if (ct.category == CostCategory::Overhead) {
+        } else if (ct.category == CostCat::Overhead) {
             EXPECT_DOUBLE_EQ(ct.estimatedTotal, 25.0);
             EXPECT_EQ(ct.entryCount, 1);
             foundOverhead = true;
@@ -204,7 +204,7 @@ TEST_F(CostingEngineTest, ApplyRateCategories_GeneratesEntries) {
     for (const auto& e : entries) {
         if (e.name == "Finishing supplies") {
             EXPECT_DOUBLE_EQ(e.estimatedTotal, 20.0);  // 2.0 * 10
-            EXPECT_EQ(e.category, CostCategory::Consumable);
+            EXPECT_EQ(e.category, CostCat::Consumable);
             foundFinishing = true;
         } else if (e.name == "Router bits") {
             EXPECT_DOUBLE_EQ(e.estimatedTotal, 15.0);  // 1.5 * 10

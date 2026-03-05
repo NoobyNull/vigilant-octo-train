@@ -7,6 +7,7 @@
 
 #include "../../core/database/cost_repository.h"
 #include "../../core/database/rate_category_repository.h"
+#include "../../core/project/costing_engine.h"
 #include "panel.h"
 
 namespace dw {
@@ -26,8 +27,18 @@ class CostingPanel : public Panel {
     void renderToolbar();
     void renderRecordList();
     void renderRecordEditor();
-    void renderNewItemRow();
     void renderRateCategories();
+
+    // Category-grouped costing display
+    void renderCostingSummary();
+    void renderCategorySection(const std::string& category, const std::string& displayName);
+    void renderAddLaborForm();
+    void renderAddOverheadForm();
+    void renderAddMaterialForm();
+
+    // Sync between CostingEngine and CostingRecord
+    void syncEngineFromRecord();
+    void syncRecordFromEngine();
 
     // Recalculate edit buffer totals from items
     void recalculateEditBuffer();
@@ -40,17 +51,29 @@ class CostingPanel : public Panel {
     std::vector<CostingRecord> m_records;
     int m_selectedIndex = -1;
 
+    // Costing engine for category-grouped computation
+    CostingEngine m_engine;
+
     // Edit buffer for selected record
     CostingRecord m_editBuffer;
     char m_editName[256]{};
     char m_editNotes[1024]{};
 
-    // New item input buffer
-    char m_newItemName[256]{};
-    int m_newItemCategory = 0;
-    float m_newItemQty = 1.0f;
-    float m_newItemRate = 0.0f;
-    char m_newItemNotes[256]{};
+    // Labor form buffers
+    char m_laborName[256]{};
+    float m_laborRate = 25.0f;
+    float m_laborHours = 1.0f;
+
+    // Overhead form buffers
+    char m_overheadName[256]{};
+    float m_overheadAmount = 0.0f;
+    char m_overheadNotes[256]{};
+
+    // Material form buffers
+    char m_materialName[256]{};
+    float m_materialPrice = 0.0f;
+    float m_materialQty = 1.0f;
+    char m_materialUnit[64]{"sheet"};
 
     // Tax/discount edit fields
     float m_editTaxRate = 0.0f;

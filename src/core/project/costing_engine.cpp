@@ -47,7 +47,7 @@ CostingEntry CostingEngine::createMaterialEntry(
     const std::string& unit) {
     CostingEntry e;
     e.name = name;
-    e.category = CostCategory::Material;
+    e.category = CostCat::Material;
     e.quantity = quantity;
     e.unitRate = priceAtCapture;
     e.estimatedTotal = quantity * priceAtCapture;
@@ -65,7 +65,7 @@ CostingEntry CostingEngine::createLaborEntry(
     f64 estimatedHours) {
     CostingEntry e;
     e.name = name;
-    e.category = CostCategory::Labor;
+    e.category = CostCat::Labor;
     e.quantity = estimatedHours;
     e.unitRate = hourlyRate;
     e.estimatedTotal = hourlyRate * estimatedHours;
@@ -79,7 +79,7 @@ CostingEntry CostingEngine::createOverheadEntry(
     const std::string& notes) {
     CostingEntry e;
     e.name = name;
-    e.category = CostCategory::Overhead;
+    e.category = CostCat::Overhead;
     e.quantity = 1.0;
     e.unitRate = amount;
     e.estimatedTotal = amount;
@@ -101,7 +101,7 @@ void CostingEngine::applyRateCategories(const std::vector<RateCategory>& rates,
     // Generate new entries from rate categories
     for (const auto& rate : rates) {
         CostingEntry e;
-        e.category = CostCategory::Consumable;
+        e.category = CostCat::Consumable;
         e.name = rate.name;
         e.quantity = projectVolumeCuUnits;
         e.unitRate = rate.ratePerCuUnit;
@@ -141,11 +141,11 @@ f64 CostingEngine::variance() const {
 std::vector<CategoryTotal> CostingEngine::categoryTotals() const {
     // Maintain canonical order
     const char* categoryOrder[] = {
-        CostCategory::Material,
-        CostCategory::Tooling,
-        CostCategory::Consumable,
-        CostCategory::Labor,
-        CostCategory::Overhead,
+        CostCat::Material,
+        CostCat::Tooling,
+        CostCat::Consumable,
+        CostCat::Labor,
+        CostCat::Overhead,
     };
 
     std::vector<CategoryTotal> result;

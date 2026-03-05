@@ -15,8 +15,8 @@ struct CostingSnapshot {
     f64 priceAtCapture = 0.0;       // Price when added to project
 };
 
-// Cost category string constants
-namespace CostCategory {
+// Cost category string constants for CostingEntry (distinct from CostCategory enum in cost_repository.h)
+namespace CostCat {
     constexpr const char* Material    = "material";
     constexpr const char* Tooling     = "tooling";
     constexpr const char* Consumable  = "consumable";

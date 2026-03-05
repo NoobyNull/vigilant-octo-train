@@ -8,8 +8,15 @@
 
 namespace dw {
 
-static const char* kCategoryNames[] = {"Material", "Labor", "Tool", "Other"};
-static constexpr int kCategoryCount = 4;
+// Display names for the 5 cost categories
+static const char* categoryDisplayName(const std::string& cat) {
+    if (cat == CostCat::Material) return "Material Costs";
+    if (cat == CostCat::Tooling) return "Tooling Costs";
+    if (cat == CostCat::Consumable) return "Consumable Costs";
+    if (cat == CostCat::Labor) return "Labor Costs";
+    if (cat == CostCat::Overhead) return "Overhead";
+    return "Other";
+}
 
 CostingPanel::CostingPanel(CostRepository* repo, RateCategoryRepository* rateCatRepo)
     : Panel("Project Costing"), m_repo(repo), m_rateCatRepo(rateCatRepo) {
@@ -45,7 +52,7 @@ void CostingPanel::render() {
     ImGui::SameLine();
 
     if (ImGui::BeginChild("RecordEditor", ImVec2(0, avail.y), true)) {
-        if (m_selectedIndex >= 0) {
+        if (m_selectedIndex >= 0 || m_isNewRecord) {
             renderRecordEditor();
         } else {
             ImGui::TextDisabled("Select or create a cost record");
@@ -68,6 +75,7 @@ void CostingPanel::renderToolbar() {
         m_editDiscountRate = 0.0f;
         m_isNewRecord = true;
         m_selectedIndex = -1; // Will be set after insert
+        m_engine.setEntries({});
         refreshRateCategories();
     }
     if (ImGui::IsItemHovered()) {
@@ -87,6 +95,7 @@ void CostingPanel::renderToolbar() {
                 m_records = m_repo->findAll();
                 m_selectedIndex = -1;
                 m_isNewRecord = false;
+                m_engine.setEntries({});
                 refreshRateCategories();
             } else {
                 ToastManager::instance().show(ToastType::Error, "Delete Failed");
@@ -105,6 +114,7 @@ void CostingPanel::renderToolbar() {
             m_records = m_repo->findAll();
             m_selectedIndex = -1;
             m_isNewRecord = false;
+            m_engine.setEntries({});
             refreshRateCategories();
         }
     }
@@ -130,6 +140,7 @@ void CostingPanel::renderRecordList() {
             std::snprintf(m_editNotes, sizeof(m_editNotes), "%s", rec.notes.c_str());
             m_editTaxRate = static_cast<float>(rec.taxRate);
             m_editDiscountRate = static_cast<float>(rec.discountRate);
+            syncEngineFromRecord();
             refreshRateCategories();
         }
     }
@@ -151,111 +162,39 @@ void CostingPanel::renderRecordEditor() {
 
     ImGui::Spacing();
 
-    // Line items table
-    ImGui::Text("Line Items:");
-    if (ImGui::BeginTable("CostItems",
-                          6,
-                          ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
-                              ImGuiTableFlags_Resizable)) {
-        ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn("Category", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("Material__").x);
-        ImGui::TableSetupColumn("Qty", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("0000.00").x);
-        ImGui::TableSetupColumn("Rate", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("$00000.00").x);
-        ImGui::TableSetupColumn("Total", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("$00000.00").x);
-        ImGui::TableSetupColumn("##Del", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("X__").x);
-        ImGui::TableHeadersRow();
+    // Sync engine from record and recalculate
+    syncEngineFromRecord();
+    m_engine.recalculate();
 
-        int deleteIdx = -1;
-        for (int i = 0; i < static_cast<int>(m_editBuffer.items.size()); ++i) {
-            auto& item = m_editBuffer.items[static_cast<size_t>(i)];
-            ImGui::PushID(i);
-            ImGui::TableNextRow();
+    // Category-grouped sections
+    renderCategorySection(CostCat::Material, "Material Costs");
+    renderCategorySection(CostCat::Tooling, "Tooling Costs");
+    renderCategorySection(CostCat::Consumable, "Consumable Costs");
+    renderCategorySection(CostCat::Labor, "Labor Costs");
+    renderCategorySection(CostCat::Overhead, "Overhead");
 
-            // Name
-            ImGui::TableNextColumn();
-            char itemName[256];
-            std::snprintf(itemName, sizeof(itemName), "%s", item.name.c_str());
-            ImGui::SetNextItemWidth(-1);
-            if (ImGui::InputText("##ItemName", itemName, sizeof(itemName))) {
-                item.name = itemName;
-            }
+    ImGui::Spacing();
+    ImGui::Separator();
 
-            // Category combo
-            ImGui::TableNextColumn();
-            int catIdx = static_cast<int>(item.category);
-            ImGui::SetNextItemWidth(-1);
-            if (ImGui::Combo("##Cat", &catIdx, kCategoryNames, kCategoryCount)) {
-                item.category = static_cast<CostCategory>(catIdx);
-            }
-
-            // Quantity
-            ImGui::TableNextColumn();
-            float qty = static_cast<float>(item.quantity);
-            ImGui::SetNextItemWidth(-1);
-            if (ImGui::InputFloat("##Qty", &qty, 0, 0, "%.2f")) {
-                item.quantity = static_cast<f64>(qty);
-                item.total = item.quantity * item.rate;
-            }
-
-            // Rate
-            ImGui::TableNextColumn();
-            float rate = static_cast<float>(item.rate);
-            ImGui::SetNextItemWidth(-1);
-            if (ImGui::InputFloat("##Rate", &rate, 0, 0, "%.2f")) {
-                item.rate = static_cast<f64>(rate);
-                item.total = item.quantity * item.rate;
-            }
-
-            // Total (read-only)
-            ImGui::TableNextColumn();
-            ImGui::Text("$%.2f", item.total);
-
-            // Delete button
-            ImGui::TableNextColumn();
-            if (ImGui::SmallButton("X")) {
-                deleteIdx = i;
-            }
-
-            ImGui::PopID();
-        }
-
-        // Remove item if delete was clicked
-        if (deleteIdx >= 0) {
-            m_editBuffer.items.erase(m_editBuffer.items.begin() + deleteIdx);
-        }
-
-        // Add item row
-        renderNewItemRow();
-
-        ImGui::EndTable();
-    }
+    // Summary totals
+    renderCostingSummary();
 
     ImGui::Spacing();
 
     // Tax and discount
-    ImGui::SetNextItemWidth(ImGui::CalcTextSize("100.00%").x + ImGui::GetStyle().FramePadding.x * 2);
+    const auto& style = ImGui::GetStyle();
+    float percentFieldW = ImGui::CalcTextSize("100.00%").x + style.FramePadding.x * 2;
+    ImGui::SetNextItemWidth(percentFieldW);
     ImGui::InputFloat("Tax %", &m_editTaxRate, 0, 0, "%.2f");
-    ImGui::SameLine(0, ImGui::GetStyle().ItemSpacing.x * 3);
-    ImGui::SetNextItemWidth(ImGui::CalcTextSize("100.00%").x + ImGui::GetStyle().FramePadding.x * 2);
+    ImGui::SameLine(0, style.ItemSpacing.x * 3);
+    ImGui::SetNextItemWidth(percentFieldW);
     ImGui::InputFloat("Discount %", &m_editDiscountRate, 0, 0, "%.2f");
 
     // Calculate totals
     m_editBuffer.taxRate = static_cast<f64>(m_editTaxRate);
     m_editBuffer.discountRate = static_cast<f64>(m_editDiscountRate);
+    syncRecordFromEngine();
     recalculateEditBuffer();
-
-    ImGui::Spacing();
-    ImGui::Separator();
-
-    // Totals display
-    ImGui::Text("Subtotal:  $%.2f", m_editBuffer.subtotal);
-    if (m_editBuffer.taxAmount > 0.001) {
-        ImGui::Text("Tax:       $%.2f", m_editBuffer.taxAmount);
-    }
-    if (m_editBuffer.discountAmount > 0.001) {
-        ImGui::Text("Discount: -$%.2f", m_editBuffer.discountAmount);
-    }
-    ImGui::Text("Total:     $%.2f", m_editBuffer.total);
 
     ImGui::Spacing();
 
@@ -267,7 +206,7 @@ void CostingPanel::renderRecordEditor() {
 
     // Save button
     std::string saveLabel = std::string(Icons::Save) + " Save";
-    float saveBtnW = ImGui::CalcTextSize(saveLabel.c_str()).x + ImGui::GetStyle().FramePadding.x * 4;
+    float saveBtnW = ImGui::CalcTextSize(saveLabel.c_str()).x + style.FramePadding.x * 4;
     if (ImGui::Button(saveLabel.c_str(), ImVec2(saveBtnW, 0))) {
         m_editBuffer.name = m_editName;
         m_editBuffer.notes = m_editNotes;
@@ -303,6 +242,340 @@ void CostingPanel::renderRecordEditor() {
     ImGui::Spacing();
     ImGui::Separator();
     renderRateCategories();
+}
+
+void CostingPanel::renderCategorySection(const std::string& category,
+                                          const std::string& displayName) {
+    if (!ImGui::CollapsingHeader(displayName.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+        return;
+    }
+
+    // Collect entries for this category
+    const auto& allEntries = m_engine.entries();
+    std::vector<size_t> categoryIndices;
+    for (size_t i = 0; i < allEntries.size(); ++i) {
+        if (allEntries[i].category == category) {
+            categoryIndices.push_back(i);
+        }
+    }
+
+    const auto& style = ImGui::GetStyle();
+
+    // Table with calculated column widths
+    float nameColW = ImGui::CalcTextSize("MMMMMMMMMMMMMMMMMMMM").x; // ~20 chars
+    float numColW = ImGui::CalcTextSize("00000.00").x + style.FramePadding.x * 2;
+    float moneyColW = ImGui::CalcTextSize("$000000.00").x + style.FramePadding.x * 2;
+    float actionColW = ImGui::CalcTextSize("X").x + style.FramePadding.x * 4;
+
+    std::string tableId = "CostCat_" + category;
+    if (ImGui::BeginTable(tableId.c_str(), 6,
+                          ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
+                              ImGuiTableFlags_Resizable)) {
+        ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch, nameColW);
+        ImGui::TableSetupColumn("Qty", ImGuiTableColumnFlags_WidthFixed, numColW);
+        ImGui::TableSetupColumn("Rate", ImGuiTableColumnFlags_WidthFixed, moneyColW);
+        ImGui::TableSetupColumn("Estimated", ImGuiTableColumnFlags_WidthFixed, moneyColW);
+        ImGui::TableSetupColumn("Actual", ImGuiTableColumnFlags_WidthFixed, moneyColW);
+        ImGui::TableSetupColumn("##Del", ImGuiTableColumnFlags_WidthFixed, actionColW);
+        ImGui::TableHeadersRow();
+
+        std::string removeId;
+        for (size_t idx : categoryIndices) {
+            auto* entry = const_cast<CostingEntry*>(&allEntries[idx]);
+            ImGui::PushID(static_cast<int>(idx));
+            ImGui::TableNextRow();
+
+            // Name
+            ImGui::TableNextColumn();
+            char nameBuf[256];
+            std::snprintf(nameBuf, sizeof(nameBuf), "%s", entry->name.c_str());
+            ImGui::SetNextItemWidth(-1);
+            if (ImGui::InputText("##Name", nameBuf, sizeof(nameBuf))) {
+                entry->name = nameBuf;
+            }
+
+            // Qty
+            ImGui::TableNextColumn();
+            float qty = static_cast<float>(entry->quantity);
+            ImGui::SetNextItemWidth(-1);
+            if (ImGui::InputFloat("##Qty", &qty, 0, 0, "%.2f")) {
+                entry->quantity = static_cast<f64>(qty);
+                entry->estimatedTotal = entry->quantity * entry->unitRate;
+            }
+
+            // Rate
+            ImGui::TableNextColumn();
+            bool isMaterialSnapshot = (category == CostCat::Material && entry->snapshot.dbId > 0);
+            if (isMaterialSnapshot) {
+                // Read-only for snapshotted materials
+                ImGui::Text("$%.2f", entry->unitRate);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("Snapshot price from database (captured at $%.2f)",
+                                      entry->snapshot.priceAtCapture);
+                }
+            } else {
+                float rate = static_cast<float>(entry->unitRate);
+                ImGui::SetNextItemWidth(-1);
+                if (ImGui::InputFloat("##Rate", &rate, 0, 0, "%.2f")) {
+                    entry->unitRate = static_cast<f64>(rate);
+                    entry->estimatedTotal = entry->quantity * entry->unitRate;
+                }
+            }
+
+            // Estimated (read-only)
+            ImGui::TableNextColumn();
+            ImGui::Text("$%.2f", entry->estimatedTotal);
+
+            // Actual (editable)
+            ImGui::TableNextColumn();
+            float actual = static_cast<float>(entry->actualTotal);
+            ImGui::SetNextItemWidth(-1);
+            if (ImGui::InputFloat("##Actual", &actual, 0, 0, "%.2f")) {
+                entry->actualTotal = static_cast<f64>(actual);
+            }
+
+            // Delete
+            ImGui::TableNextColumn();
+            if (ImGui::SmallButton("X")) {
+                removeId = entry->id;
+            }
+
+            ImGui::PopID();
+        }
+
+        // Remove entry if requested (after iteration)
+        if (!removeId.empty()) {
+            m_engine.removeEntry(removeId);
+            syncRecordFromEngine();
+        }
+
+        ImGui::EndTable();
+    }
+
+    // Category subtotal
+    f64 catEstimated = 0.0;
+    f64 catActual = 0.0;
+    for (size_t idx : categoryIndices) {
+        catEstimated += allEntries[idx].estimatedTotal;
+        catActual += allEntries[idx].actualTotal;
+    }
+    if (!categoryIndices.empty()) {
+        ImGui::Text("Subtotal: Est $%.2f | Act $%.2f", catEstimated, catActual);
+    }
+
+    // Add forms for specific categories
+    if (category == CostCat::Labor) {
+        renderAddLaborForm();
+    } else if (category == CostCat::Overhead) {
+        renderAddOverheadForm();
+    } else if (category == CostCat::Material) {
+        renderAddMaterialForm();
+    }
+
+    ImGui::Spacing();
+}
+
+void CostingPanel::renderAddLaborForm() {
+    const auto& style = ImGui::GetStyle();
+    float fieldW = ImGui::CalcTextSize("MMMMMMMMMMMM").x + style.FramePadding.x * 2;
+    float numW = ImGui::CalcTextSize("0000.00").x + style.FramePadding.x * 2;
+
+    ImGui::SetNextItemWidth(fieldW);
+    ImGui::InputText("##LaborName", m_laborName, sizeof(m_laborName));
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Labor item name");
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(numW);
+    ImGui::InputFloat("$/hr##LaborRate", &m_laborRate, 0, 0, "%.2f");
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(numW);
+    ImGui::InputFloat("hrs##LaborHrs", &m_laborHours, 0, 0, "%.1f");
+
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Add Labor")) {
+        if (m_laborName[0] != '\0') {
+            auto entry = CostingEngine::createLaborEntry(
+                m_laborName,
+                static_cast<f64>(m_laborRate),
+                static_cast<f64>(m_laborHours));
+            m_engine.addEntry(std::move(entry));
+            syncRecordFromEngine();
+
+            // Reset
+            std::memset(m_laborName, 0, sizeof(m_laborName));
+            m_laborRate = 25.0f;
+            m_laborHours = 1.0f;
+        }
+    }
+}
+
+void CostingPanel::renderAddOverheadForm() {
+    const auto& style = ImGui::GetStyle();
+    float fieldW = ImGui::CalcTextSize("MMMMMMMMMMMM").x + style.FramePadding.x * 2;
+    float numW = ImGui::CalcTextSize("0000.00").x + style.FramePadding.x * 2;
+
+    ImGui::SetNextItemWidth(fieldW);
+    ImGui::InputText("##OhName", m_overheadName, sizeof(m_overheadName));
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Overhead item name");
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(numW);
+    ImGui::InputFloat("$##OhAmt", &m_overheadAmount, 0, 0, "%.2f");
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(fieldW);
+    ImGui::InputText("Notes##OhNotes", m_overheadNotes, sizeof(m_overheadNotes));
+
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Add Overhead")) {
+        if (m_overheadName[0] != '\0') {
+            auto entry = CostingEngine::createOverheadEntry(
+                m_overheadName,
+                static_cast<f64>(m_overheadAmount),
+                m_overheadNotes);
+            m_engine.addEntry(std::move(entry));
+            syncRecordFromEngine();
+
+            // Reset
+            std::memset(m_overheadName, 0, sizeof(m_overheadName));
+            m_overheadAmount = 0.0f;
+            std::memset(m_overheadNotes, 0, sizeof(m_overheadNotes));
+        }
+    }
+}
+
+void CostingPanel::renderAddMaterialForm() {
+    const auto& style = ImGui::GetStyle();
+    float fieldW = ImGui::CalcTextSize("MMMMMMMMMMMM").x + style.FramePadding.x * 2;
+    float numW = ImGui::CalcTextSize("0000.00").x + style.FramePadding.x * 2;
+    float unitW = ImGui::CalcTextSize("board foot").x + style.FramePadding.x * 2;
+
+    ImGui::SetNextItemWidth(fieldW);
+    ImGui::InputText("##MatName", m_materialName, sizeof(m_materialName));
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Material name");
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(numW);
+    ImGui::InputFloat("$##MatPrice", &m_materialPrice, 0, 0, "%.2f");
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(numW);
+    ImGui::InputFloat("Qty##MatQty", &m_materialQty, 0, 0, "%.1f");
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(unitW);
+    ImGui::InputText("Unit##MatUnit", m_materialUnit, sizeof(m_materialUnit));
+
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Add Material")) {
+        if (m_materialName[0] != '\0') {
+            auto entry = CostingEngine::createMaterialEntry(
+                m_materialName,
+                0, // No DB reference for manual entry
+                "",
+                static_cast<f64>(m_materialPrice),
+                static_cast<f64>(m_materialQty),
+                m_materialUnit);
+            m_engine.addEntry(std::move(entry));
+            syncRecordFromEngine();
+
+            // Reset
+            std::memset(m_materialName, 0, sizeof(m_materialName));
+            m_materialPrice = 0.0f;
+            m_materialQty = 1.0f;
+            std::snprintf(m_materialUnit, sizeof(m_materialUnit), "sheet");
+        }
+    }
+}
+
+void CostingPanel::renderCostingSummary() {
+    auto totals = m_engine.categoryTotals();
+
+    // Per-category subtotals
+    for (const auto& ct : totals) {
+        ImGui::Text("  %s: Est $%.2f | Act $%.2f (%d items)",
+                     categoryDisplayName(ct.category),
+                     ct.estimatedTotal, ct.actualTotal, ct.entryCount);
+    }
+
+    ImGui::Spacing();
+    ImGui::Separator();
+
+    f64 estTotal = m_engine.totalEstimated();
+    f64 actTotal = m_engine.totalActual();
+    f64 var = m_engine.variance();
+
+    ImGui::Text("Estimated Total: $%.2f", estTotal);
+    ImGui::Text("Actual Total:    $%.2f", actTotal);
+
+    // Variance with color coding
+    if (var <= 0.0) {
+        // Under budget or on budget -- green
+        ImGui::TextColored(ImVec4(0.3f, 0.85f, 0.3f, 1.0f),
+                            "Variance:        $%.2f (under budget)", var);
+    } else {
+        // Over budget -- red
+        ImGui::TextColored(ImVec4(0.95f, 0.3f, 0.3f, 1.0f),
+                            "Variance:       +$%.2f (over budget)", var);
+    }
+}
+
+void CostingPanel::syncEngineFromRecord() {
+    std::vector<CostingEntry> entries;
+    for (const auto& item : m_editBuffer.items) {
+        CostingEntry ce;
+        ce.name = item.name;
+        ce.id = (item.id > 0) ? std::to_string(item.id) : "";
+        ce.quantity = item.quantity;
+        ce.unitRate = item.rate;
+        ce.estimatedTotal = item.total;
+
+        // Map old CostCategory enum to new string category
+        switch (item.category) {
+        case CostCategory::Material:
+            ce.category = CostCat::Material;
+            break;
+        case CostCategory::Labor:
+            ce.category = CostCat::Labor;
+            break;
+        case CostCategory::Tool:
+            ce.category = CostCat::Tooling;
+            break;
+        case CostCategory::Other:
+            ce.category = CostCat::Overhead;
+            break;
+        }
+
+        entries.push_back(std::move(ce));
+    }
+    m_engine.setEntries(std::move(entries));
+}
+
+void CostingPanel::syncRecordFromEngine() {
+    std::vector<CostItem> items;
+    for (const auto& ce : m_engine.entries()) {
+        CostItem item;
+        item.name = ce.name;
+        item.quantity = ce.quantity;
+        item.rate = ce.unitRate;
+        item.total = ce.estimatedTotal;
+        item.notes = ce.notes;
+
+        // Map string category back to enum
+        if (ce.category == CostCat::Material) {
+            item.category = CostCategory::Material;
+        } else if (ce.category == CostCat::Labor) {
+            item.category = CostCategory::Labor;
+        } else if (ce.category == CostCat::Tooling) {
+            item.category = CostCategory::Tool;
+        } else {
+            item.category = CostCategory::Other;
+        }
+
+        items.push_back(std::move(item));
+    }
+    m_editBuffer.items = std::move(items);
 }
 
 void CostingPanel::renderRateCategories() {
@@ -509,54 +782,6 @@ void CostingPanel::refreshRateCategories() {
     }
 }
 
-void CostingPanel::renderNewItemRow() {
-    ImGui::TableNextRow();
-
-    // Name
-    ImGui::TableNextColumn();
-    ImGui::SetNextItemWidth(-1);
-    ImGui::InputText("##NewName", m_newItemName, sizeof(m_newItemName));
-
-    // Category
-    ImGui::TableNextColumn();
-    ImGui::SetNextItemWidth(-1);
-    ImGui::Combo("##NewCat", &m_newItemCategory, kCategoryNames, kCategoryCount);
-
-    // Qty
-    ImGui::TableNextColumn();
-    ImGui::SetNextItemWidth(-1);
-    ImGui::InputFloat("##NewQty", &m_newItemQty, 0, 0, "%.2f");
-
-    // Rate
-    ImGui::TableNextColumn();
-    ImGui::SetNextItemWidth(-1);
-    ImGui::InputFloat("##NewRate", &m_newItemRate, 0, 0, "%.2f");
-
-    // Total preview
-    ImGui::TableNextColumn();
-    ImGui::Text("$%.2f", static_cast<double>(m_newItemQty) * static_cast<double>(m_newItemRate));
-
-    // Add button
-    ImGui::TableNextColumn();
-    if (ImGui::SmallButton("+")) {
-        if (m_newItemName[0] != '\0') {
-            CostItem item;
-            item.name = m_newItemName;
-            item.category = static_cast<CostCategory>(m_newItemCategory);
-            item.quantity = static_cast<f64>(m_newItemQty);
-            item.rate = static_cast<f64>(m_newItemRate);
-            item.total = item.quantity * item.rate;
-            m_editBuffer.items.push_back(item);
-
-            // Reset new item fields
-            std::memset(m_newItemName, 0, sizeof(m_newItemName));
-            m_newItemCategory = 0;
-            m_newItemQty = 1.0f;
-            m_newItemRate = 0.0f;
-        }
-    }
-}
-
 void CostingPanel::selectRecord(i64 recordId) {
     // Refresh list to ensure we have latest data
     if (m_repo) {
@@ -577,6 +802,7 @@ void CostingPanel::selectRecord(i64 recordId) {
                 m_editNotes, sizeof(m_editNotes), "%s", m_editBuffer.notes.c_str());
             m_editTaxRate = static_cast<float>(m_editBuffer.taxRate);
             m_editDiscountRate = static_cast<float>(m_editBuffer.discountRate);
+            syncEngineFromRecord();
             refreshRateCategories();
             return;
         }
