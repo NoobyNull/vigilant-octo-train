@@ -1,140 +1,90 @@
 # Requirements: Digital Workshop
 
-**Defined:** 2026-03-04
+**Defined:** 2026-03-05
 **Core Value:** A woodworker can go from selecting a piece of wood and a cutting tool to safely running a CNC job with optimized feeds and speeds -- all without leaving the application.
 
-## v0.4.0 Requirements
+## v0.5.0 Requirements
 
-Requirements for Shared Materials & Project Costing milestone. Each maps to roadmap phases.
+Requirements for Codebase Cleanup & Simplification milestone. Pure refactoring — no user-facing behavior changes.
 
-### Materials & Stock (MATL)
+### Bug Fixes (BUG)
 
-- [x] **MATL-01**: User can add stock size entries to any material with dimensions (WxH*thickness) and per-unit price
-- [x] **MATL-02**: User can add, edit, and delete stock sizes from the Materials panel
-- [x] **MATL-03**: User sees auto-suggested common sizes when adding stock (4x8, 5x5 for sheets; 2x4, 1x6 for lumber)
-- [x] **MATL-04**: User can view board foot calculation and cost-per-board-foot derived from stock dimensions and price
-- [x] **MATL-05**: User can create consumable items (sandpaper, finish, glue) with per-unit pricing and unit-of-measure
+- [ ] **BUG-01**: GCodeMetadata in ImportQueue uses smart pointer instead of raw new/delete
+- [ ] **BUG-02**: file::move() handles cross-filesystem moves via copy+delete fallback
 
-### Cut List Optimizer (CLO)
+### Monolithic Function Splits (SPLIT)
 
-- [x] **CLO-01**: User selects material and stock size from the shared material system instead of hardcoded presets
-- [x] **CLO-02**: User sees itemized waste breakdown: usable scrap pieces, kerf loss (blade width * cut length), and unusable waste
-- [x] **CLO-03**: User can optimize parts across multiple stock sizes in the same run
-- [x] **CLO-04**: User can track usable scrap pieces and flag them for reuse in future optimizations
-- [x] **CLO-05**: CLO results automatically push material costs, waste, and sheet count into project costing
+- [ ] **SPLIT-01**: Application::initWiring() (~905 lines) is decomposed into domain-specific wiring functions
+- [ ] **SPLIT-02**: ImportQueue::processTask() (~540 lines) is decomposed into pipeline stage functions
+- [ ] **SPLIT-03**: Schema::createTables() (~425 lines) is decomposed into per-table builder functions
+- [ ] **SPLIT-04**: Config::load() (~373 lines) is decomposed into per-section parser functions
+- [ ] **SPLIT-05**: Application::init() (~292 lines) is decomposed into initialization phase functions
 
-### Project Costing (COST)
+### Duplicate Code Consolidation (DUP)
 
-- [ ] **COST-01**: Application uses "Costing" instead of "Estimator" throughout UI and code
-- [x] **COST-02**: Material costs are captured (snapshot) at point of addition to project
-- [x] **COST-03**: Tool costs are per-unit with flexible units (hours, minutes, per-object-in-batch), live from DB
-- [x] **COST-04**: Consumable costs track quantity used, live pricing from DB
-- [x] **COST-05**: Labor entries with configurable hourly rate
-- [x] **COST-06**: Overhead entries (user-defined line items)
-- [x] **COST-07**: Each cost line shows estimated and actual columns; actual is manual entry
-- [x] **COST-08**: User can set a sale price; margin (sale price minus total cost) is calculated and displayed
-- [x] **COST-09**: Project panel shows total estimated cost, total actual cost, and margin aggregated from all entries
-- [x] **COST-10**: Cost categories: Material, Tooling, Consumable, Labor, Overhead
-- [x] **COST-11**: User can toggle between Estimate view (working/editable) and Order view (finalized receipt)
-- [x] **COST-12**: User can print the estimate or order as a formatted document
-- [x] **COST-13**: Costing data persists to user's TheDigitalWorkshop data directory
+- [ ] **DUP-01**: UI color constants (error red, success green, warning yellow) are centralized in a single header
+- [ ] **DUP-02**: ImGui 2-column label/value table pattern is extracted into a reusable helper function
+- [ ] **DUP-03**: Inline edit buffer management (memset+snprintf pairs) is consolidated into a utility function
 
-### Data Architecture (DATA)
+### Code Quality (QUAL)
 
-- [ ] **DATA-01**: Stock sizes stored in DB table with FK to materials (single source of truth for current prices)
-- [ ] **DATA-02**: Project-specific costs (captured material prices, actuals, sale price) stored in project folder as JSON
-- [x] **DATA-03**: Live pricing (tools, consumables) reads directly from DB -- changes propagate automatically
-- [x] **DATA-04**: CLO results stored in project folder with references to stock_size IDs
+- [ ] **QUAL-01**: Hardcoded UI scale factors in panel code are replaced with style-system-derived values
+- [ ] **QUAL-02**: glClearColor uses theme/config values instead of hardcoded constants
+- [ ] **QUAL-03**: application_wiring.cpp is under 800 lines (consequence of SPLIT-01)
 
-## Design Decisions
+### Oversized Files (SIZE)
 
-**Three cost categories with different pricing behaviors:**
+- [ ] **SIZE-01**: Config::save() (~370 lines) is decomposed into per-section writer functions (symmetry with SPLIT-04)
 
-| Category | Examples | Price Source | Behavior |
-|----------|----------|-------------|----------|
-| Material | Pine 4x8, walnut board | Captured at point of addition | Snapshot -- historical accuracy |
-| Mine (tooling) | V-bit, sanding disc | Live from DB, per-unit (hrs/min/per-object) | Real-time -- reflects current replacement cost |
-| Consumable | Sandpaper, finish, glue | Live from DB, per-unit | Real-time -- reflects current market price |
+## v0.6.0+ Requirements
 
-**Estimate vs Order:**
-- Estimate = working view, editable, live prices update automatically
-- Order = finalized receipt, locked, represents what was actually charged
+Deferred to future release. Tracked but not in current roadmap.
 
-**Data split:**
-- Database = global truth (materials, stock prices, tool costs, consumable prices)
-- Project folder = project-specific (captured material prices, actual costs paid, sale price, CLO results)
+### Deferred Refactoring
 
-**Git versioning:** Skip v0.3.0 tag -- go directly to v0.4.0 to align with GSD milestone numbering.
-
-## Previous Milestone Requirements
-
-### v0.2.0: Sender Feature Parity (Phases 9-13)
-
-8 SAF requirements (complete), 8 SND requirements (pending), 8 NIC requirements (pending), 16 EXT requirements (complete), 5 TCP requirements (complete).
-
-### v0.3.0: Direct Carve (Phases 14-19)
-
-30 DC requirements (complete). See REQUIREMENTS-DIRECT-CARVE.md.
-
-## Future Requirements
-
-### Deferred
-
-- **INV-01**: Material inventory tracking (how many sheets on hand)
-- **INV-02**: Supplier/vendor info on stock entries
-- **INV-03**: Tax/markup calculation presets
-- **TOOL-01**: Tool wear tracking with automatic replacement alerts
-- **TOOL-02**: Per-tool cost history over time
+- **REF-01**: Config class split into concern-specific classes (AppConfig, RenderConfig, CncConfig, etc.)
+- **REF-02**: Repository CRUD template base class (reduces 10 repos by ~1,100 lines)
+- **REF-03**: gcode_panel.cpp decomposition (1956 lines)
+- **REF-04**: cnc_controller.cpp decomposition (1351 lines — justified complexity but monitor)
+- **REF-05**: tool_database.cpp decomposition (1006 lines)
+- **REF-06**: Windows serial port enumeration (TODO stub)
+- **REF-07**: Undo/redo system
+- **REF-08**: 3MF deflate compression full integration
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Accounting integration (QuickBooks, etc.) | Desktop app, not an accounting tool |
-| Multi-currency support | USD-only for now, user is domestic |
-| Cloud-based price updates | No cloud sync -- user manages prices manually |
-| Purchase order generation | Receipt/order view covers the output need |
-| Git tag v0.3.0 | Skipped to align with GSD versioning -- Direct Carve was on feature branch |
+| Config class split into concern classes | Too invasive for cleanup milestone, defer to v0.6.0 |
+| Repository template base class | High-value but needs careful design, defer |
+| CNC controller refactoring | Justified complexity, single responsibility |
+| New features or behavior changes | This is a pure refactoring milestone |
+| Thread safety for Config singleton | Known single-threaded by design |
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MATL-01 | Phase 21 | Complete |
-| MATL-02 | Phase 21 | Complete |
-| MATL-03 | Phase 21 | Complete |
-| MATL-04 | Phase 21 | Complete |
-| MATL-05 | Phase 22 | Complete |
-| CLO-01 | Phase 23 | Complete |
-| CLO-02 | Phase 23 | Complete |
-| CLO-03 | Phase 23 | Complete |
-| CLO-04 | Phase 23 | Complete |
-| CLO-05 | Phase 25 | Complete |
-| COST-01 | Phase 20 | Pending |
-| COST-02 | Phase 24 | Complete |
-| COST-03 | Phase 22 | Complete |
-| COST-04 | Phase 22 | Complete |
-| COST-05 | Phase 24 | Complete |
-| COST-06 | Phase 24 | Complete |
-| COST-07 | Phase 24 | Complete |
-| COST-08 | Phase 26 | Complete |
-| COST-09 | Phase 25 | Complete |
-| COST-10 | Phase 24 | Complete |
-| COST-11 | Phase 26 | Complete |
-| COST-12 | Phase 26 | Complete |
-| COST-13 | Phase 24 | Complete |
-| DATA-01 | Phase 20 | Pending |
-| DATA-02 | Phase 20 | Pending |
-| DATA-03 | Phase 22 | Complete |
-| DATA-04 | Phase 23 | Complete |
+| BUG-01 | Phase 27 | Pending |
+| BUG-02 | Phase 27 | Pending |
+| SPLIT-01 | Phase 28 | Pending |
+| SPLIT-02 | Phase 28 | Pending |
+| SPLIT-03 | Phase 28 | Pending |
+| SPLIT-04 | Phase 28 | Pending |
+| SPLIT-05 | Phase 28 | Pending |
+| SIZE-01 | Phase 28 | Pending |
+| DUP-01 | Phase 29 | Pending |
+| DUP-02 | Phase 29 | Pending |
+| DUP-03 | Phase 29 | Pending |
+| QUAL-01 | Phase 30 | Pending |
+| QUAL-02 | Phase 30 | Pending |
+| QUAL-03 | Phase 28 | Pending |
 
 **Coverage:**
-- v0.4.0 requirements: 27 total
-- Mapped to phases: 27/27
+- v0.5.0 requirements: 14 total
+- Mapped to phases: 14
 - Unmapped: 0
 
 ---
-*Requirements defined: 2026-03-04*
-*Last updated: 2026-03-04 -- traceability updated with phase mappings*
+*Requirements defined: 2026-03-05*
+*Last updated: 2026-03-05 after initial definition*
