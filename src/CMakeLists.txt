@@ -137,6 +137,9 @@ set(DW_SOURCES
     # Archive
     core/archive/archive.cpp
 
+    # Workspace
+    core/workspace/workspace_relocator.cpp
+
     # Materials
     core/materials/default_materials.cpp
     core/materials/gemini_material_service.cpp

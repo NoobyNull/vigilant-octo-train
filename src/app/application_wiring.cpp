@@ -63,6 +63,8 @@
 #include "ui/panels/direct_carve_panel.h"
 #include "ui/panels/tool_browser_panel.h"
 #include "ui/panels/viewport_panel.h"
+#include "core/workspace/workspace_relocator.h"
+#include "ui/dialogs/file_dialog.h"
 #include "ui/widgets/toast.h"
 
 namespace dw {
@@ -876,6 +878,96 @@ void Application::initWiring() {
             return report;
         });
     }
+
+    // Wire workspace relocator
+    m_uiManager->setOnRelocateWorkspace([this]() {
+        Path currentRoot = Config::instance().getEffectiveWorkspaceRoot();
+
+        // Check for individually overridden categories to warn about
+        auto overridden = WorkspaceRelocator::getOverriddenCategories();
+
+        m_uiManager->fileDialog()->showFolder(
+            "Select New Workspace Location", [this, currentRoot, overridden](const std::string& dest) {
+                if (dest.empty())
+                    return;
+
+                Path destRoot(dest);
+
+                // Same location check
+                std::error_code ec;
+                if (fs::equivalent(currentRoot, destRoot, ec)) {
+                    ToastManager::instance().show(
+                        ToastType::Info, "Relocate Workspace", "Already at that location");
+                    return;
+                }
+
+                // Count files for progress
+                int fileCount = WorkspaceRelocator::countFiles(currentRoot);
+                if (fileCount == 0) {
+                    // Nothing to move — just update config
+                    auto& config = Config::instance();
+                    config.setWorkspaceRoot(destRoot);
+                    config.setModelsDir({});
+                    config.setProjectsDir({});
+                    config.setMaterialsDir({});
+                    config.setGCodeDir({});
+                    config.setSupportDir({});
+                    config.save();
+                    ToastManager::instance().show(
+                        ToastType::Success,
+                        "Workspace Relocated",
+                        "Workspace root updated (no files to move)");
+                    return;
+                }
+
+                auto* progress = m_uiManager->progressDialog();
+                progress->start("Relocating Workspace...", fileCount);
+
+                WorkspaceRelocator::Options opts;
+                opts.sourceRoot = currentRoot;
+                opts.destRoot = destRoot;
+                opts.moveFiles = true;
+
+                std::thread([this, opts, progress, overridden]() {
+                    auto result = WorkspaceRelocator::relocate(
+                        opts,
+                        [progress](const std::string& file) { progress->advance(file); },
+                        [progress]() { return progress->isCancelled(); });
+
+                    m_mainThreadQueue->enqueue([this, result, opts]() {
+                        m_uiManager->progressDialog()->finish();
+
+                        if (result.success) {
+                            auto& config = Config::instance();
+                            config.setWorkspaceRoot(opts.destRoot);
+                            config.setModelsDir({});
+                            config.setProjectsDir({});
+                            config.setMaterialsDir({});
+                            config.setGCodeDir({});
+                            config.setSupportDir({});
+                            config.save();
+
+                            std::string msg = std::to_string(result.filesCopied) + " file(s) moved";
+                            if (result.filesSkipped > 0)
+                                msg += ", " + std::to_string(result.filesSkipped) + " skipped";
+                            if (!result.skippedCategories.empty()) {
+                                msg += " (";
+                                for (size_t i = 0; i < result.skippedCategories.size(); ++i) {
+                                    if (i > 0) msg += ", ";
+                                    msg += result.skippedCategories[i];
+                                }
+                                msg += " overridden, not moved)";
+                            }
+                            ToastManager::instance().show(
+                                ToastType::Success, "Workspace Relocated", msg);
+                        } else {
+                            ToastManager::instance().show(
+                                ToastType::Error, "Relocation Failed", result.error);
+                        }
+                    });
+                }).detach();
+            });
+    });
 
     // Wire tagger shutdown dialog
     if (m_uiManager->taggerShutdownDialog()) {

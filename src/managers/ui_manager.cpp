@@ -354,6 +354,9 @@ void UIManager::renderToolsMenu() {
     if (ImGui::MenuItem("Library Maintenance...") && m_onLibraryMaintenance) {
         m_onLibraryMaintenance();
     }
+    if (ImGui::MenuItem("Relocate Workspace...") && m_onRelocateWorkspace) {
+        m_onRelocateWorkspace();
+    }
     ImGui::EndMenu();
 }
 

@@ -198,6 +198,7 @@ class UIManager {
     void setOnSpawnSettings(ActionCallback cb) { m_onSpawnSettings = std::move(cb); }
     void setOnShowAbout(ActionCallback cb) { m_onShowAbout = std::move(cb); }
     void setOnLibraryMaintenance(ActionCallback cb) { m_onLibraryMaintenance = std::move(cb); }
+    void setOnRelocateWorkspace(ActionCallback cb) { m_onRelocateWorkspace = std::move(cb); }
 
     // CNC menu bar callbacks
     using ConnectCallback = std::function<void(const std::string& port)>;
@@ -334,6 +335,7 @@ class UIManager {
     ActionCallback m_onSpawnSettings;
     ActionCallback m_onShowAbout;
     ActionCallback m_onLibraryMaintenance;
+    ActionCallback m_onRelocateWorkspace;
 
     // CNC menu bar callbacks
     ConnectCallback m_onConnect;
