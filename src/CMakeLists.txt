@@ -159,6 +159,7 @@ set(DW_SOURCES
     ui/panels/library_panel_items.cpp
     ui/panels/materials_panel.cpp
     ui/panels/materials_panel_dialogs.cpp
+    ui/panels/materials_panel_stock.cpp
     ui/panels/properties_panel.cpp
     ui/panels/project_panel.cpp
     ui/panels/gcode_panel.cpp
