@@ -15,6 +15,15 @@ struct CostingSnapshot {
     f64 priceAtCapture = 0.0;       // Price when added to project
 };
 
+// Cost category string constants
+namespace CostCategory {
+    constexpr const char* Material    = "material";
+    constexpr const char* Tooling     = "tooling";
+    constexpr const char* Consumable  = "consumable";
+    constexpr const char* Labor       = "labor";
+    constexpr const char* Overhead    = "overhead";
+}
+
 // Single cost line item in a project
 struct CostingEntry {
     std::string id;                  // UUID string for stable identity

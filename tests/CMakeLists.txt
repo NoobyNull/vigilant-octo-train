@@ -79,6 +79,7 @@ set(DW_TEST_SOURCES
     test_carve_streamer.cpp
     test_carve_integration.cpp
     test_unit_conversion.cpp
+    test_costing_engine.cpp
     test_board_foot.cpp
     test_waste_breakdown.cpp
     test_multi_stock_optimizer.cpp
@@ -144,6 +145,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/project/project.cpp
     ${CMAKE_SOURCE_DIR}/src/core/project/project_directory.cpp
     ${CMAKE_SOURCE_DIR}/src/core/project/project_costing_io.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/project/costing_engine.cpp
     ${CMAKE_SOURCE_DIR}/src/core/export/model_exporter.cpp
     ${CMAKE_SOURCE_DIR}/src/core/archive/archive.cpp
     ${CMAKE_SOURCE_DIR}/src/core/materials/material_archive.cpp
