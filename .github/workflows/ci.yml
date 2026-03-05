@@ -185,11 +185,27 @@ jobs:
       - name: Test
         run: ./build/tests/Release/dw_tests.exe
 
-      - name: Package (ZIP + WiX)
+      - name: Package (ZIP)
         run: |
           cd build
           cpack -G ZIP -C Release
-          cpack -G WIX -C Release
+
+      - name: Package (WiX MSI)
+        run: |
+          cd build
+          cpack -G WIX -C Release --verbose
+
+      - name: Dump WiX log on failure
+        if: failure()
+        run: |
+          $logFile = "build/_CPack_Packages/win64/WIX/wix.log"
+          if (Test-Path $logFile) {
+            Write-Host "=== WiX Log ==="
+            Get-Content $logFile
+          } else {
+            Write-Host "wix.log not found at $logFile"
+            Get-ChildItem -Recurse build/_CPack_Packages -ErrorAction SilentlyContinue | Select-Object FullName
+          }
 
       - name: Upload artifact (ZIP)
         uses: actions/upload-artifact@v4
