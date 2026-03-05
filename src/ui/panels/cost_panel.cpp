@@ -6,6 +6,7 @@
 #include <ctime>
 
 #include "ui/icons.h"
+#include "ui/widgets/edit_buffer.h"
 #include "ui/widgets/toast.h"
 
 #include "../../core/utils/file_utils.h"
@@ -73,9 +74,8 @@ void CostingPanel::renderToolbar() {
         // Create new record
         m_editBuffer = CostingRecord{};
         m_editBuffer.name = "New Record";
-        std::memset(m_editName, 0, sizeof(m_editName));
-        std::snprintf(m_editName, sizeof(m_editName), "%s", m_editBuffer.name.c_str());
-        std::memset(m_editNotes, 0, sizeof(m_editNotes));
+        fillBuffer(m_editName, m_editBuffer.name);
+        clearBuffer(m_editNotes);
         m_editTaxRate = 0.0f;
         m_editDiscountRate = 0.0f;
         m_isNewRecord = true;
@@ -139,10 +139,8 @@ void CostingPanel::renderRecordList() {
             m_selectedIndex = i;
             m_isNewRecord = false;
             m_editBuffer = rec;
-            std::memset(m_editName, 0, sizeof(m_editName));
-            std::snprintf(m_editName, sizeof(m_editName), "%s", rec.name.c_str());
-            std::memset(m_editNotes, 0, sizeof(m_editNotes));
-            std::snprintf(m_editNotes, sizeof(m_editNotes), "%s", rec.notes.c_str());
+            fillBuffer(m_editName, rec.name);
+            fillBuffer(m_editNotes, rec.notes);
             m_editTaxRate = static_cast<float>(rec.taxRate);
             m_editDiscountRate = static_cast<float>(rec.discountRate);
             syncEngineFromRecord();
@@ -435,7 +433,7 @@ void CostingPanel::renderAddLaborForm() {
             syncRecordFromEngine();
 
             // Reset
-            std::memset(m_laborName, 0, sizeof(m_laborName));
+            clearBuffer(m_laborName);
             m_laborRate = 25.0f;
             m_laborHours = 1.0f;
         }
@@ -470,9 +468,9 @@ void CostingPanel::renderAddOverheadForm() {
             syncRecordFromEngine();
 
             // Reset
-            std::memset(m_overheadName, 0, sizeof(m_overheadName));
+            clearBuffer(m_overheadName);
             m_overheadAmount = 0.0f;
-            std::memset(m_overheadNotes, 0, sizeof(m_overheadNotes));
+            clearBuffer(m_overheadNotes);
         }
     }
 }
@@ -513,10 +511,10 @@ void CostingPanel::renderAddMaterialForm() {
             syncRecordFromEngine();
 
             // Reset
-            std::memset(m_materialName, 0, sizeof(m_materialName));
+            clearBuffer(m_materialName);
             m_materialPrice = 0.0f;
             m_materialQty = 1.0f;
-            std::snprintf(m_materialUnit, sizeof(m_materialUnit), "sheet");
+            fillBuffer(m_materialUnit, std::string("sheet"));
         }
     }
 }
@@ -762,11 +760,9 @@ void CostingPanel::renderRateCategories() {
                 ImGui::TableNextColumn();
                 if (ImGui::SmallButton("Edit")) {
                     m_editingRateIndex = i;
-                    std::memset(m_editRateName, 0, sizeof(m_editRateName));
-                    std::snprintf(m_editRateName, sizeof(m_editRateName), "%s", rate.name.c_str());
+                    fillBuffer(m_editRateName, rate.name);
                     m_editRatePerCuUnit = static_cast<float>(rate.ratePerCuUnit);
-                    std::memset(m_editRateNotes, 0, sizeof(m_editRateNotes));
-                    std::snprintf(m_editRateNotes, sizeof(m_editRateNotes), "%s", rate.notes.c_str());
+                    fillBuffer(m_editRateNotes, rate.notes);
                 }
                 ImGui::SameLine();
                 if (ImGui::SmallButton("Del")) {
@@ -822,9 +818,9 @@ void CostingPanel::renderRateCategories() {
                 m_rateCatRepo->insert(newCat);
 
                 // Reset input fields
-                std::memset(m_newRateName, 0, sizeof(m_newRateName));
+                clearBuffer(m_newRateName);
                 m_newRatePerCuUnit = 0.0f;
-                std::memset(m_newRateNotes, 0, sizeof(m_newRateNotes));
+                clearBuffer(m_newRateNotes);
                 m_newRateIsOverride = false;
 
                 refreshRateCategories();
@@ -870,12 +866,8 @@ void CostingPanel::selectRecord(i64 recordId) {
             m_selectedIndex = i;
             m_isNewRecord = false;
             m_editBuffer = m_records[static_cast<size_t>(i)];
-            std::memset(m_editName, 0, sizeof(m_editName));
-            std::snprintf(
-                m_editName, sizeof(m_editName), "%s", m_editBuffer.name.c_str());
-            std::memset(m_editNotes, 0, sizeof(m_editNotes));
-            std::snprintf(
-                m_editNotes, sizeof(m_editNotes), "%s", m_editBuffer.notes.c_str());
+            fillBuffer(m_editName, m_editBuffer.name);
+            fillBuffer(m_editNotes, m_editBuffer.notes);
             m_editTaxRate = static_cast<float>(m_editBuffer.taxRate);
             m_editDiscountRate = static_cast<float>(m_editBuffer.discountRate);
             syncEngineFromRecord();

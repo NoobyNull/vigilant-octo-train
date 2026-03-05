@@ -15,6 +15,7 @@
 #include "../../core/utils/log.h"
 #include "../context_menu_manager.h"
 #include "../icons.h"
+#include "../widgets/edit_buffer.h"
 
 namespace dw {
 
@@ -152,7 +153,7 @@ void MaterialsPanel::renderToolbar() {
 
     // Add new material button
     if (ImGui::Button(Icons::Add)) {
-        std::memset(m_generatePrompt, 0, sizeof(m_generatePrompt));
+        clearBuffer(m_generatePrompt);
         m_showAddDialog = true;
     }
     if (ImGui::IsItemHovered()) {

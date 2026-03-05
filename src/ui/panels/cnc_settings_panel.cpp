@@ -14,18 +14,22 @@
 #include "ui/dialogs/file_dialog.h"
 #include "ui/icons.h"
 #include "ui/theme.h"
+#include "ui/ui_colors.h"
+#include "ui/widgets/edit_buffer.h"
 
 namespace dw {
 
+// Aliases for concise usage within this file
+static constexpr auto& kModifiedColor = colors::kWarning;
+static constexpr auto& kErrorColor = colors::kError;
+static constexpr auto& kOkColor = colors::kSuccess;
+static constexpr auto& kDimColor = colors::kDimmed;
+static constexpr auto& kAxisX = colors::kAxisX;
+static constexpr auto& kAxisY = colors::kAxisY;
+static constexpr auto& kAxisZ = colors::kAxisZ;
+
 namespace {
 
-const ImVec4 kModifiedColor{1.0f, 0.8f, 0.2f, 1.0f};
-const ImVec4 kErrorColor{1.0f, 0.3f, 0.3f, 1.0f};
-const ImVec4 kOkColor{0.3f, 0.8f, 0.3f, 1.0f};
-const ImVec4 kDimColor{0.5f, 0.5f, 0.5f, 1.0f};
-const ImVec4 kAxisX{1.0f, 0.3f, 0.3f, 1.0f};
-const ImVec4 kAxisY{0.3f, 1.0f, 0.3f, 1.0f};
-const ImVec4 kAxisZ{0.3f, 0.5f, 1.0f, 1.0f};
 const ImVec4 kChangedFromDefault{0.6f, 0.4f, 1.0f, 1.0f}; // Purple for FluidNC $SC
 
 } // namespace
@@ -49,7 +53,7 @@ void CncSettingsPanel::render() {
 
     if (!m_connected) {
         ImGui::Spacing();
-        ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "%s Disconnected",
+        ImGui::TextColored(kDimColor, "%s Disconnected",
                            Icons::Unlink);
         ImGui::TextDisabled("Connect a CNC machine to view firmware settings");
         ImGui::End();
@@ -260,7 +264,7 @@ void CncSettingsPanel::renderUnifiedNumeric(const std::string& key, const char* 
     auto& eb = m_editBuffers[key];
     if (!eb.active) {
         eb.key = key;
-        std::snprintf(eb.buf, sizeof(eb.buf), "%s", s->value.c_str());
+        fillBuffer(eb.buf, s->value);
         eb.active = true;
     }
 
@@ -322,7 +326,7 @@ void CncSettingsPanel::renderUnifiedPerAxisGroup(const char* label, const char* 
         auto& eb = m_editBuffers[*keys[i]];
         if (!eb.active) {
             eb.key = *keys[i];
-            std::snprintf(eb.buf, sizeof(eb.buf), "%s", s->value.c_str());
+            fillBuffer(eb.buf, s->value);
             eb.active = true;
         }
 
@@ -466,7 +470,7 @@ void CncSettingsPanel::renderToolbar() {
     sameLineIfFits(lockLabel);
     ImVec4 lockColor = m_locked
         ? ImVec4(0.6f, 0.6f, 0.6f, 1.0f)
-        : ImVec4(1.0f, 0.8f, 0.2f, 1.0f);
+        : colors::kWarning;
     ImGui::PushStyleColor(ImGuiCol_Text, lockColor);
     if (ImGui::Button(lockLabel)) {
         m_locked = !m_locked;
@@ -750,7 +754,7 @@ void CncSettingsPanel::renderRawTab() {
         auto& eb = m_editBuffers[key];
         if (!eb.active) {
             eb.key = key;
-            std::snprintf(eb.buf, sizeof(eb.buf), "%s", s.value.c_str());
+            fillBuffer(eb.buf, s.value);
             eb.active = true;
         }
 

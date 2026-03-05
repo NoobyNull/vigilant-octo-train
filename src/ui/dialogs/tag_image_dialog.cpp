@@ -5,6 +5,8 @@
 
 #include <imgui.h>
 
+#include "ui/widgets/edit_buffer.h"
+
 namespace dw {
 
 TagImageDialog::TagImageDialog() : Dialog("Tag Image") {}
@@ -15,12 +17,12 @@ void TagImageDialog::open(const ModelRecord& record, GLuint thumbnailTexture) {
     m_error.clear();
 
     // Clear buffers
-    std::memset(m_titleBuf, 0, sizeof(m_titleBuf));
-    std::memset(m_description, 0, sizeof(m_description));
-    std::memset(m_hover, 0, sizeof(m_hover));
-    std::memset(m_keywords, 0, sizeof(m_keywords));
-    std::memset(m_associations, 0, sizeof(m_associations));
-    std::memset(m_categories, 0, sizeof(m_categories));
+    clearBuffer(m_titleBuf);
+    clearBuffer(m_description);
+    clearBuffer(m_hover);
+    clearBuffer(m_keywords);
+    clearBuffer(m_associations);
+    clearBuffer(m_categories);
 
     m_state = State::Loading;
     m_open = true;
@@ -41,9 +43,9 @@ void TagImageDialog::setResult(const DescriptorResult& result) {
     m_error.clear();
 
     // Populate buffers from result
-    std::strncpy(m_titleBuf, result.title.c_str(), sizeof(m_titleBuf) - 1);
-    std::strncpy(m_description, result.description.c_str(), sizeof(m_description) - 1);
-    std::strncpy(m_hover, result.hoverNarrative.c_str(), sizeof(m_hover) - 1);
+    fillBuffer(m_titleBuf, result.title);
+    fillBuffer(m_description, result.description);
+    fillBuffer(m_hover, result.hoverNarrative);
 
     // Join vectors as comma-separated
     auto join = [](const std::vector<std::string>& v) -> std::string {
@@ -56,9 +58,9 @@ void TagImageDialog::setResult(const DescriptorResult& result) {
         return out;
     };
 
-    std::strncpy(m_keywords, join(result.keywords).c_str(), sizeof(m_keywords) - 1);
-    std::strncpy(m_associations, join(result.associations).c_str(), sizeof(m_associations) - 1);
-    std::strncpy(m_categories, join(result.categories).c_str(), sizeof(m_categories) - 1);
+    fillBuffer(m_keywords, join(result.keywords));
+    fillBuffer(m_associations, join(result.associations));
+    fillBuffer(m_categories, join(result.categories));
 
     m_state = State::Ready;
 }

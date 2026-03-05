@@ -10,6 +10,7 @@
 #include "../../core/utils/board_foot.h"
 #include "../../core/utils/unit_conversion.h"
 #include "../icons.h"
+#include "../widgets/edit_buffer.h"
 
 namespace dw {
 
@@ -115,8 +116,8 @@ void MaterialsPanel::renderDetailView() {
         m_stockEditBuffer.materialId = m_detailMaterialId;
         m_stockEditBuffer.unitLabel = "sheet";
         std::memset(m_stockDimBufs, 0, sizeof(m_stockDimBufs));
-        std::memset(m_stockPriceBuf, 0, sizeof(m_stockPriceBuf));
-        std::memset(m_stockNameBuf, 0, sizeof(m_stockNameBuf));
+        clearBuffer(m_stockPriceBuf);
+        clearBuffer(m_stockNameBuf);
         m_stockUnitIndex = 0;
         m_showStockAddPopup = true;
         ImGui::OpenPopup("StockAddEdit");
@@ -231,9 +232,8 @@ void MaterialsPanel::renderStockSizeTable() {
                     m_stockDimBufs[1], sizeof(m_stockDimBufs[1]), stock.heightMm, metric);
                 fillDimBuffer(
                     m_stockDimBufs[2], sizeof(m_stockDimBufs[2]), stock.thicknessMm, metric);
-                std::snprintf(
-                    m_stockPriceBuf, sizeof(m_stockPriceBuf), "%.2f", stock.pricePerUnit);
-                std::snprintf(m_stockNameBuf, sizeof(m_stockNameBuf), "%s", stock.name.c_str());
+                formatBuffer(m_stockPriceBuf, "%.2f", stock.pricePerUnit);
+                fillBuffer(m_stockNameBuf, stock.name);
 
                 m_showStockAddPopup = true;
                 ImGui::OpenPopup("StockAddEdit");

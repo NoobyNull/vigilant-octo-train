@@ -8,6 +8,7 @@
 #include "core/cnc/cnc_controller.h"
 #include "ui/icons.h"
 #include "ui/theme.h"
+#include "ui/widgets/edit_buffer.h"
 
 namespace dw {
 
@@ -73,9 +74,9 @@ void CncMacroPanel::renderMacroList() {
         // Start new macro edit
         m_editingId = 0;
         m_editIsNew = true;
-        std::memset(m_editName, 0, sizeof(m_editName));
-        std::memset(m_editGcode, 0, sizeof(m_editGcode));
-        std::memset(m_editShortcut, 0, sizeof(m_editShortcut));
+        clearBuffer(m_editName);
+        clearBuffer(m_editGcode);
+        clearBuffer(m_editShortcut);
     }
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Add new macro");
@@ -157,9 +158,9 @@ void CncMacroPanel::renderMacroList() {
         if (ImGui::SmallButton("Edit")) {
             m_editingId = macro.id;
             m_editIsNew = false;
-            std::strncpy(m_editName, macro.name.c_str(), sizeof(m_editName) - 1);
-            std::strncpy(m_editGcode, macro.gcode.c_str(), sizeof(m_editGcode) - 1);
-            std::strncpy(m_editShortcut, macro.shortcut.c_str(), sizeof(m_editShortcut) - 1);
+            fillBuffer(m_editName, macro.name);
+            fillBuffer(m_editGcode, macro.gcode);
+            fillBuffer(m_editShortcut, macro.shortcut);
         }
 
         // Delete button (only for non-built-in)
