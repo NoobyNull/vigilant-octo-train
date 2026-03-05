@@ -527,6 +527,7 @@ void Application::initWiring() {
         cop->setCutListFile(m_cutListFile.get());
         cop->setProjectManager(m_projectManager.get());
         cop->setModelRepository(m_modelRepo.get());
+        cop->setMaterialManager(m_materialManager.get());
         cop->setOnAddToCost([this](const std::string& name, int qty, float rate, float total) {
             if (!m_costRepo) return;
             // Create a new costing record with the cut plan material cost

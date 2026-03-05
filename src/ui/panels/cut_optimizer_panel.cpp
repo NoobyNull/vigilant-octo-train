@@ -3,11 +3,15 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
+#include <map>
 
 #include <imgui.h>
 
 #include "../../core/database/model_repository.h"
+#include "../../core/materials/material_manager.h"
 #include "../../core/optimizer/cut_list_file.h"
+#include "../../core/optimizer/multi_stock_optimizer.h"
+#include "../../core/optimizer/waste_breakdown.h"
 #include "../../core/project/project.h"
 #include "../icons.h"
 #include "../widgets/toast.h"
@@ -16,9 +20,19 @@ namespace dw {
 
 CutOptimizerPanel::CutOptimizerPanel() : Panel("Cut Optimizer") {
     m_canvas.zoomMax = 5.0f;
-    std::strncpy(m_sheetName, "Plywood", sizeof(m_sheetName));
-    m_sheet.cost = 45.0f;
-    m_sheet.name = "Plywood";
+    m_sheetName[0] = '\0';
+}
+
+void CutOptimizerPanel::setMaterialManager(MaterialManager* mm) {
+    m_materialManager = mm;
+    m_materialsLoaded = false;
+}
+
+void CutOptimizerPanel::refreshMaterials() {
+    if (!m_materialManager)
+        return;
+    m_materials = m_materialManager->getAllMaterials();
+    m_materialsLoaded = true;
 }
 
 // ---------------------------------------------------------------------------
@@ -436,33 +450,106 @@ void CutOptimizerPanel::renderCutListTable() {
 }
 
 // ---------------------------------------------------------------------------
-// STOCK SHEETS — presets + editable current sheet
+// STOCK SHEETS — material dropdown + stock size selection + manual override
 // ---------------------------------------------------------------------------
 void CutOptimizerPanel::renderStockSheets() {
     ImGui::Text("%s STOCK", Icons::Folder);
 
-    // Preset buttons
-    for (const auto& preset : kPresets) {
-        char lbl[64];
-        std::snprintf(lbl, sizeof(lbl), "%s $%.0f", preset.name, static_cast<double>(preset.cost));
-        if (ImGui::Button(lbl)) {
-            m_sheet.width = preset.width;
-            m_sheet.height = preset.height;
-            m_sheet.cost = preset.cost;
-            m_sheet.name = preset.name;
-            std::strncpy(m_sheetName, preset.name, sizeof(m_sheetName));
-            m_hasResults = false;
-        }
-        ImGui::SameLine();
+    // Load materials on first render
+    if (!m_materialsLoaded && m_materialManager) {
+        refreshMaterials();
     }
-    ImGui::NewLine();
 
-    // Editable current sheet fields
+    // Material dropdown
+    if (m_materialManager && !m_materials.empty()) {
+        const char* previewName = (m_selectedMaterialIdx >= 0 &&
+                                    m_selectedMaterialIdx < static_cast<int>(m_materials.size()))
+                                       ? m_materials[static_cast<size_t>(m_selectedMaterialIdx)].name.c_str()
+                                       : "Select Material...";
+
+        ImGui::SetNextItemWidth(-1);
+        if (ImGui::BeginCombo("##material", previewName)) {
+            // Manual/None option
+            if (ImGui::Selectable("(Manual)", m_selectedMaterialIdx == -1)) {
+                m_selectedMaterialIdx = -1;
+                m_stockSizes.clear();
+                m_selectedStockIdx = -1;
+            }
+            for (int i = 0; i < static_cast<int>(m_materials.size()); ++i) {
+                bool isSelected = (m_selectedMaterialIdx == i);
+                if (ImGui::Selectable(m_materials[static_cast<size_t>(i)].name.c_str(), isSelected)) {
+                    m_selectedMaterialIdx = i;
+                    m_selectedStockIdx = -1;
+                    // Load stock sizes for this material
+                    m_stockSizes = m_materialManager->getStockSizes(
+                        m_materials[static_cast<size_t>(i)].id);
+                    // Auto-select first stock size if available
+                    if (!m_stockSizes.empty()) {
+                        m_selectedStockIdx = 0;
+                        const auto& ss = m_stockSizes[0];
+                        m_sheet.width = static_cast<f32>(ss.widthMm);
+                        m_sheet.height = static_cast<f32>(ss.heightMm);
+                        m_sheet.cost = static_cast<f32>(ss.pricePerUnit);
+                        m_sheet.name = ss.name.empty()
+                                           ? m_materials[static_cast<size_t>(i)].name
+                                           : ss.name;
+                        std::strncpy(m_sheetName, m_sheet.name.c_str(), sizeof(m_sheetName));
+                        m_sheetName[sizeof(m_sheetName) - 1] = '\0';
+                        m_hasResults = false;
+                    }
+                }
+                if (isSelected) ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+
+        // Refresh button
+        ImGui::SameLine();
+        if (ImGui::SmallButton(Icons::Refresh)) {
+            refreshMaterials();
+        }
+
+        // Stock sizes for selected material
+        if (m_selectedMaterialIdx >= 0 && !m_stockSizes.empty()) {
+            ImGui::TextDisabled("Stock Sizes:");
+            for (int i = 0; i < static_cast<int>(m_stockSizes.size()); ++i) {
+                const auto& ss = m_stockSizes[static_cast<size_t>(i)];
+                char label[128];
+                std::snprintf(label, sizeof(label), "%s %.0fx%.0f $%.2f/%s",
+                              ss.name.empty() ? "Stock" : ss.name.c_str(),
+                              ss.widthMm, ss.heightMm,
+                              ss.pricePerUnit,
+                              ss.unitLabel.empty() ? "sheet" : ss.unitLabel.c_str());
+                bool isSelected = (m_selectedStockIdx == i);
+                if (ImGui::Selectable(label, isSelected, 0, ImVec2(0, 0))) {
+                    m_selectedStockIdx = i;
+                    m_sheet.width = static_cast<f32>(ss.widthMm);
+                    m_sheet.height = static_cast<f32>(ss.heightMm);
+                    m_sheet.cost = static_cast<f32>(ss.pricePerUnit);
+                    m_sheet.name = ss.name.empty()
+                                       ? m_materials[static_cast<size_t>(m_selectedMaterialIdx)].name
+                                       : ss.name;
+                    std::strncpy(m_sheetName, m_sheet.name.c_str(), sizeof(m_sheetName));
+                    m_sheetName[sizeof(m_sheetName) - 1] = '\0';
+                    m_hasResults = false;
+                }
+            }
+        } else if (m_selectedMaterialIdx >= 0 && m_stockSizes.empty()) {
+            ImGui::TextDisabled("No stock sizes defined for this material");
+        }
+    } else if (!m_materialManager) {
+        ImGui::TextDisabled("Material system not available");
+    } else if (m_materials.empty()) {
+        ImGui::TextDisabled("No materials in database");
+    }
+
+    ImGui::Spacing();
+
+    // Manual sheet override fields (always visible)
     ImGui::SetNextItemWidth(-1);
     if (ImGui::InputText("##sheetname", m_sheetName, sizeof(m_sheetName)))
         m_sheet.name = m_sheetName;
 
-    // W and H side by side — each gets half the available width minus label
     {
         float availW = ImGui::GetContentRegionAvail().x;
         float labelW = ImGui::CalcTextSize("W").x + ImGui::GetStyle().ItemInnerSpacing.x;
@@ -648,7 +735,7 @@ void CutOptimizerPanel::renderLayoutsSidebar() {
 }
 
 // ---------------------------------------------------------------------------
-// RESULTS PANEL — stats + cost
+// RESULTS PANEL — stats + cost + waste breakdown
 // ---------------------------------------------------------------------------
 void CutOptimizerPanel::renderResultsPanel() {
     ImGui::Text("%s RESULTS", Icons::Info);
@@ -658,64 +745,148 @@ void CutOptimizerPanel::renderResultsPanel() {
         return;
     }
 
-    float eff = m_result.overallEfficiency() * 100.0f;
-
-    // Large efficiency number
-    ImGui::PushFont(nullptr); // default font, but big text via separator trick
-    ImGui::Text("%.1f%%", static_cast<double>(eff));
-    ImGui::PopFont();
-    ImGui::TextDisabled("Efficiency");
-
-    ImGui::Spacing();
-    ImGui::Text("Sheets: %d", m_result.sheetsUsed);
-
-    // Cost breakdown
-    float totalCost = static_cast<float>(m_result.sheetsUsed) * m_sheet.cost;
-    float sheetArea = m_sheet.area();
-    float rate = (sheetArea > 0.0f) ? m_sheet.cost / sheetArea : 0.0f;
-
-    // Parts value: sum of placed part areas
-    float partsValue = m_result.totalUsedArea * rate;
-
-    // Kerf (dust): estimate from placements — kerf strip on 2 edges per piece
-    float kerfArea = 0.0f;
-    for (const auto& sr : m_result.sheets) {
-        for (const auto& pl : sr.placements) {
-            float pw = pl.getWidth();
-            float ph = pl.getHeight();
-            kerfArea += m_kerf * (pw + ph);
+    // Multi-stock results with waste breakdown
+    if (m_hasMultiResults && !m_multiResult.groups.empty()) {
+        // Group selector if multiple groups
+        if (m_multiResult.groups.size() > 1) {
+            ImGui::TextDisabled("Material Groups:");
+            for (int gi = 0; gi < static_cast<int>(m_multiResult.groups.size()); ++gi) {
+                const auto& g = m_multiResult.groups[static_cast<size_t>(gi)];
+                char label[128];
+                std::snprintf(label, sizeof(label), "%s##grp%d",
+                              g.materialName.c_str(), gi);
+                bool isSelected = (m_selectedGroupIdx == gi);
+                if (ImGui::Selectable(label, isSelected)) {
+                    m_selectedGroupIdx = gi;
+                    m_result = g.plan;
+                    m_sheet = g.usedSheet;
+                    std::strncpy(m_sheetName, m_sheet.name.c_str(), sizeof(m_sheetName));
+                    m_sheetName[sizeof(m_sheetName) - 1] = '\0';
+                    m_selectedSheet = 0;
+                }
+            }
+            ImGui::Separator();
         }
-    }
-    float dustValue = kerfArea * rate;
 
-    // Remaining offcut value
-    float offcutValue = totalCost - partsValue - dustValue;
-    if (offcutValue < 0.0f) offcutValue = 0.0f;
+        // Current group details
+        int groupIdx = std::clamp(m_selectedGroupIdx, 0,
+                                   static_cast<int>(m_multiResult.groups.size()) - 1);
+        const auto& grp = m_multiResult.groups[static_cast<size_t>(groupIdx)];
 
-    ImGui::Spacing();
-    ImGui::Text("Cost: $%.2f", static_cast<double>(totalCost));
-    ImGui::TextDisabled("%d x $%.2f", m_result.sheetsUsed, static_cast<double>(m_sheet.cost));
-    ImGui::Text("  Parts:  $%.2f", static_cast<double>(partsValue));
-    ImGui::Text("  Offcut: $%.2f", static_cast<double>(offcutValue));
-    ImGui::Text("  Dust:   $%.2f", static_cast<double>(dustValue));
+        float eff = grp.plan.overallEfficiency() * 100.0f;
+        ImGui::Text("%.1f%%", static_cast<double>(eff));
+        ImGui::TextDisabled("Efficiency - %s", grp.materialName.c_str());
 
-    // Unplaced warning
-    if (!m_result.unplacedParts.empty()) {
         ImGui::Spacing();
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
-        ImGui::TextWrapped("%zu parts could not be placed!",
-                           m_result.unplacedParts.size());
-        ImGui::PopStyleColor();
+        ImGui::Text("Stock: %s", grp.usedSheet.name.c_str());
+        ImGui::Text("Sheets: %d", grp.plan.sheetsUsed);
+        ImGui::Text("Cost: $%.2f", static_cast<double>(grp.plan.totalCost));
+
+        // Waste breakdown
+        const auto& wb = grp.waste;
+        ImGui::Spacing();
+        ImGui::TextDisabled("Waste Breakdown:");
+
+        ImGui::Text("  Usable Scrap: $%.2f", static_cast<double>(wb.scrapValue));
+        ImGui::TextDisabled("    %.0f sq mm", static_cast<double>(wb.totalScrapArea));
+        ImGui::Text("  Kerf Loss:    $%.2f", static_cast<double>(wb.kerfValue));
+        ImGui::TextDisabled("    %.0f sq mm", static_cast<double>(wb.totalKerfArea));
+        ImGui::Text("  Unusable:     $%.2f", static_cast<double>(wb.unusableValue));
+        ImGui::Text("  Total Waste:  $%.2f", static_cast<double>(wb.totalWasteValue));
+
+        // Scrap pieces collapsible
+        if (!wb.scrapPieces.empty() &&
+            ImGui::TreeNode("Scrap Pieces")) {
+            for (size_t si = 0; si < wb.scrapPieces.size(); ++si) {
+                const auto& sp = wb.scrapPieces[si];
+                // Convert sq mm to sq inches for user-friendliness
+                float sqIn = sp.area() / 645.16f;
+                ImGui::Text("  %.0f x %.0f mm (%.1f sq in) - Sheet %d",
+                            static_cast<double>(sp.width),
+                            static_cast<double>(sp.height),
+                            static_cast<double>(sqIn),
+                            sp.sheetIndex + 1);
+            }
+            ImGui::TreePop();
+        }
+
+        // Unplaced warning for this group
+        if (!grp.plan.unplacedParts.empty()) {
+            ImGui::Spacing();
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
+            ImGui::TextWrapped("%zu parts could not be placed!",
+                               grp.plan.unplacedParts.size());
+            ImGui::PopStyleColor();
+        }
+
+        // Grand totals across all groups
+        if (m_multiResult.groups.size() > 1) {
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Text("Grand Total: $%.2f (%d sheets)",
+                         static_cast<double>(m_multiResult.totalCost),
+                         m_multiResult.totalSheetsUsed);
+        }
+    } else {
+        // Single-sheet results (backward compatible)
+        float eff = m_result.overallEfficiency() * 100.0f;
+
+        ImGui::Text("%.1f%%", static_cast<double>(eff));
+        ImGui::TextDisabled("Efficiency");
+
+        ImGui::Spacing();
+        ImGui::Text("Sheets: %d", m_result.sheetsUsed);
+
+        // Compute waste breakdown for single-sheet results
+        auto wb = optimizer::computeWasteBreakdown(m_result, m_sheet, m_kerf);
+
+        float totalCost = static_cast<float>(m_result.sheetsUsed) * m_sheet.cost;
+        ImGui::Spacing();
+        ImGui::Text("Cost: $%.2f", static_cast<double>(totalCost));
+        ImGui::TextDisabled("%d x $%.2f", m_result.sheetsUsed, static_cast<double>(m_sheet.cost));
+
+        // Waste breakdown
+        ImGui::Spacing();
+        ImGui::TextDisabled("Waste Breakdown:");
+        ImGui::Text("  Usable Scrap: $%.2f", static_cast<double>(wb.scrapValue));
+        ImGui::Text("  Kerf Loss:    $%.2f", static_cast<double>(wb.kerfValue));
+        ImGui::Text("  Unusable:     $%.2f", static_cast<double>(wb.unusableValue));
+        ImGui::Text("  Total Waste:  $%.2f", static_cast<double>(wb.totalWasteValue));
+
+        // Scrap pieces
+        if (!wb.scrapPieces.empty() &&
+            ImGui::TreeNode("Scrap Pieces")) {
+            for (const auto& sp : wb.scrapPieces) {
+                float sqIn = sp.area() / 645.16f;
+                ImGui::Text("  %.0f x %.0f mm (%.1f sq in) - Sheet %d",
+                            static_cast<double>(sp.width),
+                            static_cast<double>(sp.height),
+                            static_cast<double>(sqIn),
+                            sp.sheetIndex + 1);
+            }
+            ImGui::TreePop();
+        }
+
+        // Unplaced warning
+        if (!m_result.unplacedParts.empty()) {
+            ImGui::Spacing();
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
+            ImGui::TextWrapped("%zu parts could not be placed!",
+                               m_result.unplacedParts.size());
+            ImGui::PopStyleColor();
+        }
     }
 
     // Add to Project Costing button
     ImGui::Spacing();
     if (!m_onAddToCost)
         ImGui::BeginDisabled();
+    float totalCost = m_hasMultiResults ? m_multiResult.totalCost
+                                        : static_cast<float>(m_result.sheetsUsed) * m_sheet.cost;
     if (ImGui::Button("Add to Costing", ImVec2(-1, 0))) {
         if (m_onAddToCost) {
             m_onAddToCost(m_sheet.name.empty() ? "Cut Plan Sheets" : m_sheet.name,
-                          m_result.sheetsUsed,
+                          m_hasMultiResults ? m_multiResult.totalSheetsUsed : m_result.sheetsUsed,
                           m_sheet.cost,
                           totalCost);
             ToastManager::instance().show(ToastType::Success, "Added",
@@ -843,7 +1014,7 @@ void CutOptimizerPanel::renderImportPopup() {
 }
 
 // ---------------------------------------------------------------------------
-// runOptimization — same as before
+// runOptimization — uses MultiStockOptimizer when materials are assigned
 // ---------------------------------------------------------------------------
 void CutOptimizerPanel::runOptimization() {
     if (m_parts.empty()) {
@@ -852,29 +1023,108 @@ void CutOptimizerPanel::runOptimization() {
         return;
     }
 
-    auto optimizer = optimizer::CutOptimizer::create(m_algorithm);
-    if (!optimizer) {
-        ToastManager::instance().show(ToastType::Error, "Optimizer Error",
-                                      "Failed to create optimizer");
-        return;
+    // Check if any parts have material assignments
+    bool hasMaterialAssignments = false;
+    for (const auto& part : m_parts) {
+        if (part.materialId != 0) {
+            hasMaterialAssignments = true;
+            break;
+        }
     }
 
-    optimizer->setAllowRotation(m_allowRotation);
-    optimizer->setKerf(m_kerf);
-    optimizer->setMargin(m_margin);
+    if (hasMaterialAssignments && m_materialManager) {
+        // Build material groups from parts
+        std::map<i64, optimizer::MaterialGroup> groupMap;
+        for (const auto& part : m_parts) {
+            i64 matId = part.materialId;
+            if (groupMap.find(matId) == groupMap.end()) {
+                optimizer::MaterialGroup mg;
+                mg.materialId = matId;
+                if (matId == 0) {
+                    mg.materialName = "Unassigned";
+                    mg.stockSizes = {m_sheet};
+                } else {
+                    auto mat = m_materialManager->getMaterial(matId);
+                    mg.materialName = mat ? mat->name : "Unknown";
+                    auto stockSizes = m_materialManager->getStockSizes(matId);
+                    for (const auto& ss : stockSizes) {
+                        optimizer::Sheet s;
+                        s.width = static_cast<f32>(ss.widthMm);
+                        s.height = static_cast<f32>(ss.heightMm);
+                        s.cost = static_cast<f32>(ss.pricePerUnit);
+                        s.name = ss.name;
+                        mg.stockSizes.push_back(s);
+                    }
+                    // If no stock sizes defined, use current sheet as fallback
+                    if (mg.stockSizes.empty()) {
+                        mg.stockSizes = {m_sheet};
+                    }
+                }
+                groupMap[matId] = mg;
+            }
+        }
 
-    std::vector<optimizer::Sheet> sheets = {m_sheet};
-    m_result = optimizer->optimize(m_parts, sheets);
-    m_hasResults = true;
-    m_selectedSheet = 0;
+        std::vector<optimizer::MaterialGroup> materials;
+        materials.reserve(groupMap.size());
+        for (auto& [id, mg] : groupMap) {
+            materials.push_back(std::move(mg));
+        }
 
-    int unplacedCount = static_cast<int>(m_result.unplacedParts.size());
-    if (unplacedCount > 0) {
-        ToastManager::instance().show(ToastType::Warning, "Incomplete Layout",
-                                      std::to_string(unplacedCount) + " parts could not be placed");
+        m_multiResult = optimizer::optimizeMultiStock(
+            m_parts, materials, m_algorithm, m_allowRotation, m_kerf, m_margin);
+        m_hasMultiResults = true;
+        m_selectedGroupIdx = 0;
+
+        // Populate backward-compatible single result from first group
+        if (!m_multiResult.groups.empty()) {
+            m_result = m_multiResult.groups[0].plan;
+            m_sheet = m_multiResult.groups[0].usedSheet;
+            std::strncpy(m_sheetName, m_sheet.name.c_str(), sizeof(m_sheetName));
+            m_sheetName[sizeof(m_sheetName) - 1] = '\0';
+        }
+        m_hasResults = true;
+        m_selectedSheet = 0;
+
+        // Check for unplaced across all groups
+        int totalUnplaced = 0;
+        for (const auto& g : m_multiResult.groups)
+            totalUnplaced += static_cast<int>(g.plan.unplacedParts.size());
+
+        if (totalUnplaced > 0) {
+            ToastManager::instance().show(ToastType::Warning, "Incomplete Layout",
+                                          std::to_string(totalUnplaced) + " parts could not be placed");
+        } else {
+            ToastManager::instance().show(ToastType::Success, "Optimization Complete",
+                                          std::to_string(m_multiResult.groups.size()) +
+                                              " material groups optimized");
+        }
     } else {
-        ToastManager::instance().show(ToastType::Success, "Optimization Complete",
-                                      "All parts placed successfully");
+        // Single-sheet optimization (no material assignments)
+        auto opt = optimizer::CutOptimizer::create(m_algorithm);
+        if (!opt) {
+            ToastManager::instance().show(ToastType::Error, "Optimizer Error",
+                                          "Failed to create optimizer");
+            return;
+        }
+
+        opt->setAllowRotation(m_allowRotation);
+        opt->setKerf(m_kerf);
+        opt->setMargin(m_margin);
+
+        std::vector<optimizer::Sheet> sheets = {m_sheet};
+        m_result = opt->optimize(m_parts, sheets);
+        m_hasResults = true;
+        m_hasMultiResults = false;
+        m_selectedSheet = 0;
+
+        int unplacedCount = static_cast<int>(m_result.unplacedParts.size());
+        if (unplacedCount > 0) {
+            ToastManager::instance().show(ToastType::Warning, "Incomplete Layout",
+                                          std::to_string(unplacedCount) + " parts could not be placed");
+        } else {
+            ToastManager::instance().show(ToastType::Success, "Optimization Complete",
+                                          "All parts placed successfully");
+        }
     }
 }
 
