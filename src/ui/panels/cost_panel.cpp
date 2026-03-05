@@ -8,6 +8,7 @@
 #include "ui/icons.h"
 #include "ui/widgets/toast.h"
 
+#include "../../core/utils/file_utils.h"
 #include "../../core/utils/log.h"
 
 namespace dw {
@@ -264,6 +265,10 @@ void CostingPanel::renderRecordEditor() {
             ToastManager::instance().show(ToastType::Error, "Save Failed");
         }
     }
+
+    // Export button (same line as save)
+    ImGui::SameLine();
+    renderExportButton();
 
     // Rate categories section (after record editor)
     ImGui::Spacing();
@@ -1190,6 +1195,10 @@ void CostingPanel::renderOrderView() {
         redColor.x = 0.95f; redColor.y = 0.3f; redColor.z = 0.3f;
         ImGui::TextColored(redColor, "Margin: -$%.2f (%.1f%%)", -margin, marginPct);
     }
+
+    // Export button for order view
+    ImGui::Spacing();
+    renderExportButton();
 }
 
 void CostingPanel::convertEstimateToOrder() {
@@ -1235,6 +1244,62 @@ void CostingPanel::saveOrdersToDisk() {
     if (!ProjectCostingIO::saveOrders(m_costingDir, m_orders)) {
         log::errorf("CostingPanel", "Failed to save orders to %s", m_costingDir.c_str());
     }
+}
+
+void CostingPanel::renderExportButton() {
+    const auto& style = ImGui::GetStyle();
+    std::string exportLabel = std::string(Icons::Export) + " Export";
+    float exportBtnW = ImGui::CalcTextSize(exportLabel.c_str()).x + style.FramePadding.x * 4;
+
+    bool canExport = false;
+    if (m_viewMode == CostViewMode::Estimate) {
+        canExport = (m_activeEstimateIndex >= 0 &&
+                     m_activeEstimateIndex < static_cast<int>(m_estimates.size()));
+    } else {
+        canExport = (m_selectedOrderIndex >= 0 &&
+                     m_selectedOrderIndex < static_cast<int>(m_orders.size()));
+    }
+
+    ImGui::BeginDisabled(!canExport || m_costingDir.empty());
+    if (ImGui::Button(exportLabel.c_str(), ImVec2(exportBtnW, 0))) {
+        std::string content;
+        std::string baseName;
+
+        if (m_viewMode == CostViewMode::Estimate) {
+            syncEstimateFromEngine();
+            m_estimates[static_cast<size_t>(m_activeEstimateIndex)].salePrice =
+                static_cast<f64>(m_salePrice);
+            const auto& est = m_estimates[static_cast<size_t>(m_activeEstimateIndex)];
+            content = ProjectCostingIO::exportEstimateText(est);
+            baseName = est.name;
+        } else {
+            const auto& ord = m_orders[static_cast<size_t>(m_selectedOrderIndex)];
+            content = ProjectCostingIO::exportOrderText(ord);
+            baseName = ord.name;
+        }
+
+        // Sanitize filename: replace spaces with underscores, remove special chars
+        std::string safeName;
+        for (char c : baseName) {
+            if (c == ' ') {
+                safeName += '_';
+            } else if (std::isalnum(static_cast<unsigned char>(c)) || c == '-' || c == '_') {
+                safeName += c;
+            }
+        }
+        if (safeName.empty()) safeName = "export";
+
+        std::string suffix = (m_viewMode == CostViewMode::Estimate) ? "_estimate.txt" : "_order.txt";
+        Path outPath = Path(m_costingDir) / (safeName + suffix);
+
+        if (file::writeText(outPath, content)) {
+            std::string msg = "Exported to " + safeName + suffix;
+            ToastManager::instance().show(ToastType::Success, msg.c_str());
+        } else {
+            ToastManager::instance().show(ToastType::Error, "Export failed");
+        }
+    }
+    ImGui::EndDisabled();
 }
 
 } // namespace dw

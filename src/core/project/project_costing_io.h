@@ -74,6 +74,12 @@ class ProjectCostingIO {
     // Convert estimate to order (freezes all values)
     static CostingOrder convertToOrder(const CostingEstimate& estimate);
 
+    // Generate formatted plain-text document from an estimate
+    static std::string exportEstimateText(const CostingEstimate& estimate);
+
+    // Generate formatted plain-text document from an order
+    static std::string exportOrderText(const CostingOrder& order);
+
     // Schema version
     static constexpr int SCHEMA_VERSION = 1;
 };

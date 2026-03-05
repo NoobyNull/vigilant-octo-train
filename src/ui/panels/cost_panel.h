@@ -56,6 +56,7 @@ class CostingPanel : public Panel {
     void convertEstimateToOrder();
     void loadOrdersFromDisk();
     void saveOrdersToDisk();
+    void renderExportButton();
 
     // Sync between CostingEngine and CostingRecord
     void syncEngineFromRecord();

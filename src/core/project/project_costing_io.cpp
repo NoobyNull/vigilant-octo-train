@@ -2,6 +2,8 @@
 
 #include <chrono>
 #include <ctime>
+#include <iomanip>
+#include <sstream>
 
 #include <nlohmann/json.hpp>
 
@@ -243,6 +245,227 @@ CostingOrder ProjectCostingIO::convertToOrder(const CostingEstimate& estimate) {
     order.finalizedAt = currentTimestamp();
     order.sourceEstimateName = estimate.name;
     return order;
+}
+
+// --- Export helpers ---
+
+namespace {
+
+constexpr int kDocWidth = 58;
+
+const char* exportCategoryHeading(const std::string& cat) {
+    if (cat == CostCat::Material) return "MATERIAL COSTS";
+    if (cat == CostCat::Tooling) return "TOOLING COSTS";
+    if (cat == CostCat::Consumable) return "CONSUMABLE COSTS";
+    if (cat == CostCat::Labor) return "LABOR COSTS";
+    if (cat == CostCat::Overhead) return "OVERHEAD";
+    return "OTHER";
+}
+
+void formatCategory(std::ostringstream& ss, const std::string& category,
+                     const std::vector<CostingEntry>& allEntries) {
+    std::vector<const CostingEntry*> catEntries;
+    for (const auto& e : allEntries) {
+        if (e.category == category) {
+            catEntries.push_back(&e);
+        }
+    }
+    if (catEntries.empty()) return;
+
+    ss << "\n" << exportCategoryHeading(category) << "\n";
+    ss << std::string(static_cast<size_t>(kDocWidth), '-') << "\n";
+
+    f64 subtotal = 0.0;
+    for (const auto* e : catEntries) {
+        // Format: "  Name                    Qty x $Rate    $Total"
+        std::ostringstream line;
+        line << std::fixed << std::setprecision(2);
+        line << "  " << std::left << std::setw(24) << e->name.substr(0, 24);
+        line << std::right;
+
+        if (category == CostCat::Labor) {
+            line << std::setw(5) << e->quantity << " x $"
+                 << std::setw(7) << e->unitRate << "/hr";
+        } else {
+            line << std::setw(5) << e->quantity << " x $"
+                 << std::setw(7) << e->unitRate << "   ";
+        }
+        line << " $" << std::setw(9) << e->estimatedTotal;
+
+        ss << line.str() << "\n";
+        subtotal += e->estimatedTotal;
+    }
+
+    // Right-align subtotal
+    std::ostringstream subLine;
+    subLine << std::fixed << std::setprecision(2);
+    subLine << std::right << std::setw(kDocWidth - 11) << "Subtotal:" << "  $"
+            << std::setw(9) << subtotal;
+    ss << subLine.str() << "\n";
+}
+
+} // namespace
+
+// --- exportEstimateText ---
+
+std::string ProjectCostingIO::exportEstimateText(const CostingEstimate& estimate) {
+    std::ostringstream ss;
+    ss << std::fixed << std::setprecision(2);
+
+    std::string sep(static_cast<size_t>(kDocWidth), '=');
+    std::string thinSep(static_cast<size_t>(kDocWidth), '-');
+
+    // Header
+    ss << sep << "\n";
+    // Center "ESTIMATE"
+    {
+        const std::string title = "ESTIMATE";
+        int pad = (kDocWidth - static_cast<int>(title.size())) / 2;
+        ss << std::string(static_cast<size_t>(pad > 0 ? pad : 0), ' ') << title << "\n";
+    }
+    {
+        int pad = (kDocWidth - static_cast<int>(estimate.name.size())) / 2;
+        ss << std::string(static_cast<size_t>(pad > 0 ? pad : 0), ' ') << estimate.name << "\n";
+    }
+    {
+        const std::string& dateStr = estimate.modifiedAt.empty() ? estimate.createdAt : estimate.modifiedAt;
+        int pad = (kDocWidth - static_cast<int>(dateStr.size())) / 2;
+        ss << std::string(static_cast<size_t>(pad > 0 ? pad : 0), ' ') << dateStr << "\n";
+    }
+    ss << sep << "\n";
+
+    // Category sections in canonical order
+    static const char* catOrder[] = {CostCat::Material, CostCat::Tooling,
+                                      CostCat::Consumable, CostCat::Labor, CostCat::Overhead};
+    f64 grandTotal = 0.0;
+    for (const auto& e : estimate.entries) {
+        grandTotal += e.estimatedTotal;
+    }
+
+    for (const char* cat : catOrder) {
+        formatCategory(ss, cat, estimate.entries);
+    }
+
+    // Summary
+    ss << "\n" << sep << "\n";
+    {
+        const std::string title = "SUMMARY";
+        int pad = (kDocWidth - static_cast<int>(title.size())) / 2;
+        ss << std::string(static_cast<size_t>(pad > 0 ? pad : 0), ' ') << title << "\n";
+    }
+    ss << thinSep << "\n";
+
+    ss << std::right << std::setw(kDocWidth - 11) << "Subtotal:" << "  $"
+       << std::setw(9) << grandTotal << "\n";
+    ss << std::right << std::setw(kDocWidth - 11) << "Sale Price:" << "  $"
+       << std::setw(9) << estimate.salePrice << "\n";
+
+    f64 margin = estimate.salePrice - grandTotal;
+    if (estimate.salePrice > 0.0) {
+        f64 pct = (margin / estimate.salePrice) * 100.0;
+        std::ostringstream marginStr;
+        marginStr << std::fixed << std::setprecision(2);
+        marginStr << "$" << margin << " (" << std::setprecision(1) << pct << "%)";
+        ss << std::right << std::setw(kDocWidth - static_cast<int>(marginStr.str().size()) - 2)
+           << "Margin:" << "  " << marginStr.str() << "\n";
+    } else {
+        ss << std::right << std::setw(kDocWidth - 11) << "Margin:" << "  $"
+           << std::setw(9) << margin << "\n";
+    }
+
+    ss << sep << "\n";
+
+    // Notes
+    if (!estimate.notes.empty()) {
+        ss << "\nNotes: " << estimate.notes << "\n";
+    }
+
+    ss << "\nGenerated: " << currentTimestamp() << "\n";
+
+    return ss.str();
+}
+
+// --- exportOrderText ---
+
+std::string ProjectCostingIO::exportOrderText(const CostingOrder& order) {
+    std::ostringstream ss;
+    ss << std::fixed << std::setprecision(2);
+
+    std::string sep(static_cast<size_t>(kDocWidth), '=');
+    std::string thinSep(static_cast<size_t>(kDocWidth), '-');
+
+    // Header
+    ss << sep << "\n";
+    {
+        const std::string title = "ORDER";
+        int pad = (kDocWidth - static_cast<int>(title.size())) / 2;
+        ss << std::string(static_cast<size_t>(pad > 0 ? pad : 0), ' ') << title << "\n";
+    }
+    {
+        int pad = (kDocWidth - static_cast<int>(order.name.size())) / 2;
+        ss << std::string(static_cast<size_t>(pad > 0 ? pad : 0), ' ') << order.name << "\n";
+    }
+    {
+        std::string dateLabel = "Finalized: " + order.finalizedAt;
+        int pad = (kDocWidth - static_cast<int>(dateLabel.size())) / 2;
+        ss << std::string(static_cast<size_t>(pad > 0 ? pad : 0), ' ') << dateLabel << "\n";
+    }
+    if (!order.sourceEstimateName.empty()) {
+        std::string srcLabel = "From estimate: " + order.sourceEstimateName;
+        int pad = (kDocWidth - static_cast<int>(srcLabel.size())) / 2;
+        ss << std::string(static_cast<size_t>(pad > 0 ? pad : 0), ' ') << srcLabel << "\n";
+    }
+    ss << sep << "\n";
+
+    // Category sections
+    static const char* catOrder[] = {CostCat::Material, CostCat::Tooling,
+                                      CostCat::Consumable, CostCat::Labor, CostCat::Overhead};
+    f64 grandTotal = 0.0;
+    for (const auto& e : order.entries) {
+        grandTotal += e.estimatedTotal;
+    }
+
+    for (const char* cat : catOrder) {
+        formatCategory(ss, cat, order.entries);
+    }
+
+    // Summary
+    ss << "\n" << sep << "\n";
+    {
+        const std::string title = "SUMMARY";
+        int pad = (kDocWidth - static_cast<int>(title.size())) / 2;
+        ss << std::string(static_cast<size_t>(pad > 0 ? pad : 0), ' ') << title << "\n";
+    }
+    ss << thinSep << "\n";
+
+    ss << std::right << std::setw(kDocWidth - 11) << "Subtotal:" << "  $"
+       << std::setw(9) << grandTotal << "\n";
+    ss << std::right << std::setw(kDocWidth - 11) << "Sale Price:" << "  $"
+       << std::setw(9) << order.salePrice << "\n";
+
+    f64 margin = order.salePrice - grandTotal;
+    if (order.salePrice > 0.0) {
+        f64 pct = (margin / order.salePrice) * 100.0;
+        std::ostringstream marginStr;
+        marginStr << std::fixed << std::setprecision(2);
+        marginStr << "$" << margin << " (" << std::setprecision(1) << pct << "%)";
+        ss << std::right << std::setw(kDocWidth - static_cast<int>(marginStr.str().size()) - 2)
+           << "Margin:" << "  " << marginStr.str() << "\n";
+    } else {
+        ss << std::right << std::setw(kDocWidth - 11) << "Margin:" << "  $"
+           << std::setw(9) << margin << "\n";
+    }
+
+    ss << sep << "\n";
+
+    // Notes
+    if (!order.notes.empty()) {
+        ss << "\nNotes: " << order.notes << "\n";
+    }
+
+    ss << "\nGenerated: " << currentTimestamp() << "\n";
+
+    return ss.str();
 }
 
 } // namespace dw
