@@ -22,7 +22,7 @@ Requirements for Codebase Cleanup & Simplification milestone. Pure refactoring -
 
 ### Duplicate Code Consolidation (DUP)
 
-- [ ] **DUP-01**: UI color constants (error red, success green, warning yellow) are centralized in a single header
+- [x] **DUP-01**: UI color constants (error red, success green, warning yellow) are centralized in a single header
 - [x] **DUP-02**: ImGui 2-column label/value table pattern is extracted into a reusable helper function
 - [ ] **DUP-03**: Inline edit buffer management (memset+snprintf pairs) is consolidated into a utility function
 
@@ -74,7 +74,7 @@ Deferred to future release. Tracked but not in current roadmap.
 | SPLIT-05 | Phase 28 | Pending |
 | SIZE-01 | Phase 28 | Pending |
 | QUAL-03 | Phase 28 | Pending |
-| DUP-01 | Phase 29 | Pending |
+| DUP-01 | Phase 29 | Complete |
 | DUP-02 | Phase 29 | Complete |
 | DUP-03 | Phase 29 | Pending |
 | QUAL-01 | Phase 30 | Pending |

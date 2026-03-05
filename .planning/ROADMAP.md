@@ -117,7 +117,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 29-01: Centralize UI color constants (error, success, warning) in a shared header
+- [x] 29-01: Centralize UI color constants (error, success, warning) in a shared header
 - [ ] 29-02: Extract ImGui 2-column label/value table into a reusable helper
 - [ ] 29-03: Consolidate inline edit buffer management into a utility function
 
@@ -143,7 +143,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 27. Bug Fixes & Safety | v0.5.0 | 0/2 | Not started | - |
 | 28. Monolithic Function Splits | v0.5.0 | 0/5 | Not started | - |
-| 29. Duplicate Code Consolidation | v0.5.0 | 0/3 | Not started | - |
+| 29. Duplicate Code Consolidation | v0.5.0 | 1/3 | In progress | - |
 | 30. Code Quality Polish | v0.5.0 | 0/2 | Not started | - |
 
 ---

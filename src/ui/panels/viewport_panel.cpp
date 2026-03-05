@@ -553,8 +553,9 @@ void ViewportPanel::renderViewport() {
 }
 
 void ViewportPanel::renderToolbar() {
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 4));
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6, 4));
+    auto& style = ImGui::GetStyle();
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(style.ItemSpacing.y, style.ItemSpacing.y));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(style.FramePadding.x, style.FramePadding.y));
 
     if (ImGui::Button("Reset")) {
         resetView();

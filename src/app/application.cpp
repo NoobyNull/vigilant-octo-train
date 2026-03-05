@@ -517,7 +517,8 @@ void Application::render() {
     int displayW = 0, displayH = 0;
     SDL_GL_GetDrawableSize(m_window, &displayW, &displayH);
     glViewport(0, 0, displayW, displayH);
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    auto& bgColor = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
+    glClearColor(bgColor.x, bgColor.y, bgColor.z, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     SDL_GL_SwapWindow(m_window);
