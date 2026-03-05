@@ -26,18 +26,18 @@ Requirements for Shared Materials & Project Costing milestone. Each maps to road
 ### Project Costing (COST)
 
 - [ ] **COST-01**: Application uses "Costing" instead of "Estimator" throughout UI and code
-- [ ] **COST-02**: Material costs are captured (snapshot) at point of addition to project
+- [x] **COST-02**: Material costs are captured (snapshot) at point of addition to project
 - [x] **COST-03**: Tool costs are per-unit with flexible units (hours, minutes, per-object-in-batch), live from DB
 - [x] **COST-04**: Consumable costs track quantity used, live pricing from DB
-- [ ] **COST-05**: Labor entries with configurable hourly rate
-- [ ] **COST-06**: Overhead entries (user-defined line items)
-- [ ] **COST-07**: Each cost line shows estimated and actual columns; actual is manual entry
+- [x] **COST-05**: Labor entries with configurable hourly rate
+- [x] **COST-06**: Overhead entries (user-defined line items)
+- [x] **COST-07**: Each cost line shows estimated and actual columns; actual is manual entry
 - [ ] **COST-08**: User can set a sale price; margin (sale price minus total cost) is calculated and displayed
 - [ ] **COST-09**: Project panel shows total estimated cost, total actual cost, and margin aggregated from all entries
-- [ ] **COST-10**: Cost categories: Material, Tooling, Consumable, Labor, Overhead
+- [x] **COST-10**: Cost categories: Material, Tooling, Consumable, Labor, Overhead
 - [ ] **COST-11**: User can toggle between Estimate view (working/editable) and Order view (finalized receipt)
 - [ ] **COST-12**: User can print the estimate or order as a formatted document
-- [ ] **COST-13**: Costing data persists to user's TheDigitalWorkshop data directory
+- [x] **COST-13**: Costing data persists to user's TheDigitalWorkshop data directory
 
 ### Data Architecture (DATA)
 
@@ -113,18 +113,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLO-04 | Phase 23 | Complete |
 | CLO-05 | Phase 25 | Pending |
 | COST-01 | Phase 20 | Pending |
-| COST-02 | Phase 24 | Pending |
+| COST-02 | Phase 24 | Complete |
 | COST-03 | Phase 22 | Complete |
 | COST-04 | Phase 22 | Complete |
-| COST-05 | Phase 24 | Pending |
-| COST-06 | Phase 24 | Pending |
-| COST-07 | Phase 24 | Pending |
+| COST-05 | Phase 24 | Complete |
+| COST-06 | Phase 24 | Complete |
+| COST-07 | Phase 24 | Complete |
 | COST-08 | Phase 26 | Pending |
 | COST-09 | Phase 25 | Pending |
-| COST-10 | Phase 24 | Pending |
+| COST-10 | Phase 24 | Complete |
 | COST-11 | Phase 26 | Pending |
 | COST-12 | Phase 26 | Pending |
-| COST-13 | Phase 24 | Pending |
+| COST-13 | Phase 24 | Complete |
 | DATA-01 | Phase 20 | Pending |
 | DATA-02 | Phase 20 | Pending |
 | DATA-03 | Phase 22 | Complete |
