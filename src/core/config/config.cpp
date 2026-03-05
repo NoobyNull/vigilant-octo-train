@@ -135,7 +135,9 @@ bool Config::load() {
                 m_logFilePath = value;
             }
         } else if (section == "paths") {
-            if (key == "last_import") {
+            if (key == "workspace_root") {
+                m_workspaceRoot = value;
+            } else if (key == "last_import") {
                 m_lastImportDir = value;
             } else if (key == "last_export") {
                 m_lastExportDir = value;
@@ -459,6 +461,9 @@ bool Config::save() {
 
     // Paths section
     ss << "[paths]\n";
+    if (!m_workspaceRoot.empty()) {
+        ss << "workspace_root=" << m_workspaceRoot.string() << "\n";
+    }
     if (!m_lastImportDir.empty()) {
         ss << "last_import=" << m_lastImportDir.string() << "\n";
     }
@@ -757,24 +762,28 @@ void Config::updateLayoutPreset(int index, const LayoutPreset& preset) {
         m_layoutPresets[static_cast<size_t>(index)] = preset;
 }
 
+Path Config::getEffectiveWorkspaceRoot() const {
+    return m_workspaceRoot.empty() ? paths::getUserRoot() : m_workspaceRoot;
+}
+
 Path Config::getModelsDir() const {
-    return m_modelsDir.empty() ? paths::getDefaultModelsDir() : m_modelsDir;
+    return m_modelsDir.empty() ? getEffectiveWorkspaceRoot() / "Models" : m_modelsDir;
 }
 
 Path Config::getProjectsDir() const {
-    return m_projectsDir.empty() ? paths::getDefaultProjectsDir() : m_projectsDir;
+    return m_projectsDir.empty() ? getEffectiveWorkspaceRoot() / "Projects" : m_projectsDir;
 }
 
 Path Config::getMaterialsDir() const {
-    return m_materialsDir.empty() ? paths::getDefaultMaterialsDir() : m_materialsDir;
+    return m_materialsDir.empty() ? getEffectiveWorkspaceRoot() / "Materials" : m_materialsDir;
 }
 
 Path Config::getGCodeDir() const {
-    return m_gcodeDir.empty() ? paths::getDefaultGCodeDir() : m_gcodeDir;
+    return m_gcodeDir.empty() ? getEffectiveWorkspaceRoot() / "GCode" : m_gcodeDir;
 }
 
 Path Config::getSupportDir() const {
-    return m_supportDir.empty() ? paths::getDefaultSupportDir() : m_supportDir;
+    return m_supportDir.empty() ? getEffectiveWorkspaceRoot() / "Support" : m_supportDir;
 }
 
 } // namespace dw

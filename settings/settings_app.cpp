@@ -75,11 +75,14 @@ bool SettingsApp::init() {
     std::strncpy(m_libraryDir, libraryPath.string().c_str(), sizeof(m_libraryDir) - 1);
     m_libraryDir[sizeof(m_libraryDir) - 1] = '\0';
 
-    // Category directories
+    // Workspace root
     auto copyDir = [](char* buf, size_t sz, const Path& dir) {
         std::strncpy(buf, dir.string().c_str(), sz - 1);
         buf[sz - 1] = '\0';
     };
+    copyDir(m_workspaceRoot, sizeof(m_workspaceRoot), cfg.getWorkspaceRoot());
+
+    // Category directories
     copyDir(m_modelsDir, sizeof(m_modelsDir), cfg.getModelsDir());
     copyDir(m_projectsDir, sizeof(m_projectsDir), cfg.getProjectsDir());
     copyDir(m_materialsDir, sizeof(m_materialsDir), cfg.getMaterialsDir());
@@ -556,11 +559,7 @@ void SettingsApp::renderImportTab() {
 void SettingsApp::renderPathsTab() {
     ImGui::Spacing();
 
-    ImGui::Text("User Directories");
-    ImGui::TextDisabled("Where your files are stored. Change to move storage to another location.");
-    ImGui::Spacing();
-
-    float labelWidth = 80.0f;
+    float labelWidth = 100.0f;
     auto renderDirRow = [this, labelWidth](const char* label, char* buf, size_t bufSize) {
         ImGui::Text("%s", label);
         ImGui::SameLine(labelWidth);
@@ -579,6 +578,23 @@ void SettingsApp::renderPathsTab() {
             ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.2f, 1.0f), "[new]");
         }
     };
+
+    ImGui::Text("Workspace Root");
+    ImGui::TextDisabled("Set once to relocate all category directories (e.g. network share).");
+    ImGui::Spacing();
+
+    ImGui::Indent();
+    renderDirRow("Root", m_workspaceRoot, sizeof(m_workspaceRoot));
+    ImGui::TextDisabled("Default: %s", paths::getUserRoot().string().c_str());
+    ImGui::Unindent();
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    ImGui::Text("Category Directories");
+    ImGui::TextDisabled("Override individual directories. Empty = derived from workspace root.");
+    ImGui::Spacing();
 
     ImGui::Indent();
     renderDirRow("Models", m_modelsDir, sizeof(m_modelsDir));
@@ -714,7 +730,10 @@ void SettingsApp::applySettings() {
     cfg.setShowImportErrorToasts(m_showImportErrorToasts);
     cfg.setEnableFloatingWindows(m_enableFloatingWindows);
 
-    // Category directories (empty string = use defaults)
+    // Workspace root (empty string = use getUserRoot())
+    cfg.setWorkspaceRoot(Path(m_workspaceRoot));
+
+    // Category directories (empty string = use defaults from workspace root)
     cfg.setModelsDir(Path(m_modelsDir));
     cfg.setProjectsDir(Path(m_projectsDir));
     cfg.setMaterialsDir(Path(m_materialsDir));

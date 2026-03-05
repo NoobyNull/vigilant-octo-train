@@ -207,7 +207,12 @@ class Config {
     Path getLibraryDir() const { return m_libraryDir; }
     void setLibraryDir(const Path& path) { m_libraryDir = path; }
 
-    // Category directories (empty means use default from app_paths)
+    // Workspace root (empty = use app_paths::getUserRoot())
+    const Path& getWorkspaceRoot() const { return m_workspaceRoot; }
+    void setWorkspaceRoot(const Path& path) { m_workspaceRoot = path; }
+    Path getEffectiveWorkspaceRoot() const;
+
+    // Category directories (empty means use default from workspace root)
     Path getModelsDir() const;
     void setModelsDir(const Path& path) { m_modelsDir = path; }
 
@@ -412,7 +417,10 @@ class Config {
     FileHandlingMode m_fileHandlingMode = FileHandlingMode::LeaveInPlace;
     Path m_libraryDir; // Empty means default (app data dir / "library")
 
-    // Category directories (empty = default from app_paths)
+    // Workspace root (empty = use app_paths::getUserRoot())
+    Path m_workspaceRoot;
+
+    // Category directories (empty = default from workspace root)
     Path m_modelsDir;
     Path m_projectsDir;
     Path m_materialsDir;

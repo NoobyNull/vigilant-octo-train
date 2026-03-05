@@ -77,6 +77,9 @@ class SettingsApp {
     bool m_showImportErrorToasts = true;
     bool m_libraryDirValid = true; // Validation state for library directory
 
+    // Workspace root
+    char m_workspaceRoot[512]{};
+
     // Category directories
     char m_modelsDir[512]{};
     char m_projectsDir[512]{};
