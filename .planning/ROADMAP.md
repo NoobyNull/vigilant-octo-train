@@ -134,9 +134,9 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 24-01: Cost entry model (categories, estimated/actual), material snapshot
-- [ ] 24-02: Labor and overhead entries, cost panel UI
-- [ ] 24-03: Costing data persistence to project folder
+- [ ] 24-01-PLAN.md -- CostingEngine with 5 categories, material snapshot, est/actual, rate auto-population (TDD, wave 1)
+- [ ] 24-02-PLAN.md -- CostingPanel UI rewrite with category-grouped display, labor/overhead forms (wave 2, depends on 24-01)
+- [ ] 24-03-PLAN.md -- ProjectCostingIO persistence wiring, save/load on project selection (wave 2, depends on 24-01)
 
 ### Phase 25: CLO-to-Costing Pipeline
 **Goal**: CLO results automatically feed into project costing and the project panel shows aggregated cost totals
@@ -175,7 +175,7 @@ Plans:
 | 21. Material Stock Sizes | 2/2 | Complete    | 2026-03-05 | - |
 | 22. Consumables & Live Pricing | 2/2 | Complete    | 2026-03-05 | - |
 | 23. CLO Material Integration | 3/3 | Complete    | 2026-03-05 | - |
-| 24. Project Costing Engine | v0.4.0 | 0/3 | Not started | - |
+| 24. Project Costing Engine | 1/3 | In Progress|  | - |
 | 25. CLO-to-Costing Pipeline | v0.4.0 | 0/1 | Not started | - |
 | 26. Estimate & Order Views | v0.4.0 | 0/2 | Not started | - |
 

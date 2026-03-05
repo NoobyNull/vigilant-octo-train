@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-03-04)
 
 ## Current Position
 
-Phase: 22 of 26 (Consumables & Live Pricing) -- COMPLETE
-Plan: 2 of 2 in current phase (all done)
-Status: Phase 22 complete
-Last activity: 2026-03-05 -- Phase 22 executed (2 plans, 4 commits, 857 tests passing)
+Phase: 24 of 26 (Project Costing Engine) -- IN PROGRESS
+Plan: 1 of 3 in current phase (24-01 complete)
+Status: Executing Wave 2 (plans 24-02, 24-03)
+Last activity: 2026-03-04 -- Plan 24-01 CostingEngine TDD complete (14 tests, 931 total passing)
 
 Progress: [###-------------] 18%
 
