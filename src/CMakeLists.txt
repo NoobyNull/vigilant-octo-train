@@ -22,6 +22,8 @@ set(DW_SOURCES
     core/utils/file_utils.cpp
     core/utils/string_utils.cpp
     core/utils/gemini_http.cpp
+    core/utils/unit_conversion.cpp
+    core/utils/board_foot.cpp
 
     # Threading
     core/threading/main_thread_queue.cpp
@@ -158,6 +160,7 @@ set(DW_SOURCES
     ui/panels/library_panel_items.cpp
     ui/panels/materials_panel.cpp
     ui/panels/materials_panel_dialogs.cpp
+    ui/panels/materials_panel_stock.cpp
     ui/panels/properties_panel.cpp
     ui/panels/project_panel.cpp
     ui/panels/gcode_panel.cpp

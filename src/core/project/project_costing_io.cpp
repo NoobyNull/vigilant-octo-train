@@ -134,7 +134,10 @@ CostingOrder jsonToOrder(const nlohmann::json& j) {
 
 bool ProjectCostingIO::saveEstimates(const Path& costingDir,
                                      const std::vector<CostingEstimate>& estimates) {
-    file::createDirectories(costingDir);
+    if (!file::createDirectories(costingDir)) {
+        log::errorf(kLogModule, "Failed to create costing directory: %s", costingDir.c_str());
+        return false;
+    }
 
     nlohmann::json j;
     j["schema_version"] = SCHEMA_VERSION;
@@ -182,7 +185,10 @@ std::vector<CostingEstimate> ProjectCostingIO::loadEstimates(const Path& costing
 
 bool ProjectCostingIO::saveOrders(const Path& costingDir,
                                   const std::vector<CostingOrder>& orders) {
-    file::createDirectories(costingDir);
+    if (!file::createDirectories(costingDir)) {
+        log::errorf(kLogModule, "Failed to create costing directory: %s", costingDir.c_str());
+        return false;
+    }
 
     nlohmann::json j;
     j["schema_version"] = SCHEMA_VERSION;
