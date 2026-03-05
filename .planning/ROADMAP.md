@@ -52,7 +52,7 @@
 
 - [x] **Phase 20: Data Foundation & Rename** - Stock sizes DB table, project cost JSON schema, rename estimator to costing (2026-03-04)
 - [ ] **Phase 21: Material Stock Sizes** - Parent-child material/stock model with dimensions, pricing, and common size suggestions
-- [ ] **Phase 22: Consumables & Live Pricing** - Consumable items, tool cost entries, live DB pricing for non-material costs
+- [x] **Phase 22: Consumables & Live Pricing** - Consumable items, tool cost entries, live DB pricing for non-material costs (completed 2026-03-05)
 - [ ] **Phase 23: CLO Material Integration** - Cut optimizer uses shared material/stock system with waste breakdown and scrap tracking
 - [ ] **Phase 24: Project Costing Engine** - Cost entry types (material, labor, overhead), estimated vs actual columns, persistence
 - [ ] **Phase 25: CLO-to-Costing Pipeline** - CLO results auto-push into project costing, project-level cost aggregation
@@ -173,7 +173,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 20. Data Foundation & Rename | v0.4.0 | 3/3 | Complete | 2026-03-04 |
 | 21. Material Stock Sizes | 1/2 | In Progress|  | - |
-| 22. Consumables & Live Pricing | 1/2 | In Progress|  | - |
+| 22. Consumables & Live Pricing | 2/2 | Complete   | 2026-03-05 | - |
 | 23. CLO Material Integration | v0.4.0 | 0/3 | Not started | - |
 | 24. Project Costing Engine | v0.4.0 | 0/3 | Not started | - |
 | 25. CLO-to-Costing Pipeline | v0.4.0 | 0/1 | Not started | - |
