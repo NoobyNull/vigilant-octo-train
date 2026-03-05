@@ -17,9 +17,9 @@ TEST(BoardFoot, Standard4x4Board) {
 }
 
 TEST(BoardFoot, FullSheet4x8at3_4) {
-    // 3/4" thick x 4'x8' sheet = 32 BF
+    // 3/4" thick x 4'x8' sheet = (0.75 * 48 * 96) / 144 = 24 BF
     // In mm: 19.05 x 1219.2 x 2438.4
-    EXPECT_NEAR(calcBoardFeet(19.05, 1219.2, 2438.4), 32.0, kEps);
+    EXPECT_NEAR(calcBoardFeet(19.05, 1219.2, 2438.4), 24.0, kEps);
 }
 
 TEST(BoardFoot, ZeroWidth) {
@@ -39,10 +39,10 @@ TEST(BoardFoot, ZeroThickness) {
 // ============================================================
 
 TEST(CostPerBoardFoot, SheetPricing) {
-    // $50/sheet, 4x8 at 3/4" -> 32 BF -> $50/32 = $1.5625/BF
+    // $50/sheet, 4x8 at 3/4" -> 24 BF -> $50/24 = $2.0833/BF
     EXPECT_NEAR(
         calcCostPerBoardFoot(50.0, "sheet", 19.05, 1219.2, 2438.4),
-        1.5625, kEps);
+        2.0833, 0.001);
 }
 
 TEST(CostPerBoardFoot, BoardFootPricing) {
