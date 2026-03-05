@@ -8,6 +8,7 @@
 #include "../../core/database/cost_repository.h"
 #include "../../core/database/rate_category_repository.h"
 #include "../../core/project/costing_engine.h"
+#include "../../core/project/project_costing_io.h"
 #include "panel.h"
 
 namespace dw {
@@ -22,6 +23,9 @@ class CostingPanel : public Panel {
 
     // Navigate to and select a specific record by ID
     void selectRecord(i64 recordId);
+
+    // Set the project costing directory for persistence
+    void setCostingDir(const Path& dir);
 
   private:
     void renderToolbar();
@@ -40,6 +44,11 @@ class CostingPanel : public Panel {
     void syncEngineFromRecord();
     void syncRecordFromEngine();
 
+    // Persistence
+    void loadFromDisk();
+    void saveToDisk();
+    void syncEstimateFromEngine();
+
     // Recalculate edit buffer totals from items
     void recalculateEditBuffer();
 
@@ -53,6 +62,11 @@ class CostingPanel : public Panel {
 
     // Costing engine for category-grouped computation
     CostingEngine m_engine;
+
+    // Persistence state
+    Path m_costingDir;
+    std::vector<CostingEstimate> m_estimates;
+    int m_activeEstimateIndex = -1;
 
     // Edit buffer for selected record
     CostingRecord m_editBuffer;

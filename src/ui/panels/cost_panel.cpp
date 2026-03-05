@@ -1,10 +1,14 @@
 #include "ui/panels/cost_panel.h"
 
+#include <chrono>
 #include <cstdio>
 #include <cstring>
+#include <ctime>
 
 #include "ui/icons.h"
 #include "ui/widgets/toast.h"
+
+#include "../../core/utils/log.h"
 
 namespace dw {
 
@@ -233,6 +237,8 @@ void CostingPanel::renderRecordEditor() {
                     break;
                 }
             }
+            // Also persist to project costing directory
+            saveToDisk();
         } else {
             ToastManager::instance().show(ToastType::Error, "Save Failed");
         }
@@ -819,6 +825,74 @@ void CostingPanel::recalculateEditBuffer() {
     m_editBuffer.discountAmount = m_editBuffer.subtotal * m_editBuffer.discountRate / 100.0;
     m_editBuffer.total = m_editBuffer.subtotal + m_editBuffer.taxAmount -
                          m_editBuffer.discountAmount;
+}
+
+// --- Persistence ---
+
+void CostingPanel::setCostingDir(const Path& dir) {
+    m_costingDir = dir;
+    loadFromDisk();
+    if (!m_estimates.empty()) {
+        m_activeEstimateIndex = 0;
+        m_engine.setEntries(m_estimates[0].entries);
+    }
+}
+
+void CostingPanel::loadFromDisk() {
+    if (m_costingDir.empty()) {
+        return;
+    }
+    m_estimates = ProjectCostingIO::loadEstimates(m_costingDir);
+    if (!m_estimates.empty() && m_activeEstimateIndex >= 0 &&
+        m_activeEstimateIndex < static_cast<int>(m_estimates.size())) {
+        m_engine.setEntries(m_estimates[static_cast<size_t>(m_activeEstimateIndex)].entries);
+    }
+}
+
+void CostingPanel::saveToDisk() {
+    if (m_costingDir.empty()) {
+        return; // No project context
+    }
+    syncEstimateFromEngine();
+    if (ProjectCostingIO::saveEstimates(m_costingDir, m_estimates)) {
+        log::infof("CostingPanel", "Saved %zu estimates to %s",
+                    m_estimates.size(), m_costingDir.c_str());
+    } else {
+        log::errorf("CostingPanel", "Failed to save estimates to %s", m_costingDir.c_str());
+    }
+}
+
+void CostingPanel::syncEstimateFromEngine() {
+    if (m_activeEstimateIndex < 0) {
+        // No active estimate -- create one from the current record name
+        CostingEstimate est;
+        est.name = m_editName;
+
+        auto now = std::chrono::system_clock::now();
+        auto time = std::chrono::system_clock::to_time_t(now);
+        char buf[32];
+        std::strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S", std::localtime(&time));
+        est.createdAt = buf;
+        est.modifiedAt = buf;
+
+        est.entries = m_engine.entries();
+        m_estimates.push_back(std::move(est));
+        m_activeEstimateIndex = static_cast<int>(m_estimates.size()) - 1;
+        return;
+    }
+
+    if (m_activeEstimateIndex >= static_cast<int>(m_estimates.size())) {
+        return;
+    }
+
+    auto& est = m_estimates[static_cast<size_t>(m_activeEstimateIndex)];
+    est.entries = m_engine.entries();
+
+    auto now = std::chrono::system_clock::now();
+    auto time = std::chrono::system_clock::to_time_t(now);
+    char buf[32];
+    std::strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S", std::localtime(&time));
+    est.modifiedAt = buf;
 }
 
 } // namespace dw
