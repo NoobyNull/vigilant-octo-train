@@ -39,6 +39,7 @@ set(DW_TEST_SOURCES
     test_path_resolver.cpp
     test_cost_repository.cpp
     test_stock_size_repository.cpp
+    test_rate_category_repository.cpp
     test_project_costing_io.cpp
     test_cut_plan_repository.cpp
     test_gcode_repository.cpp
@@ -125,6 +126,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/database/project_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/cost_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/stock_size_repository.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/database/rate_category_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/gcode_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/cut_plan_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/tool_database.cpp
