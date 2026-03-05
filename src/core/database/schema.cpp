@@ -378,6 +378,20 @@ bool Schema::createTables(Database& db) {
     )");
 
 
+    // Rate categories table (volume-scaled cost items)
+    // project_id=0 means global default (no FK for sentinel value)
+    if (!db.execute(R"(
+        CREATE TABLE IF NOT EXISTS rate_categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            rate_per_cu_unit REAL NOT NULL DEFAULT 0,
+            project_id INTEGER DEFAULT 0,
+            notes TEXT DEFAULT ''
+        )
+    )")) {
+        return false;
+    }
+
     // Toolbox tools table (user's curated tool subset from .vtdb library)
     if (!db.execute(R"(
         CREATE TABLE IF NOT EXISTS toolbox_tools (
@@ -451,6 +465,11 @@ bool Schema::createTables(Database& db) {
         "CREATE INDEX IF NOT EXISTS idx_cnc_jobs_started ON cnc_jobs(started_at)");
     (void)db.execute(
         "CREATE INDEX IF NOT EXISTS idx_cnc_jobs_status ON cnc_jobs(status)");
+    (void)db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_rate_categories_project ON rate_categories(project_id)");
+    (void)db.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_rate_categories_name_project ON "
+        "rate_categories(name, project_id)");
 
     // Set schema version
     if (!setVersion(db, CURRENT_VERSION)) {
@@ -706,6 +725,25 @@ bool Schema::migrate(Database& db, int fromVersion) {
         (void)db.execute("DROP INDEX IF EXISTS idx_cost_estimates_project");
         (void)db.execute("CREATE INDEX IF NOT EXISTS idx_costing_records_project ON costing_records(project_id)");
         log::info("Schema", "v15: Added stock_sizes table, removed cost_per_board_foot, renamed cost_estimates to costing_records");
+    }
+
+    if (fromVersion < 16) {
+        // project_id=0 means global default (no FK for sentinel value)
+        (void)db.execute(R"(
+            CREATE TABLE IF NOT EXISTS rate_categories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                rate_per_cu_unit REAL NOT NULL DEFAULT 0,
+                project_id INTEGER DEFAULT 0,
+                notes TEXT DEFAULT ''
+            )
+        )");
+        (void)db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_rate_categories_project ON rate_categories(project_id)");
+        (void)db.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_rate_categories_name_project ON "
+            "rate_categories(name, project_id)");
+        log::info("Schema", "v16: Added rate_categories table");
     }
 
     if (!setVersion(db, CURRENT_VERSION)) {

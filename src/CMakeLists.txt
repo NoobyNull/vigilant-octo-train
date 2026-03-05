@@ -49,6 +49,7 @@ set(DW_SOURCES
     core/database/job_repository.cpp
     core/database/cost_repository.cpp
     core/database/stock_size_repository.cpp
+    core/database/rate_category_repository.cpp
     core/database/cut_plan_repository.cpp
     core/database/tool_database.cpp
     core/database/toolbox_repository.cpp
