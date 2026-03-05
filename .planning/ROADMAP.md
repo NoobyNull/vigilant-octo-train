@@ -174,7 +174,7 @@ Plans:
 | 20. Data Foundation & Rename | v0.4.0 | 3/3 | Complete | 2026-03-04 |
 | 21. Material Stock Sizes | 2/2 | Complete    | 2026-03-05 | - |
 | 22. Consumables & Live Pricing | 2/2 | Complete    | 2026-03-05 | - |
-| 23. CLO Material Integration | 1/3 | In Progress|  | - |
+| 23. CLO Material Integration | 2/3 | In Progress|  | - |
 | 24. Project Costing Engine | v0.4.0 | 0/3 | Not started | - |
 | 25. CLO-to-Costing Pipeline | v0.4.0 | 0/1 | Not started | - |
 | 26. Estimate & Order Views | v0.4.0 | 0/2 | Not started | - |
