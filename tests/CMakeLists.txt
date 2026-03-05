@@ -82,6 +82,7 @@ set(DW_TEST_SOURCES
     test_board_foot.cpp
     test_waste_breakdown.cpp
     test_multi_stock_optimizer.cpp
+    test_clo_result_file.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
     # Tier 3 — workspace tests (no GL/SDL required)
@@ -126,6 +127,7 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/optimizer/guillotine.cpp
     ${CMAKE_SOURCE_DIR}/src/core/optimizer/waste_breakdown.cpp
     ${CMAKE_SOURCE_DIR}/src/core/optimizer/multi_stock_optimizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/optimizer/clo_result_file.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/database.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/connection_pool.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/schema.cpp
