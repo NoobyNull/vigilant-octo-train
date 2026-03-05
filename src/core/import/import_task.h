@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <cstring>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -73,7 +74,7 @@ struct ImportTask {
     i64 modelId = 0;
 
     // G-code specific data (only populated when importType == GCode)
-    GCodeMetadata* gcodeMetadata = nullptr; // Heap-allocated to avoid header dependency
+    std::unique_ptr<GCodeMetadata> gcodeMetadata;
     i64 gcodeId = 0;
 
     // State

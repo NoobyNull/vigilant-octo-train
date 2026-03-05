@@ -84,9 +84,10 @@ void ImportQueue::enqueueInternal(const std::vector<Path>& paths) {
         task.extension = file::getExtension(path);
         task.importType = importTypeFromExtension(task.extension);
 
-        // Enqueue to thread pool - capture task by value (moved into lambda)
-        m_threadPool->enqueue(
-            [this, task = std::move(task)]() mutable { processTask(std::move(task)); });
+        // Enqueue to thread pool — shared_ptr bridges the move-only ImportTask
+        // across std::function's copy-constructible requirement
+        auto taskPtr = std::make_shared<ImportTask>(std::move(task));
+        m_threadPool->enqueue([this, taskPtr]() { processTask(std::move(*taskPtr)); });
     }
 }
 
@@ -325,8 +326,8 @@ void ImportQueue::processTask(ImportTask task) {
 
         task.mesh = result.mesh;
 
-        // Extract and store metadata (heap-allocate to avoid header dependencies)
-        task.gcodeMetadata = new GCodeMetadata(gcodeLoader.lastMetadata());
+        // Extract and store metadata
+        task.gcodeMetadata = std::make_unique<GCodeMetadata>(gcodeLoader.lastMetadata());
 
     } else {
         // Existing mesh loading via LoaderFactory
@@ -410,10 +411,7 @@ void ImportQueue::processTask(ImportTask task) {
                         task.sourcePath.filename().string().c_str());
 
             // Cleanup
-            if (task.gcodeMetadata) {
-                delete task.gcodeMetadata;
-                task.gcodeMetadata = nullptr;
-            }
+            task.gcodeMetadata.reset();
 
             // Update summary
             {
@@ -726,8 +724,8 @@ void ImportQueue::enqueueForReimport(const std::vector<DuplicateRecord>& duplica
         task.importType = dup.importType;
         task.skipDuplicateCheck = true;
 
-        m_threadPool->enqueue(
-            [this, task = std::move(task)]() mutable { processTask(std::move(task)); });
+        auto taskPtr = std::make_shared<ImportTask>(std::move(task));
+        m_threadPool->enqueue([this, taskPtr]() { processTask(std::move(*taskPtr)); });
     }
 }
 

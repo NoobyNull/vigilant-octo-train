@@ -157,7 +157,25 @@ bool copy(const Path& from, const Path& to) {
 }
 
 bool move(const Path& from, const Path& to) {
-    return fsOp2("move", from, to, [&](std::error_code& ec) { fs::rename(from, to, ec); });
+    // Try fast rename first (works on same filesystem)
+    std::error_code ec;
+    fs::rename(from, to, ec);
+    if (!ec)
+        return true;
+
+    // Rename failed (likely cross-filesystem) — fall back to copy + delete
+    if (!file::copy(from, to))
+        return false;
+
+    // Only remove source after verified copy
+    fs::remove(from, ec);
+    if (ec) {
+        log::warningf("FileIO",
+                      "Moved file but failed to remove source: %s (%s)",
+                      from.string().c_str(),
+                      ec.message().c_str());
+    }
+    return true;
 }
 
 Result<u64> getFileSize(const Path& path) {
