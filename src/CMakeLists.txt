@@ -48,6 +48,7 @@ set(DW_SOURCES
     core/database/gcode_repository.cpp
     core/database/job_repository.cpp
     core/database/cost_repository.cpp
+    core/database/stock_size_repository.cpp
     core/database/cut_plan_repository.cpp
     core/database/tool_database.cpp
     core/database/toolbox_repository.cpp
@@ -192,8 +193,13 @@ set(DW_SOURCES
     ui/dialogs/tagger_shutdown_dialog.cpp
 )
 
+# Windows application icon resource
+if(WIN32)
+    set(DW_WIN_RESOURCE "${CMAKE_SOURCE_DIR}/resources/app.rc")
+endif()
+
 # Create executable
-add_executable(digital_workshop ${DW_SOURCES})
+add_executable(digital_workshop ${DW_SOURCES} ${DW_WIN_RESOURCE})
 
 # Apply compiler flags
 dw_configure_target(digital_workshop)
@@ -263,8 +269,23 @@ if(DW_BUNDLED_MATERIALS)
     add_dependencies(digital_workshop dw_bundle_materials)
 endif()
 
+# --- Bundle icons ---
+set(DW_ICONS_OUTPUT_DIR "${CMAKE_BINARY_DIR}/resources/icons")
+add_custom_command(TARGET digital_workshop POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${DW_ICONS_OUTPUT_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/resources/icons" "${DW_ICONS_OUTPUT_DIR}"
+    COMMENT "Copying icons to build dir"
+)
+
 # Install target
 install(TARGETS digital_workshop RUNTIME DESTINATION bin)
+
+# Install icons
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/resources/icons/"
+    DESTINATION share/digitalworkshop/resources/icons
+    FILES_MATCHING PATTERN "*.ico" PATTERN "*.png"
+)
 
 # Install bundled materials if directory exists
 if(EXISTS "${CMAKE_SOURCE_DIR}/resources/materials/")
