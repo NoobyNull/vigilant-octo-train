@@ -83,12 +83,28 @@ bool Schema::createTables(Database& db) {
             feed_rate REAL DEFAULT 0,
             spindle_speed REAL DEFAULT 0,
             depth_of_cut REAL DEFAULT 0,
-            cost_per_board_foot REAL DEFAULT 0,
             grain_direction_deg REAL DEFAULT 0,
             thumbnail_path TEXT,
             imported_at TEXT DEFAULT CURRENT_TIMESTAMP,
             is_bundled INTEGER DEFAULT 0,
             is_hidden INTEGER DEFAULT 0
+        )
+    )")) {
+        return false;
+    }
+
+    // Stock sizes table - purchasable dimensions of materials
+    if (!db.execute(R"(
+        CREATE TABLE IF NOT EXISTS stock_sizes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            material_id INTEGER NOT NULL,
+            name TEXT DEFAULT '',
+            width_mm REAL DEFAULT NULL,
+            height_mm REAL DEFAULT NULL,
+            thickness_mm REAL NOT NULL DEFAULT 0,
+            price_per_unit REAL NOT NULL DEFAULT 0,
+            unit_label TEXT NOT NULL DEFAULT 'sheet',
+            FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE
         )
     )")) {
         return false;
@@ -401,6 +417,8 @@ bool Schema::createTables(Database& db) {
     // Create indexes for common queries (best-effort)
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_materials_name ON materials(name)");
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_materials_category ON materials(category)");
+    (void)db.execute(
+        "CREATE INDEX IF NOT EXISTS idx_stock_sizes_material ON stock_sizes(material_id)");
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_models_hash ON models(hash)");
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_models_name ON models(name)");
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_models_format ON models(file_format)");
@@ -663,6 +681,27 @@ bool Schema::migrate(Database& db, int fromVersion) {
             )
         )");
         log::info("Schema", "v14: Added toolbox_tools table");
+    }
+
+    if (fromVersion < 15) {
+        (void)db.execute(R"(
+            CREATE TABLE IF NOT EXISTS stock_sizes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                material_id INTEGER NOT NULL,
+                name TEXT DEFAULT '',
+                width_mm REAL DEFAULT NULL,
+                height_mm REAL DEFAULT NULL,
+                thickness_mm REAL NOT NULL DEFAULT 0,
+                price_per_unit REAL NOT NULL DEFAULT 0,
+                unit_label TEXT NOT NULL DEFAULT 'sheet',
+                FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE
+            )
+        )");
+        (void)db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_stock_sizes_material ON stock_sizes(material_id)");
+        // Drop legacy cost_per_board_foot column (SQLite 3.35.0+)
+        (void)db.execute("ALTER TABLE materials DROP COLUMN cost_per_board_foot");
+        log::info("Schema", "v15: Added stock_sizes table, removed cost_per_board_foot from materials");
     }
 
     if (!setVersion(db, CURRENT_VERSION)) {

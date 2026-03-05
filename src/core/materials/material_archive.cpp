@@ -30,7 +30,6 @@ std::string MaterialArchive::metadataToJson(const MaterialRecord& record) {
     j["feed_rate"] = record.feedRate;
     j["spindle_speed"] = record.spindleSpeed;
     j["depth_of_cut"] = record.depthOfCut;
-    j["cost_per_board_foot"] = record.costPerBoardFoot;
     j["grain_direction_deg"] = record.grainDirectionDeg;
     j["texture_file"] = kTextureEntry;
     j["version"] = 1;
@@ -47,7 +46,6 @@ std::optional<MaterialRecord> MaterialArchive::jsonToMaterial(const std::string&
         record.feedRate = j.value("feed_rate", 0.0f);
         record.spindleSpeed = j.value("spindle_speed", 0.0f);
         record.depthOfCut = j.value("depth_of_cut", 0.0f);
-        record.costPerBoardFoot = j.value("cost_per_board_foot", 0.0f);
         record.grainDirectionDeg = j.value("grain_direction_deg", 0.0f);
         return record;
     } catch (const nlohmann::json::exception& e) {

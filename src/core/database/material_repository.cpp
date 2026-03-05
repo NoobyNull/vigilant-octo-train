@@ -12,9 +12,9 @@ std::optional<i64> MaterialRepository::insert(const MaterialRecord& material) {
         INSERT INTO materials (
             name, category, archive_path,
             janka_hardness, feed_rate, spindle_speed,
-            depth_of_cut, cost_per_board_foot, grain_direction_deg,
+            depth_of_cut, grain_direction_deg,
             thumbnail_path, is_bundled, is_hidden
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     )");
 
     if (!stmt.isValid()) {
@@ -28,11 +28,10 @@ std::optional<i64> MaterialRepository::insert(const MaterialRecord& material) {
         !stmt.bindDouble(5, static_cast<f64>(material.feedRate)) ||
         !stmt.bindDouble(6, static_cast<f64>(material.spindleSpeed)) ||
         !stmt.bindDouble(7, static_cast<f64>(material.depthOfCut)) ||
-        !stmt.bindDouble(8, static_cast<f64>(material.costPerBoardFoot)) ||
-        !stmt.bindDouble(9, static_cast<f64>(material.grainDirectionDeg)) ||
-        !stmt.bindText(10, material.thumbnailPath.string()) ||
-        !stmt.bindInt(11, material.isBundled ? 1 : 0) ||
-        !stmt.bindInt(12, material.isHidden ? 1 : 0)) {
+        !stmt.bindDouble(8, static_cast<f64>(material.grainDirectionDeg)) ||
+        !stmt.bindText(9, material.thumbnailPath.string()) ||
+        !stmt.bindInt(10, material.isBundled ? 1 : 0) ||
+        !stmt.bindInt(11, material.isHidden ? 1 : 0)) {
         log::error("MaterialRepo", "Failed to bind insert parameters");
         return std::nullopt;
     }
@@ -140,7 +139,6 @@ bool MaterialRepository::update(const MaterialRecord& material) {
             feed_rate = ?,
             spindle_speed = ?,
             depth_of_cut = ?,
-            cost_per_board_foot = ?,
             grain_direction_deg = ?,
             thumbnail_path = ?,
             is_bundled = ?,
@@ -159,12 +157,11 @@ bool MaterialRepository::update(const MaterialRecord& material) {
         !stmt.bindDouble(5, static_cast<f64>(material.feedRate)) ||
         !stmt.bindDouble(6, static_cast<f64>(material.spindleSpeed)) ||
         !stmt.bindDouble(7, static_cast<f64>(material.depthOfCut)) ||
-        !stmt.bindDouble(8, static_cast<f64>(material.costPerBoardFoot)) ||
-        !stmt.bindDouble(9, static_cast<f64>(material.grainDirectionDeg)) ||
-        !stmt.bindText(10, material.thumbnailPath.string()) ||
-        !stmt.bindInt(11, material.isBundled ? 1 : 0) ||
-        !stmt.bindInt(12, material.isHidden ? 1 : 0) ||
-        !stmt.bindInt(13, material.id)) {
+        !stmt.bindDouble(8, static_cast<f64>(material.grainDirectionDeg)) ||
+        !stmt.bindText(9, material.thumbnailPath.string()) ||
+        !stmt.bindInt(10, material.isBundled ? 1 : 0) ||
+        !stmt.bindInt(11, material.isHidden ? 1 : 0) ||
+        !stmt.bindInt(12, material.id)) {
         log::error("MaterialRepo", "Failed to bind update parameters");
         return false;
     }
@@ -212,12 +209,11 @@ MaterialRecord MaterialRepository::rowToMaterial(Statement& stmt) {
     material.feedRate = static_cast<f32>(stmt.getDouble(5));
     material.spindleSpeed = static_cast<f32>(stmt.getDouble(6));
     material.depthOfCut = static_cast<f32>(stmt.getDouble(7));
-    material.costPerBoardFoot = static_cast<f32>(stmt.getDouble(8));
-    material.grainDirectionDeg = static_cast<f32>(stmt.getDouble(9));
-    material.thumbnailPath = Path(stmt.getText(10));
-    material.importedAt = stmt.getText(11);
-    material.isBundled = stmt.getInt(12) != 0;
-    material.isHidden = stmt.getInt(13) != 0;
+    material.grainDirectionDeg = static_cast<f32>(stmt.getDouble(8));
+    material.thumbnailPath = Path(stmt.getText(9));
+    material.importedAt = stmt.getText(10);
+    material.isBundled = stmt.getInt(11) != 0;
+    material.isHidden = stmt.getInt(12) != 0;
     return material;
 }
 
