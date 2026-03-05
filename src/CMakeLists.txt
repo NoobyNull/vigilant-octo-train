@@ -117,6 +117,8 @@ set(DW_SOURCES
     core/optimizer/cut_list_file.cpp
     core/optimizer/bin_packer.cpp
     core/optimizer/guillotine.cpp
+    core/optimizer/waste_breakdown.cpp
+    core/optimizer/multi_stock_optimizer.cpp
 
     # Carve (Direct Carve pipeline)
     core/carve/heightmap.cpp

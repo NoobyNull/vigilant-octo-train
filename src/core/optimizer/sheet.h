@@ -10,7 +10,8 @@ namespace optimizer {
 
 // A rectangular part to be cut
 struct Part {
-    i64 id = 0; // Reference to model/source
+    i64 id = 0;          // Reference to model/source
+    i64 materialId = 0;  // FK to materials (0 = unassigned)
     std::string name;
     f32 width = 0.0f;  // X dimension
     f32 height = 0.0f; // Y dimension
