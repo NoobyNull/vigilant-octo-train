@@ -507,23 +507,67 @@ void CostingPanel::renderCostingSummary() {
 
     ImGui::Spacing();
     ImGui::Separator();
+    ImGui::Spacing();
+
+    // Project Totals section
+    ImGui::Text("Project Totals");
+    ImGui::Separator();
 
     f64 estTotal = m_engine.totalEstimated();
     f64 actTotal = m_engine.totalActual();
     f64 var = m_engine.variance();
 
-    ImGui::Text("Estimated Total: $%.2f", estTotal);
-    ImGui::Text("Actual Total:    $%.2f", actTotal);
+    if (ImGui::BeginTable("ProjectTotals", 2, ImGuiTableFlags_None)) {
+        float labelColW = ImGui::CalcTextSize("Total Estimated:__").x;
+        ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, labelColW);
+        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
 
-    // Variance with color coding
-    if (var <= 0.0) {
-        // Under budget or on budget -- green
-        ImGui::TextColored(ImVec4(0.3f, 0.85f, 0.3f, 1.0f),
-                            "Variance:        $%.2f (under budget)", var);
-    } else {
-        // Over budget -- red
-        ImGui::TextColored(ImVec4(0.95f, 0.3f, 0.3f, 1.0f),
-                            "Variance:       +$%.2f (over budget)", var);
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("Total Estimated:");
+        ImGui::TableNextColumn();
+        ImGui::Text("$%.2f", estTotal);
+
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("Total Actual:");
+        ImGui::TableNextColumn();
+        ImGui::Text("$%.2f", actTotal);
+
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("Variance:");
+        ImGui::TableNextColumn();
+        if (var <= 0.0) {
+            // Under budget or on budget -- use theme success color
+            ImVec4 greenColor = ImGui::GetStyleColorVec4(ImGuiCol_PlotHistogram);
+            greenColor.x = 0.3f; greenColor.y = 0.85f; greenColor.z = 0.3f;
+            ImGui::TextColored(greenColor, "$%.2f (under budget)", var);
+        } else {
+            // Over budget -- use theme warning color
+            ImVec4 redColor = ImGui::GetStyleColorVec4(ImGuiCol_PlotHistogram);
+            redColor.x = 0.95f; redColor.y = 0.3f; redColor.z = 0.3f;
+            ImGui::TextColored(redColor, "+$%.2f (over budget)", var);
+        }
+
+        ImGui::EndTable();
+    }
+
+    // Entry count with CLO attribution
+    ImGui::Spacing();
+    const auto& allEntries = m_engine.entries();
+    int totalEntries = static_cast<int>(allEntries.size());
+    int cloCount = 0;
+    for (const auto& e : allEntries) {
+        if (e.notes.find("[auto:clo]") != std::string::npos) {
+            ++cloCount;
+        }
+    }
+
+    ImGui::Text("%d cost entries", totalEntries);
+    if (cloCount > 0) {
+        ImGui::SameLine();
+        ImGui::TextDisabled("(%d from cut optimizer)", cloCount);
     }
 }
 
