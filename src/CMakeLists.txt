@@ -71,6 +71,7 @@ set(DW_SOURCES
     # Project
     core/project/project.cpp
     core/project/project_directory.cpp
+    core/project/project_costing_io.cpp
 
     # Storage
     core/storage/storage_manager.cpp
