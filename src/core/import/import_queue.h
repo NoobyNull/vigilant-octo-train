@@ -71,6 +71,23 @@ class ImportQueue {
     void processTask(ImportTask task); // Note: takes by value for move into lambda
     void enqueueInternal(const std::vector<Path>& paths); // Shared impl for both enqueue overloads
 
+    // --- Pipeline stage helpers (called from processTask on worker thread) ---
+    // Each stage returns false on failure (task already marked failed + progress updated).
+
+    struct TaskContext; // Forward-declared, defined in .cpp
+
+    void failTask(ImportTask& task, const std::string& error);
+    void checkBatchComplete();
+
+    bool stageReadFile(ImportTask& task);
+    void stageComputeHash(ImportTask& task);
+    bool stageCheckDuplicate(ImportTask& task, TaskContext& ctx);
+    bool stageParse(ImportTask& task);
+    bool stageInsertGCode(ImportTask& task, TaskContext& ctx, u64 fileSize);
+    bool stageInsertMesh(ImportTask& task, TaskContext& ctx, u64 fileSize);
+    void stageHandleFile(ImportTask& task, TaskContext& ctx);
+    void stageFinalize(ImportTask& task);
+
     ConnectionPool& m_pool;
     LibraryManager* m_libraryManager; // Optional, for auto-detect
     StorageManager* m_storageManager; // Optional, for CAS blob storage
