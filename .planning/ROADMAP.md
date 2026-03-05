@@ -56,7 +56,7 @@
 - [x] **Phase 23: CLO Material Integration** - Cut optimizer uses shared material/stock system with waste breakdown and scrap tracking (completed 2026-03-05)
 - [x] **Phase 24: Project Costing Engine** - Cost entry types (material, labor, overhead), estimated vs actual columns, persistence (completed 2026-03-05)
 - [x] **Phase 25: CLO-to-Costing Pipeline** - CLO results auto-push into project costing, project-level cost aggregation (completed 2026-03-05)
-- [ ] **Phase 26: Estimate & Order Views** - Sale price and margin, estimate vs order toggle, formatted print output
+- [x] **Phase 26: Estimate & Order Views** - Sale price and margin, estimate vs order toggle, formatted print output (completed 2026-03-05)
 
 ## Phase Details (v0.4.0)
 
@@ -177,7 +177,7 @@ Plans:
 | 23. CLO Material Integration | 3/3 | Complete    | 2026-03-05 | - |
 | 24. Project Costing Engine | 3/3 | Complete    | 2026-03-05 | - |
 | 25. CLO-to-Costing Pipeline | 1/1 | Complete    | 2026-03-05 | - |
-| 26. Estimate & Order Views | 1/2 | In Progress|  | - |
+| 26. Estimate & Order Views | 2/2 | Complete   | 2026-03-05 | - |
 
 ---
 *Roadmap created: 2026-02-24*

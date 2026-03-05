@@ -36,7 +36,7 @@ Requirements for Shared Materials & Project Costing milestone. Each maps to road
 - [x] **COST-09**: Project panel shows total estimated cost, total actual cost, and margin aggregated from all entries
 - [x] **COST-10**: Cost categories: Material, Tooling, Consumable, Labor, Overhead
 - [x] **COST-11**: User can toggle between Estimate view (working/editable) and Order view (finalized receipt)
-- [ ] **COST-12**: User can print the estimate or order as a formatted document
+- [x] **COST-12**: User can print the estimate or order as a formatted document
 - [x] **COST-13**: Costing data persists to user's TheDigitalWorkshop data directory
 
 ### Data Architecture (DATA)
@@ -123,7 +123,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | COST-09 | Phase 25 | Complete |
 | COST-10 | Phase 24 | Complete |
 | COST-11 | Phase 26 | Complete |
-| COST-12 | Phase 26 | Pending |
+| COST-12 | Phase 26 | Complete |
 | COST-13 | Phase 24 | Complete |
 | DATA-01 | Phase 20 | Pending |
 | DATA-02 | Phase 20 | Pending |
