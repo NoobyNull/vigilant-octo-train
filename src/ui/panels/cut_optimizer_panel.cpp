@@ -477,6 +477,7 @@ void CutOptimizerPanel::renderStockSheets() {
                 m_selectedStockIdx = -1;
             }
             for (int i = 0; i < static_cast<int>(m_materials.size()); ++i) {
+                ImGui::PushID(i);
                 bool isSelected = (m_selectedMaterialIdx == i);
                 if (ImGui::Selectable(m_materials[static_cast<size_t>(i)].name.c_str(), isSelected)) {
                     m_selectedMaterialIdx = i;
@@ -500,6 +501,7 @@ void CutOptimizerPanel::renderStockSheets() {
                     }
                 }
                 if (isSelected) ImGui::SetItemDefaultFocus();
+                ImGui::PopID();
             }
             ImGui::EndCombo();
         }
@@ -515,6 +517,7 @@ void CutOptimizerPanel::renderStockSheets() {
             ImGui::TextDisabled("Stock Sizes:");
             for (int i = 0; i < static_cast<int>(m_stockSizes.size()); ++i) {
                 const auto& ss = m_stockSizes[static_cast<size_t>(i)];
+                ImGui::PushID(i);
                 char label[128];
                 std::snprintf(label, sizeof(label), "%s %.0fx%.0f $%.2f/%s",
                               ss.name.empty() ? "Stock" : ss.name.c_str(),
@@ -534,6 +537,7 @@ void CutOptimizerPanel::renderStockSheets() {
                     m_sheetName[sizeof(m_sheetName) - 1] = '\0';
                     m_hasResults = false;
                 }
+                ImGui::PopID();
             }
         } else if (m_selectedMaterialIdx >= 0 && m_stockSizes.empty()) {
             ImGui::TextDisabled("No stock sizes defined for this material");

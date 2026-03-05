@@ -59,6 +59,10 @@ Path getDefaultSupportDir();
 // Returns <exe_dir>/resources/materials/
 Path getBundledMaterialsDir();
 
+// Bundled icons directory (shipped icons next to the executable)
+// Returns <exe_dir>/resources/icons/
+Path getBundledIconsDir();
+
 // Ensure all application directories exist
 bool ensureDirectoriesExist();
 

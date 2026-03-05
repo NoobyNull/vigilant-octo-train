@@ -79,11 +79,6 @@ void GCodePanel::render() {
     if (!m_open)
         return;
 
-    // Force GCode panel to stay docked — never float
-    ImGuiWindowClass gcodeClass;
-    gcodeClass.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoUndocking;
-    ImGui::SetNextWindowClass(&gcodeClass);
-
     applyMinSize(24, 12);
     if (ImGui::Begin(m_title.c_str(), &m_open)) {
         // Job completion flash bar

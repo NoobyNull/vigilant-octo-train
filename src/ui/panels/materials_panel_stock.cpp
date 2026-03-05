@@ -91,8 +91,8 @@ void MaterialsPanel::renderDetailView() {
     ImGui::SameLine();
 
     // Category badge
-    const char* catName = materialCategoryToString(detailMat->category).c_str();
-    ImGui::TextDisabled("(%s)", catName);
+    auto catName = materialCategoryToString(detailMat->category);
+    ImGui::TextDisabled("(%s)", catName.c_str());
     ImGui::SameLine();
 
     // Close button (right-aligned)

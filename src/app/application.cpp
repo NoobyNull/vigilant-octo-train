@@ -477,10 +477,28 @@ void Application::render() {
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    ImGuiDockNodeFlags dockFlags = ImGuiDockNodeFlags_None;
-    if (!Config::instance().getEnableFloatingWindows())
-        dockFlags |= ImGuiDockNodeFlags_NoUndocking;
-    ImGuiID dockspaceId = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), dockFlags);
+    // Manual dockspace that reserves space for the status bar at the bottom
+    auto* viewport = ImGui::GetMainViewport();
+    float statusBarH = ImGui::GetFrameHeight() + ImGui::GetStyle().WindowPadding.y * 2;
+
+    ImGui::SetNextWindowPos(viewport->WorkPos);
+    ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x, viewport->WorkSize.y - statusBarH));
+    ImGui::SetNextWindowViewport(viewport->ID);
+
+    ImGuiWindowFlags dockHostFlags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
+                                     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+                                     ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
+                                     ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground;
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::Begin("DockSpaceHost", nullptr, dockHostFlags);
+    ImGui::PopStyleVar(3);
+
+    ImGuiID dockspaceId = ImGui::GetID("MainDockSpace");
+    ImGui::DockSpace(dockspaceId);
+    ImGui::End();
     if (m_uiManager->isFirstFrame()) {
         m_uiManager->clearFirstFrame();
         if (ImGui::DockBuilderGetNode(dockspaceId) == nullptr ||

@@ -292,6 +292,14 @@ void ViewportPanel::registerContextMenuEntries() {
     };
     entries.push_back(axisEntry);
 
+    ContextMenuEntry envelopeEntry;
+    envelopeEntry.label = "Show Work Envelope";
+    envelopeEntry.action = []() {
+        auto& cfg = Config::instance();
+        cfg.setCncShowWorkEnvelope(!cfg.getCncShowWorkEnvelope());
+    };
+    entries.push_back(envelopeEntry);
+
     entries.push_back(ContextMenuEntry::separator());
 
     // Lighting
