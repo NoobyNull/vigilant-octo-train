@@ -145,10 +145,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. When a CLO run completes, material costs (stock sheets used), waste amounts, and sheet count are automatically pushed as cost entries into the project costing view
   2. Project panel displays total estimated cost, total actual cost, and the difference -- aggregated from all cost entries across all categories
-**Plans**: TBD
+**Plans**: 1 plan (1 wave)
 
 Plans:
-- [ ] 25-01: Auto-push CLO results to costing, project-level cost aggregation
+- [ ] 25-01-PLAN.md -- CLO-to-costing auto-push pipeline and project cost aggregation display (wave 1)
 
 ### Phase 26: Estimate & Order Views
 **Goal**: Users can set a sale price to see margin, toggle between a working estimate and a finalized order view, and print either as a formatted document
