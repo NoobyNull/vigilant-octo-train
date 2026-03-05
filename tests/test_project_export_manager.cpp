@@ -491,15 +491,15 @@ TEST_F(ProjectExportTest, RoundTripAllAssetTypes) {
     ASSERT_TRUE(gcodeId.has_value());
     ASSERT_TRUE(gcodeRepo.addToProject(*projId, *gcodeId));
 
-    // 4. Insert cost estimate
+    // 4. Insert costing record
     dw::CostRepository costRepo(m_db);
-    dw::CostEstimate costEst;
-    costEst.name = "Material Cost";
-    costEst.projectId = *projId;
-    costEst.items.push_back({0, "Plywood Sheet", dw::CostCategory::Material, 2.0, 45.0, 90.0, ""});
-    costEst.items.push_back({0, "Router Bit", dw::CostCategory::Tool, 1.0, 25.0, 25.0, ""});
-    costEst.recalculate();
-    auto costId = costRepo.insert(costEst);
+    dw::CostingRecord costRec;
+    costRec.name = "Material Cost";
+    costRec.projectId = *projId;
+    costRec.items.push_back({0, "Plywood Sheet", dw::CostCategory::Material, 2.0, 45.0, 90.0, ""});
+    costRec.items.push_back({0, "Router Bit", dw::CostCategory::Tool, 1.0, 25.0, 25.0, ""});
+    costRec.recalculate();
+    auto costId = costRepo.insert(costRec);
     ASSERT_TRUE(costId.has_value());
 
     // 5. Insert cut plan

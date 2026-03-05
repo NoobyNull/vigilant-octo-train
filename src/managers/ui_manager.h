@@ -32,7 +32,7 @@ class LibraryPanel;
 class PropertiesPanel;
 class ProjectPanel;
 class GCodePanel;
-class CostPanel;
+class CostingPanel;
 class CutOptimizerPanel;
 class MaterialsPanel;
 class StartPage;
@@ -127,7 +127,7 @@ class UIManager {
     GCodePanel* gcodePanel() { return m_gcodePanel.get(); }
     CutOptimizerPanel* cutOptimizerPanel() { return m_cutOptimizerPanel.get(); }
     MaterialsPanel* materialsPanel() { return m_materialsPanel.get(); }
-    CostPanel* costPanel() { return m_costPanel.get(); }
+    CostingPanel* costPanel() { return m_costPanel.get(); }
     StartPage* startPage() { return m_startPage.get(); }
     ToolBrowserPanel* toolBrowserPanel() { return m_toolBrowserPanel.get(); }
     CncStatusPanel* cncStatusPanel() { return m_cncStatusPanel.get(); }
@@ -157,7 +157,7 @@ class UIManager {
     bool& showProject() { return m_showProject; }
     bool& showGCode() { return m_showGCode; }
     bool& showCutOptimizer() { return m_showCutOptimizer; }
-    bool& showCostEstimator() { return m_showCostEstimator; }
+    bool& showProjectCosting() { return m_showProjectCosting; }
     bool& showMaterials() { return m_showMaterials; }
     bool& showToolBrowser() { return m_showToolBrowser; }
     bool& showCncStatus() { return m_showCncStatus; }
@@ -234,7 +234,7 @@ class UIManager {
     std::unique_ptr<GCodePanel> m_gcodePanel;
     std::unique_ptr<CutOptimizerPanel> m_cutOptimizerPanel;
     std::unique_ptr<MaterialsPanel> m_materialsPanel;
-    std::unique_ptr<CostPanel> m_costPanel;
+    std::unique_ptr<CostingPanel> m_costPanel;
     std::unique_ptr<StartPage> m_startPage;
     std::unique_ptr<ToolBrowserPanel> m_toolBrowserPanel;
     std::unique_ptr<CncStatusPanel> m_cncStatusPanel;
@@ -255,7 +255,7 @@ class UIManager {
     bool m_showProject = true;
     bool m_showGCode = false;
     bool m_showCutOptimizer = false;
-    bool m_showCostEstimator = false;
+    bool m_showProjectCosting = false;
     bool m_showMaterials = false;
     bool m_showToolBrowser = false;
     bool m_showCncStatus = false;

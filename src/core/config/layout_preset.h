@@ -30,7 +30,7 @@ struct LayoutPreset {
 // All valid panel keys (for validation and iteration)
 inline constexpr const char* PANEL_KEYS[] = {
     "viewport",      "library",     "properties",   "project",
-    "gcode",         "cut_optimizer", "cost_estimator", "materials",
+    "gcode",         "cut_optimizer", "project_costing", "materials",
     "tool_browser",  "start_page",
     "cnc_status",    "cnc_jog",     "cnc_console",  "cnc_wcs",
     "cnc_tool",      "cnc_job",     "cnc_safety",   "cnc_settings",

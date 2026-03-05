@@ -149,8 +149,11 @@ class Config {
     bool getShowCutOptimizer() const { return m_wsShowCutOptimizer; }
     void setShowCutOptimizer(bool v) { m_wsShowCutOptimizer = v; }
 
-    bool getShowCostEstimator() const { return m_wsShowCostEstimator; }
-    void setShowCostEstimator(bool v) { m_wsShowCostEstimator = v; }
+    bool getShowProjectCosting() const { return m_wsShowProjectCosting; }
+    void setShowProjectCosting(bool v) { m_wsShowProjectCosting = v; }
+    // Backward compat alias (reads old config key)
+    bool getShowCostEstimator() const { return m_wsShowProjectCosting; }
+    void setShowCostEstimator(bool v) { m_wsShowProjectCosting = v; }
 
     bool getShowToolBrowser() const { return m_wsShowToolBrowser; }
     void setShowToolBrowser(bool v) { m_wsShowToolBrowser = v; }
@@ -383,7 +386,7 @@ class Config {
     bool m_wsShowMaterials = false;
     bool m_wsShowGCode = false;
     bool m_wsShowCutOptimizer = false;
-    bool m_wsShowCostEstimator = false;
+    bool m_wsShowProjectCosting = false;
     bool m_wsShowToolBrowser = false;
     bool m_wsShowCncStatus = false;
     bool m_wsShowCncJog = false;

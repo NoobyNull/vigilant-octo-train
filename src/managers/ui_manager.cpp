@@ -76,7 +76,7 @@ void UIManager::init(LibraryManager* libraryManager,
     m_cutOptimizerPanel = std::make_unique<CutOptimizerPanel>();
     m_materialsPanel = std::make_unique<MaterialsPanel>(materialManager);
     if (costRepo) {
-        m_costPanel = std::make_unique<CostPanel>(costRepo);
+        m_costPanel = std::make_unique<CostingPanel>(costRepo);
     }
     m_startPage = std::make_unique<StartPage>();
     m_toolBrowserPanel = std::make_unique<ToolBrowserPanel>();
@@ -287,7 +287,7 @@ void UIManager::renderViewMenu() {
     ImGui::MenuItem("Project", nullptr, &m_showProject);
     ImGui::Separator();
     ImGui::MenuItem("Cut Optimizer", nullptr, &m_showCutOptimizer);
-    ImGui::MenuItem("Cost Estimator", nullptr, &m_showCostEstimator);
+    ImGui::MenuItem("Project Costing", nullptr, &m_showProjectCosting);
     ImGui::MenuItem("Materials", nullptr, &m_showMaterials);
     ImGui::MenuItem("Tool Browser", nullptr, &m_showToolBrowser);
     ImGui::Separator();
@@ -403,11 +403,11 @@ void UIManager::renderPanels() {
         m_cutOptimizerPanel->render();
     }
 
-    if (m_showCostEstimator && m_costPanel) {
+    if (m_showProjectCosting && m_costPanel) {
         m_costPanel->render();
         // Sync: if user closed panel via X button, update menu checkbox state
         if (!m_costPanel->isOpen()) {
-            m_showCostEstimator = false;
+            m_showProjectCosting = false;
             m_costPanel->setOpen(true); // reset for next View menu toggle
         }
     }
@@ -723,7 +723,7 @@ void UIManager::setupDefaultDockLayout(ImGuiID dockspaceId) {
     ImGui::DockBuilderDockWindow("Cut Optimizer", dockCenter);
 
     // Left-bottom tabs (behind Project)
-    ImGui::DockBuilderDockWindow("Cost Estimator", dockLeftBottom);
+    ImGui::DockBuilderDockWindow("Project Costing", dockLeftBottom);
     ImGui::DockBuilderDockWindow("Materials", dockLeftBottom);
 
     // Right tabs (behind Properties)
@@ -755,7 +755,7 @@ void UIManager::restoreVisibilityFromConfig() {
     m_showMaterials = cfg.getShowMaterials();
     m_showGCode = cfg.getShowGCode();
     m_showCutOptimizer = cfg.getShowCutOptimizer();
-    m_showCostEstimator = cfg.getShowCostEstimator();
+    m_showProjectCosting = cfg.getShowProjectCosting();
     m_showToolBrowser = cfg.getShowToolBrowser();
     m_showStartPage = cfg.getShowStartPage();
 
@@ -784,7 +784,7 @@ void UIManager::saveVisibilityToConfig() {
     cfg.setShowMaterials(m_showMaterials);
     cfg.setShowGCode(m_showGCode);
     cfg.setShowCutOptimizer(m_showCutOptimizer);
-    cfg.setShowCostEstimator(m_showCostEstimator);
+    cfg.setShowProjectCosting(m_showProjectCosting);
     cfg.setShowToolBrowser(m_showToolBrowser);
     cfg.setShowStartPage(m_showStartPage);
 
@@ -901,7 +901,7 @@ void UIManager::buildPanelRegistry() {
         {"start_page",     &m_showStartPage,      "Start Page",        "Start Page"},
         {"gcode",          &m_showGCode,          "G-code Viewer",     "G-code"},
         {"cut_optimizer",  &m_showCutOptimizer,   "Cut Optimizer",     "Cut Optimizer"},
-        {"cost_estimator", &m_showCostEstimator,  "Cost Estimator",    "Cost Estimator"},
+        {"project_costing", &m_showProjectCosting,  "Project Costing",    "Project Costing"},
         {"materials",      &m_showMaterials,      "Materials",         "Materials"},
         {"tool_browser",   &m_showToolBrowser,    "Tool Browser",      "Tool Browser"},
         {"cnc_status",     &m_showCncStatus,      "Status",            "CNC Status"},

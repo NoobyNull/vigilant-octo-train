@@ -373,14 +373,14 @@ DwprojExportResult ProjectExportManager::importProject(const Path& archivePath,
 
 // --- JSON Parsing Helpers ---
 
-std::vector<CostEstimate> ProjectExportManager::parseCostsJson(const std::string& json) {
-    std::vector<CostEstimate> results;
+std::vector<CostingRecord> ProjectExportManager::parseCostsJson(const std::string& json) {
+    std::vector<CostingRecord> results;
     try {
         auto arr = nlohmann::json::parse(json);
         if (!arr.is_array()) return results;
 
         for (const auto& ej : arr) {
-            CostEstimate est;
+            CostingRecord est;
             est.name = ej.value("name", "");
             est.projectId = ej.value("project_id", static_cast<i64>(0));
             est.subtotal = ej.value("subtotal", 0.0);

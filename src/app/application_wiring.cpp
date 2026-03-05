@@ -494,10 +494,10 @@ void Application::initWiring() {
                 m_uiManager->materialsPanel()->selectMaterial(materialId);
             }
         });
-        m_uiManager->projectPanel()->setOnCostSelected([this](i64 estimateId) {
+        m_uiManager->projectPanel()->setOnCostSelected([this](i64 recordId) {
             if (m_uiManager->costPanel()) {
                 m_uiManager->costPanel()->setOpen(true);
-                m_uiManager->costPanel()->selectEstimate(estimateId);
+                m_uiManager->costPanel()->selectRecord(recordId);
             }
         });
         m_uiManager->projectPanel()->setOnCutPlanSelected([this](i64 planId) {
@@ -529,20 +529,20 @@ void Application::initWiring() {
         cop->setModelRepository(m_modelRepo.get());
         cop->setOnAddToCost([this](const std::string& name, int qty, float rate, float total) {
             if (!m_costRepo) return;
-            // Create a new cost estimate with the cut plan material cost
-            CostEstimate estimate;
-            estimate.name = "Cut Plan — " + name;
+            // Create a new costing record with the cut plan material cost
+            CostingRecord record;
+            record.name = "Cut Plan \xe2\x80\x94 " + name;
             if (m_projectManager && m_projectManager->currentProject())
-                estimate.projectId = m_projectManager->currentProject()->id();
+                record.projectId = m_projectManager->currentProject()->id();
             CostItem item;
             item.name = name + " sheets";
             item.category = CostCategory::Material;
             item.quantity = static_cast<f64>(qty);
             item.rate = static_cast<f64>(rate);
             item.total = static_cast<f64>(total);
-            estimate.items.push_back(item);
-            estimate.recalculate();
-            m_costRepo->insert(estimate);
+            record.items.push_back(item);
+            record.recalculate();
+            m_costRepo->insert(record);
         });
     }
     if (auto* gcp = m_uiManager->gcodePanel()) {

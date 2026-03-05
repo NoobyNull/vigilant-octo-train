@@ -390,9 +390,9 @@ std::string ProjectExportManager::buildManifestJson(
 }
 
 std::string ProjectExportManager::buildCostsJson(
-    const std::vector<CostEstimate>& estimates) {
+    const std::vector<CostingRecord>& records) {
     nlohmann::json arr = nlohmann::json::array();
-    for (const auto& est : estimates) {
+    for (const auto& est : records) {
         nlohmann::json ej;
         ej["id"] = est.id;
         ej["name"] = est.name;

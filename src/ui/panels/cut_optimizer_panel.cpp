@@ -35,9 +35,20 @@ void CutOptimizerPanel::render() {
 
         float avail = ImGui::GetContentRegionAvail().x;
         float availH = ImGui::GetContentRegionAvail().y;
-        float spacing = ImGui::GetStyle().ItemSpacing.x;
-        float leftW = avail * 0.22f;
-        float rightW = avail * 0.16f;
+        const auto& style = ImGui::GetStyle();
+        float spacing = style.ItemSpacing.x;
+
+        // Bottom-up: calculate left column width from content needs
+        // Widest row is stock: [input "W"] SameLine [input "H"] — two inputs + two labels + spacing
+        float inputW = ImGui::CalcTextSize("00000.00").x + style.FramePadding.x * 2;
+        float labelW = ImGui::CalcTextSize("W##sheet").x + spacing;
+        float leftContentW = (inputW + labelW) * 2 + spacing;
+        float leftW = leftContentW + style.WindowPadding.x * 2;
+
+        // Right column: sized from content — "00pc 100%" + padding
+        float rightContentW = ImGui::CalcTextSize("Sheet 0  00pc 100%").x;
+        float rightW = rightContentW + style.WindowPadding.x * 2;
+
         float centerW = avail - leftW - rightW - spacing * 2;
 
         if (centerW < avail * 0.2f) {
@@ -391,17 +402,25 @@ void CutOptimizerPanel::renderCutListTable() {
         }
     }
 
-    // Add row
-    ImGui::SetNextItemWidth(ImGui::CalcTextSize("0000.0").x + ImGui::GetStyle().FramePadding.x * 2);
-    ImGui::InputFloat("##nw", &m_newPartWidth, 0, 0, "%.0f");
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(ImGui::CalcTextSize("0000.0").x + ImGui::GetStyle().FramePadding.x * 2);
-    ImGui::InputFloat("##nh", &m_newPartHeight, 0, 0, "%.0f");
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(ImGui::CalcTextSize("000").x + ImGui::GetStyle().FramePadding.x * 2);
-    ImGui::InputInt("##nq", &m_newPartQuantity, 0);
-    if (m_newPartQuantity < 1) m_newPartQuantity = 1;
-    ImGui::SameLine();
+    // Add row — divide available width: [W] [H] [Qty] [+Add]
+    {
+        float availW = ImGui::GetContentRegionAvail().x;
+        float btnW = ImGui::CalcTextSize("+ Add").x + ImGui::GetStyle().FramePadding.x * 2;
+        float fieldSpace = availW - btnW - ImGui::GetStyle().ItemSpacing.x * 3;
+        float dimW = fieldSpace * 0.4f;  // W and H each get 40%
+        float qtyW = fieldSpace * 0.2f;  // Qty gets 20%
+
+        ImGui::SetNextItemWidth(dimW);
+        ImGui::InputFloat("##nw", &m_newPartWidth, 0, 0, "%.0f");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(dimW);
+        ImGui::InputFloat("##nh", &m_newPartHeight, 0, 0, "%.0f");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(qtyW);
+        ImGui::InputInt("##nq", &m_newPartQuantity, 0);
+        if (m_newPartQuantity < 1) m_newPartQuantity = 1;
+        ImGui::SameLine();
+    }
     if (ImGui::SmallButton("+ Add")) {
         optimizer::Part part;
         part.width = m_newPartWidth;
@@ -440,18 +459,24 @@ void CutOptimizerPanel::renderStockSheets() {
 
     // Editable current sheet fields
     ImGui::SetNextItemWidth(-1);
-    if (ImGui::InputText("Name##sheet", m_sheetName, sizeof(m_sheetName)))
+    if (ImGui::InputText("##sheetname", m_sheetName, sizeof(m_sheetName)))
         m_sheet.name = m_sheetName;
 
-    ImGui::SetNextItemWidth(ImGui::CalcTextSize("00000.00").x + ImGui::GetStyle().FramePadding.x * 2);
-    if (ImGui::InputFloat("W##sheet", &m_sheet.width, 0, 0, "%.0f"))
-        m_hasResults = false;
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(ImGui::CalcTextSize("00000.00").x + ImGui::GetStyle().FramePadding.x * 2);
-    if (ImGui::InputFloat("H##sheet", &m_sheet.height, 0, 0, "%.0f"))
-        m_hasResults = false;
+    // W and H side by side — each gets half the available width minus label
+    {
+        float availW = ImGui::GetContentRegionAvail().x;
+        float labelW = ImGui::CalcTextSize("W").x + ImGui::GetStyle().ItemInnerSpacing.x;
+        float halfW = (availW - ImGui::GetStyle().ItemSpacing.x) * 0.5f - labelW;
+        ImGui::SetNextItemWidth(halfW);
+        if (ImGui::InputFloat("W##sheet", &m_sheet.width, 0, 0, "%.0f"))
+            m_hasResults = false;
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(halfW);
+        if (ImGui::InputFloat("H##sheet", &m_sheet.height, 0, 0, "%.0f"))
+            m_hasResults = false;
+    }
 
-    ImGui::SetNextItemWidth(ImGui::CalcTextSize("00000.00").x + ImGui::GetStyle().FramePadding.x * 2);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
     ImGui::InputFloat("$/sheet", &m_sheet.cost, 0, 0, "%.2f");
 
     // Grain direction indicator
@@ -467,13 +492,19 @@ void CutOptimizerPanel::renderStockSheets() {
 void CutOptimizerPanel::renderSettings() {
     ImGui::Text("%s SETTINGS", Icons::Settings);
 
-    ImGui::SetNextItemWidth(ImGui::CalcTextSize("00000.00").x + ImGui::GetStyle().FramePadding.x * 2);
-    if (ImGui::InputFloat("Kerf", &m_kerf, 0, 0, "%.1f"))
-        m_hasResults = false;
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(ImGui::CalcTextSize("00000.00").x + ImGui::GetStyle().FramePadding.x * 2);
-    if (ImGui::InputFloat("Padding", &m_margin, 0, 0, "%.1f"))
-        m_hasResults = false;
+    {
+        float availW = ImGui::GetContentRegionAvail().x;
+        float labelKerf = ImGui::CalcTextSize("Kerf").x + ImGui::GetStyle().ItemInnerSpacing.x;
+        float labelPad = ImGui::CalcTextSize("Padding").x + ImGui::GetStyle().ItemInnerSpacing.x;
+        float halfW = (availW - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+        ImGui::SetNextItemWidth(halfW - labelKerf);
+        if (ImGui::InputFloat("Kerf", &m_kerf, 0, 0, "%.1f"))
+            m_hasResults = false;
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(halfW - labelPad);
+        if (ImGui::InputFloat("Padding", &m_margin, 0, 0, "%.1f"))
+            m_hasResults = false;
+    }
 
     ImGui::Checkbox("Allow Rotation", &m_allowRotation);
 
@@ -677,18 +708,18 @@ void CutOptimizerPanel::renderResultsPanel() {
         ImGui::PopStyleColor();
     }
 
-    // Add to Cost Estimate button
+    // Add to Project Costing button
     ImGui::Spacing();
     if (!m_onAddToCost)
         ImGui::BeginDisabled();
-    if (ImGui::Button("Add to Cost Est.", ImVec2(-1, 0))) {
+    if (ImGui::Button("Add to Costing", ImVec2(-1, 0))) {
         if (m_onAddToCost) {
             m_onAddToCost(m_sheet.name.empty() ? "Cut Plan Sheets" : m_sheet.name,
                           m_result.sheetsUsed,
                           m_sheet.cost,
                           totalCost);
             ToastManager::instance().show(ToastType::Success, "Added",
-                                          "Cut plan cost added to estimate");
+                                          "Cut plan cost added to costing");
         }
     }
     if (!m_onAddToCost)

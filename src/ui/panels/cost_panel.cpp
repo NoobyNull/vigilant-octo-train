@@ -11,13 +11,13 @@ namespace dw {
 static const char* kCategoryNames[] = {"Material", "Labor", "Tool", "Other"};
 static constexpr int kCategoryCount = 4;
 
-CostPanel::CostPanel(CostRepository* repo) : Panel("Cost Estimator"), m_repo(repo) {
+CostingPanel::CostingPanel(CostRepository* repo) : Panel("Project Costing"), m_repo(repo) {
     if (m_repo) {
-        m_estimates = m_repo->findAll();
+        m_records = m_repo->findAll();
     }
 }
 
-void CostPanel::render() {
+void CostingPanel::render() {
     if (!m_open) {
         return;
     }
@@ -35,18 +35,18 @@ void CostPanel::render() {
     float listWidth = ImGui::GetContentRegionAvail().x * 0.22f;
     ImVec2 avail = ImGui::GetContentRegionAvail();
 
-    if (ImGui::BeginChild("EstimateList", ImVec2(listWidth, avail.y), true)) {
-        renderEstimateList();
+    if (ImGui::BeginChild("RecordList", ImVec2(listWidth, avail.y), true)) {
+        renderRecordList();
     }
     ImGui::EndChild();
 
     ImGui::SameLine();
 
-    if (ImGui::BeginChild("EstimateEditor", ImVec2(0, avail.y), true)) {
+    if (ImGui::BeginChild("RecordEditor", ImVec2(0, avail.y), true)) {
         if (m_selectedIndex >= 0) {
-            renderEstimateEditor();
+            renderRecordEditor();
         } else {
-            ImGui::TextDisabled("Select or create an estimate");
+            ImGui::TextDisabled("Select or create a cost record");
         }
     }
     ImGui::EndChild();
@@ -54,36 +54,36 @@ void CostPanel::render() {
     ImGui::End();
 }
 
-void CostPanel::renderToolbar() {
+void CostingPanel::renderToolbar() {
     if (ImGui::Button(Icons::Add)) {
-        // Create new estimate
-        m_editBuffer = CostEstimate{};
-        m_editBuffer.name = "New Estimate";
+        // Create new record
+        m_editBuffer = CostingRecord{};
+        m_editBuffer.name = "New Record";
         std::memset(m_editName, 0, sizeof(m_editName));
         std::snprintf(m_editName, sizeof(m_editName), "%s", m_editBuffer.name.c_str());
         std::memset(m_editNotes, 0, sizeof(m_editNotes));
         m_editTaxRate = 0.0f;
         m_editDiscountRate = 0.0f;
-        m_isNewEstimate = true;
+        m_isNewRecord = true;
         m_selectedIndex = -1; // Will be set after insert
     }
     if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("New Estimate");
+        ImGui::SetTooltip("New Record");
     }
 
     ImGui::SameLine();
 
     bool hasSelection = m_selectedIndex >= 0 &&
-                        m_selectedIndex < static_cast<int>(m_estimates.size());
+                        m_selectedIndex < static_cast<int>(m_records.size());
     ImGui::BeginDisabled(!hasSelection);
     if (ImGui::Button(Icons::Delete)) {
         if (hasSelection) {
-            i64 id = m_estimates[static_cast<size_t>(m_selectedIndex)].id;
+            i64 id = m_records[static_cast<size_t>(m_selectedIndex)].id;
             if (m_repo->remove(id)) {
-                ToastManager::instance().show(ToastType::Success, "Estimate Deleted");
-                m_estimates = m_repo->findAll();
+                ToastManager::instance().show(ToastType::Success, "Record Deleted");
+                m_records = m_repo->findAll();
                 m_selectedIndex = -1;
-                m_isNewEstimate = false;
+                m_isNewRecord = false;
             } else {
                 ToastManager::instance().show(ToastType::Error, "Delete Failed");
             }
@@ -91,16 +91,16 @@ void CostPanel::renderToolbar() {
     }
     ImGui::EndDisabled();
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-        ImGui::SetTooltip("Delete Estimate");
+        ImGui::SetTooltip("Delete Record");
     }
 
     ImGui::SameLine();
 
     if (ImGui::Button(Icons::Refresh)) {
         if (m_repo) {
-            m_estimates = m_repo->findAll();
+            m_records = m_repo->findAll();
             m_selectedIndex = -1;
-            m_isNewEstimate = false;
+            m_isNewRecord = false;
         }
     }
     if (ImGui::IsItemHovered()) {
@@ -108,40 +108,40 @@ void CostPanel::renderToolbar() {
     }
 }
 
-void CostPanel::renderEstimateList() {
-    for (int i = 0; i < static_cast<int>(m_estimates.size()); ++i) {
-        const auto& est = m_estimates[static_cast<size_t>(i)];
+void CostingPanel::renderRecordList() {
+    for (int i = 0; i < static_cast<int>(m_records.size()); ++i) {
+        const auto& rec = m_records[static_cast<size_t>(i)];
         char label[128];
-        std::snprintf(label, sizeof(label), "%s\n$%.2f", est.name.c_str(), est.total);
+        std::snprintf(label, sizeof(label), "%s\n$%.2f", rec.name.c_str(), rec.total);
 
-        bool selected = (i == m_selectedIndex && !m_isNewEstimate);
+        bool selected = (i == m_selectedIndex && !m_isNewRecord);
         if (ImGui::Selectable(label, selected, 0, ImVec2(0, ImGui::GetTextLineHeight() * 2.5f))) {
             m_selectedIndex = i;
-            m_isNewEstimate = false;
-            m_editBuffer = est;
+            m_isNewRecord = false;
+            m_editBuffer = rec;
             std::memset(m_editName, 0, sizeof(m_editName));
-            std::snprintf(m_editName, sizeof(m_editName), "%s", est.name.c_str());
+            std::snprintf(m_editName, sizeof(m_editName), "%s", rec.name.c_str());
             std::memset(m_editNotes, 0, sizeof(m_editNotes));
-            std::snprintf(m_editNotes, sizeof(m_editNotes), "%s", est.notes.c_str());
-            m_editTaxRate = static_cast<float>(est.taxRate);
-            m_editDiscountRate = static_cast<float>(est.discountRate);
+            std::snprintf(m_editNotes, sizeof(m_editNotes), "%s", rec.notes.c_str());
+            m_editTaxRate = static_cast<float>(rec.taxRate);
+            m_editDiscountRate = static_cast<float>(rec.discountRate);
         }
     }
 
-    // Show new estimate entry if creating
-    if (m_isNewEstimate) {
+    // Show new record entry if creating
+    if (m_isNewRecord) {
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 0.8f, 0.4f, 1.0f));
-        ImGui::Selectable("(New Estimate)", true);
+        ImGui::Selectable("(New Record)", true);
         ImGui::PopStyleColor();
     }
 }
 
-void CostPanel::renderEstimateEditor() {
+void CostingPanel::renderRecordEditor() {
     // Name input
     ImGui::Text("Name:");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(-1);
-    ImGui::InputText("##EstName", m_editName, sizeof(m_editName));
+    ImGui::InputText("##RecName", m_editName, sizeof(m_editName));
 
     ImGui::Spacing();
 
@@ -255,7 +255,7 @@ void CostPanel::renderEstimateEditor() {
 
     // Notes
     ImGui::Text("Notes:");
-    ImGui::InputTextMultiline("##EstNotes", m_editNotes, sizeof(m_editNotes), ImVec2(-1, 60));
+    ImGui::InputTextMultiline("##RecNotes", m_editNotes, sizeof(m_editNotes), ImVec2(-1, 60));
 
     ImGui::Spacing();
 
@@ -267,24 +267,24 @@ void CostPanel::renderEstimateEditor() {
         m_editBuffer.notes = m_editNotes;
 
         bool ok = false;
-        if (m_isNewEstimate) {
+        if (m_isNewRecord) {
             auto newId = m_repo->insert(m_editBuffer);
             ok = newId.has_value();
             if (ok) {
-                m_isNewEstimate = false;
+                m_isNewRecord = false;
             }
         } else {
             ok = m_repo->update(m_editBuffer);
         }
 
         if (ok) {
-            ToastManager::instance().show(ToastType::Success, "Estimate Saved");
-            m_estimates = m_repo->findAll();
-            // Re-select by ID
-            for (int i = 0; i < static_cast<int>(m_estimates.size()); ++i) {
-                if (m_estimates[static_cast<size_t>(i)].name == m_editBuffer.name) {
+            ToastManager::instance().show(ToastType::Success, "Record Saved");
+            m_records = m_repo->findAll();
+            // Re-select by name
+            for (int i = 0; i < static_cast<int>(m_records.size()); ++i) {
+                if (m_records[static_cast<size_t>(i)].name == m_editBuffer.name) {
                     m_selectedIndex = i;
-                    m_editBuffer = m_estimates[static_cast<size_t>(i)];
+                    m_editBuffer = m_records[static_cast<size_t>(i)];
                     break;
                 }
             }
@@ -294,7 +294,7 @@ void CostPanel::renderEstimateEditor() {
     }
 }
 
-void CostPanel::renderNewItemRow() {
+void CostingPanel::renderNewItemRow() {
     ImGui::TableNextRow();
 
     // Name
@@ -342,18 +342,18 @@ void CostPanel::renderNewItemRow() {
     }
 }
 
-void CostPanel::selectEstimate(i64 estimateId) {
+void CostingPanel::selectRecord(i64 recordId) {
     // Refresh list to ensure we have latest data
     if (m_repo) {
-        m_estimates = m_repo->findAll();
+        m_records = m_repo->findAll();
     }
 
-    // Find the estimate by ID
-    for (int i = 0; i < static_cast<int>(m_estimates.size()); ++i) {
-        if (m_estimates[static_cast<size_t>(i)].id == estimateId) {
+    // Find the record by ID
+    for (int i = 0; i < static_cast<int>(m_records.size()); ++i) {
+        if (m_records[static_cast<size_t>(i)].id == recordId) {
             m_selectedIndex = i;
-            m_isNewEstimate = false;
-            m_editBuffer = m_estimates[static_cast<size_t>(i)];
+            m_isNewRecord = false;
+            m_editBuffer = m_records[static_cast<size_t>(i)];
             std::memset(m_editName, 0, sizeof(m_editName));
             std::snprintf(
                 m_editName, sizeof(m_editName), "%s", m_editBuffer.name.c_str());
@@ -367,7 +367,7 @@ void CostPanel::selectEstimate(i64 estimateId) {
     }
 }
 
-void CostPanel::recalculateEditBuffer() {
+void CostingPanel::recalculateEditBuffer() {
     m_editBuffer.subtotal = 0.0;
     for (auto& item : m_editBuffer.items) {
         item.total = item.quantity * item.rate;

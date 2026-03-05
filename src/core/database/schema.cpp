@@ -178,9 +178,9 @@ bool Schema::createTables(Database& db) {
         return false;
     }
 
-    // Cost estimates table
+    // Costing records table (renamed from cost_estimates in v0.4.0)
     if (!db.execute(R"(
-        CREATE TABLE IF NOT EXISTS cost_estimates (
+        CREATE TABLE IF NOT EXISTS costing_records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             project_id INTEGER,
@@ -426,8 +426,8 @@ bool Schema::createTables(Database& db) {
                      "project_models(project_id)");
     (void)db.execute("CREATE INDEX IF NOT EXISTS idx_project_models_model ON "
                      "project_models(model_id)");
-    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_cost_estimates_project ON "
-                     "cost_estimates(project_id)");
+    (void)db.execute("CREATE INDEX IF NOT EXISTS idx_costing_records_project ON "
+                     "costing_records(project_id)");
     (void)db.execute(
         "CREATE INDEX IF NOT EXISTS idx_project_gcode_project ON project_gcode(project_id)");
     (void)db.execute(
@@ -701,7 +701,11 @@ bool Schema::migrate(Database& db, int fromVersion) {
             "CREATE INDEX IF NOT EXISTS idx_stock_sizes_material ON stock_sizes(material_id)");
         // Drop legacy cost_per_board_foot column (SQLite 3.35.0+)
         (void)db.execute("ALTER TABLE materials DROP COLUMN cost_per_board_foot");
-        log::info("Schema", "v15: Added stock_sizes table, removed cost_per_board_foot from materials");
+        // Rename cost_estimates -> costing_records (SQLite 3.25.0+)
+        (void)db.execute("ALTER TABLE cost_estimates RENAME TO costing_records");
+        (void)db.execute("DROP INDEX IF EXISTS idx_cost_estimates_project");
+        (void)db.execute("CREATE INDEX IF NOT EXISTS idx_costing_records_project ON costing_records(project_id)");
+        log::info("Schema", "v15: Added stock_sizes table, removed cost_per_board_foot, renamed cost_estimates to costing_records");
     }
 
     if (!setVersion(db, CURRENT_VERSION)) {

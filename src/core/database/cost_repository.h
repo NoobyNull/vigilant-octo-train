@@ -23,8 +23,8 @@ struct CostItem {
     std::string notes;
 };
 
-// Cost estimate document
-struct CostEstimate {
+// Cost record document (renamed from CostEstimate in v0.4.0)
+struct CostingRecord {
     i64 id = 0;
     std::string name;
     i64 projectId = 0; // Optional link to project
@@ -43,21 +43,21 @@ struct CostEstimate {
     void recalculate();
 };
 
-// Repository for cost estimate CRUD operations
+// Repository for costing record CRUD operations
 class CostRepository {
   public:
     explicit CostRepository(Database& db);
 
     // Create
-    std::optional<i64> insert(const CostEstimate& estimate);
+    std::optional<i64> insert(const CostingRecord& record);
 
     // Read
-    std::optional<CostEstimate> findById(i64 id);
-    std::vector<CostEstimate> findAll();
-    std::vector<CostEstimate> findByProject(i64 projectId);
+    std::optional<CostingRecord> findById(i64 id);
+    std::vector<CostingRecord> findAll();
+    std::vector<CostingRecord> findByProject(i64 projectId);
 
     // Update
-    bool update(const CostEstimate& estimate);
+    bool update(const CostingRecord& record);
 
     // Delete
     bool remove(i64 id);
@@ -66,7 +66,7 @@ class CostRepository {
     i64 count();
 
   private:
-    CostEstimate rowToEstimate(Statement& stmt);
+    CostingRecord rowToRecord(Statement& stmt);
     std::string itemsToJson(const std::vector<CostItem>& items);
     std::vector<CostItem> jsonToItems(const std::string& json);
     std::string categoryToString(CostCategory cat);

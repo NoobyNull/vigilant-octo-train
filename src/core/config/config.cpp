@@ -165,8 +165,8 @@ bool Config::load() {
                 m_wsShowGCode = (value == "true" || value == "1");
             } else if (key == "show_cut_optimizer") {
                 m_wsShowCutOptimizer = (value == "true" || value == "1");
-            } else if (key == "show_cost_estimator") {
-                m_wsShowCostEstimator = (value == "true" || value == "1");
+            } else if (key == "show_project_costing" || key == "show_cost_estimator") {
+                m_wsShowProjectCosting = (value == "true" || value == "1");
             } else if (key == "show_tool_browser") {
                 m_wsShowToolBrowser = (value == "true" || value == "1");
             } else if (key == "show_cnc_status") {
@@ -486,7 +486,7 @@ bool Config::save() {
     ss << "show_materials=" << (m_wsShowMaterials ? "true" : "false") << "\n";
     ss << "show_gcode=" << (m_wsShowGCode ? "true" : "false") << "\n";
     ss << "show_cut_optimizer=" << (m_wsShowCutOptimizer ? "true" : "false") << "\n";
-    ss << "show_cost_estimator=" << (m_wsShowCostEstimator ? "true" : "false") << "\n";
+    ss << "show_project_costing=" << (m_wsShowProjectCosting ? "true" : "false") << "\n";
     ss << "show_tool_browser=" << (m_wsShowToolBrowser ? "true" : "false") << "\n";
     ss << "show_cnc_status=" << (m_wsShowCncStatus ? "true" : "false") << "\n";
     ss << "show_cnc_jog=" << (m_wsShowCncJog ? "true" : "false") << "\n";
