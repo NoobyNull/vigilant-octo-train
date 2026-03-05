@@ -5,7 +5,7 @@
 
 ## v0.5.0 Requirements
 
-Requirements for Codebase Cleanup & Simplification milestone. Pure refactoring — no user-facing behavior changes.
+Requirements for Codebase Cleanup & Simplification milestone. Pure refactoring -- no user-facing behavior changes.
 
 ### Bug Fixes (BUG)
 
@@ -45,7 +45,7 @@ Deferred to future release. Tracked but not in current roadmap.
 - **REF-01**: Config class split into concern-specific classes (AppConfig, RenderConfig, CncConfig, etc.)
 - **REF-02**: Repository CRUD template base class (reduces 10 repos by ~1,100 lines)
 - **REF-03**: gcode_panel.cpp decomposition (1956 lines)
-- **REF-04**: cnc_controller.cpp decomposition (1351 lines — justified complexity but monitor)
+- **REF-04**: cnc_controller.cpp decomposition (1351 lines -- justified complexity but monitor)
 - **REF-05**: tool_database.cpp decomposition (1006 lines)
 - **REF-06**: Windows serial port enumeration (TODO stub)
 - **REF-07**: Undo/redo system
@@ -73,12 +73,12 @@ Deferred to future release. Tracked but not in current roadmap.
 | SPLIT-04 | Phase 28 | Pending |
 | SPLIT-05 | Phase 28 | Pending |
 | SIZE-01 | Phase 28 | Pending |
+| QUAL-03 | Phase 28 | Pending |
 | DUP-01 | Phase 29 | Pending |
 | DUP-02 | Phase 29 | Pending |
 | DUP-03 | Phase 29 | Pending |
 | QUAL-01 | Phase 30 | Pending |
 | QUAL-02 | Phase 30 | Pending |
-| QUAL-03 | Phase 28 | Pending |
 
 **Coverage:**
 - v0.5.0 requirements: 14 total
@@ -87,4 +87,4 @@ Deferred to future release. Tracked but not in current roadmap.
 
 ---
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 after initial definition*
+*Last updated: 2026-03-05 -- traceability updated after roadmap creation*
