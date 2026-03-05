@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <array>
+#include <optional>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -346,6 +348,54 @@ class Config {
     Config& operator=(const Config&) = delete;
 
     Path getConfigFilePath() const;
+
+    // Per-section load helpers (called from load())
+    void loadUi(const std::string& key, const std::string& value);
+    void loadRender(const std::string& key, const std::string& value);
+    void loadLogging(const std::string& key, const std::string& value);
+    void loadPaths(const std::string& key, const std::string& value);
+    void loadWindow(const std::string& key, const std::string& value);
+    void loadWorkspace(const std::string& key, const std::string& value);
+    void loadBindings(const std::string& key, const std::string& value);
+    void loadDirs(const std::string& key, const std::string& value);
+    void loadImport(const std::string& key, const std::string& value);
+    void loadMaterials(const std::string& key, const std::string& value);
+    void loadApi(const std::string& key, const std::string& value);
+    void loadRecent(const std::string& key, const std::string& value);
+    void loadSafety(const std::string& key, const std::string& value);
+    void loadCnc(const std::string& key, const std::string& value);
+    void loadWcsAliases(const std::string& key, const std::string& value);
+    void loadRecentGCode(const std::string& key, const std::string& value);
+    void loadMachineProfiles(const std::string& key, const std::string& value,
+                             std::optional<std::vector<gcode::MachineProfile>>& loaded);
+    void loadLayoutPresets(const std::string& key, const std::string& value,
+                           std::optional<std::vector<LayoutPreset>>& loaded);
+
+    // Post-load resolution for profiles and presets
+    void resolveLoadedMachineProfiles(
+        std::optional<std::vector<gcode::MachineProfile>>& loaded);
+    void resolveLoadedLayoutPresets(
+        std::optional<std::vector<LayoutPreset>>& loaded);
+
+    // Per-section save helpers (called from save())
+    void saveUi(std::ostringstream& ss) const;
+    void saveRender(std::ostringstream& ss) const;
+    void saveLogging(std::ostringstream& ss) const;
+    void savePaths(std::ostringstream& ss) const;
+    void saveWindow(std::ostringstream& ss) const;
+    void saveWorkspace(std::ostringstream& ss) const;
+    void saveBindings(std::ostringstream& ss) const;
+    void saveDirs(std::ostringstream& ss) const;
+    void saveImport(std::ostringstream& ss) const;
+    void saveMaterials(std::ostringstream& ss) const;
+    void saveApi(std::ostringstream& ss) const;
+    void saveRecent(std::ostringstream& ss) const;
+    void saveCnc(std::ostringstream& ss) const;
+    void saveWcsAliases(std::ostringstream& ss) const;
+    void saveRecentGCode(std::ostringstream& ss) const;
+    void saveSafety(std::ostringstream& ss) const;
+    void saveMachineProfiles(std::ostringstream& ss) const;
+    void saveLayoutPresets(std::ostringstream& ss) const;
 
     // Recent projects (most recent first, max 10)
     std::vector<Path> m_recentProjects;
