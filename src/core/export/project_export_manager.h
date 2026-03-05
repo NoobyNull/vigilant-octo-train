@@ -96,7 +96,7 @@ class ProjectExportManager {
         std::string projectNotes;
         std::vector<ManifestModel> models;
         std::vector<ManifestGCode> gcode;
-        std::vector<CostEstimate> costEstimates;
+        std::vector<CostingRecord> costingRecords;
         std::vector<CutPlanRecord> cutPlans;
     };
 
@@ -109,10 +109,10 @@ class ProjectExportManager {
         const std::string& projectNotes,
         bool hasCosts,
         bool hasCutPlans);
-    std::string buildCostsJson(const std::vector<CostEstimate>& estimates);
+    std::string buildCostsJson(const std::vector<CostingRecord>& estimates);
     std::string buildCutPlansJson(const std::vector<CutPlanRecord>& plans);
     bool parseManifest(const std::string& json, Manifest& out, std::string& error);
-    std::vector<CostEstimate> parseCostsJson(const std::string& json);
+    std::vector<CostingRecord> parseCostsJson(const std::string& json);
     std::vector<CutPlanRecord> parseCutPlansJson(const std::string& json);
     std::optional<i64> getModelMaterialId(i64 modelId);
 

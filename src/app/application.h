@@ -30,6 +30,7 @@ class MainThreadQueue;
 class StorageManager;
 class MaterialManager;
 class CostRepository;
+class RateCategoryRepository;
 class GraphManager;
 class ModelRepository;
 class GCodeRepository;
@@ -41,12 +42,15 @@ class CutListFile;
 class CncController;
 class JobRepository;
 class ToolDatabase;
+class ToolboxRepository;
 class MacroManager;
 class GamepadInput;
 class BackgroundTagger;
 class ImportLog;
 class Mesh;
 class Texture;
+
+namespace carve { class CarveJob; }
 
 // Managers (extracted from Application)
 class UIManager;
@@ -138,6 +142,9 @@ class Application {
     // Cost estimation repository
     std::unique_ptr<CostRepository> m_costRepo;
 
+    // Rate category repository (consumable/tool cost rates)
+    std::unique_ptr<RateCategoryRepository> m_rateCatRepo;
+
     // Graph query engine (Cypher via GraphQLite extension)
     std::unique_ptr<GraphManager> m_graphManager;
 
@@ -153,6 +160,9 @@ class Application {
     // CNC tool database (Vectric .vtdb format)
     std::unique_ptr<ToolDatabase> m_toolDatabase;
 
+    // My Toolbox (curated tool subset, stored in main app DB)
+    std::unique_ptr<ToolboxRepository> m_toolboxRepo;
+
     // CNC controller (multi-firmware support: GRBL, grblHAL, FluidNC, Smoothieware)
     std::unique_ptr<CncController> m_cncController;
 
@@ -164,6 +174,9 @@ class Application {
 
     // CNC gamepad input (SDL_GameController for jog/actions)
     std::unique_ptr<GamepadInput> m_gamepadInput;
+
+    // Direct Carve job (heightmap, analysis, toolpath, streaming)
+    std::unique_ptr<carve::CarveJob> m_carveJob;
 
     // Currently focused model ID (for material assignment)
     int64_t m_focusedModelId = -1;

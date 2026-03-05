@@ -168,16 +168,6 @@ void MaterialsPanel::renderEditForm() {
 
         ImGui::Spacing();
         ImGui::Separator();
-        ImGui::Text("Economics");
-        ImGui::Spacing();
-
-        // Cost per Board Foot
-        ImGui::SetNextItemWidth(paramInputW);
-        ImGui::InputFloat(
-            "Cost per Board Foot ($)", &m_editBuffer.costPerBoardFoot, 0.1f, 1.0f, "%.2f");
-
-        ImGui::Spacing();
-        ImGui::Separator();
         ImGui::Text("Grain");
         ImGui::Spacing();
 

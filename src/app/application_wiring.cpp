@@ -11,6 +11,7 @@
 #include "core/database/connection_pool.h"
 #include "core/database/model_repository.h"
 #include "core/database/tool_database.h"
+#include "core/database/toolbox_repository.h"
 #include "core/database/cut_plan_repository.h"
 #include "core/optimizer/cut_list_file.h"
 #include "core/database/gcode_repository.h"
@@ -59,6 +60,7 @@
 #include "ui/panels/cnc_safety_panel.h"
 #include "ui/panels/cnc_settings_panel.h"
 #include "ui/panels/cnc_macro_panel.h"
+#include "ui/panels/direct_carve_panel.h"
 #include "ui/panels/tool_browser_panel.h"
 #include "ui/panels/viewport_panel.h"
 #include "ui/widgets/toast.h"
@@ -492,10 +494,10 @@ void Application::initWiring() {
                 m_uiManager->materialsPanel()->selectMaterial(materialId);
             }
         });
-        m_uiManager->projectPanel()->setOnCostSelected([this](i64 estimateId) {
+        m_uiManager->projectPanel()->setOnCostSelected([this](i64 recordId) {
             if (m_uiManager->costPanel()) {
                 m_uiManager->costPanel()->setOpen(true);
-                m_uiManager->costPanel()->selectEstimate(estimateId);
+                m_uiManager->costPanel()->selectRecord(recordId);
             }
         });
         m_uiManager->projectPanel()->setOnCutPlanSelected([this](i64 planId) {
@@ -525,22 +527,30 @@ void Application::initWiring() {
         cop->setCutListFile(m_cutListFile.get());
         cop->setProjectManager(m_projectManager.get());
         cop->setModelRepository(m_modelRepo.get());
-        cop->setOnAddToCost([this](const std::string& name, int qty, float rate, float total) {
-            if (!m_costRepo) return;
-            // Create a new cost estimate with the cut plan material cost
-            CostEstimate estimate;
-            estimate.name = "Cut Plan — " + name;
-            if (m_projectManager && m_projectManager->currentProject())
-                estimate.projectId = m_projectManager->currentProject()->id();
-            CostItem item;
-            item.name = name + " sheets";
-            item.category = CostCategory::Material;
-            item.quantity = static_cast<f64>(qty);
-            item.rate = static_cast<f64>(rate);
-            item.total = static_cast<f64>(total);
-            estimate.items.push_back(item);
-            estimate.recalculate();
-            m_costRepo->insert(estimate);
+        cop->setMaterialManager(m_materialManager.get());
+        cop->setOnAddToCost([this](const std::vector<CutOptimizerPanel::CloGroupCostData>& groups) {
+            auto* costPanel = m_uiManager->costPanel();
+            if (!costPanel) return;
+
+            for (const auto& group : groups) {
+                // Skip groups with no pricing
+                if (group.costPerSheet <= 0.0) {
+                    ToastManager::instance().show(ToastType::Warning, "Skipped",
+                        group.materialName + " -- no pricing available");
+                    continue;
+                }
+
+                auto entry = CostingEngine::createMaterialEntry(
+                    group.materialName,
+                    group.stockSizeDbId,
+                    group.dimensions,
+                    group.costPerSheet,
+                    static_cast<f64>(group.sheetsUsed),
+                    "sheet");
+                entry.notes = "[auto:clo]";
+                costPanel->addCloEntry(entry);
+            }
+            costPanel->save();
         });
     }
     if (auto* gcp = m_uiManager->gcodePanel()) {
@@ -560,7 +570,23 @@ void Application::initWiring() {
         auto* safetyp = m_uiManager->cncSafetyPanel();
         auto* settsp = m_uiManager->cncSettingsPanel();
         auto* macrop = m_uiManager->cncMacroPanel();
+        auto* dcarvep = m_uiManager->directCarvePanel();
         auto* vpp = m_uiManager->viewportPanel();
+
+        // Wire Direct Carve panel dependencies
+        if (dcarvep) {
+            dcarvep->setCncController(m_cncController.get());
+            dcarvep->setToolDatabase(m_toolDatabase.get());
+            dcarvep->setToolboxRepository(m_toolboxRepo.get());
+            dcarvep->setMaterialManager(m_materialManager.get());
+            dcarvep->setCarveJob(m_carveJob.get());
+            dcarvep->setFileDialog(m_uiManager->fileDialog());
+            dcarvep->setGCodePanel(gcp);
+            dcarvep->setProjectManager(m_projectManager.get());
+            dcarvep->setOpenToolBrowserCallback([this]() {
+                m_uiManager->showToolBrowser() = true;
+            });
+        }
 
         // Set CncController on new panels
         if (csp) csp->setCncController(m_cncController.get());
@@ -579,7 +605,7 @@ void Application::initWiring() {
 
         CncCallbacks cncCb;
         cncCb.onConnectionChanged =
-            [this, gcp, csp, jogp, conp, wcsp, jobp, safetyp, settsp, macrop, vpp](
+            [this, gcp, csp, jogp, conp, wcsp, jobp, safetyp, settsp, macrop, dcarvep, vpp](
                 bool connected, const std::string& version) {
             gcp->onGrblConnected(connected, version);
             if (csp) csp->onConnectionChanged(connected, version);
@@ -594,6 +620,7 @@ void Application::initWiring() {
             }
             if (settsp) settsp->onConnectionChanged(connected, version);
             if (macrop) macrop->onConnectionChanged(connected, version);
+            if (dcarvep) dcarvep->onConnectionChanged(connected);
             if (vpp) vpp->setCncConnected(connected);
             // Sync CNC state to menu bar
             m_uiManager->setCncConnected(connected);
@@ -606,7 +633,7 @@ void Application::initWiring() {
             }
         };
         cncCb.onStatusUpdate =
-            [gcp, csp, jogp, wcsp, jobp, ctp, safetyp, settsp, macrop, vpp](
+            [gcp, csp, jogp, wcsp, jobp, ctp, safetyp, settsp, macrop, dcarvep, vpp](
                 const MachineStatus& status) {
             gcp->onGrblStatus(status);
             if (csp) csp->onStatusUpdate(status);
@@ -621,6 +648,7 @@ void Application::initWiring() {
             if (safetyp) safetyp->onStatusUpdate(status);
             if (settsp) settsp->onStatusUpdate(status);
             if (macrop) macrop->onStatusUpdate(status);
+            if (dcarvep) dcarvep->onStatusUpdate(status);
             if (vpp) vpp->onCncStatusUpdate(status);
         };
         cncCb.onLineAcked = [gcp](const LineAck& ack) {
@@ -726,6 +754,7 @@ void Application::initWiring() {
     }
     if (auto* tbp = m_uiManager->toolBrowserPanel()) {
         tbp->setToolDatabase(m_toolDatabase.get());
+        tbp->setToolboxRepository(m_toolboxRepo.get());
         tbp->setMaterialManager(m_materialManager.get());
         tbp->setFileDialog(m_uiManager->fileDialog());
     }
@@ -918,7 +947,7 @@ void Application::onModelSelected(int64_t modelId) {
                 }
             }
             auto mesh = loadResult.mesh;
-            m_mainThreadQueue->enqueue([this, mesh, name, gen, orientYaw, storedCamera]() {
+            m_mainThreadQueue->enqueue([this, mesh, name, filePath, gen, orientYaw, storedCamera]() {
                 if (gen != m_loadingState.generation.load()) return;
                 m_loadingState.reset();
                 m_workspace->setFocusedMesh(mesh);
@@ -928,6 +957,11 @@ void Application::onModelSelected(int64_t modelId) {
                     m_uiManager->propertiesPanel()->setMesh(mesh, name);
                 if (m_uiManager->materialsPanel())
                     m_uiManager->materialsPanel()->setModelLoaded(true);
+                if (m_uiManager->directCarvePanel() && mesh)
+                    m_uiManager->directCarvePanel()->onModelLoaded(
+                        mesh->vertices(), mesh->indices(),
+                        mesh->bounds().min, mesh->bounds().max,
+                        name, filePath);
             });
         });
 }

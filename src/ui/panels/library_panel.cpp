@@ -10,6 +10,8 @@
 #include <imgui.h>
 
 #include "../../core/config/config.h"
+#include "../../core/loaders/texture_loader.h"
+#include "../../core/paths/app_paths.h"
 #include "../../core/utils/file_utils.h"
 #include "../../core/utils/log.h"
 #include "../context_menu_manager.h"
@@ -25,6 +27,37 @@ LibraryPanel::LibraryPanel(LibraryManager* library) : Panel("Library"), m_librar
 
 LibraryPanel::~LibraryPanel() {
     clearTextureCache();
+    if (m_placeholderTexture != 0) {
+        glDeleteTextures(1, &m_placeholderTexture);
+    }
+}
+
+GLuint LibraryPanel::getPlaceholderTexture() {
+    if (m_placeholderLoaded) {
+        return m_placeholderTexture;
+    }
+    m_placeholderLoaded = true;
+
+    Path iconPath = paths::getBundledIconsDir() / "statue.png";
+    auto data = TextureLoader::loadPNG(iconPath);
+    if (!data) {
+        log::warning("Library", "Failed to load placeholder icon: statue.png");
+        return 0;
+    }
+
+    GLuint tex = 0;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, data->width, data->height, 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE, data->pixels.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    m_placeholderTexture = tex;
+    return tex;
 }
 
 void LibraryPanel::setContextMenuManager(ContextMenuManager* mgr) {

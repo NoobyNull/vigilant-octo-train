@@ -49,13 +49,13 @@ LayoutPreset LayoutPreset::modelDefault() {
         {"viewport", true},       {"library", true},
         {"properties", true},     {"project", true},
         {"start_page", true},     {"gcode", false},
-        {"cut_optimizer", false}, {"cost_estimator", false},
+        {"cut_optimizer", false}, {"project_costing", false},
         {"materials", false},     {"tool_browser", false},
         {"cnc_status", false},    {"cnc_jog", false},
         {"cnc_console", false},   {"cnc_wcs", false},
         {"cnc_tool", false},      {"cnc_job", false},
         {"cnc_safety", false},    {"cnc_settings", false},
-        {"cnc_macros", false},
+        {"cnc_macros", false},    {"direct_carve", false},
     };
     return p;
 }
@@ -69,13 +69,13 @@ LayoutPreset LayoutPreset::cncDefault() {
         {"viewport", true},       {"library", false},
         {"properties", false},    {"project", true},
         {"start_page", false},    {"gcode", true},
-        {"cut_optimizer", false}, {"cost_estimator", false},
+        {"cut_optimizer", false}, {"project_costing", false},
         {"materials", false},     {"tool_browser", false},
         {"cnc_status", true},     {"cnc_jog", true},
         {"cnc_console", true},    {"cnc_wcs", true},
         {"cnc_tool", true},       {"cnc_job", true},
         {"cnc_safety", true},     {"cnc_settings", true},
-        {"cnc_macros", true},
+        {"cnc_macros", true},     {"direct_carve", true},
     };
     return p;
 }

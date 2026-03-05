@@ -43,4 +43,16 @@ class SerialPort : public IByteStream {
 // Scan for available serial ports (/dev/ttyUSB*, /dev/ttyACM*)
 std::vector<std::string> listSerialPorts();
 
+// Extended port info with USB metadata from sysfs
+struct SerialPortInfo {
+    std::string device;       // e.g. "/dev/ttyUSB0"
+    std::string product;      // USB product string (e.g. "Arduino Mega 2560")
+    std::string manufacturer; // USB manufacturer string
+    std::string driver;       // Kernel driver (e.g. "ch341-uart", "cdc_acm")
+    bool likelyCnc = false;   // Heuristic: matches known CNC controller patterns
+};
+
+// Scan with USB metadata (Linux only; other platforms return basic info)
+std::vector<SerialPortInfo> listSerialPortsDetailed();
+
 } // namespace dw

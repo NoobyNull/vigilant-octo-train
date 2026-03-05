@@ -149,11 +149,41 @@ class Config {
     bool getShowCutOptimizer() const { return m_wsShowCutOptimizer; }
     void setShowCutOptimizer(bool v) { m_wsShowCutOptimizer = v; }
 
-    bool getShowCostEstimator() const { return m_wsShowCostEstimator; }
-    void setShowCostEstimator(bool v) { m_wsShowCostEstimator = v; }
+    bool getShowProjectCosting() const { return m_wsShowProjectCosting; }
+    void setShowProjectCosting(bool v) { m_wsShowProjectCosting = v; }
+    // Backward compat alias (reads old config key)
+    bool getShowCostEstimator() const { return m_wsShowProjectCosting; }
+    void setShowCostEstimator(bool v) { m_wsShowProjectCosting = v; }
 
     bool getShowToolBrowser() const { return m_wsShowToolBrowser; }
     void setShowToolBrowser(bool v) { m_wsShowToolBrowser = v; }
+
+    // CNC panel visibility
+    bool getShowCncStatus() const { return m_wsShowCncStatus; }
+    void setShowCncStatus(bool v) { m_wsShowCncStatus = v; }
+    bool getShowCncJog() const { return m_wsShowCncJog; }
+    void setShowCncJog(bool v) { m_wsShowCncJog = v; }
+    bool getShowCncConsole() const { return m_wsShowCncConsole; }
+    void setShowCncConsole(bool v) { m_wsShowCncConsole = v; }
+    bool getShowCncWcs() const { return m_wsShowCncWcs; }
+    void setShowCncWcs(bool v) { m_wsShowCncWcs = v; }
+
+    // WCS aliases (G54-G59 user-defined names)
+    static constexpr int NUM_WCS = 6;
+    const std::string& getWcsAlias(int idx) const { return m_wcsAliases[idx]; }
+    void setWcsAlias(int idx, const std::string& alias) { if (idx >= 0 && idx < NUM_WCS) m_wcsAliases[idx] = alias; }
+    bool getShowCncTool() const { return m_wsShowCncTool; }
+    void setShowCncTool(bool v) { m_wsShowCncTool = v; }
+    bool getShowCncJob() const { return m_wsShowCncJob; }
+    void setShowCncJob(bool v) { m_wsShowCncJob = v; }
+    bool getShowCncSafety() const { return m_wsShowCncSafety; }
+    void setShowCncSafety(bool v) { m_wsShowCncSafety = v; }
+    bool getShowCncSettings() const { return m_wsShowCncSettings; }
+    void setShowCncSettings(bool v) { m_wsShowCncSettings = v; }
+    bool getShowCncMacros() const { return m_wsShowCncMacros; }
+    void setShowCncMacros(bool v) { m_wsShowCncMacros = v; }
+    bool getShowDirectCarve() const { return m_wsShowDirectCarve; }
+    void setShowDirectCarve(bool v) { m_wsShowDirectCarve = v; }
 
     bool getShowStartPage() const { return m_wsShowStartPage; }
     void setShowStartPage(bool v) { m_wsShowStartPage = v; }
@@ -356,8 +386,19 @@ class Config {
     bool m_wsShowMaterials = false;
     bool m_wsShowGCode = false;
     bool m_wsShowCutOptimizer = false;
-    bool m_wsShowCostEstimator = false;
+    bool m_wsShowProjectCosting = false;
     bool m_wsShowToolBrowser = false;
+    bool m_wsShowCncStatus = false;
+    bool m_wsShowCncJog = false;
+    bool m_wsShowCncConsole = false;
+    bool m_wsShowCncWcs = false;
+    std::string m_wcsAliases[6]; // User-defined names for G54-G59
+    bool m_wsShowCncTool = false;
+    bool m_wsShowCncJob = false;
+    bool m_wsShowCncSafety = false;
+    bool m_wsShowCncSettings = false;
+    bool m_wsShowCncMacros = false;
+    bool m_wsShowDirectCarve = false;
     bool m_wsShowStartPage = true;
     i64 m_wsLastSelectedModelId = -1;
     f32 m_wsLibraryThumbSize = 96.0f;
@@ -429,6 +470,7 @@ class Config {
     // Machine profiles
     std::vector<gcode::MachineProfile> m_machineProfiles;
     int m_activeMachineProfileIndex = 0;
+    std::string m_activeProfileName; // Temp: used during load to resolve name->index
 
     // Layout presets
     std::vector<LayoutPreset> m_layoutPresets;

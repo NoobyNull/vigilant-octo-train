@@ -140,6 +140,11 @@ class LibraryPanel : public Panel {
     // Thumbnail texture cache: model ID -> GL texture
     std::unordered_map<int64_t, GLuint> m_textureCache;
 
+    // Placeholder texture for models without a thumbnail (statue.png)
+    GLuint m_placeholderTexture = 0;
+    bool m_placeholderLoaded = false;
+    GLuint getPlaceholderTexture();
+
     // Rename dialog state
     bool m_showRenameDialog = false;
     int64_t m_renameModelId = 0;

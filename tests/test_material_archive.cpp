@@ -58,7 +58,6 @@ class MaterialArchiveTest : public ::testing::Test {
         rec.feedRate = 100.0f;
         rec.spindleSpeed = 18000.0f;
         rec.depthOfCut = 0.125f;
-        rec.costPerBoardFoot = 4.50f;
         rec.grainDirectionDeg = 0.0f;
         return rec;
     }
@@ -125,7 +124,6 @@ TEST_F(MaterialArchiveTest, Load_MetadataRoundTrips) {
     original.feedRate = 90.0f;
     original.spindleSpeed = 16000.0f;
     original.depthOfCut = 0.1f;
-    original.costPerBoardFoot = 5.25f;
     original.grainDirectionDeg = 45.0f;
 
     ASSERT_TRUE(dw::MaterialArchive::create(path, m_texturePath, original).success);
@@ -140,7 +138,6 @@ TEST_F(MaterialArchiveTest, Load_MetadataRoundTrips) {
     EXPECT_FLOAT_EQ(meta.feedRate, 90.0f);
     EXPECT_FLOAT_EQ(meta.spindleSpeed, 16000.0f);
     EXPECT_FLOAT_EQ(meta.depthOfCut, 0.1f);
-    EXPECT_FLOAT_EQ(meta.costPerBoardFoot, 5.25f);
     EXPECT_FLOAT_EQ(meta.grainDirectionDeg, 45.0f);
 }
 

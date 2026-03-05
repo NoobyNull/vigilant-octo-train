@@ -58,7 +58,6 @@ struct MaterialRecord {
     f32 feedRate = 0.0f;          // Feed rate (inches/min)
     f32 spindleSpeed = 0.0f;      // Spindle speed (RPM)
     f32 depthOfCut = 0.0f;        // Depth of cut (inches)
-    f32 costPerBoardFoot = 0.0f;  // Cost per board foot (USD)
     f32 grainDirectionDeg = 0.0f; // Grain direction (0-360 degrees)
     Path thumbnailPath;
     std::string importedAt;

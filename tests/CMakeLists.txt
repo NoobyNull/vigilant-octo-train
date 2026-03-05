@@ -38,6 +38,9 @@ set(DW_TEST_SOURCES
     test_app_paths.cpp
     test_path_resolver.cpp
     test_cost_repository.cpp
+    test_stock_size_repository.cpp
+    test_rate_category_repository.cpp
+    test_project_costing_io.cpp
     test_cut_plan_repository.cpp
     test_gcode_repository.cpp
     test_material_archive.cpp
@@ -63,6 +66,24 @@ set(DW_TEST_SOURCES
     test_tool_calculator.cpp
     test_grbl_settings.cpp
     test_macro_manager.cpp
+    # Carve (Direct Carve pipeline)
+    test_heightmap.cpp
+    test_model_fitter.cpp
+    test_carve_job.cpp
+    test_surface_analysis.cpp
+    test_island_detector.cpp
+    test_analysis_overlay.cpp
+    test_tool_recommender.cpp
+    test_toolpath_generator.cpp
+    test_gcode_export.cpp
+    test_carve_streamer.cpp
+    test_carve_integration.cpp
+    test_unit_conversion.cpp
+    test_costing_engine.cpp
+    test_board_foot.cpp
+    test_waste_breakdown.cpp
+    test_multi_stock_optimizer.cpp
+    test_clo_result_file.cpp
     # Tier 2 — lint/format compliance (no GL/SDL required)
     test_lint_compliance.cpp
     # Tier 3 — workspace tests (no GL/SDL required)
@@ -81,6 +102,8 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/utils/log.cpp
     ${CMAKE_SOURCE_DIR}/src/core/utils/string_utils.cpp
     ${CMAKE_SOURCE_DIR}/src/core/utils/file_utils.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/utils/unit_conversion.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/utils/board_foot.cpp
     ${CMAKE_SOURCE_DIR}/src/core/mesh/mesh.cpp
     ${CMAKE_SOURCE_DIR}/src/core/mesh/hash.cpp
     ${CMAKE_SOURCE_DIR}/src/core/loaders/stl_loader.cpp
@@ -99,9 +122,13 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/cnc/tool_calculator.cpp
     ${CMAKE_SOURCE_DIR}/src/core/cnc/grbl_settings.cpp
     ${CMAKE_SOURCE_DIR}/src/core/cnc/macro_manager.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/heightmap.cpp
     ${CMAKE_SOURCE_DIR}/src/core/optimizer/cut_optimizer.cpp
     ${CMAKE_SOURCE_DIR}/src/core/optimizer/bin_packer.cpp
     ${CMAKE_SOURCE_DIR}/src/core/optimizer/guillotine.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/optimizer/waste_breakdown.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/optimizer/multi_stock_optimizer.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/optimizer/clo_result_file.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/database.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/connection_pool.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/schema.cpp
@@ -109,10 +136,16 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/database/material_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/project_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/cost_repository.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/database/stock_size_repository.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/database/rate_category_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/gcode_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/cut_plan_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/database/tool_database.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/database/toolbox_repository.cpp
     ${CMAKE_SOURCE_DIR}/src/core/project/project.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/project/project_directory.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/project/project_costing_io.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/project/costing_engine.cpp
     ${CMAKE_SOURCE_DIR}/src/core/export/model_exporter.cpp
     ${CMAKE_SOURCE_DIR}/src/core/archive/archive.cpp
     ${CMAKE_SOURCE_DIR}/src/core/materials/material_archive.cpp
@@ -134,6 +167,16 @@ set(DW_TEST_DEPS
     ${CMAKE_SOURCE_DIR}/src/core/storage/storage_manager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/export/project_export_manager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/export/project_import.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/heightmap.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/model_fitter.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/carve_job.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/surface_analysis.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/island_detector.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/analysis_overlay.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/tool_recommender.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/toolpath_generator.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/gcode_export.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/carve/carve_streamer.cpp
     ${CMAKE_SOURCE_DIR}/src/render/camera.cpp
     ${CMAKE_SOURCE_DIR}/src/app/workspace.cpp
 )

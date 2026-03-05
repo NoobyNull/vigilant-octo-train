@@ -7,7 +7,7 @@
 
 namespace dw {
 
-void CostEstimate::recalculate() {
+void CostingRecord::recalculate() {
     subtotal = 0.0;
     for (auto& item : items) {
         item.total = item.quantity * item.rate;
@@ -20,9 +20,9 @@ void CostEstimate::recalculate() {
 
 CostRepository::CostRepository(Database& db) : m_db(db) {}
 
-std::optional<i64> CostRepository::insert(const CostEstimate& estimate) {
+std::optional<i64> CostRepository::insert(const CostingRecord& record) {
     auto stmt = m_db.prepare(R"(
-        INSERT INTO cost_estimates (
+        INSERT INTO costing_records (
             name, project_id, items, subtotal, tax_rate, tax_amount,
             discount_rate, discount_amount, total, notes
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -32,17 +32,17 @@ std::optional<i64> CostRepository::insert(const CostEstimate& estimate) {
         return std::nullopt;
     }
 
-    bool bindOk = stmt.bindText(1, estimate.name);
-    if (estimate.projectId > 0) {
-        bindOk = bindOk && stmt.bindInt(2, estimate.projectId);
+    bool bindOk = stmt.bindText(1, record.name);
+    if (record.projectId > 0) {
+        bindOk = bindOk && stmt.bindInt(2, record.projectId);
     } else {
         bindOk = bindOk && stmt.bindNull(2);
     }
-    bindOk = bindOk && stmt.bindText(3, itemsToJson(estimate.items)) &&
-             stmt.bindDouble(4, estimate.subtotal) && stmt.bindDouble(5, estimate.taxRate) &&
-             stmt.bindDouble(6, estimate.taxAmount) && stmt.bindDouble(7, estimate.discountRate) &&
-             stmt.bindDouble(8, estimate.discountAmount) && stmt.bindDouble(9, estimate.total) &&
-             stmt.bindText(10, estimate.notes);
+    bindOk = bindOk && stmt.bindText(3, itemsToJson(record.items)) &&
+             stmt.bindDouble(4, record.subtotal) && stmt.bindDouble(5, record.taxRate) &&
+             stmt.bindDouble(6, record.taxAmount) && stmt.bindDouble(7, record.discountRate) &&
+             stmt.bindDouble(8, record.discountAmount) && stmt.bindDouble(9, record.total) &&
+             stmt.bindText(10, record.notes);
 
     if (!bindOk) {
         log::error("CostRepo", "Failed to bind insert parameters");
@@ -50,15 +50,15 @@ std::optional<i64> CostRepository::insert(const CostEstimate& estimate) {
     }
 
     if (!stmt.execute()) {
-        log::errorf("CostRepo", "Failed to insert estimate: %s", m_db.lastError().c_str());
+        log::errorf("CostRepo", "Failed to insert record: %s", m_db.lastError().c_str());
         return std::nullopt;
     }
 
     return m_db.lastInsertId();
 }
 
-std::optional<CostEstimate> CostRepository::findById(i64 id) {
-    auto stmt = m_db.prepare("SELECT * FROM cost_estimates WHERE id = ?");
+std::optional<CostingRecord> CostRepository::findById(i64 id) {
+    auto stmt = m_db.prepare("SELECT * FROM costing_records WHERE id = ?");
     if (!stmt.isValid()) {
         return std::nullopt;
     }
@@ -68,32 +68,32 @@ std::optional<CostEstimate> CostRepository::findById(i64 id) {
     }
 
     if (stmt.step()) {
-        return rowToEstimate(stmt);
+        return rowToRecord(stmt);
     }
 
     return std::nullopt;
 }
 
-std::vector<CostEstimate> CostRepository::findAll() {
-    std::vector<CostEstimate> results;
+std::vector<CostingRecord> CostRepository::findAll() {
+    std::vector<CostingRecord> results;
 
-    auto stmt = m_db.prepare("SELECT * FROM cost_estimates ORDER BY modified_at DESC");
+    auto stmt = m_db.prepare("SELECT * FROM costing_records ORDER BY modified_at DESC");
     if (!stmt.isValid()) {
         return results;
     }
 
     while (stmt.step()) {
-        results.push_back(rowToEstimate(stmt));
+        results.push_back(rowToRecord(stmt));
     }
 
     return results;
 }
 
-std::vector<CostEstimate> CostRepository::findByProject(i64 projectId) {
-    std::vector<CostEstimate> results;
+std::vector<CostingRecord> CostRepository::findByProject(i64 projectId) {
+    std::vector<CostingRecord> results;
 
     auto stmt =
-        m_db.prepare("SELECT * FROM cost_estimates WHERE project_id = ? ORDER BY modified_at DESC");
+        m_db.prepare("SELECT * FROM costing_records WHERE project_id = ? ORDER BY modified_at DESC");
     if (!stmt.isValid()) {
         return results;
     }
@@ -103,15 +103,15 @@ std::vector<CostEstimate> CostRepository::findByProject(i64 projectId) {
     }
 
     while (stmt.step()) {
-        results.push_back(rowToEstimate(stmt));
+        results.push_back(rowToRecord(stmt));
     }
 
     return results;
 }
 
-bool CostRepository::update(const CostEstimate& estimate) {
+bool CostRepository::update(const CostingRecord& record) {
     auto stmt = m_db.prepare(R"(
-        UPDATE cost_estimates SET
+        UPDATE costing_records SET
             name = ?,
             project_id = ?,
             items = ?,
@@ -130,17 +130,17 @@ bool CostRepository::update(const CostEstimate& estimate) {
         return false;
     }
 
-    bool bindOk = stmt.bindText(1, estimate.name);
-    if (estimate.projectId > 0) {
-        bindOk = bindOk && stmt.bindInt(2, estimate.projectId);
+    bool bindOk = stmt.bindText(1, record.name);
+    if (record.projectId > 0) {
+        bindOk = bindOk && stmt.bindInt(2, record.projectId);
     } else {
         bindOk = bindOk && stmt.bindNull(2);
     }
-    bindOk = bindOk && stmt.bindText(3, itemsToJson(estimate.items)) &&
-             stmt.bindDouble(4, estimate.subtotal) && stmt.bindDouble(5, estimate.taxRate) &&
-             stmt.bindDouble(6, estimate.taxAmount) && stmt.bindDouble(7, estimate.discountRate) &&
-             stmt.bindDouble(8, estimate.discountAmount) && stmt.bindDouble(9, estimate.total) &&
-             stmt.bindText(10, estimate.notes) && stmt.bindInt(11, estimate.id);
+    bindOk = bindOk && stmt.bindText(3, itemsToJson(record.items)) &&
+             stmt.bindDouble(4, record.subtotal) && stmt.bindDouble(5, record.taxRate) &&
+             stmt.bindDouble(6, record.taxAmount) && stmt.bindDouble(7, record.discountRate) &&
+             stmt.bindDouble(8, record.discountAmount) && stmt.bindDouble(9, record.total) &&
+             stmt.bindText(10, record.notes) && stmt.bindInt(11, record.id);
 
     if (!bindOk) {
         return false;
@@ -150,7 +150,7 @@ bool CostRepository::update(const CostEstimate& estimate) {
 }
 
 bool CostRepository::remove(i64 id) {
-    auto stmt = m_db.prepare("DELETE FROM cost_estimates WHERE id = ?");
+    auto stmt = m_db.prepare("DELETE FROM costing_records WHERE id = ?");
     if (!stmt.isValid()) {
         return false;
     }
@@ -162,7 +162,7 @@ bool CostRepository::remove(i64 id) {
 }
 
 i64 CostRepository::count() {
-    auto stmt = m_db.prepare("SELECT COUNT(*) FROM cost_estimates");
+    auto stmt = m_db.prepare("SELECT COUNT(*) FROM costing_records");
     if (!stmt.isValid()) {
         return 0;
     }
@@ -174,8 +174,8 @@ i64 CostRepository::count() {
     return 0;
 }
 
-CostEstimate CostRepository::rowToEstimate(Statement& stmt) {
-    CostEstimate est;
+CostingRecord CostRepository::rowToRecord(Statement& stmt) {
+    CostingRecord est;
     est.id = stmt.getInt(0);
     est.name = stmt.getText(1);
     est.projectId = stmt.isNull(2) ? 0 : stmt.getInt(2);

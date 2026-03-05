@@ -2,7 +2,10 @@
 
 #include <algorithm>
 
+#include "project_directory.h"
+#include "../config/config.h"
 #include "../database/database.h"
+#include "../utils/file_utils.h"
 #include "../utils/log.h"
 
 namespace dw {
@@ -174,6 +177,58 @@ bool ProjectManager::removeModelFromProject(i64 modelId) {
 
     m_currentProject->removeModel(modelId);
     return true;
+}
+
+std::shared_ptr<ProjectDirectory> ProjectManager::ensureProjectForModel(
+    const std::string& modelName, const Path& modelSourcePath) {
+
+    std::string dirName = ProjectDirectory::sanitizeName(modelName);
+    Path projectRoot = Config::instance().getProjectsDir() / dirName;
+
+    auto dir = std::make_shared<ProjectDirectory>();
+
+    if (file::isDirectory(projectRoot) && file::exists(projectRoot / "project.json")) {
+        if (!dir->open(projectRoot)) {
+            log::errorf("Project", "Failed to open existing project dir: %s",
+                        projectRoot.c_str());
+            return nullptr;
+        }
+    } else {
+        if (!dir->create(projectRoot, modelName)) {
+            log::errorf("Project", "Failed to create project dir: %s",
+                        projectRoot.c_str());
+            return nullptr;
+        }
+        if (!modelSourcePath.empty() && file::isFile(modelSourcePath)) {
+            dir->addModelFile(modelSourcePath);
+            dir->save();
+        }
+    }
+
+    // Sync with SQLite — find or create a ProjectRecord with matching filePath
+    auto records = m_projectRepo.findAll();
+    std::shared_ptr<Project> project;
+    for (const auto& rec : records) {
+        if (rec.filePath == projectRoot) {
+            project = open(rec.id);
+            break;
+        }
+    }
+    if (!project) {
+        project = create(modelName);
+        if (project) {
+            project->setFilePath(projectRoot);
+            save(*project);
+        }
+    }
+
+    if (project) {
+        m_currentProject = project;
+    }
+    m_currentDir = dir;
+
+    Config::instance().addRecentProject(projectRoot);
+    return dir;
 }
 
 } // namespace dw

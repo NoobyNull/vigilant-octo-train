@@ -5,6 +5,7 @@
 #include <imgui.h>
 
 #include "../../core/config/config.h"
+#include "../../core/gcode/machine_profile.h"
 #include "../icons.h"
 
 namespace dw {
@@ -80,36 +81,87 @@ void MachineProfileDialog::render() {
         // Feed rates
         if (ImGui::CollapsingHeader("Feed Rates (mm/min)", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Indent();
-            ImGui::DragFloat("Max X##feed", &m_editProfile.maxFeedRateX, 100.0f, 0.0f, 100000.0f,
-                             "%.0f");
-            ImGui::DragFloat("Max Y##feed", &m_editProfile.maxFeedRateY, 100.0f, 0.0f, 100000.0f,
-                             "%.0f");
-            ImGui::DragFloat("Max Z##feed", &m_editProfile.maxFeedRateZ, 100.0f, 0.0f, 100000.0f,
-                             "%.0f");
-            ImGui::DragFloat("Rapid", &m_editProfile.rapidRate, 100.0f, 0.0f, 100000.0f, "%.0f");
-            ImGui::DragFloat("Default Feed", &m_editProfile.defaultFeedRate, 100.0f, 0.0f,
-                             100000.0f, "%.0f");
+            ImGui::InputFloat("Max X##feed", &m_editProfile.maxFeedRateX, 100.0f, 500.0f, "%.0f");
+            ImGui::InputFloat("Max Y##feed", &m_editProfile.maxFeedRateY, 100.0f, 500.0f, "%.0f");
+            ImGui::InputFloat("Max Z##feed", &m_editProfile.maxFeedRateZ, 100.0f, 500.0f, "%.0f");
+            ImGui::InputFloat("Rapid", &m_editProfile.rapidRate, 100.0f, 500.0f, "%.0f");
+            ImGui::InputFloat("Default Feed", &m_editProfile.defaultFeedRate, 100.0f, 500.0f, "%.0f");
             ImGui::Unindent();
         }
 
         // Acceleration
         if (ImGui::CollapsingHeader("Acceleration (mm/s²)", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Indent();
-            ImGui::DragFloat("Accel X", &m_editProfile.accelX, 10.0f, 0.0f, 10000.0f, "%.0f");
-            ImGui::DragFloat("Accel Y", &m_editProfile.accelY, 10.0f, 0.0f, 10000.0f, "%.0f");
-            ImGui::DragFloat("Accel Z", &m_editProfile.accelZ, 10.0f, 0.0f, 10000.0f, "%.0f");
+            ImGui::InputFloat("Accel X", &m_editProfile.accelX, 10.0f, 50.0f, "%.0f");
+            ImGui::InputFloat("Accel Y", &m_editProfile.accelY, 10.0f, 50.0f, "%.0f");
+            ImGui::InputFloat("Accel Z", &m_editProfile.accelZ, 10.0f, 50.0f, "%.0f");
             ImGui::Unindent();
         }
 
         // Travel limits
         if (ImGui::CollapsingHeader("Max Travel (mm)", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Indent();
-            ImGui::DragFloat("Travel X", &m_editProfile.maxTravelX, 10.0f, 0.0f, 10000.0f,
-                             "%.0f");
-            ImGui::DragFloat("Travel Y", &m_editProfile.maxTravelY, 10.0f, 0.0f, 10000.0f,
-                             "%.0f");
-            ImGui::DragFloat("Travel Z", &m_editProfile.maxTravelZ, 10.0f, 0.0f, 10000.0f,
-                             "%.0f");
+            ImGui::InputFloat("Travel X", &m_editProfile.maxTravelX, 10.0f, 50.0f, "%.0f");
+            ImGui::InputFloat("Travel Y", &m_editProfile.maxTravelY, 10.0f, 50.0f, "%.0f");
+            ImGui::InputFloat("Travel Z", &m_editProfile.maxTravelZ, 1.0f, 10.0f, "%.0f");
+            ImGui::Unindent();
+        }
+
+        // Connection
+        if (ImGui::CollapsingHeader("Connection")) {
+            ImGui::Indent();
+
+            int connType = static_cast<int>(m_editProfile.connectionType);
+            const char* connItems[] = {"Auto", "Serial", "TCP"};
+            if (ImGui::Combo("Connection Type", &connType, connItems, 3))
+                m_editProfile.connectionType = static_cast<gcode::ConnectionType>(connType);
+
+            int fwType = static_cast<int>(m_editProfile.preferredFirmware);
+            const char* fwItems[] = {"GRBL", "GrblHAL", "FluidNC"};
+            if (ImGui::Combo("Firmware", &fwType, fwItems, 3))
+                m_editProfile.preferredFirmware = static_cast<FirmwareType>(fwType);
+
+            ImGui::InputInt("Baud Rate", &m_editProfile.baudRate, 9600, 38400);
+
+            if (m_editProfile.connectionType == gcode::ConnectionType::TCP) {
+                char hostBuf[128];
+                snprintf(hostBuf, sizeof(hostBuf), "%s", m_editProfile.tcpHost.c_str());
+                if (ImGui::InputText("TCP Host", hostBuf, sizeof(hostBuf)))
+                    m_editProfile.tcpHost = hostBuf;
+                ImGui::InputInt("TCP Port", &m_editProfile.tcpPort, 1, 100);
+            }
+
+            ImGui::Unindent();
+        }
+
+        // Spindle
+        if (ImGui::CollapsingHeader("Spindle")) {
+            ImGui::Indent();
+            ImGui::InputFloat("Max RPM", &m_editProfile.spindleMaxRPM, 1000.0f, 5000.0f, "%.0f");
+            ImGui::InputFloat("Power (W)", &m_editProfile.spindlePower, 50.0f, 200.0f, "%.0f");
+            ImGui::Checkbox("Supports Reverse (M4)", &m_editProfile.spindleReverse);
+            ImGui::Unindent();
+        }
+
+        // Drive System
+        if (ImGui::CollapsingHeader("Drive System")) {
+            ImGui::Indent();
+            int driveType = static_cast<int>(m_editProfile.driveSystem);
+            const char* driveItems[] = {"Belt", "Acme", "Lead Screw", "Ball Screw"};
+            if (ImGui::Combo("Drive Type", &driveType, driveItems, 4))
+                m_editProfile.driveSystem = static_cast<gcode::DriveSystem>(driveType);
+            ImGui::Unindent();
+        }
+
+        // Capabilities
+        if (ImGui::CollapsingHeader("Capabilities")) {
+            ImGui::Indent();
+            ImGui::Checkbox("Dust Collection", &m_editProfile.hasDustCollection);
+            ImGui::Checkbox("Flood Coolant (M8)", &m_editProfile.hasCoolant);
+            ImGui::Checkbox("Mist Coolant (M7)", &m_editProfile.hasMistCoolant);
+            ImGui::Checkbox("Probe (G38.x)", &m_editProfile.hasProbe);
+            ImGui::Checkbox("Tool Changer", &m_editProfile.hasToolChanger);
+            ImGui::Checkbox("Tool Length Offset (G43)", &m_editProfile.hasToolLengthOffset);
             ImGui::Unindent();
         }
 

@@ -26,7 +26,7 @@ class MaterialRepoTest : public ::testing::Test {
         rec.feedRate = 100.0f;
         rec.spindleSpeed = 18000.0f;
         rec.depthOfCut = 0.125f;
-        rec.costPerBoardFoot = 5.50f;
+
         rec.grainDirectionDeg = 45.0f;
         rec.thumbnailPath = "/thumbnails/" + name + ".png";
         return rec;
@@ -74,7 +74,6 @@ TEST_F(MaterialRepoTest, FindById_Found) {
     EXPECT_FLOAT_EQ(found->feedRate, 100.0f);
     EXPECT_FLOAT_EQ(found->spindleSpeed, 18000.0f);
     EXPECT_FLOAT_EQ(found->depthOfCut, 0.125f);
-    EXPECT_FLOAT_EQ(found->costPerBoardFoot, 5.50f);
     EXPECT_FLOAT_EQ(found->grainDirectionDeg, 45.0f);
 }
 
@@ -189,7 +188,6 @@ TEST_F(MaterialRepoTest, Update_Success) {
 
     found->name = "Red Oak";
     found->jankaHardness = 1290.0f;
-    found->costPerBoardFoot = 6.75f;
 
     EXPECT_TRUE(m_repo->update(*found));
 
@@ -197,7 +195,6 @@ TEST_F(MaterialRepoTest, Update_Success) {
     ASSERT_TRUE(updated.has_value());
     EXPECT_EQ(updated->name, "Red Oak");
     EXPECT_FLOAT_EQ(updated->jankaHardness, 1290.0f);
-    EXPECT_FLOAT_EQ(updated->costPerBoardFoot, 6.75f);
 }
 
 TEST_F(MaterialRepoTest, Update_CategoryChange) {

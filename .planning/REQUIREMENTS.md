@@ -1,159 +1,140 @@
-# Requirements: Digital Workshop -- Sender Feature Parity
+# Requirements: Digital Workshop
 
-**Defined:** 2026-02-26
+**Defined:** 2026-03-04
 **Core Value:** A woodworker can go from selecting a piece of wood and a cutting tool to safely running a CNC job with optimized feeds and speeds -- all without leaving the application.
 
-## v1 Requirements
+## v0.4.0 Requirements
 
-Requirements for the Sender Feature Parity milestone. Each maps to roadmap phases.
+Requirements for Shared Materials & Project Costing milestone. Each maps to roadmap phases.
 
-### Safety
+### Materials & Stock (MATL)
 
-- [x] **SAF-10**: Home button requires configurable long-press (default 1s) to prevent accidental homing
-- [x] **SAF-11**: Job start requires configurable long-press (default 1s) to prevent accidental job launch
-- [x] **SAF-12**: Abort button supports configurable long-press requirement as alternative to confirmation dialog
-- [x] **SAF-13**: Dead-man watchdog stops continuous jog if no keepalive received within configurable timeout (default 1000ms)
-- [x] **SAF-14**: Door interlock blocks rapid moves and spindle commands when GRBL Pn:D (door) pin is active, configurable on/off
-- [x] **SAF-15**: Soft limit pre-check compares G-code bounds against machine travel ($130-$132) before streaming, configurable on/off
-- [x] **SAF-16**: Stop command sends feed hold before soft reset to reduce tool marks (pause-before-reset), configurable on/off
-- [x] **SAF-17**: Safety settings UI exposes per-feature enable/disable toggles with defaults in Config
+- [x] **MATL-01**: User can add stock size entries to any material with dimensions (WxH*thickness) and per-unit price
+- [x] **MATL-02**: User can add, edit, and delete stock sizes from the Materials panel
+- [x] **MATL-03**: User sees auto-suggested common sizes when adding stock (4x8, 5x5 for sheets; 2x4, 1x6 for lumber)
+- [x] **MATL-04**: User can view board foot calculation and cost-per-board-foot derived from stock dimensions and price
+- [x] **MATL-05**: User can create consumable items (sandpaper, finish, glue) with per-unit pricing and unit-of-measure
 
-### Core Sender
+### Cut List Optimizer (CLO)
 
-- [ ] **SND-01**: Spindle override slider (0-200%) sends GRBL real-time spindle override commands
-- [ ] **SND-02**: Rapid override control (25%, 50%, 100%) sends GRBL real-time rapid override commands
-- [ ] **SND-03**: Coolant toggle buttons (Flood M8, Mist M7, Off M9) with visual state indicators in status panel
-- [ ] **SND-04**: Alarm state displays GRBL alarm code with human-readable description and inline $X unlock button
-- [ ] **SND-05**: Status polling interval configurable (50, 100, 150, 200ms) in settings, applied at runtime
-- [ ] **SND-06**: Jog step sizes include 0.01mm for precision zeroing (added to existing 0.1, 1, 10, 100mm)
-- [ ] **SND-07**: Per-step-group feedrate: separate configurable feedrates for small (0.01-0.1mm), medium (1mm), and large (10-100mm) step groups
-- [ ] **SND-08**: WCS quick-switch selector (G54-G59) visible in CNC status panel header without opening WCS panel
+- [x] **CLO-01**: User selects material and stock size from the shared material system instead of hardcoded presets
+- [x] **CLO-02**: User sees itemized waste breakdown: usable scrap pieces, kerf loss (blade width * cut length), and unusable waste
+- [x] **CLO-03**: User can optimize parts across multiple stock sizes in the same run
+- [x] **CLO-04**: User can track usable scrap pieces and flag them for reuse in future optimizations
+- [x] **CLO-05**: CLO results automatically push material costs, waste, and sheet count into project costing
 
-### Niceties
+### Project Costing (COST)
 
-- [ ] **NIC-01**: Double-click DRO axis value to zero that axis (sends G10 L20 for clicked axis)
-- [ ] **NIC-02**: Move-to dialog for explicit XYZ target entry with Go button (sends G0/G1 to target)
-- [ ] **NIC-03**: Diagonal XY jog buttons (+X+Y, +X-Y, -X+Y, -X-Y) in jog panel
-- [ ] **NIC-04**: Console messages tagged with source type ([JOB], [MDI], [MACRO], [SYS]) via color and prefix
-- [ ] **NIC-05**: Recent G-code files list (last 10) in GCode panel for quick re-load
-- [ ] **NIC-06**: Keyboard shortcuts for feed override (±10%) and spindle override (±10%) bindable in config
-- [ ] **NIC-07**: Macro list supports drag-and-drop reordering with sort_order persisted to database
-- [ ] **NIC-08**: Job completion notification via toast and optional status bar flash when streaming finishes
+- [ ] **COST-01**: Application uses "Costing" instead of "Estimator" throughout UI and code
+- [x] **COST-02**: Material costs are captured (snapshot) at point of addition to project
+- [x] **COST-03**: Tool costs are per-unit with flexible units (hours, minutes, per-object-in-batch), live from DB
+- [x] **COST-04**: Consumable costs track quantity used, live pricing from DB
+- [x] **COST-05**: Labor entries with configurable hourly rate
+- [x] **COST-06**: Overhead entries (user-defined line items)
+- [x] **COST-07**: Each cost line shows estimated and actual columns; actual is manual entry
+- [x] **COST-08**: User can set a sale price; margin (sale price minus total cost) is calculated and displayed
+- [x] **COST-09**: Project panel shows total estimated cost, total actual cost, and margin aggregated from all entries
+- [x] **COST-10**: Cost categories: Material, Tooling, Consumable, Labor, Overhead
+- [x] **COST-11**: User can toggle between Estimate view (working/editable) and Order view (finalized receipt)
+- [x] **COST-12**: User can print the estimate or order as a formatted document
+- [x] **COST-13**: Costing data persists to user's TheDigitalWorkshop data directory
 
-### Extended
+### Data Architecture (DATA)
 
-- [x] **EXT-01**: GRBL alarm code reference table (codes 1-10+) accessible from alarm display as tooltip or expandable section
-- [x] **EXT-02**: GRBL error code reference (errors 1-37+) shown in console when error responses received
-- [x] **EXT-03**: Firmware info query ($I) with version display in settings panel
-- [x] **EXT-04**: Export GRBL settings to plain text file (in addition to existing JSON backup)
-- [x] **EXT-05**: Log-to-file toggle in settings exposing existing setLogFile capability
-- [x] **EXT-06**: G-code out-of-bounds pre-check compares parsed bounds vs machine travel limits before streaming
-- [x] **EXT-07**: Probe active indicator (LED) in status panel parsing Pn:P from GRBL status
-- [x] **EXT-08**: Cycle-steps keyboard shortcut cycles through jog step size groups (small→medium→large→small)
-- [x] **EXT-09**: Per-tool color coding in toolpath visualization segments based on T-code parsing
-- [x] **EXT-10**: M6 tool change detection pauses streaming, notifies operator, waits for acknowledgment before continuing
-- [x] **EXT-11**: Z-probe workflow dialog with guided steps: approach speed, plate thickness, retract distance, probe execution
-- [x] **EXT-12**: G-code search/goto: find text in loaded G-code file and scroll to matching line
-- [x] **EXT-13**: Nested macros via M98 Pxxxx: sender-side expansion with recursion guard (max depth 16) and error reporting
-- [x] **EXT-14**: Gamepad input via SDL_GameController: axis mapping for jog, button mapping for start/pause/stop/home
-- [x] **EXT-15**: Tool length setter (TLS) workflow: measure tool offset, store per-tool, apply G43 compensation
-- [x] **EXT-16**: 3D probing workflows: edge finding, corner probing, center finding with approach/retract sequences
+- [ ] **DATA-01**: Stock sizes stored in DB table with FK to materials (single source of truth for current prices)
+- [ ] **DATA-02**: Project-specific costs (captured material prices, actuals, sale price) stored in project folder as JSON
+- [x] **DATA-03**: Live pricing (tools, consumables) reads directly from DB -- changes propagate automatically
+- [x] **DATA-04**: CLO results stored in project folder with references to stock_size IDs
 
-### TCP/IP Transport
+## Design Decisions
 
-- [x] **TCP-01**: Abstract IByteStream interface extracted from SerialPort with methods: close, isOpen, write, writeByte, readLine, drain, device, connectionState
-- [x] **TCP-02**: CncController uses unique_ptr<IByteStream> for polymorphic transport dispatch instead of concrete SerialPort member
-- [x] **TCP-03**: TcpSocket class implements IByteStream with POSIX TCP: non-blocking connect with timeout, TCP_NODELAY, disconnect detection via poll/read errors
-- [x] **TCP-04**: CncController::connectTcp(host, port) creates TcpSocket transport and runs same IO thread as serial
-- [x] **TCP-05**: Connection bar UI has Serial/TCP mode selector with host:port inputs for TCP mode
+**Three cost categories with different pricing behaviors:**
 
-## v2 Requirements
+| Category | Examples | Price Source | Behavior |
+|----------|----------|-------------|----------|
+| Material | Pine 4x8, walnut board | Captured at point of addition | Snapshot -- historical accuracy |
+| Mine (tooling) | V-bit, sanding disc | Live from DB, per-unit (hrs/min/per-object) | Real-time -- reflects current replacement cost |
+| Consumable | Sandpaper, finish, glue | Live from DB, per-unit | Real-time -- reflects current market price |
 
-Deferred to future release. Tracked but not in current roadmap.
+**Estimate vs Order:**
+- Estimate = working view, editable, live prices update automatically
+- Order = finalized receipt, locked, represents what was actually charged
 
-### Connectivity
+**Data split:**
+- Database = global truth (materials, stock prices, tool costs, consumable prices)
+- Project folder = project-specific (captured material prices, actual costs paid, sale price, CLO results)
 
-- **CON-01**: ~~Ethernet/Telnet connection for network-attached CNC controllers~~ (superseded by TCP-01 through TCP-05)
-- **CON-02**: WebSocket protocol for FluidNC WiFi connectivity
-- **CON-03**: Windows serial port implementation (Win32 CreateFile/ReadFile/WriteFile)
+**Git versioning:** Skip v0.3.0 tag -- go directly to v0.4.0 to align with GSD milestone numbering.
 
-### Remote Control
+## Previous Milestone Requirements
 
-- **RMT-01**: Headless server mode for browser-based remote access
-- **RMT-02**: Multi-client support for simultaneous monitoring
+### v0.2.0: Sender Feature Parity (Phases 9-13)
 
-### Plugin System
+8 SAF requirements (complete), 8 SND requirements (pending), 8 NIC requirements (pending), 16 EXT requirements (complete), 5 TCP requirements (complete).
 
-- **PLG-01**: Event-based plugin architecture with command transformation pipeline
-- **PLG-02**: Plugin marketplace with GitHub-based install/update
+### v0.3.0: Direct Carve (Phases 14-19)
+
+30 DC requirements (complete). See REQUIREMENTS-DIRECT-CARVE.md.
+
+## Future Requirements
+
+### Deferred
+
+- **INV-01**: Material inventory tracking (how many sheets on hand)
+- **INV-02**: Supplier/vendor info on stock entries
+- **INV-03**: Tax/markup calculation presets
+- **TOOL-01**: Tool wear tracking with automatic replacement alerts
+- **TOOL-02**: Per-tool cost history over time
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Toolpath generation / CAM | Future milestone, requires fundamentally different architecture |
-| Remote/headless server mode | Desktop CNC machines are physically attended |
-| Plugin/extensibility system | Premature for current userbase size |
-| Pendant hardware support | Requires specific hardware testing unavailable |
-| Firmware flashing (DFU) | Too risky without extensive hardware testing matrix |
-| Full G-code editor (Monaco-style) | MDI console + search/goto covers immediate needs |
-| Height map auto-leveling | Complex feature, deferred to probing milestone |
+| Accounting integration (QuickBooks, etc.) | Desktop app, not an accounting tool |
+| Multi-currency support | USD-only for now, user is domestic |
+| Cloud-based price updates | No cloud sync -- user manages prices manually |
+| Purchase order generation | Receipt/order view covers the output need |
+| Git tag v0.3.0 | Skipped to align with GSD versioning -- Direct Carve was on feature branch |
 
 ## Traceability
 
+Which phases cover which requirements. Updated during roadmap creation.
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SAF-10 | Phase 9: Safety | Complete |
-| SAF-11 | Phase 9: Safety | Complete |
-| SAF-12 | Phase 9: Safety | Complete |
-| SAF-13 | Phase 9: Safety | Complete |
-| SAF-14 | Phase 9: Safety | Complete |
-| SAF-15 | Phase 9: Safety | Complete |
-| SAF-16 | Phase 9: Safety | Complete |
-| SAF-17 | Phase 9: Safety | Complete |
-| SND-01 | Phase 10: Core Sender | Pending |
-| SND-02 | Phase 10: Core Sender | Pending |
-| SND-03 | Phase 10: Core Sender | Pending |
-| SND-04 | Phase 10: Core Sender | Pending |
-| SND-05 | Phase 10: Core Sender | Pending |
-| SND-06 | Phase 10: Core Sender | Pending |
-| SND-07 | Phase 10: Core Sender | Pending |
-| SND-08 | Phase 10: Core Sender | Pending |
-| NIC-01 | Phase 11: Niceties | Pending |
-| NIC-02 | Phase 11: Niceties | Pending |
-| NIC-03 | Phase 11: Niceties | Pending |
-| NIC-04 | Phase 11: Niceties | Pending |
-| NIC-05 | Phase 11: Niceties | Pending |
-| NIC-06 | Phase 11: Niceties | Pending |
-| NIC-07 | Phase 11: Niceties | Pending |
-| NIC-08 | Phase 11: Niceties | Pending |
-| EXT-01 | Phase 12: Extended | Complete |
-| EXT-02 | Phase 12: Extended | Complete |
-| EXT-03 | Phase 12: Extended | Complete |
-| EXT-04 | Phase 12: Extended | Complete |
-| EXT-05 | Phase 12: Extended | Complete |
-| EXT-06 | Phase 12: Extended | Complete |
-| EXT-07 | Phase 12: Extended | Complete |
-| EXT-08 | Phase 12: Extended | Complete |
-| EXT-09 | Phase 12: Extended | Complete |
-| EXT-10 | Phase 12: Extended | Complete |
-| EXT-11 | Phase 12: Extended | Complete |
-| EXT-12 | Phase 12: Extended | Complete |
-| EXT-13 | Phase 12: Extended | Complete |
-| EXT-14 | Phase 12: Extended | Complete |
-| EXT-15 | Phase 12: Extended | Complete |
-| EXT-16 | Phase 12: Extended | Complete |
-| TCP-01 | Phase 13: TCP/IP Transport | Planned |
-| TCP-02 | Phase 13: TCP/IP Transport | Planned |
-| TCP-03 | Phase 13: TCP/IP Transport | Planned |
-| TCP-04 | Phase 13: TCP/IP Transport | Planned |
-| TCP-05 | Phase 13: TCP/IP Transport | Planned |
+| MATL-01 | Phase 21 | Complete |
+| MATL-02 | Phase 21 | Complete |
+| MATL-03 | Phase 21 | Complete |
+| MATL-04 | Phase 21 | Complete |
+| MATL-05 | Phase 22 | Complete |
+| CLO-01 | Phase 23 | Complete |
+| CLO-02 | Phase 23 | Complete |
+| CLO-03 | Phase 23 | Complete |
+| CLO-04 | Phase 23 | Complete |
+| CLO-05 | Phase 25 | Complete |
+| COST-01 | Phase 20 | Pending |
+| COST-02 | Phase 24 | Complete |
+| COST-03 | Phase 22 | Complete |
+| COST-04 | Phase 22 | Complete |
+| COST-05 | Phase 24 | Complete |
+| COST-06 | Phase 24 | Complete |
+| COST-07 | Phase 24 | Complete |
+| COST-08 | Phase 26 | Complete |
+| COST-09 | Phase 25 | Complete |
+| COST-10 | Phase 24 | Complete |
+| COST-11 | Phase 26 | Complete |
+| COST-12 | Phase 26 | Complete |
+| COST-13 | Phase 24 | Complete |
+| DATA-01 | Phase 20 | Pending |
+| DATA-02 | Phase 20 | Pending |
+| DATA-03 | Phase 22 | Complete |
+| DATA-04 | Phase 23 | Complete |
 
 **Coverage:**
-- v1 requirements: 42 total + 5 TCP requirements
-- Mapped to phases: 47
-- Unmapped: 0 ✓
+- v0.4.0 requirements: 27 total
+- Mapped to phases: 27/27
+- Unmapped: 0
 
 ---
-*Requirements defined: 2026-02-26*
-*Last updated: 2026-02-26 after initial definition*
+*Requirements defined: 2026-03-04*
+*Last updated: 2026-03-04 -- traceability updated with phase mappings*

@@ -6,6 +6,7 @@
 namespace dw {
 
 constexpr const char* VERSION = "@DW_GIT_HASH@";
+constexpr const char* SEMVER = "@DW_SEMVER@";
 constexpr const char* BUILD_DATE = "@DW_BUILD_DATE@";
 
 } // namespace dw

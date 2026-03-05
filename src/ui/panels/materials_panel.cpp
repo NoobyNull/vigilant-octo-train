@@ -43,6 +43,14 @@ void MaterialsPanel::refresh() {
     m_allMaterials = m_materialManager->getAllMaterials();
 }
 
+void MaterialsPanel::refreshStockSizes() {
+    if (!m_materialManager || m_detailMaterialId < 0) {
+        m_stockSizes.clear();
+        return;
+    }
+    m_stockSizes = m_materialManager->getStockSizes(m_detailMaterialId);
+}
+
 void MaterialsPanel::selectMaterial(i64 materialId) {
     // Refresh to ensure we have latest data
     refresh();
@@ -72,10 +80,35 @@ void MaterialsPanel::render() {
     if (ImGui::Begin(m_title.c_str(), &m_open)) {
         renderToolbar();
         ImGui::Separator();
-        renderCategoryTabs();
+
+        if (m_showDetailView) {
+            // Split: grid on top, detail view on bottom
+            float availH = ImGui::GetContentRegionAvail().y;
+            // Calculate detail region: header + separator + table rows, minimum reasonable
+            float lineH = ImGui::GetTextLineHeightWithSpacing();
+            float detailMinH = lineH * 3.0f; // header + separator + at least one row
+            float stockRowCount = static_cast<float>(m_stockSizes.size());
+            float detailContentH = lineH * (4.0f + stockRowCount); // header, separator, add btn, rows
+            float detailH = std::clamp(detailContentH, detailMinH, availH * 0.5f);
+            float gridH = availH - detailH;
+
+            ImGui::BeginChild("GridRegion", ImVec2(0, gridH), false);
+            renderCategoryTabs();
+            ImGui::EndChild();
+
+            ImGui::Separator();
+            ImGui::BeginChild("DetailRegion", ImVec2(0, 0), false);
+            renderDetailView();
+            ImGui::EndChild();
+        } else {
+            renderCategoryTabs();
+        }
+
         renderAddDialog();
         renderEditForm();
         renderDeleteConfirm();
+        renderStockAddEditPopup();
+        renderStockDeleteConfirm();
     }
     ImGui::End();
 }
@@ -378,9 +411,11 @@ void MaterialsPanel::renderMaterialGrid(const std::vector<MaterialRecord>& mater
         return;
     }
 
-    const float cellSize = m_thumbnailSize + 16.0f; // padding around thumbnail
+    const auto& style = ImGui::GetStyle();
+    const float spacing = style.ItemSpacing.x;
+    const float cellSize = m_thumbnailSize + spacing;
     float availW = ImGui::GetContentRegionAvail().x;
-    int columns = static_cast<int>(availW / cellSize);
+    int columns = static_cast<int>((availW + spacing) / cellSize);
     if (columns < 1) {
         columns = 1;
     }
@@ -395,19 +430,24 @@ void MaterialsPanel::renderMaterialGrid(const std::vector<MaterialRecord>& mater
         ImGui::BeginGroup();
 
         // Invisible selectable underneath the cell (allows click + double-click detection)
-        float cellH = m_thumbnailSize + ImGui::GetTextLineHeightWithSpacing() + 8.0f;
+        float pad = style.FramePadding.y * 2.0f;
+        float cellH = m_thumbnailSize + ImGui::GetTextLineHeightWithSpacing() + pad;
         bool clicked = ImGui::Selectable("##mat",
                                          isSelected,
                                          ImGuiSelectableFlags_AllowDoubleClick,
                                          ImVec2(m_thumbnailSize, cellH));
 
         if (clicked) {
-            m_selectedMaterialId = mat.id;
             if (ImGui::IsMouseDoubleClicked(0)) {
                 if (m_onMaterialAssigned) {
                     m_onMaterialAssigned(mat.id);
                 }
             } else {
+                // Single click: select and open detail view
+                m_selectedMaterialId = mat.id;
+                m_showDetailView = true;
+                m_detailMaterialId = mat.id;
+                refreshStockSizes();
                 if (m_onMaterialSelected) {
                     m_onMaterialSelected(mat.id);
                 }
@@ -428,9 +468,10 @@ void MaterialsPanel::renderMaterialGrid(const std::vector<MaterialRecord>& mater
         ImVec2 itemMin = ImGui::GetItemRectMin();
         ImDrawList* drawList = ImGui::GetWindowDrawList();
 
-        ImVec2 thumbMin = ImVec2(itemMin.x + 4.0f, itemMin.y + 4.0f);
-        ImVec2 thumbMax = ImVec2(thumbMin.x + m_thumbnailSize - 8.0f,
-                                 thumbMin.y + m_thumbnailSize - 8.0f);
+        float inset = style.FramePadding.x;
+        ImVec2 thumbMin = ImVec2(itemMin.x + inset, itemMin.y + inset);
+        ImVec2 thumbMax = ImVec2(thumbMin.x + m_thumbnailSize - inset * 2.0f,
+                                 thumbMin.y + m_thumbnailSize - inset * 2.0f);
         float thumbW = thumbMax.x - thumbMin.x;
         float thumbH = thumbMax.y - thumbMin.y;
 
@@ -442,12 +483,12 @@ void MaterialsPanel::renderMaterialGrid(const std::vector<MaterialRecord>& mater
                                       ImVec2(0, 0),
                                       ImVec2(1, 1),
                                       IM_COL32(255, 255, 255, 255),
-                                      4.0f);
+                                      style.FrameRounding);
         } else {
             // Colored placeholder with category initial
             ImU32 bgColor = categoryPlaceholderColor(mat.category);
-            drawList->AddRectFilled(thumbMin, thumbMax, bgColor, 4.0f);
-            drawList->AddRect(thumbMin, thumbMax, IM_COL32(80, 80, 80, 200), 4.0f);
+            drawList->AddRectFilled(thumbMin, thumbMax, bgColor, style.FrameRounding);
+            drawList->AddRect(thumbMin, thumbMax, IM_COL32(80, 80, 80, 200), style.FrameRounding);
 
             const char* initial = categoryInitial(mat.category);
             ImVec2 textSize = ImGui::CalcTextSize(initial);
@@ -459,12 +500,12 @@ void MaterialsPanel::renderMaterialGrid(const std::vector<MaterialRecord>& mater
         // Selection highlight border
         if (isSelected) {
             drawList->AddRect(
-                thumbMin, thumbMax, ImGui::GetColorU32(ImGuiCol_ButtonActive), 4.0f, 0, 2.0f);
+                thumbMin, thumbMax, ImGui::GetColorU32(ImGuiCol_ButtonActive), style.FrameRounding, 0, 2.0f);
         }
 
         // Material name below thumbnail (truncated)
-        ImVec2 textPos = ImVec2(itemMin.x + 4.0f, itemMin.y + m_thumbnailSize + 2.0f);
-        float maxNameW = m_thumbnailSize - 8.0f;
+        ImVec2 textPos = ImVec2(itemMin.x + inset, itemMin.y + m_thumbnailSize + style.ItemInnerSpacing.y);
+        float maxNameW = m_thumbnailSize - inset * 2.0f;
         const char* nameStart = mat.name.c_str();
         ImVec4 clipRect(
             textPos.x, textPos.y, textPos.x + maxNameW, textPos.y + ImGui::GetTextLineHeight());
@@ -482,7 +523,7 @@ void MaterialsPanel::renderMaterialGrid(const std::vector<MaterialRecord>& mater
         // Grid layout: SameLine unless we've filled a row
         ++col;
         if (col < columns) {
-            ImGui::SameLine(0.0f, 4.0f);
+            ImGui::SameLine(0.0f, spacing);
         } else {
             col = 0;
         }

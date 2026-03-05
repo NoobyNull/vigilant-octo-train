@@ -369,9 +369,6 @@ void PropertiesPanel::renderMaterialInfo() {
             // Format depth of cut as inches
             ImGui::Text("Depth of Cut: %.3f in", mat.depthOfCut);
 
-            // Format cost as $/bf
-            ImGui::Text("Cost: $%.2f/bf", mat.costPerBoardFoot);
-
             // Grain direction slider (editable)
             ImGui::Spacing();
             ImGui::Separator();

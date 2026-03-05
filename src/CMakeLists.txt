@@ -22,6 +22,8 @@ set(DW_SOURCES
     core/utils/file_utils.cpp
     core/utils/string_utils.cpp
     core/utils/gemini_http.cpp
+    core/utils/unit_conversion.cpp
+    core/utils/board_foot.cpp
 
     # Threading
     core/threading/main_thread_queue.cpp
@@ -48,8 +50,11 @@ set(DW_SOURCES
     core/database/gcode_repository.cpp
     core/database/job_repository.cpp
     core/database/cost_repository.cpp
+    core/database/stock_size_repository.cpp
+    core/database/rate_category_repository.cpp
     core/database/cut_plan_repository.cpp
     core/database/tool_database.cpp
+    core/database/toolbox_repository.cpp
 
     # Graph
     core/graph/graph_manager.cpp
@@ -68,6 +73,9 @@ set(DW_SOURCES
 
     # Project
     core/project/project.cpp
+    core/project/project_directory.cpp
+    core/project/project_costing_io.cpp
+    core/project/costing_engine.cpp
 
     # Storage
     core/storage/storage_manager.cpp
@@ -94,6 +102,7 @@ set(DW_SOURCES
     core/gcode/machine_profile.cpp
 
     # CNC Controller (multi-firmware support)
+    core/cnc/cnc_tool.cpp
     core/cnc/serial_port.cpp
     core/cnc/tcp_socket.cpp
     core/cnc/cnc_controller.cpp
@@ -109,6 +118,21 @@ set(DW_SOURCES
     core/optimizer/cut_list_file.cpp
     core/optimizer/bin_packer.cpp
     core/optimizer/guillotine.cpp
+    core/optimizer/waste_breakdown.cpp
+    core/optimizer/multi_stock_optimizer.cpp
+    core/optimizer/clo_result_file.cpp
+
+    # Carve (Direct Carve pipeline)
+    core/carve/heightmap.cpp
+    core/carve/model_fitter.cpp
+    core/carve/carve_job.cpp
+    core/carve/surface_analysis.cpp
+    core/carve/island_detector.cpp
+    core/carve/analysis_overlay.cpp
+    core/carve/tool_recommender.cpp
+    core/carve/toolpath_generator.cpp
+    core/carve/gcode_export.cpp
+    core/carve/carve_streamer.cpp
 
     # Archive
     core/archive/archive.cpp
@@ -140,6 +164,7 @@ set(DW_SOURCES
     ui/panels/library_panel_items.cpp
     ui/panels/materials_panel.cpp
     ui/panels/materials_panel_dialogs.cpp
+    ui/panels/materials_panel_stock.cpp
     ui/panels/properties_panel.cpp
     ui/panels/project_panel.cpp
     ui/panels/gcode_panel.cpp
@@ -156,11 +181,13 @@ set(DW_SOURCES
     ui/panels/cnc_safety_panel.cpp
     ui/panels/cnc_settings_panel.cpp
     ui/panels/cnc_macro_panel.cpp
+    ui/panels/direct_carve_panel.cpp
 
     # UI Widgets
     ui/widgets/binding_recorder.cpp
     ui/widgets/status_bar.cpp
     ui/widgets/toast.cpp
+    ui/widgets/tool_recommendation_widget.cpp
 
     # UI Dialogs
     ui/dialogs/message_dialog.cpp
@@ -175,8 +202,13 @@ set(DW_SOURCES
     ui/dialogs/tagger_shutdown_dialog.cpp
 )
 
+# Windows application icon resource
+if(WIN32)
+    set(DW_WIN_RESOURCE "${CMAKE_SOURCE_DIR}/resources/app.rc")
+endif()
+
 # Create executable
-add_executable(digital_workshop ${DW_SOURCES})
+add_executable(digital_workshop ${DW_SOURCES} ${DW_WIN_RESOURCE})
 
 # Apply compiler flags
 dw_configure_target(digital_workshop)
@@ -246,8 +278,23 @@ if(DW_BUNDLED_MATERIALS)
     add_dependencies(digital_workshop dw_bundle_materials)
 endif()
 
+# --- Bundle icons ---
+set(DW_ICONS_OUTPUT_DIR "${CMAKE_BINARY_DIR}/resources/icons")
+add_custom_command(TARGET digital_workshop POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${DW_ICONS_OUTPUT_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/resources/icons" "${DW_ICONS_OUTPUT_DIR}"
+    COMMENT "Copying icons to build dir"
+)
+
 # Install target
 install(TARGETS digital_workshop RUNTIME DESTINATION bin)
+
+# Install icons
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/resources/icons/"
+    DESTINATION share/digitalworkshop/resources/icons
+    FILES_MATCHING PATTERN "*.ico" PATTERN "*.png"
+)
 
 # Install bundled materials if directory exists
 if(EXISTS "${CMAKE_SOURCE_DIR}/resources/materials/")

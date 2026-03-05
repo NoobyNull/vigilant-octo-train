@@ -187,6 +187,13 @@ bool ToolDatabase::initializeSchema(Database& db) {
     )"))
         return false;
 
+    // Migrate older databases missing extended machine columns.
+    // ALTER TABLE ... ADD COLUMN is a no-op error when the column already exists;
+    // we silently ignore failures here so both fresh and legacy DBs work.
+    (void)db.execute("ALTER TABLE machine ADD COLUMN spindle_power_watts REAL DEFAULT 0");
+    (void)db.execute("ALTER TABLE machine ADD COLUMN max_rpm INTEGER DEFAULT 24000");
+    (void)db.execute("ALTER TABLE machine ADD COLUMN drive_type INTEGER DEFAULT 0");
+
     if (!txn.commit()) {
         log::error("ToolDatabase", "Failed to commit schema");
         return false;

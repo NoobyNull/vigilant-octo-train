@@ -50,6 +50,10 @@ class CncStatusPanel : public Panel {
     static constexpr const char* WCS_NAMES[] = {"G54", "G55", "G56", "G57", "G58", "G59"};
     static constexpr int NUM_WCS = 6;
 
+    // WCS alias editing
+    int m_editingWcsIdx = -1;
+    char m_wcsAliasBuf[64] = {};
+
     // Move-To dialog state
     bool m_moveToOpen = false;
     float m_moveToX = 0.0f;

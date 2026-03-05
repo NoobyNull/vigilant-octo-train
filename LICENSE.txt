@@ -1,21 +1,136 @@
-MIT License
+DIGITAL WORKSHOP - PROPRIETARY SOURCE-AVAILABLE LICENSE
+Version 1.0, March 2026
 
-Copyright (c) 2026 Digital Workshop Contributors
+Copyright (c) 2026 Matthew (NoobyNull). All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+TERMS AND CONDITIONS
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. DEFINITIONS
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+"Software" means the Digital Workshop source code, compiled binaries,
+documentation, assets, and all associated files in this repository.
+
+"Personal Use" means use by a natural person (not a business, organization,
+or other legal entity) solely for private, non-commercial hobby purposes
+including but not limited to personal woodworking, home workshop CNC
+operation, 3D printing, and other personal fabrication activities.
+
+"Commercial Use" means any use of the Software that directly or indirectly
+generates revenue, supports a business operation, produces goods or services
+for sale, or is used within or on behalf of any for-profit or non-profit
+organization, business, or commercial entity. This includes but is not
+limited to:
+  (a) Using the Software to produce items for sale or trade;
+  (b) Using the Software in a business, shop, makerspace, or commercial
+      workshop environment;
+  (c) Offering services that rely on or incorporate the Software;
+  (d) Using the Software in educational institutions for institutional
+      purposes (personal student use is permitted);
+  (e) Bundling, embedding, or distributing the Software as part of any
+      commercial product or service;
+  (f) Using the Software for consulting, contract work, or freelance
+      activities.
+
+"Derivative Work" means any modification, adaptation, translation, port,
+or work based on or incorporating any portion of the Software.
+
+2. GRANT OF LIMITED LICENSE — PERSONAL USE ONLY
+
+Subject to the terms of this license, the copyright holder grants you a
+limited, non-exclusive, non-transferable, revocable license to:
+
+  (a) Download and use the Software for Personal Use only;
+  (b) View and study the source code for educational purposes;
+  (c) Modify the Software for your own Personal Use only.
+
+3. RESTRICTIONS
+
+You may NOT, without prior written permission from the copyright holder:
+
+  (a) Use the Software for any Commercial Use as defined above;
+  (b) Distribute, sublicense, sell, lease, rent, or otherwise transfer the
+      Software or any Derivative Work to any third party;
+  (c) Publish, share, or make available any Derivative Work, whether in
+      source or compiled form;
+  (d) Remove, alter, or obscure any copyright notices, license terms, or
+      attribution in the Software;
+  (e) Use the Software to provide a hosted, managed, or cloud-based service;
+  (f) Reverse engineer the compiled binaries for any purpose other than
+      personal debugging of your own modifications;
+  (g) Use any portion of the Software's source code, algorithms, or
+      architecture in other projects, whether open source or proprietary;
+  (h) Claim authorship or ownership of the Software or any portion thereof;
+  (i) Use the Software in any manner that competes with the copyright
+      holder's products or services.
+
+4. NO REDISTRIBUTION
+
+You may not redistribute the Software in any form. All users must obtain
+the Software directly from the official repository or release channels
+maintained by the copyright holder.
+
+5. COMMERCIAL LICENSING
+
+Any use not expressly permitted under Section 2 requires a separate
+commercial license. For commercial licensing inquiries, contact:
+
+  GitHub: https://github.com/NoobyNull
+  Repository: https://github.com/NoobyNull/The-Digital-Workshop
+
+6. TERMINATION
+
+This license is effective until terminated. Your rights under this license
+terminate automatically and immediately if you fail to comply with any term.
+Upon termination, you must destroy all copies of the Software in your
+possession. The copyright holder may also terminate this license at any
+time for any reason with written notice.
+
+7. INTELLECTUAL PROPERTY
+
+The Software and all copies thereof are proprietary to the copyright holder
+and title thereto remains in the copyright holder. All applicable rights to
+patents, copyrights, trademarks, and trade secrets in the Software are and
+shall remain in the copyright holder.
+
+8. CONTRIBUTIONS
+
+Any contributions (pull requests, patches, suggestions) submitted to the
+official repository are assigned to the copyright holder under the terms of
+this license. Contributors retain no rights to their contributions once
+merged.
+
+9. NO WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. THE COPYRIGHT HOLDER
+DOES NOT WARRANT THAT THE SOFTWARE WILL BE UNINTERRUPTED, ERROR-FREE, OR
+FREE OF HARMFUL COMPONENTS.
+
+10. LIMITATION OF LIABILITY
+
+IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING BUT NOT
+LIMITED TO PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES, LOSS OF USE, DATA,
+OR PROFITS, OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE SOFTWARE,
+EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+11. GOVERNING LAW
+
+This license shall be governed by and construed in accordance with
+applicable law. Any disputes arising under this license shall be resolved
+in the courts of competent jurisdiction.
+
+12. SEVERABILITY
+
+If any provision of this license is held to be unenforceable, that provision
+shall be modified to the minimum extent necessary to make it enforceable,
+and the remaining provisions shall continue in full force and effect.
+
+13. ENTIRE AGREEMENT
+
+This license constitutes the entire agreement between you and the copyright
+holder regarding the Software and supersedes all prior agreements and
+understandings, whether written or oral.

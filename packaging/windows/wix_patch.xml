@@ -1,0 +1,48 @@
+<CPackWiXPatch>
+
+  <!-- Add desktop and start menu shortcuts -->
+  <CPackWiXFragment Id="CM_CP_bin.digital_workshop.exe">
+    <DirectoryRef Id="TARGETDIR">
+      <Directory Id="DesktopFolder" Name="Desktop">
+        <Component Id="DesktopShortcut" Guid="A1B2C3D4-E5F6-4789-ABCD-EF0123456789">
+          <Shortcut Id="DesktopShortcutLink"
+                    Name="Digital Workshop"
+                    Description="3D model management, G-code analysis, and 2D cut optimization"
+                    Target="[INSTALL_ROOT]bin\digital_workshop.exe"
+                    WorkingDirectory="INSTALL_ROOT" />
+          <RegistryValue Root="HKCU"
+                         Key="Software\DigitalWorkshop"
+                         Name="DesktopShortcut"
+                         Type="integer" Value="1"
+                         KeyPath="yes" />
+        </Component>
+      </Directory>
+    </DirectoryRef>
+
+    <DirectoryRef Id="TARGETDIR">
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ProgramMenuDir" Name="Digital Workshop">
+          <Component Id="StartMenuShortcut" Guid="B2C3D4E5-F6A7-4890-BCDE-F01234567890">
+            <Shortcut Id="StartMenuShortcutLink"
+                      Name="Digital Workshop"
+                      Description="3D model management, G-code analysis, and 2D cut optimization"
+                      Target="[INSTALL_ROOT]bin\digital_workshop.exe"
+                      WorkingDirectory="INSTALL_ROOT" />
+            <Shortcut Id="StartMenuSettingsLink"
+                      Name="Digital Workshop Settings"
+                      Description="Configure Digital Workshop"
+                      Target="[INSTALL_ROOT]bin\dw_settings.exe"
+                      WorkingDirectory="INSTALL_ROOT" />
+            <RemoveFolder Id="CleanProgramMenuDir" On="uninstall" />
+            <RegistryValue Root="HKCU"
+                           Key="Software\DigitalWorkshop"
+                           Name="StartMenuShortcut"
+                           Type="integer" Value="1"
+                           KeyPath="yes" />
+          </Component>
+        </Directory>
+      </Directory>
+    </DirectoryRef>
+  </CPackWiXFragment>
+
+</CPackWiXPatch>

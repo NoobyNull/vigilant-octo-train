@@ -56,7 +56,6 @@ class MaterialManagerTest : public ::testing::Test {
         rec.feedRate = 100.0f;
         rec.spindleSpeed = 18000.0f;
         rec.depthOfCut = 0.125f;
-        rec.costPerBoardFoot = 4.50f;
 
         fs::path archivePath = m_tempDir / (name + ".dwmat");
         auto result =
@@ -196,7 +195,6 @@ TEST_F(MaterialManagerTest, Import_MetadataPreservedAfterRoundTrip) {
     EXPECT_FLOAT_EQ(mat->feedRate, 100.0f);
     EXPECT_FLOAT_EQ(mat->spindleSpeed, 18000.0f);
     EXPECT_FLOAT_EQ(mat->depthOfCut, 0.125f);
-    EXPECT_FLOAT_EQ(mat->costPerBoardFoot, 4.50f);
 }
 
 // ============================================================================
@@ -209,14 +207,14 @@ TEST_F(MaterialManagerTest, Update_ChangesFields) {
     ASSERT_FALSE(all.empty());
 
     auto mat = all[0];
-    float newCost = mat.costPerBoardFoot + 1.0f;
-    mat.costPerBoardFoot = newCost;
+    float newFeed = mat.feedRate + 10.0f;
+    mat.feedRate = newFeed;
 
     EXPECT_TRUE(m_manager->updateMaterial(mat));
 
     auto updated = m_manager->getMaterial(mat.id);
     ASSERT_TRUE(updated.has_value());
-    EXPECT_FLOAT_EQ(updated->costPerBoardFoot, newCost);
+    EXPECT_FLOAT_EQ(updated->feedRate, newFeed);
 }
 
 // ============================================================================

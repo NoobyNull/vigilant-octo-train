@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -283,6 +284,107 @@ std::vector<std::string> listSerialPorts() {
     return ports;
 }
 
+namespace {
+
+// Read a single-line sysfs attribute, trimming trailing newline
+std::string readSysfsAttr(const std::filesystem::path& path) {
+    std::ifstream f(path);
+    if (!f.is_open()) return {};
+    std::string line;
+    std::getline(f, line);
+    return line;
+}
+
+// Check if product/manufacturer strings suggest a CNC controller
+bool isCncLikely(const std::string& product, const std::string& manufacturer,
+                 const std::string& driver) {
+    // Known CNC controller product strings (case-insensitive substring match)
+    static const char* cncKeywords[] = {
+        "grbl", "GRBL", "Grbl",
+        "arduino", "Arduino", "ARDUINO",
+        "CNC", "cnc",
+        "FluidNC", "fluidnc",
+        "Smoothie", "smoothie",
+        "TinyG", "tinyg",
+        "Buildbotics", "buildbotics",
+        "xPro", "xpro",
+        "Mega 2560",    // Common GRBL board
+        "Uno",          // Arduino Uno (common GRBL)
+        "Nano",         // Arduino Nano
+    };
+
+    auto contains = [](const std::string& haystack, const char* needle) {
+        return haystack.find(needle) != std::string::npos;
+    };
+
+    for (const char* kw : cncKeywords) {
+        if (contains(product, kw) || contains(manufacturer, kw))
+            return true;
+    }
+
+    // ttyACM devices with cdc_acm driver are more likely to be Arduino/CNC
+    // than ttyUSB devices with generic ch341/cp210x/ftdi drivers
+    if (driver == "cdc_acm")
+        return true;
+
+    return false;
+}
+
+} // anonymous namespace
+
+std::vector<SerialPortInfo> listSerialPortsDetailed() {
+    std::vector<SerialPortInfo> result;
+    namespace fs = std::filesystem;
+
+    std::error_code ec;
+    for (const auto& entry : fs::directory_iterator("/dev", ec)) {
+        if (!entry.is_character_file(ec))
+            continue;
+        std::string name = entry.path().filename().string();
+        if (name.find("ttyUSB") != 0 && name.find("ttyACM") != 0)
+            continue;
+
+        SerialPortInfo info;
+        info.device = entry.path().string();
+
+        // Read USB metadata from sysfs
+        fs::path sysPath = fs::path("/sys/class/tty") / name / "device";
+        if (fs::exists(sysPath, ec)) {
+            // Driver name from symlink target
+            fs::path driverLink = sysPath / "driver";
+            if (fs::is_symlink(driverLink, ec)) {
+                info.driver = fs::read_symlink(driverLink, ec).filename().string();
+            }
+
+            // Walk up to USB device level for product/manufacturer
+            // ttyUSB: device/../ is the USB interface, ../../ is the USB device
+            // ttyACM: device/../ is the USB interface, ../../ is the USB device
+            for (fs::path usbDir = fs::canonical(sysPath, ec);
+                 !usbDir.empty() && usbDir != "/sys";
+                 usbDir = usbDir.parent_path()) {
+                fs::path prodFile = usbDir / "product";
+                if (fs::exists(prodFile, ec)) {
+                    info.product = readSysfsAttr(prodFile);
+                    info.manufacturer = readSysfsAttr(usbDir / "manufacturer");
+                    break;
+                }
+            }
+        }
+
+        info.likelyCnc = isCncLikely(info.product, info.manufacturer, info.driver);
+        result.push_back(std::move(info));
+    }
+
+    std::sort(result.begin(), result.end(),
+              [](const SerialPortInfo& a, const SerialPortInfo& b) {
+                  // Sort CNC-likely devices first, then by device name
+                  if (a.likelyCnc != b.likelyCnc) return a.likelyCnc > b.likelyCnc;
+                  return a.device < b.device;
+              });
+
+    return result;
+}
+
 // ── Windows stubs (serial not yet implemented) ───────────────────────
 
 #else // _WIN32
@@ -309,6 +411,10 @@ void SerialPort::drain() { m_readBuffer.clear(); }
 
 std::vector<std::string> listSerialPorts() {
     // TODO: enumerate COM ports via SetupAPI/WMI
+    return {};
+}
+
+std::vector<SerialPortInfo> listSerialPortsDetailed() {
     return {};
 }
 

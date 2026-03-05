@@ -1,5 +1,6 @@
 #pragma once
 
+#include <set>
 #include <string>
 #include <vector>
 
@@ -10,6 +11,7 @@
 namespace dw {
 
 class ToolDatabase;
+class ToolboxRepository;
 class MaterialManager;
 class FileDialog;
 
@@ -21,6 +23,7 @@ class ToolBrowserPanel : public Panel {
     void render() override;
 
     void setToolDatabase(ToolDatabase* db) { m_toolDatabase = db; }
+    void setToolboxRepository(ToolboxRepository* repo) { m_toolboxRepo = repo; }
     void setMaterialManager(MaterialManager* mgr) { m_materialManager = mgr; }
     void setFileDialog(FileDialog* dlg) { m_fileDialog = dlg; }
     void refresh();
@@ -40,6 +43,7 @@ class ToolBrowserPanel : public Panel {
     void runCalculation();
 
     ToolDatabase* m_toolDatabase = nullptr;
+    ToolboxRepository* m_toolboxRepo = nullptr;
     MaterialManager* m_materialManager = nullptr;
     FileDialog* m_fileDialog = nullptr;
 
@@ -78,6 +82,9 @@ class ToolBrowserPanel : public Panel {
     bool m_showAddGroup = false;
     std::string m_addGroupName;
     std::string m_addGroupParentId;
+
+    // Toolbox state
+    std::set<std::string> m_toolboxIds;
 
     bool m_needsRefresh = true;
 };

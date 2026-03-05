@@ -176,15 +176,24 @@ void LibraryPanel::renderModelItem(const ModelRecord& model,
                                       IM_COL32(255, 255, 255, 255),
                                       4.0f);
         } else {
-            drawList->AddRectFilled(thumbMin, thumbMax, IM_COL32(60, 60, 60, 255), 4.0f);
-            drawList->AddRect(thumbMin, thumbMax, IM_COL32(80, 80, 80, 255), 4.0f);
-
-            // Center icon in placeholder
-            const char* icon = Icons::Model;
-            ImVec2 iconSize = ImGui::CalcTextSize(icon);
-            ImVec2 iconPos = ImVec2(thumbMin.x + (ts - iconSize.x) * 0.5f,
-                                    thumbMin.y + (ts - iconSize.y) * 0.5f);
-            drawList->AddText(iconPos, IM_COL32(128, 128, 128, 255), icon);
+            GLuint placeholder = getPlaceholderTexture();
+            if (placeholder != 0) {
+                drawList->AddImageRounded((ImTextureID)(intptr_t)placeholder,
+                                          thumbMin,
+                                          thumbMax,
+                                          ImVec2(0, 0),
+                                          ImVec2(1, 1),
+                                          IM_COL32(255, 255, 255, 180),
+                                          4.0f);
+            } else {
+                drawList->AddRectFilled(thumbMin, thumbMax, IM_COL32(60, 60, 60, 255), 4.0f);
+                drawList->AddRect(thumbMin, thumbMax, IM_COL32(80, 80, 80, 255), 4.0f);
+                const char* icon = Icons::Model;
+                ImVec2 iconSize = ImGui::CalcTextSize(icon);
+                ImVec2 iconPos = ImVec2(thumbMin.x + (ts - iconSize.x) * 0.5f,
+                                        thumbMin.y + (ts - iconSize.y) * 0.5f);
+                drawList->AddText(iconPos, IM_COL32(128, 128, 128, 255), icon);
+            }
         }
 
         // Selection highlight

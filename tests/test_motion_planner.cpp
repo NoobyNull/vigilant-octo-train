@@ -37,13 +37,13 @@ TEST(MachineProfile, DefaultProfile) {
 
 TEST(MachineProfile, Shapeoko4) {
     auto p = MachineProfile::shapeoko4();
-    EXPECT_EQ(p.name, "Shapeoko 4");
+    EXPECT_EQ(p.name, "Shapeoko 4 XXL");
     EXPECT_GT(p.maxFeedRateX, 0.0f);
 }
 
 TEST(MachineProfile, LongmillMK2) {
     auto p = MachineProfile::longmillMK2();
-    EXPECT_EQ(p.name, "LongMill MK2 30x30");
+    EXPECT_EQ(p.name, "Sienci LongMill MK2 30x30");
     EXPECT_GT(p.maxFeedRateX, 0.0f);
 }
 

@@ -57,6 +57,7 @@ function(dw_set_warning_flags target)
             /utf-8
         )
 
+
         # Treat warnings as errors in Debug builds only (Release may have dependency warnings)
         if(CMAKE_BUILD_TYPE STREQUAL "Debug")
             target_compile_options(${target} PRIVATE /WX)

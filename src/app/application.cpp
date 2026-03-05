@@ -21,6 +21,7 @@
 #include "core/config/config.h"
 #include "core/database/connection_pool.h"
 #include "core/database/cost_repository.h"
+#include "core/database/rate_category_repository.h"
 #include "core/database/cut_plan_repository.h"
 #include "core/optimizer/cut_list_file.h"
 #include "core/database/database.h"
@@ -28,11 +29,13 @@
 #include "core/database/job_repository.h"
 #include "core/database/model_repository.h"
 #include "core/database/tool_database.h"
+#include "core/database/toolbox_repository.h"
 #include "core/database/schema.h"
 #include "core/export/project_export_manager.h"
 #include "core/cnc/cnc_controller.h"
 #include "core/cnc/serial_port.h"
 #include "core/cnc/gamepad_input.h"
+#include "core/carve/carve_job.h"
 #include "core/cnc/macro_manager.h"
 #include "core/graph/graph_manager.h"
 #include "core/import/background_tagger.h"
@@ -77,9 +80,11 @@ bool Application::init() {
     log::setLevel(static_cast<log::Level>(Config::instance().getLogLevel()));
 
     // Multi-viewport requires X11 — Wayland SDL2 backend lacks platform viewport support
+#ifdef __linux__
     if (Config::instance().getEnableFloatingWindows()) {
         SDL_SetHint(SDL_HINT_VIDEODRIVER, "x11");
     }
+#endif
 
     // Request per-monitor DPI awareness on Windows
     SDL_SetHint(SDL_HINT_WINDOWS_DPI_AWARENESS, "permonitorv2");
@@ -238,6 +243,7 @@ bool Application::init() {
     m_cutListFile = std::make_unique<CutListFile>();
     m_cutListFile->setDirectory(paths::getDataDir() / "cutlists");
     m_costRepo = std::make_unique<CostRepository>(*m_database);
+    m_rateCatRepo = std::make_unique<RateCategoryRepository>(*m_database);
     m_geminiService = std::make_unique<GeminiMaterialService>();
     m_descriptorService = std::make_unique<GeminiDescriptorService>();
     m_workspace = std::make_unique<Workspace>();
@@ -260,6 +266,9 @@ bool Application::init() {
     // Project export/import manager (.dwproj archives) (EXPORT-01/02)
     m_projectExportManager = std::make_unique<ProjectExportManager>(*m_database);
 
+    // My Toolbox (curated tool subset from .vtdb library)
+    m_toolboxRepo = std::make_unique<ToolboxRepository>(*m_database);
+
     // CNC tool database (Vectric .vtdb format)
     m_toolDatabase = std::make_unique<ToolDatabase>();
     if (!m_toolDatabase->open(paths::getToolDatabasePath())) {
@@ -278,6 +287,9 @@ bool Application::init() {
     m_gamepadInput = std::make_unique<GamepadInput>();
     m_gamepadInput->setCncController(m_cncController.get());
 
+    // Direct Carve job (heightmap, analysis, toolpath generation, streaming)
+    m_carveJob = std::make_unique<carve::CarveJob>();
+
     m_importQueue = std::make_unique<ImportQueue>(*m_connectionPool,
                                                   m_libraryManager.get(),
                                                   m_storageManager.get());
@@ -292,7 +304,8 @@ bool Application::init() {
     m_uiManager = std::make_unique<UIManager>();
     m_uiManager->init(
         m_libraryManager.get(), m_projectManager.get(), m_materialManager.get(),
-        m_costRepo.get(), m_modelRepo.get(), m_gcodeRepo.get(), m_cutPlanRepo.get());
+        m_costRepo.get(), m_rateCatRepo.get(), m_modelRepo.get(), m_gcodeRepo.get(),
+        m_cutPlanRepo.get());
 
     m_fileIOManager = std::make_unique<FileIOManager>(m_database.get(),
                                                       m_libraryManager.get(),
@@ -431,20 +444,25 @@ void Application::update() {
     u64 ticks = SDL_GetTicks64();
     if (ticks - m_lastPortScanMs >= 2000) {
         m_lastPortScanMs = ticks;
-        auto ports = listSerialPorts();
+        auto detailedPorts = listSerialPortsDetailed();
+
+        // Build simple port list for existing UI (Connect dropdown)
+        std::vector<std::string> ports;
+        for (const auto& p : detailedPorts)
+            ports.push_back(p.device);
         m_uiManager->setAvailablePorts(ports);
 
-        // Notify user once when a new device appears during simulation
-        if (!ports.empty() && m_cncController->isSimulating() && m_lastConnectedPort.empty()) {
-            std::string portList;
-            for (const auto& p : ports) {
-                if (!portList.empty()) portList += ", ";
-                portList += p;
+        // Only toast for devices that look like CNC controllers
+        if (m_cncController->isSimulating() && m_lastConnectedPort.empty()) {
+            for (const auto& p : detailedPorts) {
+                if (!p.likelyCnc) continue;
+                std::string desc = p.device;
+                if (!p.product.empty()) desc += " (" + p.product + ")";
+                ToastManager::instance().show(
+                    ToastType::Info, "CNC Controller Detected", desc, 5.0f);
+                m_lastConnectedPort = "__notified__";
+                break; // Only toast once
             }
-            ToastManager::instance().show(
-                ToastType::Info, "CNC Device Detected", portList, 5.0f);
-            // Set sentinel so we only toast once per appearance
-            m_lastConnectedPort = "__notified__";
         }
         if (ports.empty() && m_lastConnectedPort == "__notified__") {
             m_lastConnectedPort.clear();
@@ -459,10 +477,28 @@ void Application::render() {
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    ImGuiDockNodeFlags dockFlags = ImGuiDockNodeFlags_None;
-    if (!Config::instance().getEnableFloatingWindows())
-        dockFlags |= ImGuiDockNodeFlags_NoUndocking;
-    ImGuiID dockspaceId = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), dockFlags);
+    // Manual dockspace that reserves space for the status bar at the bottom
+    auto* viewport = ImGui::GetMainViewport();
+    float statusBarH = ImGui::GetFrameHeight() + ImGui::GetStyle().WindowPadding.y * 2;
+
+    ImGui::SetNextWindowPos(viewport->WorkPos);
+    ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x, viewport->WorkSize.y - statusBarH));
+    ImGui::SetNextWindowViewport(viewport->ID);
+
+    ImGuiWindowFlags dockHostFlags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
+                                     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+                                     ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
+                                     ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground;
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::Begin("DockSpaceHost", nullptr, dockHostFlags);
+    ImGui::PopStyleVar(3);
+
+    ImGuiID dockspaceId = ImGui::GetID("MainDockSpace");
+    ImGui::DockSpace(dockspaceId);
+    ImGui::End();
     if (m_uiManager->isFirstFrame()) {
         m_uiManager->clearFirstFrame();
         if (ImGui::DockBuilderGetNode(dockspaceId) == nullptr ||
@@ -525,11 +561,13 @@ void Application::shutdown() {
 
     // Destroy core systems
     m_gamepadInput.reset();  // Must be destroyed before CncController
+    m_toolboxRepo.reset();
     m_toolDatabase.reset();
     m_cncController.reset();
     m_descriptorService.reset();
     m_geminiService.reset();
     m_costRepo.reset();
+    m_rateCatRepo.reset();
     m_cutPlanRepo.reset();
     m_cutListFile.reset();
     m_jobRepo.reset();

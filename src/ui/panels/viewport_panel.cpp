@@ -292,6 +292,14 @@ void ViewportPanel::registerContextMenuEntries() {
     };
     entries.push_back(axisEntry);
 
+    ContextMenuEntry envelopeEntry;
+    envelopeEntry.label = "Show Work Envelope";
+    envelopeEntry.action = []() {
+        auto& cfg = Config::instance();
+        cfg.setCncShowWorkEnvelope(!cfg.getCncShowWorkEnvelope());
+    };
+    entries.push_back(envelopeEntry);
+
     entries.push_back(ContextMenuEntry::separator());
 
     // Lighting
@@ -483,7 +491,6 @@ void ViewportPanel::renderViewport() {
     }
 
     // Live CNC tool position and work envelope
-    // Viewport renders models in native file coordinates (Z-up, same as G-code) — no axis swap
     if (m_cncConnected) {
         auto& cfg = Config::instance();
         const Vec3& renderPos = m_machineStatus.workPos;

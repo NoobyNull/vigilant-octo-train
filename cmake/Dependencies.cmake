@@ -85,6 +85,7 @@ if(NOT SQLite3_FOUND)
         GIT_TAG 3.38.2
         GIT_SHALLOW TRUE
     )
+    set(SQLITE3_SKIP_INSTALL ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(sqlite3)
 
     # Create SQLite3 target
@@ -184,6 +185,7 @@ if(NOT CURL_FOUND)
     set(CURL_USE_SCHANNEL ON CACHE BOOL "" FORCE)
     set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
     set(HTTP_ONLY ON CACHE BOOL "" FORCE)
+    set(CURL_INSTALL OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(curl)
     # Create the CURL::libcurl target alias if needed
     if(NOT TARGET CURL::libcurl)

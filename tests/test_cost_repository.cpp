@@ -29,11 +29,11 @@ class CostRepoTest : public ::testing::Test {
         return id.value_or(0);
     }
 
-    dw::CostEstimate makeEstimate(const std::string& name, dw::i64 projectId = 0) {
-        dw::CostEstimate est;
+    dw::CostingRecord makeRecord(const std::string& name, dw::i64 projectId = 0) {
+        dw::CostingRecord est;
         est.name = name;
         est.projectId = projectId;
-        est.notes = "Test estimate";
+        est.notes = "Test record";
         return est;
     }
 
@@ -60,14 +60,14 @@ class CostRepoTest : public ::testing::Test {
 // --- Insert ---
 
 TEST_F(CostRepoTest, Insert_ReturnsId) {
-    auto est = makeEstimate("Basic Estimate");
+    auto est = makeRecord("Basic Estimate");
     auto id = m_repo->insert(est);
     ASSERT_TRUE(id.has_value());
     EXPECT_GT(id.value(), 0);
 }
 
 TEST_F(CostRepoTest, Insert_WithItems) {
-    auto est = makeEstimate("Estimate With Items");
+    auto est = makeRecord("Estimate With Items");
     est.items.push_back(makeItem("Plywood", dw::CostCategory::Material, 3.0, 25.50));
     est.items.push_back(makeItem("Assembly", dw::CostCategory::Labor, 2.0, 45.00));
     est.recalculate();
@@ -85,7 +85,7 @@ TEST_F(CostRepoTest, Insert_WithItems) {
 TEST_F(CostRepoTest, Insert_WithProjectId) {
     dw::i64 pid = createProject("Test Project");
     ASSERT_GT(pid, 0);
-    auto est = makeEstimate("Project Estimate", pid);
+    auto est = makeRecord("Project Estimate", pid);
     auto id = m_repo->insert(est);
     ASSERT_TRUE(id.has_value());
 
@@ -95,7 +95,7 @@ TEST_F(CostRepoTest, Insert_WithProjectId) {
 }
 
 TEST_F(CostRepoTest, Insert_WithoutProjectId) {
-    auto est = makeEstimate("Standalone Estimate");
+    auto est = makeRecord("Standalone Estimate");
     auto id = m_repo->insert(est);
     ASSERT_TRUE(id.has_value());
 
@@ -107,7 +107,7 @@ TEST_F(CostRepoTest, Insert_WithoutProjectId) {
 // --- FindById ---
 
 TEST_F(CostRepoTest, FindById_Found) {
-    auto est = makeEstimate("Findable");
+    auto est = makeRecord("Findable");
     est.items.push_back(makeItem("Wood", dw::CostCategory::Material, 1.0, 10.0));
     est.taxRate = 8.0;
     est.recalculate();
@@ -122,7 +122,7 @@ TEST_F(CostRepoTest, FindById_Found) {
     EXPECT_DOUBLE_EQ(found->taxRate, 8.0);
     EXPECT_DOUBLE_EQ(found->taxAmount, 0.8);
     EXPECT_DOUBLE_EQ(found->total, 10.8);
-    EXPECT_EQ(found->notes, "Test estimate");
+    EXPECT_EQ(found->notes, "Test record");
 }
 
 TEST_F(CostRepoTest, FindById_NotFound) {
@@ -138,9 +138,9 @@ TEST_F(CostRepoTest, FindAll_Empty) {
 }
 
 TEST_F(CostRepoTest, FindAll_Multiple) {
-    m_repo->insert(makeEstimate("Estimate A"));
-    m_repo->insert(makeEstimate("Estimate B"));
-    m_repo->insert(makeEstimate("Estimate C"));
+    m_repo->insert(makeRecord("Estimate A"));
+    m_repo->insert(makeRecord("Estimate B"));
+    m_repo->insert(makeRecord("Estimate C"));
 
     auto all = m_repo->findAll();
     EXPECT_EQ(all.size(), 3u);
@@ -151,10 +151,10 @@ TEST_F(CostRepoTest, FindAll_Multiple) {
 TEST_F(CostRepoTest, FindByProject_MatchesCorrectProject) {
     dw::i64 pid1 = createProject("Project 1");
     dw::i64 pid2 = createProject("Project 2");
-    m_repo->insert(makeEstimate("Project 1 Est A", pid1));
-    m_repo->insert(makeEstimate("Project 1 Est B", pid1));
-    m_repo->insert(makeEstimate("Project 2 Est A", pid2));
-    m_repo->insert(makeEstimate("Standalone"));
+    m_repo->insert(makeRecord("Project 1 Est A", pid1));
+    m_repo->insert(makeRecord("Project 1 Est B", pid1));
+    m_repo->insert(makeRecord("Project 2 Est A", pid2));
+    m_repo->insert(makeRecord("Standalone"));
 
     auto proj1 = m_repo->findByProject(pid1);
     EXPECT_EQ(proj1.size(), 2u);
@@ -166,7 +166,7 @@ TEST_F(CostRepoTest, FindByProject_MatchesCorrectProject) {
 
 TEST_F(CostRepoTest, FindByProject_NoMatch) {
     dw::i64 pid = createProject("Some Project");
-    m_repo->insert(makeEstimate("Some Estimate", pid));
+    m_repo->insert(makeRecord("Some Estimate", pid));
     auto results = m_repo->findByProject(99);
     EXPECT_TRUE(results.empty());
 }
@@ -174,7 +174,7 @@ TEST_F(CostRepoTest, FindByProject_NoMatch) {
 // --- Update ---
 
 TEST_F(CostRepoTest, Update_ChangesName) {
-    auto est = makeEstimate("Original Name");
+    auto est = makeRecord("Original Name");
     auto id = m_repo->insert(est);
     ASSERT_TRUE(id.has_value());
 
@@ -189,7 +189,7 @@ TEST_F(CostRepoTest, Update_ChangesName) {
 }
 
 TEST_F(CostRepoTest, Update_ChangesItems) {
-    auto est = makeEstimate("Item Test");
+    auto est = makeRecord("Item Test");
     est.items.push_back(makeItem("Initial Item", dw::CostCategory::Material, 1.0, 5.0));
     est.recalculate();
 
@@ -212,7 +212,7 @@ TEST_F(CostRepoTest, Update_ChangesItems) {
 }
 
 TEST_F(CostRepoTest, Update_ChangesFinancials) {
-    auto est = makeEstimate("Financial Test");
+    auto est = makeRecord("Financial Test");
     est.items.push_back(makeItem("Part", dw::CostCategory::Material, 10.0, 5.0));
     est.taxRate = 10.0;
     est.discountRate = 5.0;
@@ -241,7 +241,7 @@ TEST_F(CostRepoTest, Update_ChangesFinancials) {
 // --- Remove ---
 
 TEST_F(CostRepoTest, Remove_ById) {
-    auto id = m_repo->insert(makeEstimate("To Remove"));
+    auto id = m_repo->insert(makeRecord("To Remove"));
     ASSERT_TRUE(id.has_value());
     EXPECT_EQ(m_repo->count(), 1);
 
@@ -250,7 +250,7 @@ TEST_F(CostRepoTest, Remove_ById) {
 }
 
 TEST_F(CostRepoTest, Remove_NonexistentReturnsTrueButNoEffect) {
-    m_repo->insert(makeEstimate("Keeper"));
+    m_repo->insert(makeRecord("Keeper"));
     EXPECT_EQ(m_repo->count(), 1);
 
     // Removing a non-existent ID executes successfully (no row matched)
@@ -266,25 +266,25 @@ TEST_F(CostRepoTest, Count_Empty) {
 
 TEST_F(CostRepoTest, Count_AfterInserts) {
     EXPECT_EQ(m_repo->count(), 0);
-    m_repo->insert(makeEstimate("A"));
+    m_repo->insert(makeRecord("A"));
     EXPECT_EQ(m_repo->count(), 1);
-    m_repo->insert(makeEstimate("B"));
+    m_repo->insert(makeRecord("B"));
     EXPECT_EQ(m_repo->count(), 2);
 }
 
 TEST_F(CostRepoTest, Count_AfterRemove) {
-    auto id = m_repo->insert(makeEstimate("A"));
-    m_repo->insert(makeEstimate("B"));
+    auto id = m_repo->insert(makeRecord("A"));
+    m_repo->insert(makeRecord("B"));
     EXPECT_EQ(m_repo->count(), 2);
 
     m_repo->remove(id.value());
     EXPECT_EQ(m_repo->count(), 1);
 }
 
-// --- CostEstimate::recalculate ---
+// --- CostingRecord::recalculate ---
 
 TEST_F(CostRepoTest, Recalculate_EmptyItems) {
-    dw::CostEstimate est;
+    dw::CostingRecord est;
     est.taxRate = 10.0;
     est.discountRate = 5.0;
     est.recalculate();
@@ -296,7 +296,7 @@ TEST_F(CostRepoTest, Recalculate_EmptyItems) {
 }
 
 TEST_F(CostRepoTest, Recalculate_SingleItem) {
-    dw::CostEstimate est;
+    dw::CostingRecord est;
     est.items.push_back(makeItem("Widget", dw::CostCategory::Material, 4.0, 12.50));
     est.recalculate();
 
@@ -306,7 +306,7 @@ TEST_F(CostRepoTest, Recalculate_SingleItem) {
 }
 
 TEST_F(CostRepoTest, Recalculate_MultipleItems) {
-    dw::CostEstimate est;
+    dw::CostingRecord est;
     est.items.push_back(makeItem("Material A", dw::CostCategory::Material, 2.0, 10.0));
     est.items.push_back(makeItem("Labor B", dw::CostCategory::Labor, 3.0, 20.0));
     est.items.push_back(makeItem("Tool C", dw::CostCategory::Tool, 1.0, 15.0));
@@ -320,7 +320,7 @@ TEST_F(CostRepoTest, Recalculate_MultipleItems) {
 }
 
 TEST_F(CostRepoTest, Recalculate_WithTax) {
-    dw::CostEstimate est;
+    dw::CostingRecord est;
     est.items.push_back(makeItem("Item", dw::CostCategory::Material, 1.0, 100.0));
     est.taxRate = 8.5;
     est.recalculate();
@@ -331,7 +331,7 @@ TEST_F(CostRepoTest, Recalculate_WithTax) {
 }
 
 TEST_F(CostRepoTest, Recalculate_WithDiscount) {
-    dw::CostEstimate est;
+    dw::CostingRecord est;
     est.items.push_back(makeItem("Item", dw::CostCategory::Material, 1.0, 200.0));
     est.discountRate = 10.0;
     est.recalculate();
@@ -342,7 +342,7 @@ TEST_F(CostRepoTest, Recalculate_WithDiscount) {
 }
 
 TEST_F(CostRepoTest, Recalculate_WithTaxAndDiscount) {
-    dw::CostEstimate est;
+    dw::CostingRecord est;
     est.items.push_back(makeItem("Item", dw::CostCategory::Material, 5.0, 20.0));
     est.taxRate = 10.0;
     est.discountRate = 5.0;
@@ -356,7 +356,7 @@ TEST_F(CostRepoTest, Recalculate_WithTaxAndDiscount) {
 }
 
 TEST_F(CostRepoTest, Recalculate_UpdatesItemTotals) {
-    dw::CostEstimate est;
+    dw::CostingRecord est;
     dw::CostItem item;
     item.name = "Manual";
     item.quantity = 3.0;
@@ -372,7 +372,7 @@ TEST_F(CostRepoTest, Recalculate_UpdatesItemTotals) {
 // --- Items serialization/deserialization ---
 
 TEST_F(CostRepoTest, ItemsSerialization_EmptyItems) {
-    auto est = makeEstimate("Empty Items");
+    auto est = makeRecord("Empty Items");
     auto id = m_repo->insert(est);
     ASSERT_TRUE(id.has_value());
 
@@ -382,7 +382,7 @@ TEST_F(CostRepoTest, ItemsSerialization_EmptyItems) {
 }
 
 TEST_F(CostRepoTest, ItemsSerialization_AllCategories) {
-    auto est = makeEstimate("All Categories");
+    auto est = makeRecord("All Categories");
     est.items.push_back(makeItem("Wood", dw::CostCategory::Material, 1.0, 10.0));
     est.items.push_back(makeItem("Cutting", dw::CostCategory::Labor, 2.0, 25.0));
     est.items.push_back(makeItem("Saw Blade", dw::CostCategory::Tool, 1.0, 15.0));
@@ -422,7 +422,7 @@ TEST_F(CostRepoTest, ItemsSerialization_AllCategories) {
 }
 
 TEST_F(CostRepoTest, ItemsSerialization_PreservesNotes) {
-    auto est = makeEstimate("Notes Test");
+    auto est = makeRecord("Notes Test");
     dw::CostItem item;
     item.name = "Special Part";
     item.category = dw::CostCategory::Material;
@@ -442,7 +442,7 @@ TEST_F(CostRepoTest, ItemsSerialization_PreservesNotes) {
 }
 
 TEST_F(CostRepoTest, ItemsSerialization_ManyItems) {
-    auto est = makeEstimate("Many Items");
+    auto est = makeRecord("Many Items");
     for (int i = 0; i < 10; ++i) {
         est.items.push_back(
             makeItem("Item " + std::to_string(i), dw::CostCategory::Material, 1.0, 10.0 + i));
@@ -465,7 +465,7 @@ TEST_F(CostRepoTest, ItemsSerialization_ManyItems) {
 // --- Timestamps ---
 
 TEST_F(CostRepoTest, Insert_SetsTimestamps) {
-    auto id = m_repo->insert(makeEstimate("Timestamp Test"));
+    auto id = m_repo->insert(makeRecord("Timestamp Test"));
     ASSERT_TRUE(id.has_value());
 
     auto found = m_repo->findById(id.value());
@@ -478,7 +478,7 @@ TEST_F(CostRepoTest, Insert_SetsTimestamps) {
 
 TEST_F(CostRepoTest, RoundTrip_FullEstimate) {
     dw::i64 pid = createProject("Round Trip Project");
-    auto est = makeEstimate("Full Round Trip", pid);
+    auto est = makeRecord("Full Round Trip", pid);
     est.items.push_back(makeItem("Lumber", dw::CostCategory::Material, 5.0, 12.0));
     est.items.push_back(makeItem("Nails", dw::CostCategory::Material, 100.0, 0.05));
     est.items.push_back(makeItem("Workshop Time", dw::CostCategory::Labor, 3.0, 35.0));
