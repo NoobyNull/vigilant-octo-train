@@ -54,7 +54,7 @@
 - [x] **Phase 21: Material Stock Sizes** - Parent-child material/stock model with dimensions, pricing, and common size suggestions (completed 2026-03-05)
 - [x] **Phase 22: Consumables & Live Pricing** - Consumable items, tool cost entries, live DB pricing for non-material costs (completed 2026-03-05)
 - [x] **Phase 23: CLO Material Integration** - Cut optimizer uses shared material/stock system with waste breakdown and scrap tracking (completed 2026-03-05)
-- [ ] **Phase 24: Project Costing Engine** - Cost entry types (material, labor, overhead), estimated vs actual columns, persistence
+- [x] **Phase 24: Project Costing Engine** - Cost entry types (material, labor, overhead), estimated vs actual columns, persistence (completed 2026-03-05)
 - [ ] **Phase 25: CLO-to-Costing Pipeline** - CLO results auto-push into project costing, project-level cost aggregation
 - [ ] **Phase 26: Estimate & Order Views** - Sale price and margin, estimate vs order toggle, formatted print output
 
@@ -175,7 +175,7 @@ Plans:
 | 21. Material Stock Sizes | 2/2 | Complete    | 2026-03-05 | - |
 | 22. Consumables & Live Pricing | 2/2 | Complete    | 2026-03-05 | - |
 | 23. CLO Material Integration | 3/3 | Complete    | 2026-03-05 | - |
-| 24. Project Costing Engine | 2/3 | In Progress|  | - |
+| 24. Project Costing Engine | 3/3 | Complete   | 2026-03-05 | - |
 | 25. CLO-to-Costing Pipeline | v0.4.0 | 0/1 | Not started | - |
 | 26. Estimate & Order Views | v0.4.0 | 0/2 | Not started | - |
 
