@@ -1,0 +1,289 @@
+// Digital Workshop - UI Manager (layout & presets)
+// Dock layout, config save/restore, layout preset management.
+
+#include "managers/ui_manager.h"
+
+#include <cstring>
+
+#include <imgui.h>
+#include <imgui_internal.h>
+
+#include "core/config/config.h"
+#include "ui/panels/viewport_panel.h"
+
+namespace dw {
+
+void UIManager::setupDefaultDockLayout(ImGuiID dockspaceId) {
+    ImGui::DockBuilderRemoveNode(dockspaceId);
+    ImGui::DockBuilderAddNode(dockspaceId, ImGuiDockNodeFlags_DockSpace);
+    ImGui::DockBuilderSetNodeSize(dockspaceId, ImGui::GetMainViewport()->Size);
+
+    // Split: left sidebar (20%) | center+right
+    ImGuiID dockLeft = 0;
+    ImGuiID dockCenterRight = 0;
+    ImGui::DockBuilderSplitNode(
+        dockspaceId, ImGuiDir_Left, 0.20f, &dockLeft, &dockCenterRight);
+
+    // Split left sidebar: library (top 60%) | project (bottom 40%)
+    ImGuiID dockLeftTop = 0;
+    ImGuiID dockLeftBottom = 0;
+    ImGui::DockBuilderSplitNode(
+        dockLeft, ImGuiDir_Down, 0.40f, &dockLeftBottom, &dockLeftTop);
+
+    // Split center+right: center | right sidebar (20%) for properties
+    ImGuiID dockCenter = 0;
+    ImGuiID dockRight = 0;
+    ImGui::DockBuilderSplitNode(
+        dockCenterRight, ImGuiDir_Right, 0.20f, &dockRight, &dockCenter);
+
+    // Core visible panels
+    ImGui::DockBuilderDockWindow("Library", dockLeftTop);
+    ImGui::DockBuilderDockWindow("Project", dockLeftBottom);
+    ImGui::DockBuilderDockWindow("Viewport", dockCenter);
+    ImGui::DockBuilderDockWindow("Properties", dockRight);
+
+    // Hidden panels — docked as tabs in existing areas
+    ImGui::DockBuilderDockWindow("Start Page", dockCenter);
+    ImGui::DockBuilderDockWindow("G-code", dockCenter);
+    ImGui::DockBuilderDockWindow("Cut Optimizer", dockCenter);
+    ImGui::DockBuilderDockWindow("Project Costing", dockLeftBottom);
+    ImGui::DockBuilderDockWindow("Materials", dockLeftBottom);
+    ImGui::DockBuilderDockWindow("Tool & Material", dockRight);
+    ImGui::DockBuilderDockWindow("Tool Browser", dockRight);
+
+    // CNC panels — docked as center tabs
+    ImGui::DockBuilderDockWindow("CNC Status", dockCenter);
+    ImGui::DockBuilderDockWindow("Jog Control", dockCenter);
+    ImGui::DockBuilderDockWindow("MDI Console", dockCenter);
+    ImGui::DockBuilderDockWindow("WCS", dockCenter);
+    ImGui::DockBuilderDockWindow("Safety", dockCenter);
+    ImGui::DockBuilderDockWindow("Firmware", dockCenter);
+    ImGui::DockBuilderDockWindow("Macros", dockCenter);
+    ImGui::DockBuilderDockWindow("Job Progress", dockCenter);
+    ImGui::DockBuilderDockWindow("Direct Carve", dockCenter);
+
+    ImGui::DockBuilderFinish(dockspaceId);
+}
+
+void UIManager::restoreVisibilityFromConfig() {
+    auto& cfg = Config::instance();
+
+    m_showViewport = cfg.getShowViewport();
+    m_showLibrary = cfg.getShowLibrary();
+    m_showProperties = cfg.getShowProperties();
+    m_showProject = cfg.getShowProject();
+    m_showMaterials = cfg.getShowMaterials();
+    m_showGCode = cfg.getShowGCode();
+    m_showCutOptimizer = cfg.getShowCutOptimizer();
+    m_showProjectCosting = cfg.getShowProjectCosting();
+    m_showToolBrowser = cfg.getShowToolBrowser();
+    m_showStartPage = cfg.getShowStartPage();
+
+    m_showCncStatus = cfg.getShowCncStatus();
+    m_showCncJog = cfg.getShowCncJog();
+    m_showCncConsole = cfg.getShowCncConsole();
+    m_showCncWcs = cfg.getShowCncWcs();
+    m_showCncTool = cfg.getShowCncTool();
+    m_showCncJob = cfg.getShowCncJob();
+    m_showCncSafety = cfg.getShowCncSafety();
+    m_showCncSettings = cfg.getShowCncSettings();
+    m_showCncMacros = cfg.getShowCncMacros();
+    m_showDirectCarve = cfg.getShowDirectCarve();
+
+    m_activePresetIndex = cfg.getActiveLayoutPresetIndex();
+}
+
+void UIManager::saveVisibilityToConfig() {
+    auto& cfg = Config::instance();
+    cfg.setShowViewport(m_showViewport);
+    cfg.setShowLibrary(m_showLibrary);
+    cfg.setShowProperties(m_showProperties);
+    cfg.setShowProject(m_showProject);
+    cfg.setShowMaterials(m_showMaterials);
+    cfg.setShowGCode(m_showGCode);
+    cfg.setShowCutOptimizer(m_showCutOptimizer);
+    cfg.setShowProjectCosting(m_showProjectCosting);
+    cfg.setShowToolBrowser(m_showToolBrowser);
+    cfg.setShowStartPage(m_showStartPage);
+
+    cfg.setShowCncStatus(m_showCncStatus);
+    cfg.setShowCncJog(m_showCncJog);
+    cfg.setShowCncConsole(m_showCncConsole);
+    cfg.setShowCncWcs(m_showCncWcs);
+    cfg.setShowCncTool(m_showCncTool);
+    cfg.setShowCncJob(m_showCncJob);
+    cfg.setShowCncSafety(m_showCncSafety);
+    cfg.setShowCncSettings(m_showCncSettings);
+    cfg.setShowCncMacros(m_showCncMacros);
+    cfg.setShowDirectCarve(m_showDirectCarve);
+
+    cfg.setActiveLayoutPresetIndex(m_activePresetIndex);
+}
+
+void UIManager::applyRenderSettingsFromConfig() {
+    if (!m_viewportPanel)
+        return;
+
+    auto& cfg = Config::instance();
+    auto& rs = m_viewportPanel->renderSettings();
+    rs.lightDir = cfg.getRenderLightDir();
+    rs.lightColor = cfg.getRenderLightColor();
+    rs.ambient = cfg.getRenderAmbient();
+    rs.objectColor = cfg.getRenderObjectColor();
+    rs.shininess = cfg.getRenderShininess();
+    rs.showGrid = cfg.getShowGrid();
+    rs.showAxis = cfg.getShowAxis();
+}
+
+void UIManager::applyLayoutPreset(int presetIndex) {
+    auto& cfg = Config::instance();
+    const auto& presets = cfg.getLayoutPresets();
+    if (presetIndex < 0 || presetIndex >= static_cast<int>(presets.size()))
+        return;
+
+    const auto& preset = presets[static_cast<size_t>(presetIndex)];
+
+    for (const auto& entry : m_panelRegistry) {
+        auto it = preset.visibility.find(entry.key);
+        if (it != preset.visibility.end())
+            *entry.showFlag = it->second;
+    }
+
+    m_activePresetIndex = presetIndex;
+    cfg.setActiveLayoutPresetIndex(presetIndex);
+    m_suppressAutoContext = true;
+
+    // Keep workspace mode in sync with built-in presets
+    if (presetIndex == 0) m_workspaceMode = WorkspaceMode::Model;
+    else if (presetIndex == 1) m_workspaceMode = WorkspaceMode::CNC;
+}
+
+LayoutPreset UIManager::captureCurrentLayout(const std::string& name) const {
+    LayoutPreset preset;
+    preset.name = name;
+
+    for (const auto& entry : m_panelRegistry)
+        preset.visibility[entry.key] = *entry.showFlag;
+    return preset;
+}
+
+void UIManager::saveCurrentAsPreset(const std::string& name) {
+    auto& cfg = Config::instance();
+    auto& presets = const_cast<std::vector<LayoutPreset>&>(cfg.getLayoutPresets());
+
+    // Check for existing custom preset with same name — overwrite it
+    for (int i = 0; i < static_cast<int>(presets.size()); ++i) {
+        auto idx = static_cast<size_t>(i);
+        if (!presets[idx].builtIn && presets[idx].name == name) {
+            cfg.updateLayoutPreset(i, captureCurrentLayout(name));
+            m_activePresetIndex = i;
+            cfg.setActiveLayoutPresetIndex(i);
+            cfg.save();
+            return;
+        }
+    }
+
+    // New preset
+    cfg.addLayoutPreset(captureCurrentLayout(name));
+    m_activePresetIndex = static_cast<int>(cfg.getLayoutPresets().size()) - 1;
+    cfg.setActiveLayoutPresetIndex(m_activePresetIndex);
+    cfg.save();
+}
+
+void UIManager::deletePreset(int index) {
+    auto& cfg = Config::instance();
+    cfg.removeLayoutPreset(index);
+
+    if (m_activePresetIndex >= static_cast<int>(cfg.getLayoutPresets().size()))
+        m_activePresetIndex = static_cast<int>(cfg.getLayoutPresets().size()) - 1;
+    cfg.setActiveLayoutPresetIndex(m_activePresetIndex);
+    cfg.save();
+}
+
+void UIManager::checkAutoContextTrigger(const std::string& focusedPanelKey) {
+    if (m_suppressAutoContext) return;
+
+    auto& cfg = Config::instance();
+    const auto& presets = cfg.getLayoutPresets();
+
+    for (int i = 0; i < static_cast<int>(presets.size()); ++i) {
+        if (i == m_activePresetIndex) continue;
+        if (presets[static_cast<size_t>(i)].autoTriggerPanelKey == focusedPanelKey) {
+            applyLayoutPreset(i);
+            return;
+        }
+    }
+}
+
+void UIManager::renderPresetSelector() {
+    auto& cfg = Config::instance();
+    const auto& presets = cfg.getLayoutPresets();
+
+    const char* activeLabel = "Custom";
+    if (m_activePresetIndex >= 0 &&
+        m_activePresetIndex < static_cast<int>(presets.size())) {
+        activeLabel = presets[static_cast<size_t>(m_activePresetIndex)].name.c_str();
+    }
+
+    ImGui::SameLine();
+    ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+    ImGui::SameLine();
+
+    const auto& style = ImGui::GetStyle();
+    float comboWidth = ImGui::CalcTextSize(activeLabel).x + style.FramePadding.x * 4.0f +
+                       ImGui::GetFrameHeight();
+    ImGui::SetNextItemWidth(comboWidth);
+
+    if (ImGui::BeginCombo("##LayoutPreset", activeLabel, ImGuiComboFlags_NoArrowButton)) {
+        for (int i = 0; i < static_cast<int>(presets.size()); ++i) {
+            bool selected = (i == m_activePresetIndex);
+            if (ImGui::Selectable(presets[static_cast<size_t>(i)].name.c_str(), selected))
+                applyLayoutPreset(i);
+            if (selected) ImGui::SetItemDefaultFocus();
+        }
+
+        ImGui::Separator();
+        if (ImGui::Selectable("Save Current Layout..."))
+            m_showSavePresetPopup = true;
+        if (m_activePresetIndex >= 0 &&
+            m_activePresetIndex < static_cast<int>(presets.size()) &&
+            !presets[static_cast<size_t>(m_activePresetIndex)].builtIn) {
+            if (ImGui::Selectable("Delete Current Preset"))
+                deletePreset(m_activePresetIndex);
+        }
+        ImGui::EndCombo();
+    }
+}
+
+void UIManager::renderSavePresetPopup() {
+    if (m_showSavePresetPopup) {
+        ImGui::OpenPopup("Save Layout Preset");
+        m_showSavePresetPopup = false;
+    }
+    if (ImGui::BeginPopupModal("Save Layout Preset", nullptr,
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Preset name:");
+        float inputWidth = ImGui::CalcTextSize("M").x * 30.0f;
+        ImGui::SetNextItemWidth(inputWidth);
+        ImGui::InputText("##PresetName", m_presetNameBuf, sizeof(m_presetNameBuf));
+        ImGui::Spacing();
+
+        bool nameValid = m_presetNameBuf[0] != '\0';
+        if (!nameValid) ImGui::BeginDisabled();
+        if (ImGui::Button("Save")) {
+            saveCurrentAsPreset(m_presetNameBuf);
+            m_presetNameBuf[0] = '\0';
+            ImGui::CloseCurrentPopup();
+        }
+        if (!nameValid) ImGui::EndDisabled();
+
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) {
+            m_presetNameBuf[0] = '\0';
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+}
+
+} // namespace dw

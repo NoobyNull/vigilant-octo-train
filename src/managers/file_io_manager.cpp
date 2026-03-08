@@ -129,6 +129,7 @@ void FileIOManager::onFilesDropped(const std::vector<std::string>& paths) {
         return;
 
     std::vector<Path> importPaths;
+    int skippedFiles = 0;
     for (const auto& p : paths) {
         Path path{p};
 
@@ -200,8 +201,17 @@ void FileIOManager::onFilesDropped(const std::vector<std::string>& paths) {
 
             if (LoaderFactory::isSupported(ext)) {
                 importPaths.push_back(path);
+            } else {
+                ++skippedFiles;
             }
         }
+    }
+
+    if (skippedFiles > 0) {
+        ToastManager::instance().show(ToastType::Warning,
+                                      "Skipped Files",
+                                      std::to_string(skippedFiles) +
+                                          " unsupported file(s) were skipped");
     }
 
     if (!importPaths.empty()) {

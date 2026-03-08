@@ -4,6 +4,11 @@
 // Owns all UI panels, dialogs, visibility state, menu bar,
 // keyboard shortcuts, import progress overlay, about/restart popups,
 // and dock layout. Extracted from Application (god class decomposition).
+//
+// Implementation split across:
+//   ui_manager.cpp         — init, shutdown, panel rendering, background UI
+//   ui_manager_menus.cpp   — menu bar, keyboard shortcuts, about/restart dialogs
+//   ui_manager_layout.cpp  — dock layout, presets, config save/restore
 
 #include <functional>
 #include <memory>
@@ -16,6 +21,10 @@
 using ImGuiID = unsigned int;
 
 namespace dw {
+
+// Forward declarations - base classes
+class Panel;
+class Dialog;
 
 // Forward declarations - panels
 class CncStatusPanel;
@@ -112,10 +121,8 @@ class UIManager {
     void setupDefaultDockLayout(ImGuiID dockspaceId);
     void handleKeyboardShortcuts();
 
-    // --- New background UI methods (Plan 02-05) ---
-    void renderBackgroundUI(
-        float deltaTime,
-        const LoadingState* loadingState); // Renders StatusBar, ToastManager, ImportSummaryDialog
+    // --- Background UI (StatusBar, ToastManager, ImportSummaryDialog) ---
+    void renderBackgroundUI(float deltaTime, const LoadingState* loadingState);
 
     // --- Dock layout first-frame logic ---
     [[nodiscard]] bool isFirstFrame() const { return m_firstFrame; }
@@ -177,7 +184,7 @@ class UIManager {
     // Workspace mode
     WorkspaceMode workspaceMode() const { return m_workspaceMode; }
     void setWorkspaceMode(WorkspaceMode mode);
-    void showCncPanels(bool show); // Show/hide CNC panels without affecting model panels
+    void showCncPanels(bool show);
     bool& showRestartPopup() { return m_showRestartPopup; }
 
     // Layout presets
@@ -199,6 +206,7 @@ class UIManager {
     void setOnShowAbout(ActionCallback cb) { m_onShowAbout = std::move(cb); }
     void setOnLibraryMaintenance(ActionCallback cb) { m_onLibraryMaintenance = std::move(cb); }
     void setOnRelocateWorkspace(ActionCallback cb) { m_onRelocateWorkspace = std::move(cb); }
+    void setOnLocateMissingFiles(ActionCallback cb) { m_onLocateMissingFiles = std::move(cb); }
 
     // CNC menu bar callbacks
     using ConnectCallback = std::function<void(const std::string& port)>;
@@ -214,7 +222,7 @@ class UIManager {
     void setCncSimulating(bool v) { m_cncSimulating = v; }
     void setAvailablePorts(std::vector<std::string> ports) { m_availablePorts = std::move(ports); }
 
-    // --- Import progress callbacks (Plan 02-05) ---
+    // --- Import progress callbacks ---
     void setImportProgress(const ImportProgress* progress);
     void showImportSummary(const ImportBatchSummary& summary);
     void setImportCancelCallback(std::function<void()> callback);
@@ -273,15 +281,20 @@ class UIManager {
     bool m_showDirectCarve = false;
     bool m_showStartPage = true;
 
-    // Panel registry for preset system
+    // Panel registry — maps panel keys to visibility, rendering, and config
     struct PanelEntry {
         const char* key;         // Preset key (e.g. "cnc_status")
         bool* showFlag;          // &m_showCncStatus
         const char* menuLabel;   // View menu display name
         const char* windowTitle; // ImGui window title for focus detection
+        Panel* panel;            // Base pointer for render() dispatch
+        bool syncClose;          // Handle X-button close → visibility sync
     };
     std::vector<PanelEntry> m_panelRegistry;
     void buildPanelRegistry();
+
+    // Dialog list for batch rendering
+    std::vector<Dialog*> m_dialogList;
 
     // Layout preset state
     int m_activePresetIndex = 0;
@@ -305,10 +318,10 @@ class UIManager {
     std::unique_ptr<MaintenanceDialog> m_maintenanceDialog;
     std::unique_ptr<TaggerShutdownDialog> m_taggerShutdownDialog;
 
-    // Widgets (Plan 02-05)
+    // Widgets
     std::unique_ptr<StatusBar> m_statusBar;
 
-    // Context menu manager (Phase 03-00)
+    // Context menu manager
     std::unique_ptr<ContextMenuManager> m_contextMenuManager;
 
     // Restart popup state
@@ -317,12 +330,15 @@ class UIManager {
     // First frame flag for dock layout
     bool m_firstFrame = true;
 
-    // Menu rendering helpers (extracted from renderMenuBar for complexity)
+    // Menu rendering helpers (in ui_manager_menus.cpp)
     void renderFileMenu();
     void renderViewMenu();
+    void renderSenderSubmenu();
     void renderEditMenu();
     void renderToolsMenu();
     void renderHelpMenu();
+    void renderCncMenuBarStatus();
+    bool checkPanicStop();
 
     // Action callbacks (delegated to Application)
     ActionCallback m_onNewProject;
@@ -336,6 +352,7 @@ class UIManager {
     ActionCallback m_onShowAbout;
     ActionCallback m_onLibraryMaintenance;
     ActionCallback m_onRelocateWorkspace;
+    ActionCallback m_onLocateMissingFiles;
 
     // CNC menu bar callbacks
     ConnectCallback m_onConnect;

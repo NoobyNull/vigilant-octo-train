@@ -80,6 +80,7 @@ class ImportQueue {
     void checkBatchComplete();
 
     bool stageReadFile(ImportTask& task);
+    bool stageValidate(ImportTask& task);
     void stageComputeHash(ImportTask& task);
     bool stageCheckDuplicate(ImportTask& task, TaskContext& ctx);
     bool stageParse(ImportTask& task);

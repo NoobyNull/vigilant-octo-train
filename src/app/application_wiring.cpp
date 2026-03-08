@@ -21,6 +21,7 @@
 #include "core/materials/gemini_descriptor_service.h"
 #include "core/materials/gemini_material_service.h"
 #include "core/materials/material_manager.h"
+#include "core/paths/path_recovery.h"
 #include "core/paths/path_resolver.h"
 #include "core/threading/main_thread_queue.h"
 #include "core/utils/log.h"
@@ -51,6 +52,51 @@
 
 namespace dw {
 
+namespace {
+
+// Reset all per-category directory overrides to default (workspace-relative).
+void clearDirOverrides(Config& config) {
+    config.setModelsDir({});
+    config.setProjectsDir({});
+    config.setMaterialsDir({});
+    config.setGCodeDir({});
+    config.setSupportDir({});
+}
+
+// Persist AI descriptor results to the library database.
+void persistTagResults(LibraryManager* libMgr, int64_t modelId, const DescriptorResult& result) {
+    libMgr->updateDescriptor(modelId, result.title, result.description, result.hoverNarrative);
+    auto existing = libMgr->getModel(modelId);
+    if (existing) {
+        auto tags = existing->tags;
+        for (const auto& kw : result.keywords)
+            tags.push_back(kw);
+        for (const auto& assoc : result.associations)
+            tags.push_back(assoc);
+        libMgr->updateTags(modelId, tags);
+    }
+    if (!result.categories.empty())
+        libMgr->resolveAndAssignCategories(modelId, result.categories);
+}
+
+// Format the result message for workspace relocation.
+std::string formatRelocateMsg(const WorkspaceRelocator::Result& result) {
+    std::string msg = std::to_string(result.filesCopied) + " file(s) moved";
+    if (result.filesSkipped > 0)
+        msg += ", " + std::to_string(result.filesSkipped) + " skipped";
+    if (!result.skippedCategories.empty()) {
+        msg += " (";
+        for (size_t i = 0; i < result.skippedCategories.size(); ++i) {
+            if (i > 0) msg += ", ";
+            msg += result.skippedCategories[i];
+        }
+        msg += " overridden, not moved)";
+    }
+    return msg;
+}
+
+} // anonymous namespace
+
 void Application::initWiring() {
     wireImportPipeline();
     wireStartPage();
@@ -63,41 +109,30 @@ void Application::initWiring() {
 }
 
 void Application::wireImportPipeline() {
-    // Wire StatusBar cancel button to ImportQueue
     m_uiManager->setImportCancelCallback([this]() {
-        if (m_importQueue)
-            m_importQueue->cancel();
+        if (m_importQueue) m_importQueue->cancel();
     });
-
-    // Wire ImportQueue callbacks for UI feedback
     m_importQueue->setOnBatchComplete([this](const ImportBatchSummary& summary) {
         m_mainThreadQueue->enqueue([this, summary]() {
             if (Config::instance().getShowImportErrorToasts()) {
                 if (summary.failedCount > 0)
-                    ToastManager::instance().show(ToastType::Error,
-                                                  "Import Errors",
-                                                  std::to_string(summary.failedCount) +
-                                                      " file(s) failed to import");
+                    ToastManager::instance().show(
+                        ToastType::Error, "Import Errors",
+                        std::to_string(summary.failedCount) + " file(s) failed to import");
                 if (summary.successCount > 0)
-                    ToastManager::instance().show(ToastType::Success,
-                                                  "Import Complete",
-                                                  std::to_string(summary.successCount) +
-                                                      " file(s) imported successfully");
+                    ToastManager::instance().show(
+                        ToastType::Success, "Import Complete",
+                        std::to_string(summary.successCount) + " file(s) imported successfully");
             }
             if (summary.duplicateCount > 0)
                 m_uiManager->showImportSummary(summary);
-
-            // Start background tagger if "manage + tag" mode was selected
             if (m_importQueue->queueForTagging() && m_backgroundTagger &&
                 !m_backgroundTagger->isActive()) {
                 auto apiKey = Config::instance().getGeminiApiKey();
-                if (!apiKey.empty())
-                    m_backgroundTagger->start(apiKey);
+                if (!apiKey.empty()) m_backgroundTagger->start(apiKey);
             }
         });
     });
-
-    // Wire import options dialog and confirm callback
     m_fileIOManager->setImportOptionsDialog(m_uiManager->importOptionsDialog());
     if (m_uiManager->importOptionsDialog()) {
         m_uiManager->importOptionsDialog()->setOnConfirm(
@@ -108,8 +143,6 @@ void Application::wireImportPipeline() {
                 }
             });
     }
-
-    // Wire re-import callback for duplicate review
     if (m_uiManager->importSummaryDialog()) {
         m_uiManager->importSummaryDialog()->setOnReimport(
             [this](std::vector<DuplicateRecord> selected) {
@@ -167,128 +200,7 @@ void Application::wireLibraryPanel() {
         [this](int64_t modelId) { onModelSelected(modelId); });
 
     m_uiManager->libraryPanel()->setOnRegenerateThumbnail(
-        [this](const std::vector<int64_t>& modelIds) {
-            if (!m_libraryManager || modelIds.empty())
-                return;
-
-            // Single item: lightweight path (no progress dialog)
-            if (modelIds.size() == 1) {
-                int64_t modelId = modelIds[0];
-                auto record = m_libraryManager->getModel(modelId);
-                if (!record) {
-                    ToastManager::instance().show(ToastType::Error,
-                                                  "Thumbnail Failed",
-                                                  "Model not found in database");
-                    return;
-                }
-                Path filePath = PathResolver::resolve(record->filePath, PathCategory::Support);
-                std::string modelName = record->name;
-                ToastManager::instance().show(ToastType::Info,
-                                              "Regenerating Thumbnail",
-                                              modelName);
-                std::thread([this, filePath, modelId, modelName]() {
-                    auto result = LoaderFactory::load(filePath);
-                    if (!result) {
-                        m_mainThreadQueue->enqueue([modelName, error = result.error]() {
-                            ToastManager::instance().show(
-                                ToastType::Error,
-                                "Thumbnail Failed",
-                                modelName + ": " +
-                                    (error.empty() ? "failed to load file" : error));
-                        });
-                        return;
-                    }
-                    auto mesh = result.mesh;
-                    m_mainThreadQueue->enqueue([this, mesh, modelId, modelName]() {
-                        bool ok = generateMaterialThumbnail(modelId, *mesh);
-                        if (m_uiManager->libraryPanel()) {
-                            m_uiManager->libraryPanel()->invalidateThumbnail(modelId);
-                            m_uiManager->libraryPanel()->refresh();
-                        }
-                        if (ok) {
-                            ToastManager::instance().show(ToastType::Success,
-                                                          "Thumbnail Updated",
-                                                          modelName);
-                        } else {
-                            ToastManager::instance().show(ToastType::Error,
-                                                          "Thumbnail Failed",
-                                                          modelName + ": generation failed");
-                        }
-                    });
-                }).detach();
-                return;
-            }
-
-            // Batch path: progress dialog + single coordinator thread
-            auto* progressDlg = m_uiManager->progressDialog();
-            if (!progressDlg)
-                return;
-
-            struct BatchItem {
-                int64_t id;
-                Path filePath;
-                std::string name;
-            };
-            auto items = std::make_shared<std::vector<BatchItem>>();
-            items->reserve(modelIds.size());
-            for (int64_t id : modelIds) {
-                auto record = m_libraryManager->getModel(id);
-                if (record) {
-                    auto resolved = PathResolver::resolve(record->filePath, PathCategory::Support);
-                    items->push_back({id, resolved, record->name});
-                }
-            }
-            if (items->empty())
-                return;
-
-            progressDlg->start("Regenerating Thumbnails", static_cast<int>(items->size()));
-
-            std::thread([this, items, progressDlg]() {
-                for (const auto& item : *items) {
-                    if (progressDlg->isCancelled())
-                        break;
-
-                    auto result = LoaderFactory::load(item.filePath);
-                    if (!result) {
-                        m_mainThreadQueue->enqueue([name = item.name, error = result.error]() {
-                            ToastManager::instance().show(
-                                ToastType::Error,
-                                "Thumbnail Failed",
-                                name + ": " + (error.empty() ? "failed to load file" : error));
-                        });
-                        progressDlg->advance(item.name);
-                        continue;
-                    }
-
-                    auto mesh = result.mesh;
-                    auto modelId = item.id;
-                    auto modelName = item.name;
-
-                    m_mainThreadQueue->enqueue([this, mesh, modelId, modelName]() {
-                        bool ok = generateMaterialThumbnail(modelId, *mesh);
-                        if (m_uiManager->libraryPanel()) {
-                            m_uiManager->libraryPanel()->invalidateThumbnail(modelId);
-                        }
-                        if (!ok) {
-                            ToastManager::instance().show(ToastType::Error,
-                                                          "Thumbnail Failed",
-                                                          modelName + ": generation failed");
-                        }
-                    });
-                    progressDlg->advance(item.name);
-                }
-
-                m_mainThreadQueue->enqueue([this, progressDlg]() {
-                    progressDlg->finish();
-                    if (m_uiManager->libraryPanel()) {
-                        m_uiManager->libraryPanel()->refresh();
-                    }
-                    ToastManager::instance().show(ToastType::Success,
-                                                  "Thumbnails Updated",
-                                                  "Batch regeneration complete");
-                });
-            }).detach();
-        });
+        [this](const std::vector<int64_t>& modelIds) { regenerateThumbnails(modelIds); });
 
     m_uiManager->libraryPanel()->setOnAssignDefaultMaterial([this](int64_t modelId) {
         i64 defaultMatId = Config::instance().getDefaultMaterialId();
@@ -300,186 +212,21 @@ void Application::wireLibraryPanel() {
         m_materialManager->assignMaterialToModel(defaultMatId, modelId);
     });
 
-    // Tag Image dialog: request callback — spawn async Gemini classification
-    auto* tagDlg = m_uiManager->tagImageDialog();
-    tagDlg->setOnRequest([this, tagDlg](int64_t modelId) {
-        if (!m_descriptorService || !m_mainThreadQueue)
-            return;
-        std::string apiKey = Config::instance().getGeminiApiKey();
-        if (apiKey.empty()) {
-            log::warning("App", "Gemini API key not configured");
-            DescriptorResult err;
-            err.error = "Gemini API key not configured";
-            tagDlg->setResult(err);
-            return;
-        }
-        auto record = m_libraryManager->getModel(modelId);
-        if (!record || record->thumbnailPath.empty()) {
-            DescriptorResult err;
-            err.error = "Model has no thumbnail";
-            tagDlg->setResult(err);
-            return;
-        }
-
-        auto* svc = m_descriptorService.get();
-        auto* mtq = m_mainThreadQueue.get();
-        std::string thumbPath = record->thumbnailPath.string();
-
-        std::thread([svc, mtq, tagDlg, thumbPath, apiKey]() {
-            auto result = svc->describe(thumbPath, apiKey);
-            mtq->enqueue([tagDlg, result]() { tagDlg->setResult(result); });
-        }).detach();
-    });
-
-    // Tag Image dialog: save callback — persist edited results
-    tagDlg->setOnSave([this](int64_t modelId, const DescriptorResult& result) {
-        auto* libMgr = m_libraryManager.get();
-        libMgr->updateDescriptor(
-            modelId, result.title, result.description, result.hoverNarrative);
-        auto existing = libMgr->getModel(modelId);
-        if (existing) {
-            auto tags = existing->tags;
-            for (const auto& kw : result.keywords)
-                tags.push_back(kw);
-            for (const auto& assoc : result.associations)
-                tags.push_back(assoc);
-            libMgr->updateTags(modelId, tags);
-        }
-        if (!result.categories.empty())
-            libMgr->resolveAndAssignCategories(modelId, result.categories);
-        m_uiManager->libraryPanel()->refresh();
-        m_uiManager->libraryPanel()->invalidateThumbnail(modelId);
-        if (m_uiManager->propertiesPanel()) {
-            auto updated = libMgr->getModel(modelId);
-            if (updated)
-                m_uiManager->propertiesPanel()->setModelRecord(*updated);
-        }
-        ToastManager::instance().show(ToastType::Success, "Tagged", result.title);
-        log::infof("App",
-                   "Tagged model %lld as: %s",
-                   static_cast<long long>(modelId),
-                   result.title.c_str());
-    });
-
-    // "Tag Image" context menu action
-    m_uiManager->libraryPanel()->setOnTagImage([this,
-                                                tagDlg](const std::vector<int64_t>& modelIds) {
-        if (modelIds.empty()) {
-            return;
-        }
-
-        // Single selection: open interactive dialog
-        if (modelIds.size() == 1) {
-            auto record = m_libraryManager->getModel(modelIds[0]);
-            if (!record) {
-                return;
-            }
-            GLuint tex = m_uiManager->libraryPanel()->getThumbnailTextureForModel(modelIds[0]);
-            tagDlg->open(*record, tex);
-            return;
-        }
-
-        // Multi selection: fire-and-forget batch tagging
-        std::string apiKey = Config::instance().getGeminiApiKey();
-        if (apiKey.empty()) {
-            log::warning("App", "Gemini API key not configured");
-            return;
-        }
-
-        auto* svc = m_descriptorService.get();
-        auto* libMgr = m_libraryManager.get();
-        auto* mtq = m_mainThreadQueue.get();
-        auto* libPanel = m_uiManager->libraryPanel();
-        auto* propPanel = m_uiManager->propertiesPanel();
-        size_t count = modelIds.size();
-
-        for (int64_t modelId : modelIds) {
-            auto record = m_libraryManager->getModel(modelId);
-            if (!record || record->thumbnailPath.empty()) {
-                continue;
-            }
-
-            std::string thumbPath = record->thumbnailPath.string();
-            std::string modelName = record->name;
-
-            std::thread([svc,
-                         libMgr,
-                         mtq,
-                         libPanel,
-                         propPanel,
-                         modelId,
-                         modelName,
-                         thumbPath,
-                         apiKey,
-                         count]() {
-                auto result = svc->describe(thumbPath, apiKey);
-                mtq->enqueue(
-                    [libMgr, libPanel, propPanel, modelId, modelName, result, count]() {
-                        if (result.success) {
-                            libMgr->updateDescriptor(modelId,
-                                                     result.title,
-                                                     result.description,
-                                                     result.hoverNarrative);
-                            auto existing = libMgr->getModel(modelId);
-                            if (existing) {
-                                auto tags = existing->tags;
-                                for (const auto& kw : result.keywords) {
-                                    tags.push_back(kw);
-                                }
-                                for (const auto& assoc : result.associations) {
-                                    tags.push_back(assoc);
-                                }
-                                libMgr->updateTags(modelId, tags);
-                            }
-                            if (!result.categories.empty()) {
-                                libMgr->resolveAndAssignCategories(modelId, result.categories);
-                            }
-                            libPanel->refresh();
-                            libPanel->invalidateThumbnail(modelId);
-                            ToastManager::instance().show(ToastType::Success,
-                                                          "Tagged",
-                                                          result.title);
-                            log::infof("App",
-                                       "Tagged %s as: %s",
-                                       modelName.c_str(),
-                                       result.title.c_str());
-                        } else {
-                            log::warningf("App",
-                                          "Descriptor failed for %s: %s",
-                                          modelName.c_str(),
-                                          result.error.c_str());
-                        }
-                    });
-            }).detach();
-        }
-
-        ToastManager::instance().show(ToastType::Info,
-                                      "Tagging",
-                                      "Classifying " + std::to_string(count) + " models...");
-    });
+    wireTagDialog();
 }
 
 void Application::wireProjectPanel() {
-    if (!m_uiManager->projectPanel())
-        return;
-
-    auto hideStart = [this](bool show) {
-        m_uiManager->showStartPage() = show;
-    };
-    m_uiManager->projectPanel()->setOnModelSelected(
-        [this](int64_t modelId) { onModelSelected(modelId); });
-    m_uiManager->projectPanel()->setOpenProjectCallback(
-        [this, hideStart]() { m_fileIOManager->openProject(hideStart); });
-    m_uiManager->projectPanel()->setSaveProjectCallback(
-        [this]() { m_fileIOManager->saveProject(); });
-    m_uiManager->projectPanel()->setOnOpenRecentProject([this, hideStart](const Path& path) {
+    auto* pp = m_uiManager->projectPanel();
+    if (!pp) return;
+    auto hideStart = [this](bool show) { m_uiManager->showStartPage() = show; };
+    pp->setOnModelSelected([this](int64_t modelId) { onModelSelected(modelId); });
+    pp->setOpenProjectCallback([this, hideStart]() { m_fileIOManager->openProject(hideStart); });
+    pp->setSaveProjectCallback([this]() { m_fileIOManager->saveProject(); });
+    pp->setOnOpenRecentProject([this, hideStart](const Path& path) {
         m_fileIOManager->openRecentProject(path, hideStart);
     });
-    m_uiManager->projectPanel()->setExportProjectCallback(
-        [this]() { m_fileIOManager->exportProjectArchive(); });
-
-    // Cross-panel navigation from ProjectPanel
-    m_uiManager->projectPanel()->setOnGCodeSelected([this](i64 gcodeId) {
+    pp->setExportProjectCallback([this]() { m_fileIOManager->exportProjectArchive(); });
+    pp->setOnGCodeSelected([this](i64 gcodeId) {
         if (!m_gcodeRepo) return;
         auto rec = m_gcodeRepo->findById(gcodeId);
         if (rec && m_uiManager->gcodePanel()) {
@@ -488,37 +235,30 @@ void Application::wireProjectPanel() {
                 PathResolver::resolve(rec->filePath, PathCategory::GCode).string());
         }
     });
-    m_uiManager->projectPanel()->setOnMaterialSelected([this](i64 materialId) {
-        if (m_uiManager->materialsPanel()) {
-            m_uiManager->materialsPanel()->setOpen(true);
-            m_uiManager->materialsPanel()->selectMaterial(materialId);
-        }
+    pp->setOnMaterialSelected([this](i64 id) {
+        if (auto* p = m_uiManager->materialsPanel()) { p->setOpen(true); p->selectMaterial(id); }
     });
-    m_uiManager->projectPanel()->setOnCostSelected([this](i64 recordId) {
-        if (m_uiManager->costPanel()) {
-            m_uiManager->costPanel()->setOpen(true);
-            m_uiManager->costPanel()->selectRecord(recordId);
-        }
+    pp->setOnCostSelected([this](i64 id) {
+        if (auto* p = m_uiManager->costPanel()) { p->setOpen(true); p->selectRecord(id); }
     });
-    m_uiManager->projectPanel()->setOnCutPlanSelected([this](i64 planId) {
+    pp->setOnCutPlanSelected([this](i64 planId) {
         if (!m_cutPlanRepo || !m_cutListFile) return;
         auto rec = m_cutPlanRepo->findById(planId);
-        if (rec && m_uiManager->cutOptimizerPanel()) {
-            CutListFile::LoadResult lr;
-            lr.name = rec->name;
-            lr.algorithm = rec->algorithm;
-            lr.allowRotation = rec->allowRotation;
-            lr.kerf = rec->kerf;
-            lr.margin = rec->margin;
-            if (!rec->sheetConfigJson.empty())
-                lr.sheet = CutPlanRepository::jsonToSheet(rec->sheetConfigJson);
-            if (!rec->partsJson.empty())
-                lr.parts = CutPlanRepository::jsonToParts(rec->partsJson);
-            if (!rec->resultJson.empty())
-                lr.result = CutPlanRepository::jsonToCutPlan(rec->resultJson);
-            m_uiManager->cutOptimizerPanel()->setOpen(true);
-            m_uiManager->cutOptimizerPanel()->loadCutPlan(lr);
-        }
+        if (!rec || !m_uiManager->cutOptimizerPanel()) return;
+        CutListFile::LoadResult lr;
+        lr.name = rec->name;
+        lr.algorithm = rec->algorithm;
+        lr.allowRotation = rec->allowRotation;
+        lr.kerf = rec->kerf;
+        lr.margin = rec->margin;
+        if (!rec->sheetConfigJson.empty())
+            lr.sheet = CutPlanRepository::jsonToSheet(rec->sheetConfigJson);
+        if (!rec->partsJson.empty())
+            lr.parts = CutPlanRepository::jsonToParts(rec->partsJson);
+        if (!rec->resultJson.empty())
+            lr.result = CutPlanRepository::jsonToCutPlan(rec->resultJson);
+        m_uiManager->cutOptimizerPanel()->setOpen(true);
+        m_uiManager->cutOptimizerPanel()->loadCutPlan(lr);
     });
 }
 
@@ -618,7 +358,204 @@ void Application::wireMenuActions() {
     m_uiManager->setOnQuit([this]() { quit(); });
     m_uiManager->setOnSpawnSettings([this]() { m_configManager->spawnSettingsApp(); });
 
-    // Wire Tools menu
+    wireToolsMenu();
+
+    // Wire tagger shutdown dialog
+    if (m_uiManager->taggerShutdownDialog()) {
+        m_uiManager->taggerShutdownDialog()->setOnQuit([this]() { m_running = false; });
+    }
+}
+
+void Application::regenerateThumbnails(const std::vector<int64_t>& modelIds) {
+    if (!m_libraryManager || modelIds.empty())
+        return;
+    if (modelIds.size() == 1)
+        regenerateSingleThumbnail(modelIds[0]);
+    else
+        regenerateBatchThumbnails(modelIds);
+}
+
+void Application::regenerateSingleThumbnail(int64_t modelId) {
+    auto record = m_libraryManager->getModel(modelId);
+    if (!record) {
+        ToastManager::instance().show(
+            ToastType::Error, "Thumbnail Failed", "Model not found in database");
+        return;
+    }
+    Path filePath = PathResolver::resolve(record->filePath, PathCategory::Support);
+    std::string modelName = record->name;
+    ToastManager::instance().show(ToastType::Info, "Regenerating Thumbnail", modelName);
+    std::thread([this, filePath, modelId, modelName]() {
+        auto result = LoaderFactory::load(filePath);
+        if (!result) {
+            m_mainThreadQueue->enqueue([modelName, error = result.error]() {
+                ToastManager::instance().show(
+                    ToastType::Error, "Thumbnail Failed",
+                    modelName + ": " + (error.empty() ? "failed to load file" : error));
+            });
+            return;
+        }
+        auto mesh = result.mesh;
+        m_mainThreadQueue->enqueue([this, mesh, modelId, modelName]() {
+            bool ok = generateMaterialThumbnail(modelId, *mesh);
+            if (m_uiManager->libraryPanel()) {
+                m_uiManager->libraryPanel()->invalidateThumbnail(modelId);
+                m_uiManager->libraryPanel()->refresh();
+            }
+            ToastManager::instance().show(
+                ok ? ToastType::Success : ToastType::Error,
+                ok ? "Thumbnail Updated" : "Thumbnail Failed",
+                ok ? modelName : modelName + ": generation failed");
+        });
+    }).detach();
+}
+
+void Application::regenerateBatchThumbnails(const std::vector<int64_t>& modelIds) {
+    auto* progressDlg = m_uiManager->progressDialog();
+    if (!progressDlg) return;
+    struct BatchItem { int64_t id; Path filePath; std::string name; };
+    auto items = std::make_shared<std::vector<BatchItem>>();
+    items->reserve(modelIds.size());
+    for (int64_t id : modelIds) {
+        auto record = m_libraryManager->getModel(id);
+        if (record)
+            items->push_back({id, PathResolver::resolve(record->filePath, PathCategory::Support),
+                              record->name});
+    }
+    if (items->empty())
+        return;
+    progressDlg->start("Regenerating Thumbnails", static_cast<int>(items->size()));
+    std::thread([this, items, progressDlg]() {
+        for (const auto& item : *items) {
+            if (progressDlg->isCancelled()) break;
+            auto result = LoaderFactory::load(item.filePath);
+            if (!result) {
+                m_mainThreadQueue->enqueue([name = item.name, error = result.error]() {
+                    ToastManager::instance().show(
+                        ToastType::Error, "Thumbnail Failed",
+                        name + ": " + (error.empty() ? "failed to load file" : error));
+                });
+                progressDlg->advance(item.name);
+                continue;
+            }
+            auto mesh = result.mesh;
+            auto modelId = item.id;
+            auto modelName = item.name;
+            m_mainThreadQueue->enqueue([this, mesh, modelId, modelName]() {
+                bool ok = generateMaterialThumbnail(modelId, *mesh);
+                if (m_uiManager->libraryPanel())
+                    m_uiManager->libraryPanel()->invalidateThumbnail(modelId);
+                if (!ok)
+                    ToastManager::instance().show(
+                        ToastType::Error, "Thumbnail Failed", modelName + ": generation failed");
+            });
+            progressDlg->advance(item.name);
+        }
+        m_mainThreadQueue->enqueue([this, progressDlg]() {
+            progressDlg->finish();
+            if (m_uiManager->libraryPanel())
+                m_uiManager->libraryPanel()->refresh();
+            ToastManager::instance().show(
+                ToastType::Success, "Thumbnails Updated", "Batch regeneration complete");
+        });
+    }).detach();
+}
+
+void Application::wireTagDialog() {
+    auto* tagDlg = m_uiManager->tagImageDialog();
+    if (!tagDlg) return;
+
+    tagDlg->setOnRequest([this, tagDlg](int64_t modelId) {
+        if (!m_descriptorService || !m_mainThreadQueue) return;
+        std::string apiKey = Config::instance().getGeminiApiKey();
+        if (apiKey.empty()) {
+            log::warning("App", "Gemini API key not configured");
+            DescriptorResult err;
+            err.error = "Gemini API key not configured";
+            tagDlg->setResult(err);
+            return;
+        }
+        auto record = m_libraryManager->getModel(modelId);
+        if (!record || record->thumbnailPath.empty()) {
+            DescriptorResult err;
+            err.error = "Model has no thumbnail";
+            tagDlg->setResult(err);
+            return;
+        }
+        auto* svc = m_descriptorService.get();
+        auto* mtq = m_mainThreadQueue.get();
+        std::string thumbPath = record->thumbnailPath.string();
+        std::thread([svc, mtq, tagDlg, thumbPath, apiKey]() {
+            auto result = svc->describe(thumbPath, apiKey);
+            mtq->enqueue([tagDlg, result]() { tagDlg->setResult(result); });
+        }).detach();
+    });
+    tagDlg->setOnSave([this](int64_t modelId, const DescriptorResult& result) {
+        persistTagResults(m_libraryManager.get(), modelId, result);
+        m_uiManager->libraryPanel()->refresh();
+        m_uiManager->libraryPanel()->invalidateThumbnail(modelId);
+        if (m_uiManager->propertiesPanel()) {
+            auto updated = m_libraryManager->getModel(modelId);
+            if (updated)
+                m_uiManager->propertiesPanel()->setModelRecord(*updated);
+        }
+        ToastManager::instance().show(ToastType::Success, "Tagged", result.title);
+        log::infof("App", "Tagged model %lld as: %s",
+                   static_cast<long long>(modelId), result.title.c_str());
+    });
+    m_uiManager->libraryPanel()->setOnTagImage(
+        [this](const std::vector<int64_t>& modelIds) { handleTagImage(modelIds); });
+}
+
+void Application::handleTagImage(const std::vector<int64_t>& modelIds) {
+    if (modelIds.empty()) return;
+    auto* tagDlg = m_uiManager->tagImageDialog();
+    if (!tagDlg) return;
+
+    if (modelIds.size() == 1) {
+        auto record = m_libraryManager->getModel(modelIds[0]);
+        if (!record) return;
+        GLuint tex = m_uiManager->libraryPanel()->getThumbnailTextureForModel(modelIds[0]);
+        tagDlg->open(*record, tex);
+        return;
+    }
+    std::string apiKey = Config::instance().getGeminiApiKey();
+    if (apiKey.empty()) {
+        log::warning("App", "Gemini API key not configured");
+        return;
+    }
+    auto* svc = m_descriptorService.get();
+    auto* libMgr = m_libraryManager.get();
+    auto* mtq = m_mainThreadQueue.get();
+    auto* libPanel = m_uiManager->libraryPanel();
+    size_t count = modelIds.size();
+    for (int64_t modelId : modelIds) {
+        auto record = m_libraryManager->getModel(modelId);
+        if (!record || record->thumbnailPath.empty()) continue;
+        std::string thumbPath = record->thumbnailPath.string();
+        std::string modelName = record->name;
+        std::thread([svc, libMgr, mtq, libPanel, modelId, modelName, thumbPath, apiKey]() {
+            auto result = svc->describe(thumbPath, apiKey);
+            mtq->enqueue([libMgr, libPanel, modelId, modelName, result]() {
+                if (result.success) {
+                    persistTagResults(libMgr, modelId, result);
+                    libPanel->refresh();
+                    libPanel->invalidateThumbnail(modelId);
+                    ToastManager::instance().show(ToastType::Success, "Tagged", result.title);
+                    log::infof("App", "Tagged %s as: %s",
+                               modelName.c_str(), result.title.c_str());
+                } else {
+                    log::warningf("App", "Descriptor failed for %s: %s",
+                                  modelName.c_str(), result.error.c_str());
+                }
+            });
+        }).detach();
+    }
+    ToastManager::instance().show(
+        ToastType::Info, "Tagging", "Classifying " + std::to_string(count) + " models...");
+}
+
+void Application::wireToolsMenu() {
     m_uiManager->setOnLibraryMaintenance([this]() {
         if (m_uiManager->maintenanceDialog())
             m_uiManager->maintenanceDialog()->open();
@@ -630,109 +567,111 @@ void Application::wireMenuActions() {
                 m_uiManager->libraryPanel()->refresh();
             int total = report.categoriesSplit + report.categoriesRemoved + report.tagsDeduped +
                         report.thumbnailsCleared + report.ftsRebuilt;
-            if (total > 0) {
-                ToastManager::instance().show(ToastType::Success,
-                                              "Maintenance Complete",
-                                              std::to_string(total) + " issue(s) fixed");
-            } else {
-                ToastManager::instance().show(ToastType::Info,
-                                              "Maintenance Complete",
-                                              "No issues found");
-            }
+            ToastManager::instance().show(
+                total > 0 ? ToastType::Success : ToastType::Info,
+                "Maintenance Complete",
+                total > 0 ? std::to_string(total) + " issue(s) fixed" : "No issues found");
             return report;
         });
     }
+    m_uiManager->setOnRelocateWorkspace([this]() { handleRelocateWorkspace(); });
+    m_uiManager->setOnLocateMissingFiles([this]() { handleLocateMissingFiles(); });
+}
 
-    // Wire workspace relocator
-    m_uiManager->setOnRelocateWorkspace([this]() {
-        Path currentRoot = Config::instance().getEffectiveWorkspaceRoot();
+void Application::handleRelocateWorkspace() {
+    Path currentRoot = Config::instance().getEffectiveWorkspaceRoot();
+    m_uiManager->fileDialog()->showFolder("Select New Workspace Location",
+        [this, currentRoot](const std::string& dest) {
+            if (dest.empty()) return;
+            Path destRoot(dest);
+            std::error_code ec;
+            if (fs::equivalent(currentRoot, destRoot, ec)) {
+                ToastManager::instance().show(
+                    ToastType::Info, "Relocate Workspace", "Already at that location");
+                return;
+            }
+            int fileCount = WorkspaceRelocator::countFiles(currentRoot);
+            if (fileCount == 0) {
+                auto& config = Config::instance();
+                config.setWorkspaceRoot(destRoot);
+                clearDirOverrides(config);
+                config.save();
+                ToastManager::instance().show(ToastType::Success, "Workspace Relocated",
+                                              "Workspace root updated (no files to move)");
+                return;
+            }
+            auto* progress = m_uiManager->progressDialog();
+            progress->start("Relocating Workspace...", fileCount);
+            WorkspaceRelocator::Options opts{currentRoot, destRoot, true};
+            std::thread([this, opts, progress]() {
+                auto result = WorkspaceRelocator::relocate(
+                    opts,
+                    [progress](const std::string& file) { progress->advance(file); },
+                    [progress]() { return progress->isCancelled(); });
+                m_mainThreadQueue->enqueue([this, result, opts]() {
+                    m_uiManager->progressDialog()->finish();
+                    if (result.success) {
+                        auto& config = Config::instance();
+                        config.setWorkspaceRoot(opts.destRoot);
+                        clearDirOverrides(config);
+                        config.save();
+                        ToastManager::instance().show(ToastType::Success, "Workspace Relocated",
+                                                      formatRelocateMsg(result));
+                    } else {
+                        ToastManager::instance().show(
+                            ToastType::Error, "Relocation Failed", result.error);
+                    }
+                });
+            }).detach();
+        });
+}
 
-        auto overridden = WorkspaceRelocator::getOverriddenCategories();
-
-        m_uiManager->fileDialog()->showFolder(
-            "Select New Workspace Location", [this, currentRoot, overridden](const std::string& dest) {
-                if (dest.empty())
-                    return;
-
-                Path destRoot(dest);
-
-                std::error_code ec;
-                if (fs::equivalent(currentRoot, destRoot, ec)) {
-                    ToastManager::instance().show(
-                        ToastType::Info, "Relocate Workspace", "Already at that location");
-                    return;
-                }
-
-                int fileCount = WorkspaceRelocator::countFiles(currentRoot);
-                if (fileCount == 0) {
-                    auto& config = Config::instance();
-                    config.setWorkspaceRoot(destRoot);
-                    config.setModelsDir({});
-                    config.setProjectsDir({});
-                    config.setMaterialsDir({});
-                    config.setGCodeDir({});
-                    config.setSupportDir({});
-                    config.save();
-                    ToastManager::instance().show(
-                        ToastType::Success,
-                        "Workspace Relocated",
-                        "Workspace root updated (no files to move)");
-                    return;
-                }
-
-                auto* progress = m_uiManager->progressDialog();
-                progress->start("Relocating Workspace...", fileCount);
-
-                WorkspaceRelocator::Options opts;
-                opts.sourceRoot = currentRoot;
-                opts.destRoot = destRoot;
-                opts.moveFiles = true;
-
-                std::thread([this, opts, progress, overridden]() {
-                    auto result = WorkspaceRelocator::relocate(
-                        opts,
-                        [progress](const std::string& file) { progress->advance(file); },
-                        [progress]() { return progress->isCancelled(); });
-
-                    m_mainThreadQueue->enqueue([this, result, opts]() {
-                        m_uiManager->progressDialog()->finish();
-
-                        if (result.success) {
-                            auto& config = Config::instance();
-                            config.setWorkspaceRoot(opts.destRoot);
-                            config.setModelsDir({});
-                            config.setProjectsDir({});
-                            config.setMaterialsDir({});
-                            config.setGCodeDir({});
-                            config.setSupportDir({});
-                            config.save();
-
-                            std::string msg = std::to_string(result.filesCopied) + " file(s) moved";
-                            if (result.filesSkipped > 0)
-                                msg += ", " + std::to_string(result.filesSkipped) + " skipped";
-                            if (!result.skippedCategories.empty()) {
-                                msg += " (";
-                                for (size_t i = 0; i < result.skippedCategories.size(); ++i) {
-                                    if (i > 0) msg += ", ";
-                                    msg += result.skippedCategories[i];
-                                }
-                                msg += " overridden, not moved)";
-                            }
-                            ToastManager::instance().show(
-                                ToastType::Success, "Workspace Relocated", msg);
-                        } else {
-                            ToastManager::instance().show(
-                                ToastType::Error, "Relocation Failed", result.error);
-                        }
-                    });
-                }).detach();
-            });
-    });
-
-    // Wire tagger shutdown dialog
-    if (m_uiManager->taggerShutdownDialog()) {
-        m_uiManager->taggerShutdownDialog()->setOnQuit([this]() { m_running = false; });
+void Application::handleLocateMissingFiles() {
+    PathRecovery recovery(*m_modelRepo, *m_gcodeRepo);
+    auto missing = recovery.findMissing();
+    if (missing.empty()) {
+        ToastManager::instance().show(
+            ToastType::Info, "Missing Files", "All files accounted for");
+        return;
     }
+    auto missingPtr = std::make_shared<std::vector<MissingFile>>(std::move(missing));
+    ToastManager::instance().show(
+        ToastType::Warning, "Missing Files",
+        std::to_string(missingPtr->size()) + " file(s) not found — locate one to recover");
+    m_uiManager->fileDialog()->showOpen(
+        "Locate a Missing File", {{"All Files", "*"}},
+        [this, missingPtr](const std::string& selected) {
+            if (selected.empty()) return;
+            Path selectedPath(selected);
+            std::string selectedName = selectedPath.filename().string();
+            const MissingFile* match = nullptr;
+            for (const auto& mf : *missingPtr) {
+                if (mf.resolvedPath.filename().string() == selectedName) {
+                    match = &mf;
+                    break;
+                }
+            }
+            if (!match) {
+                ToastManager::instance().show(
+                    ToastType::Error, "Missing Files", "No missing file matches that name");
+                return;
+            }
+            PathRecovery pathRecovery(*m_modelRepo, *m_gcodeRepo);
+            auto recovered =
+                pathRecovery.recoverFromRelocated(*match, selectedPath, *missingPtr);
+            if (recovered.empty()) {
+                ToastManager::instance().show(
+                    ToastType::Warning, "Missing Files", "Could not recover any files");
+                return;
+            }
+            int updated = pathRecovery.applyRecoveries(recovered);
+            ToastManager::instance().show(
+                ToastType::Success, "Files Recovered",
+                std::to_string(updated) + " of " +
+                    std::to_string(missingPtr->size()) + " file(s) recovered");
+            if (m_uiManager->libraryPanel())
+                m_uiManager->libraryPanel()->refresh();
+        });
 }
 
 } // namespace dw

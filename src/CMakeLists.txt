@@ -13,6 +13,8 @@ set(DW_SOURCES
 
     # Managers (extracted from Application)
     managers/ui_manager.cpp
+    managers/ui_manager_menus.cpp
+    managers/ui_manager_layout.cpp
     managers/file_io_manager.cpp
     managers/config_manager.cpp
 
@@ -34,6 +36,7 @@ set(DW_SOURCES
     # Core paths
     core/paths/app_paths.cpp
     core/paths/path_resolver.cpp
+    core/paths/path_recovery.cpp
 
     # Core config
     core/config/config.cpp
@@ -87,6 +90,7 @@ set(DW_SOURCES
     core/import/import_log.cpp
     core/import/background_tagger.cpp
     core/import/file_handler.cpp
+    core/import/file_validator.cpp
     core/import/filesystem_detector.cpp
 
     # Library

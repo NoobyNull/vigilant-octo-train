@@ -13,6 +13,7 @@
 #include "../storage/storage_manager.h"
 #include "../utils/file_utils.h"
 #include "../utils/log.h"
+#include "file_validator.h"
 #include "import_log.h"
 
 namespace dw {
@@ -210,6 +211,18 @@ bool ImportQueue::stageReadFile(ImportTask& task) {
         return false;
     }
     task.fileData = std::move(*fileData);
+    return true;
+}
+
+bool ImportQueue::stageValidate(ImportTask& task) {
+    task.stage = ImportStage::Validating;
+    m_progress.currentStage.store(ImportStage::Validating);
+
+    auto result = file_validator::validate(task.fileData, task.extension);
+    if (!result.valid) {
+        failTask(task, "Validation failed: " + result.reason);
+        return false;
+    }
     return true;
 }
 
@@ -554,14 +567,18 @@ void ImportQueue::processTask(ImportTask task) {
     if (!stageReadFile(task))
         return;
 
-    // Stage 2: Compute content hash
+    // Stage 2: Validate file content (magic bytes, structure, size)
+    if (!stageValidate(task))
+        return;
+
+    // Stage 3: Compute content hash
     stageComputeHash(task);
 
-    // Stage 3: Check for duplicates
+    // Stage 4: Check for duplicates
     if (!stageCheckDuplicate(task, ctx))
         return;
 
-    // Stage 4: Parse file contents (mesh or G-code)
+    // Stage 5: Parse file contents (mesh or G-code)
     if (!stageParse(task))
         return;
 

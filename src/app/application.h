@@ -103,8 +103,16 @@ class Application {
     void wirePropertiesPanel();  // Properties: mesh, color, grain, material
     void wireMaterialsPanel();   // Materials: assignment, AI generation
     void wireMenuActions();      // File/Tools menu, maintenance, relocator, quit
+    void wireTagDialog();        // Tag Image dialog: request, save, batch tagging
+    void wireToolsMenu();        // Maintenance, relocator, missing files
 
     // Callbacks (business logic stays in Application)
+    void regenerateThumbnails(const std::vector<int64_t>& modelIds);
+    void regenerateSingleThumbnail(int64_t modelId);
+    void regenerateBatchThumbnails(const std::vector<int64_t>& modelIds);
+    void handleTagImage(const std::vector<int64_t>& modelIds);
+    void handleRelocateWorkspace();
+    void handleLocateMissingFiles();
     void onModelSelected(int64_t modelId);
     void assignMaterialToCurrentModel(int64_t materialId);
     void loadMaterialTextureForModel(int64_t modelId);

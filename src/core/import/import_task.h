@@ -29,6 +29,7 @@ inline ImportType importTypeFromExtension(const std::string& ext) {
 enum class ImportStage {
     Pending,
     Reading,
+    Validating,
     Hashing,
     CheckingDuplicate,
     Parsing,
@@ -134,6 +135,8 @@ inline const char* importStageName(ImportStage stage) {
         return "Queued";
     case ImportStage::Reading:
         return "Reading file";
+    case ImportStage::Validating:
+        return "Validating";
     case ImportStage::Hashing:
         return "Computing hash";
     case ImportStage::CheckingDuplicate:
