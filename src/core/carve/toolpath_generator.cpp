@@ -191,7 +191,10 @@ void ToolpathGenerator::generateScanLines(Toolpath& path,
 {
     const Vec3 bmin = heightmap.boundsMin();
     const Vec3 bmax = heightmap.boundsMax();
-    const f32 res = heightmap.resolution();
+    const f32 hmRes = heightmap.resolution();
+    const f32 res = (config.scanResolutionMm > 0.0f)
+                        ? config.scanResolutionMm
+                        : hmRes;
 
     // Axis mapping:
     //   primaryAxis==true  -> scan along X, step along Y
@@ -205,6 +208,7 @@ void ToolpathGenerator::generateScanLines(Toolpath& path,
     if (stepExtent <= 0.0f || stepoverMm <= 0.0f) return;
 
     const int numLines = std::max(1, static_cast<int>(stepExtent / stepoverMm) + 1);
+    path.scanLineCount += numLines;
 
     for (int lineIdx = 0; lineIdx < numLines; ++lineIdx) {
         const f32 stepPos = stepMin + static_cast<f32>(lineIdx) * stepoverMm;

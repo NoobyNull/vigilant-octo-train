@@ -105,6 +105,7 @@ void Application::wireCncPanels() {
             dcarvep->setOpenToolBrowserCallback([this]() {
                 m_uiManager->showToolBrowser() = true;
             });
+            dcarvep->setCutOptimizerPanel(m_uiManager->cutOptimizerPanel());
         }
 
         // Set CncController on CNC panels

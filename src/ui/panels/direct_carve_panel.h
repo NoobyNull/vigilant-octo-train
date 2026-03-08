@@ -48,6 +48,7 @@ class DirectCarvePanel : public Panel {
     void setMaterialManager(MaterialManager* mgr);
     void setProjectManager(ProjectManager* pm);
     void setOpenToolBrowserCallback(std::function<void()> cb);
+    void setCutOptimizerPanel(class CutOptimizerPanel* cop);
 
     // Callbacks
     void onConnectionChanged(bool connected);
@@ -168,6 +169,8 @@ class DirectCarvePanel : public Panel {
 
     // Preview state
     bool m_toolpathGenerated = false;
+    int m_settingsVersion = 0;       // Bumped when toolpath-affecting settings change
+    int m_generatedAtVersion = -1;   // Version when toolpath was last generated
     f32 m_previewZoom = 1.0f;
     bool m_showFinishing = true;
     bool m_showClearing = true;
@@ -201,6 +204,7 @@ class DirectCarvePanel : public Panel {
 
     // Project directory support
     ProjectManager* m_projectManager = nullptr;
+    CutOptimizerPanel* m_cutOptimizer = nullptr;
     std::function<void()> m_openToolBrowser;
     Path m_modelSourcePath;
 

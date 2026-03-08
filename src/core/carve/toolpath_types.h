@@ -38,6 +38,7 @@ struct ToolpathConfig {
     f32 feedRateMmMin = 1000.0f;
     f32 plungeRateMmMin = 300.0f;
     f32 leadInMm = 2.0f;  // Ramp distance for clearing lead-in/out
+    f32 scanResolutionMm = 0.0f;  // Point spacing along scan lines (0 = heightmap resolution)
 };
 
 // Single toolpath move
@@ -51,7 +52,8 @@ struct Toolpath {
     std::vector<ToolpathPoint> points;
     f32 totalDistanceMm = 0.0f;
     f32 estimatedTimeSec = 0.0f;
-    int lineCount = 0;  // Number of G-code lines this will produce
+    int lineCount = 0;       // Number of G-code lines this will produce
+    int scanLineCount = 0;   // Number of actual scan passes
     std::vector<std::string> warnings;  // Travel limit violations
 };
 

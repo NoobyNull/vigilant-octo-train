@@ -184,6 +184,11 @@ void CutOptimizerPanel::loadCutPlan(const CutListFile::LoadResult& lr) {
                       : optimizer::Algorithm::Guillotine;
 }
 
+void CutOptimizerPanel::addPart(const optimizer::Part& part) {
+    m_parts.push_back(part);
+    m_hasResults = false;  // Invalidate existing optimization
+}
+
 void CutOptimizerPanel::clear() {
     m_parts.clear();
     m_result = optimizer::CutPlan{};

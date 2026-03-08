@@ -772,3 +772,89 @@ TEST(TravelLimits, ExceedsBounds)
     EXPECT_TRUE(hasX) << "Should warn about X axis";
     EXPECT_TRUE(hasY) << "Should warn about Y axis";
 }
+
+// ---------------------------------------------------------------------------
+// ScanResolution: Custom resolution reduces point count
+// ---------------------------------------------------------------------------
+
+TEST(ToolpathGen, ScanResolutionReducesPoints)
+{
+    // 10mm x 10mm at 0.5mm heightmap resolution
+    Heightmap hm = makeFlatHeightmap(-1.0f, 10.0f, 10.0f, 0.5f);
+
+    ToolpathConfig cfgDefault;
+    cfgDefault.axis = ScanAxis::XOnly;
+    cfgDefault.direction = MillDirection::Climb;
+    cfgDefault.customStepoverPct = 50.0f;
+    // scanResolutionMm = 0 → uses heightmap resolution (0.5mm)
+
+    ToolpathConfig cfgCoarse = cfgDefault;
+    cfgCoarse.scanResolutionMm = 2.0f;  // 4x coarser
+
+    ToolpathGenerator gen;
+    Toolpath pathDefault = gen.generateFinishing(hm, cfgDefault, 4.0f, defaultTool());
+    Toolpath pathCoarse = gen.generateFinishing(hm, cfgCoarse, 4.0f, defaultTool());
+
+    ASSERT_FALSE(pathDefault.points.empty());
+    ASSERT_FALSE(pathCoarse.points.empty());
+
+    // Coarser resolution should produce significantly fewer points
+    EXPECT_LT(pathCoarse.points.size(), pathDefault.points.size());
+
+    // Scan line count should be the same (resolution doesn't affect stepover)
+    EXPECT_EQ(pathDefault.scanLineCount, pathCoarse.scanLineCount);
+
+    // Both should still cover the same Z values (flat surface)
+    for (const auto& pt : pathCoarse.points) {
+        if (!pt.rapid) {
+            EXPECT_NEAR(pt.position.z, -1.0f, 0.15f);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ScanLineCount: Tracks actual scan passes
+// ---------------------------------------------------------------------------
+
+TEST(ToolpathGen, ScanLineCountTracked)
+{
+    Heightmap hm = makeFlatHeightmap(-1.0f, 10.0f, 10.0f, 1.0f);
+
+    ToolpathConfig cfg;
+    cfg.axis = ScanAxis::XOnly;
+    cfg.direction = MillDirection::Climb;
+    cfg.customStepoverPct = 50.0f;  // 50% of 4mm = 2mm stepover
+
+    ToolpathGenerator gen;
+    Toolpath path = gen.generateFinishing(hm, cfg, 4.0f, defaultTool());
+
+    // 10mm extent / 2mm stepover + 1 = 6 scan lines
+    EXPECT_EQ(path.scanLineCount, 6);
+
+    // G-code line count should be much larger (points per line × lines)
+    EXPECT_GT(path.lineCount, path.scanLineCount);
+}
+
+// ---------------------------------------------------------------------------
+// ScanLineCount: XThenY doubles scan passes
+// ---------------------------------------------------------------------------
+
+TEST(ToolpathGen, ScanLineCountXThenY)
+{
+    Heightmap hm = makeFlatHeightmap(-1.0f, 10.0f, 10.0f, 1.0f);
+
+    ToolpathConfig cfgX;
+    cfgX.axis = ScanAxis::XOnly;
+    cfgX.direction = MillDirection::Climb;
+    cfgX.customStepoverPct = 50.0f;
+
+    ToolpathConfig cfgXY = cfgX;
+    cfgXY.axis = ScanAxis::XThenY;
+
+    ToolpathGenerator gen;
+    Toolpath xOnly = gen.generateFinishing(hm, cfgX, 4.0f, defaultTool());
+    Toolpath xThenY = gen.generateFinishing(hm, cfgXY, 4.0f, defaultTool());
+
+    // XThenY should have twice the scan lines (symmetric heightmap)
+    EXPECT_EQ(xThenY.scanLineCount, xOnly.scanLineCount * 2);
+}
