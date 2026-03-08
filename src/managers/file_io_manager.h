@@ -32,7 +32,6 @@ class ImportOptionsDialog;
 class ProjectExportManager;
 class ProgressDialog;
 class MainThreadQueue;
-class GeminiDescriptorService;
 
 class FileIOManager {
   public:
@@ -77,7 +76,6 @@ class FileIOManager {
     // Dependency injection
     void setProgressDialog(ProgressDialog* dialog) { m_progressDialog = dialog; }
     void setMainThreadQueue(MainThreadQueue* queue) { m_mainThreadQueue = queue; }
-    void setDescriptorService(GeminiDescriptorService* svc) { m_descriptorService = svc; }
 
   private:
     // Recursive directory scanning helper
@@ -107,7 +105,6 @@ class FileIOManager {
     ProjectExportManager* m_projectExportManager = nullptr;
     ProgressDialog* m_progressDialog = nullptr;
     MainThreadQueue* m_mainThreadQueue = nullptr;
-    GeminiDescriptorService* m_descriptorService = nullptr;
 
   public:
     void setImportOptionsDialog(ImportOptionsDialog* dialog) { m_importOptionsDialog = dialog; }

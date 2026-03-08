@@ -14,6 +14,10 @@ enum class Level { Debug, Info, Warning, Error };
 void setLevel(Level level);
 Level getLevel();
 
+// Enable/disable console (stderr) output (default: disabled)
+void setConsoleOutput(bool enabled);
+bool getConsoleOutput();
+
 // Core logging functions
 void debug(std::string_view module, std::string_view message);
 void info(std::string_view module, std::string_view message);

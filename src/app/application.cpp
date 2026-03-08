@@ -142,7 +142,7 @@ bool Application::init() {
         std::fprintf(stderr, "gladLoadGL failed\n");
         return false;
     }
-    std::printf("OpenGL %s\n", glGetString(GL_VERSION));
+    log::infof("Application", "OpenGL %s", glGetString(GL_VERSION));
 
     // Setup ImGui
     IMGUI_CHECKVERSION();
@@ -317,7 +317,6 @@ bool Application::init() {
                                                       m_projectExportManager.get());
     m_fileIOManager->setProgressDialog(m_uiManager->progressDialog());
     m_fileIOManager->setMainThreadQueue(m_mainThreadQueue.get());
-    m_fileIOManager->setDescriptorService(m_descriptorService.get());
 
     m_fileIOManager->setThumbnailCallback(
         [this](int64_t modelId, Mesh& mesh) { return generateMaterialThumbnail(modelId, mesh); });

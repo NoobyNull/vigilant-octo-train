@@ -123,20 +123,16 @@ void ImportOptionsDialog::render() {
             }
         }
 
-        // AI tagging checkbox (only when managing files and API key is set)
-        if (m_selectedMode != static_cast<int>(FileHandlingMode::LeaveInPlace)) {
-            ImGui::Spacing();
-            bool hasApiKey = !Config::instance().getGeminiApiKey().empty();
-            if (!hasApiKey)
-                ImGui::BeginDisabled();
-            ImGui::Checkbox("Queue for AI tagging after import", &m_queueForTagging);
-            if (!hasApiKey) {
-                ImGui::EndDisabled();
-                ImGui::SameLine();
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
-                ImGui::Text("(no API key)");
-                ImGui::PopStyleColor();
-            }
+        // AI tagging checkbox
+        ImGui::Spacing();
+        bool hasApiKey = !Config::instance().getGeminiApiKey().empty();
+        if (!hasApiKey)
+            ImGui::BeginDisabled();
+        ImGui::Checkbox("Tag with AI after import", &m_queueForTagging);
+        if (!hasApiKey) {
+            ImGui::EndDisabled();
+            ImGui::SameLine();
+            ImGui::TextDisabled("(set API key in Settings)");
         }
 
         ImGui::Spacing();

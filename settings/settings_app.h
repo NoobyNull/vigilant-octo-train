@@ -90,8 +90,11 @@ class SettingsApp {
     // API keys
     char m_geminiApiKey[256]{};
 
-    static constexpr int WINDOW_WIDTH = 520;
-    static constexpr int WINDOW_HEIGHT = 480;
+    // Auto-sizing: render a few frames to let ImGui measure, then resize SDL window
+    int m_framesToAutoSize = 3;
+
+    static constexpr int INITIAL_WIDTH = 520;
+    static constexpr int INITIAL_HEIGHT = 480;
 };
 
 } // namespace dw

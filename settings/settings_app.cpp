@@ -6,6 +6,7 @@
 #include <SDL.h>
 #include <glad/gl.h>
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_sdl2.h>
 
@@ -107,8 +108,8 @@ bool SettingsApp::init() {
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
     m_window = SDL_CreateWindow(
-        "Digital Workshop - Settings", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH,
-        WINDOW_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+        "Digital Workshop - Settings", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, INITIAL_WIDTH,
+        INITIAL_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI);
 
     if (!m_window) {
         std::fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
@@ -256,6 +257,27 @@ void SettingsApp::render() {
     ImGui::End();
 
     ImGui::Render();
+
+    // Auto-size: after a few frames let ImGui settle, then resize SDL window to fit content
+    if (m_framesToAutoSize > 0) {
+        --m_framesToAutoSize;
+        if (m_framesToAutoSize == 0) {
+            ImGuiWindow* imWin = ImGui::FindWindowByName("##Settings");
+            if (imWin) {
+                // ContentSize reflects the actual laid-out content dimensions
+                int newW = static_cast<int>(imWin->ContentSize.x +
+                                            ImGui::GetStyle().WindowPadding.x * 2.0f);
+                int newH = static_cast<int>(imWin->ContentSize.y +
+                                            ImGui::GetStyle().WindowPadding.y * 2.0f);
+                // Clamp to reasonable bounds
+                if (newW < INITIAL_WIDTH) newW = INITIAL_WIDTH;
+                if (newH < 200) newH = 200;
+                SDL_SetWindowSize(m_window, newW, newH);
+                SDL_SetWindowPosition(m_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+            }
+        }
+    }
+
     int displayW = 0;
     int displayH = 0;
     SDL_GL_GetDrawableSize(m_window, &displayW, &displayH);
@@ -340,6 +362,7 @@ void SettingsApp::renderGeneralTab() {
     ImGui::Separator();
     ImGui::Spacing();
 
+#ifdef __linux__
     ImGui::Text("Windows");
     ImGui::Indent();
     if (ImGui::Checkbox("Enable Floating Windows", &m_enableFloatingWindows))
@@ -351,6 +374,7 @@ void SettingsApp::renderGeneralTab() {
     }
     ImGui::TextDisabled("Requires restart. Uses X11/XWayland on Wayland.");
     ImGui::Unindent();
+#endif
 }
 
 void SettingsApp::renderAppearanceTab() {

@@ -1,5 +1,8 @@
 #include "start_page.h"
 
+#include <cstring>
+#include <filesystem>
+
 #include <imgui.h>
 
 #include "../../core/config/config.h"
@@ -14,40 +17,56 @@ void StartPage::render() {
     if (!m_open)
         return;
 
-    ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse;
+    // Load workspace root from config on first render
+    if (!m_workspaceRootLoaded) {
+        auto root = Config::instance().getWorkspaceRoot();
+        std::strncpy(m_workspaceRoot, root.string().c_str(), sizeof(m_workspaceRoot) - 1);
+        m_workspaceRoot[sizeof(m_workspaceRoot) - 1] = '\0';
+        m_startMode = Config::instance().getActiveLayoutPresetIndex();
+        m_workspaceRootLoaded = true;
+    }
 
-    // Default size and centered position on first launch
+    // Non-dockable floating window
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoDocking;
+
     const auto* viewport = ImGui::GetMainViewport();
-    ImVec2 viewportSize = viewport->Size;
-    ImVec2 startSize(viewport->WorkSize.x * 0.55f, viewport->WorkSize.y * 0.45f);
+    ImVec2 startSize(viewport->WorkSize.x * 0.55f, viewport->WorkSize.y * 0.55f);
     ImGui::SetNextWindowSize(startSize, ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowPos(ImVec2(viewportSize.x * 0.5f, viewportSize.y * 0.5f),
-                            ImGuiCond_FirstUseEver,
-                            ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowPos(
+        ImVec2(viewport->WorkPos.x + viewport->WorkSize.x * 0.5f,
+               viewport->WorkPos.y + viewport->WorkSize.y * 0.5f),
+        ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
 
-    applyMinSize(20, 10);
+    applyMinSize(30, 16);
     if (ImGui::Begin(m_title.c_str(), &m_open, flags)) {
         // Header
         ImGui::Text("Digital Workshop");
-        ImGui::TextDisabled("Version %s", VERSION);
+        ImGui::SameLine();
+        ImGui::TextDisabled("v%s", VERSION);
         ImGui::TextDisabled("3D Model Management for CNC and 3D Printing");
 
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
 
-        // Two-column layout — reserve space for checkbox at bottom
+        // Reserve space for bottom checkbox
         float checkboxHeight = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
         float contentHeight = ImGui::GetContentRegionAvail().y - checkboxHeight;
         float availWidth = ImGui::GetContentRegionAvail().x;
-        float leftWidth = availWidth * 0.6f;
+        float leftWidth = availWidth * 0.55f;
 
+        // Left column: setup + recent projects
         ImGui::BeginChild("##StartLeft", ImVec2(leftWidth, contentHeight), false);
+        renderSetup();
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
         renderRecentProjects();
         ImGui::EndChild();
 
         ImGui::SameLine();
 
+        // Right column: quick actions
         ImGui::BeginChild("##StartRight", ImVec2(0, contentHeight), false);
         renderQuickActions();
         ImGui::EndChild();
@@ -63,6 +82,51 @@ void StartPage::render() {
     ImGui::End();
 }
 
+void StartPage::renderSetup() {
+    ImGui::Text("Setup");
+    ImGui::Spacing();
+
+    // Workspace root
+    ImGui::TextDisabled("Workspace Root");
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    if (ImGui::InputText("##WorkspaceRoot", m_workspaceRoot, sizeof(m_workspaceRoot))) {
+        Config::instance().setWorkspaceRoot(Path(m_workspaceRoot));
+        Config::instance().save();
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Base directory for all project files.\nLeave empty for default: %s",
+                          paths::getUserRoot().string().c_str());
+    }
+
+    // Show validation
+    Path wsPath(m_workspaceRoot);
+    if (!wsPath.empty()) {
+        if (std::filesystem::exists(wsPath) && std::filesystem::is_directory(wsPath)) {
+            ImGui::SameLine();
+        } else {
+            ImGui::TextDisabled("Directory will be created when needed.");
+        }
+    } else {
+        ImGui::TextDisabled("Using default: %s", paths::getUserRoot().string().c_str());
+    }
+
+    ImGui::Spacing();
+
+    // Start mode selection
+    ImGui::TextDisabled("Start In");
+    if (ImGui::RadioButton("Modeling / Projects", m_startMode == 0)) {
+        m_startMode = 0;
+        if (m_onWorkspaceModeChanged)
+            m_onWorkspaceModeChanged(0);
+    }
+    ImGui::SameLine();
+    if (ImGui::RadioButton("CNC Sender", m_startMode == 1)) {
+        m_startMode = 1;
+        if (m_onWorkspaceModeChanged)
+            m_onWorkspaceModeChanged(1);
+    }
+}
+
 void StartPage::renderRecentProjects() {
     ImGui::Text("Recent Projects");
     ImGui::Spacing();
@@ -71,7 +135,7 @@ void StartPage::renderRecentProjects() {
 
     if (recentProjects.empty()) {
         ImGui::TextDisabled("No recent projects.");
-        ImGui::TextDisabled("Create a new project or open an existing one to get started.");
+        ImGui::TextDisabled("Create a new project or open an existing one.");
     } else {
         for (size_t i = 0; i < recentProjects.size(); ++i) {
             const auto& projectPath = recentProjects[i];
@@ -83,8 +147,8 @@ void StartPage::renderRecentProjects() {
             }
 
             float rowH = ImGui::GetTextLineHeightWithSpacing();
-            if (ImGui::Selectable(name.c_str(), false,
-                    ImGuiSelectableFlags_None, ImVec2(0, rowH))) {
+            if (ImGui::Selectable(name.c_str(), false, ImGuiSelectableFlags_None,
+                                  ImVec2(0, rowH))) {
                 if (m_onOpenRecentProject) {
                     m_onOpenRecentProject(projectPath);
                 }
@@ -94,7 +158,6 @@ void StartPage::renderRecentProjects() {
                 ImGui::SetTooltip("%s", projectPath.string().c_str());
             }
 
-            // Show path in dim text on same line
             ImGui::SameLine();
             ImGui::TextDisabled("%s", projectPath.parent_path().string().c_str());
 

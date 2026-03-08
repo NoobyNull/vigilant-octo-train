@@ -14,6 +14,7 @@ namespace log {
 namespace {
 
 Level g_minLevel = Level::Info;
+bool g_consoleOutput = false;
 std::ofstream g_logFile;
 std::mutex g_logMutex;
 
@@ -68,9 +69,11 @@ void logMessage(Level level, std::string_view module, std::string_view message) 
     const char* color = levelToColor(level);
     const char* reset = "\033[0m";
 
-    // Console output with color
-    std::cerr << color << "[" << timestamp << "] [" << levelStr << "] "
-              << "[" << module << "] " << reset << message << std::endl;
+    // Console output with color (only when enabled via --verbose)
+    if (g_consoleOutput) {
+        std::cerr << color << "[" << timestamp << "] [" << levelStr << "] "
+                  << "[" << module << "] " << reset << message << std::endl;
+    }
 
     // File output without color
     if (g_logFile.is_open()) {
@@ -87,6 +90,14 @@ void setLevel(Level level) {
 
 Level getLevel() {
     return g_minLevel;
+}
+
+void setConsoleOutput(bool enabled) {
+    g_consoleOutput = enabled;
+}
+
+bool getConsoleOutput() {
+    return g_consoleOutput;
 }
 
 void debug(std::string_view module, std::string_view message) {

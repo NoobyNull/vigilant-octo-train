@@ -136,6 +136,9 @@ void Application::wireStartPage() {
     sp->setOnOpenRecentProject([this, hideStart](const Path& path) {
         m_fileIOManager->openRecentProject(path, hideStart);
     });
+    sp->setOnWorkspaceModeChanged([this](int mode) {
+        m_uiManager->setWorkspaceMode(mode == 1 ? WorkspaceMode::CNC : WorkspaceMode::Model);
+    });
 }
 
 void Application::wireLibraryPanel() {
