@@ -11,6 +11,7 @@ namespace gcode {
 
 enum class ConnectionType { Auto, Serial, TCP };
 enum class DriveSystem { Belt, Acme, LeadScrew, BallScrew };
+enum class HomeCorner { BottomLeft, BottomRight, TopLeft, TopRight, Center };
 
 // CNC machine kinematic parameters for accurate motion planning.
 // Values map to GRBL $ settings where noted.
@@ -53,6 +54,9 @@ struct MachineProfile {
 
     // Drive system
     DriveSystem driveSystem = DriveSystem::LeadScrew;
+
+    // Home location — which corner the machine homes to (Center computes midpoint)
+    HomeCorner homeCorner = HomeCorner::BottomLeft;
 
     // Auxiliary capabilities
     bool hasDustCollection = false;

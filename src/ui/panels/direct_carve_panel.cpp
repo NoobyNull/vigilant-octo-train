@@ -1363,6 +1363,72 @@ void DirectCarvePanel::renderOutlineTest() {
         ImGui::TextColored(kYellow, "Outline test skipped.");
 }
 
+// Two-pass probe on a single axis: fast seek, retract, slow accurate pass.
+// All commands are incremental (caller must set G91 beforehand).
+void DirectCarvePanel::sendProbeAxis(char axis, f32 direction, f32 searchDist,
+                                     f32 fastSpeed, f32 slowSpeed, f32 retractDist) {
+    char cmd[256];
+    f32 sign = (direction >= 0.0f) ? 1.0f : -1.0f;
+
+    // Fast seek
+    std::snprintf(cmd, sizeof(cmd), "G38.2 %c%.1f F%.0f",
+                  axis, static_cast<double>(sign * searchDist),
+                  static_cast<double>(fastSpeed));
+    m_cnc->sendCommand(cmd);
+
+    // Retract
+    std::snprintf(cmd, sizeof(cmd), "G0 %c%.1f",
+                  axis, static_cast<double>(-sign * retractDist));
+    m_cnc->sendCommand(cmd);
+
+    // Slow accurate pass
+    std::snprintf(cmd, sizeof(cmd), "G38.2 %c%.1f F%.0f",
+                  axis, static_cast<double>(sign * (retractDist + 1.0f)),
+                  static_cast<double>(slowSpeed));
+    m_cnc->sendCommand(cmd);
+
+    // Dwell for position settle
+    m_cnc->sendCommand("G4 P0.15");
+}
+
+// Probe Z and set WCS Z = plateThickness (zeros Z at stock surface below plate).
+void DirectCarvePanel::sendProbeZ(f32 plateThickness) {
+    char cmd[256];
+    sendProbeAxis('Z', -1.0f, m_probeSearchDist, m_probeFastSpeed,
+                  m_probeSlowSpeed, m_probeRetractDist);
+
+    std::snprintf(cmd, sizeof(cmd), "G10 L20 P0 Z%.3f",
+                  static_cast<double>(plateThickness));
+    m_cnc->sendCommand(cmd);
+
+    // Retract above plate
+    std::snprintf(cmd, sizeof(cmd), "G0 Z%.1f",
+                  static_cast<double>(m_probeRetractDist));
+    m_cnc->sendCommand(cmd);
+}
+
+// Probe an XY axis, set WCS offset accounting for plate wall + tool radius.
+void DirectCarvePanel::sendProbeXY(char axis, f32 direction,
+                                   f32 xyThickness, f32 toolRadius) {
+    char cmd[256];
+    f32 sign = (direction >= 0.0f) ? 1.0f : -1.0f;
+    sendProbeAxis(axis, direction, m_probeSearchDist, m_probeFastSpeed,
+                  m_probeSlowSpeed, m_probeRetractDist);
+
+    // Set axis = -(xyThickness + toolRadius) * sign
+    // Contact point is at the plate outer face; work zero is at the
+    // stock edge (inset by wall thickness + tool radius from contact).
+    f32 offset = -sign * (xyThickness + toolRadius);
+    std::snprintf(cmd, sizeof(cmd), "G10 L20 P0 %c%.3f",
+                  axis, static_cast<double>(offset));
+    m_cnc->sendCommand(cmd);
+
+    // Retract away from edge
+    std::snprintf(cmd, sizeof(cmd), "G0 %c%.1f",
+                  axis, static_cast<double>(-sign * m_probeRetractDist));
+    m_cnc->sendCommand(cmd);
+}
+
 void DirectCarvePanel::renderZeroConfirm() {
     ImGui::TextUnformatted("Zero Position Confirmation");
     ImGui::Spacing();
@@ -1381,22 +1447,271 @@ void DirectCarvePanel::renderZeroConfirm() {
     if (nearZero) ImGui::TextColored(kGreen, "Position is near zero origin.");
 
     ImGui::Spacing();
-    ImGui::TextWrapped("Position the tool at the work zero point "
-                       "(bottom-left of stock, Z on top surface).");
+
+    bool canSend = (m_cnc != nullptr && m_cncConnected);
+    bool isIdle = canSend && m_machineStatus.state == MachineState::Idle;
+
+    // --- Manual Zero ---
+    if (ImGui::CollapsingHeader("Manual Zero", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Indent();
+        ImGui::TextWrapped("Position the tool at work zero "
+                           "(bottom-left of stock, Z on top surface).");
+        ImGui::Spacing();
+
+        float bw = ImGui::GetFontSize() * 10.0f;
+        if (!canSend) ImGui::BeginDisabled();
+        if (ImGui::Button("Set Zero Here", ImVec2(bw, 0)))
+            m_cnc->sendCommand("G10 L20 P0 X0 Y0 Z0");
+        ImGui::SameLine();
+        if (ImGui::Button("Zero XY Only", ImVec2(bw, 0)))
+            m_cnc->sendCommand("G10 L20 P0 X0 Y0");
+        ImGui::SameLine();
+        if (ImGui::Button("Zero Z Only", ImVec2(bw, 0)))
+            m_cnc->sendCommand("G10 L20 P0 Z0");
+        if (!canSend) ImGui::EndDisabled();
+        ImGui::Unindent();
+    }
+
     ImGui::Spacing();
 
-    float bw = ImGui::GetFontSize() * 10.0f;
-    bool canSend = (m_cnc != nullptr && m_cncConnected);
-    if (!canSend) ImGui::BeginDisabled();
-    if (ImGui::Button("Set Zero Here", ImVec2(bw, 0)))
-        m_cnc->sendCommand("G10 L20 P0 X0 Y0 Z0");
-    ImGui::SameLine();
-    if (ImGui::Button("Zero XY Only", ImVec2(bw, 0)))
-        m_cnc->sendCommand("G10 L20 P0 X0 Y0");
-    ImGui::SameLine();
-    if (ImGui::Button("Zero Z Only", ImVec2(bw, 0)))
-        m_cnc->sendCommand("G10 L20 P0 Z0");
-    if (!canSend) ImGui::EndDisabled();
+    // --- Touch Plate Probe ---
+    if (ImGui::CollapsingHeader("Touch Plate Probe", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Indent();
+
+        // Probe pin indicator
+        bool probeActive = (m_machineStatus.inputPins & cnc::PIN_PROBE) != 0;
+        ImVec4 probeColor = probeActive
+            ? ImVec4(0.2f, 1.0f, 0.2f, 1.0f)
+            : ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
+        ImGui::TextColored(probeColor, "Probe pin: %s",
+                           probeActive ? "ACTIVE (circuit closed)" : "inactive");
+        ImGui::Spacing();
+
+        // --- Mode selector ---
+        const char* modeLabels[] = {
+            "Z Only", "X Only", "Y Only", "XY Corner", "XYZ Auto"
+        };
+        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
+        int modeInt = static_cast<int>(m_probeMode);
+        if (ImGui::Combo("Probe Mode", &modeInt, modeLabels, 5))
+            m_probeMode = static_cast<ProbeMode>(modeInt);
+
+        bool needsXY = (m_probeMode == ProbeMode::XOnly ||
+                        m_probeMode == ProbeMode::YOnly ||
+                        m_probeMode == ProbeMode::XYCorner ||
+                        m_probeMode == ProbeMode::XYZAuto);
+
+        // Corner direction (for XY modes)
+        if (needsXY) {
+            const char* cornerLabels[] = {
+                "Bottom-Left (probe -X, -Y)",
+                "Bottom-Right (probe +X, -Y)",
+                "Top-Right (probe +X, +Y)",
+                "Top-Left (probe -X, +Y)"
+            };
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 16.0f);
+            ImGui::Combo("Probe Direction", &m_probeCorner, cornerLabels, 4);
+        }
+
+        ImGui::Spacing();
+        ImGui::SeparatorText("Parameters");
+
+        float fieldW = ImGui::GetFontSize() * 8.0f;
+
+        // Z thickness (for Z and XYZ modes)
+        bool needsZ = (m_probeMode == ProbeMode::ZOnly ||
+                       m_probeMode == ProbeMode::XYZAuto);
+        if (needsZ) {
+            ImGui::SetNextItemWidth(fieldW);
+            ImGui::InputFloat("Z Plate Thickness (mm)", &m_probeZThickness, 0.5f, 1.0f, "%.2f");
+            m_probeZThickness = std::max(0.0f, m_probeZThickness);
+        }
+
+        // XY wall thickness (for XY modes)
+        if (needsXY) {
+            ImGui::SetNextItemWidth(fieldW);
+            ImGui::InputFloat("XY Wall Thickness (mm)", &m_probeXYThickness, 0.5f, 1.0f, "%.2f");
+            m_probeXYThickness = std::max(0.0f, m_probeXYThickness);
+        }
+
+        // Tool diameter (auto-populated from selected finishing tool)
+        if (needsXY) {
+            if (m_probeToolDiameter <= 0.0f && m_finishingToolSelected)
+                m_probeToolDiameter = static_cast<f32>(m_finishTool.diameter);
+
+            ImGui::SetNextItemWidth(fieldW);
+            ImGui::InputFloat("Tool Diameter (mm)", &m_probeToolDiameter, 0.1f, 1.0f, "%.3f");
+            m_probeToolDiameter = std::max(0.0f, m_probeToolDiameter);
+            if (m_finishingToolSelected) {
+                ImGui::SameLine();
+                ImGui::TextDisabled("(from %s)", m_finishTool.name_format.c_str());
+            }
+        }
+
+        ImGui::SetNextItemWidth(fieldW);
+        ImGui::InputFloat("Fast Speed (mm/min)", &m_probeFastSpeed, 10, 50, "%.0f");
+        m_probeFastSpeed = std::clamp(m_probeFastSpeed, 10.0f, 1000.0f);
+
+        ImGui::SetNextItemWidth(fieldW);
+        ImGui::InputFloat("Slow Speed (mm/min)", &m_probeSlowSpeed, 5, 25, "%.0f");
+        m_probeSlowSpeed = std::clamp(m_probeSlowSpeed, 5.0f, 500.0f);
+
+        ImGui::SetNextItemWidth(fieldW);
+        ImGui::InputFloat("Search Distance (mm)", &m_probeSearchDist, 5, 10, "%.1f");
+        m_probeSearchDist = std::clamp(m_probeSearchDist, 1.0f, 200.0f);
+
+        ImGui::SetNextItemWidth(fieldW);
+        ImGui::InputFloat("Retract (mm)", &m_probeRetractDist, 0.5f, 1, "%.1f");
+        m_probeRetractDist = std::clamp(m_probeRetractDist, 0.1f, 20.0f);
+
+        ImGui::Spacing();
+
+        // Direction signs based on corner
+        // BL=0: probe toward -X,-Y  BR=1: +X,-Y  TR=2: +X,+Y  TL=3: -X,+Y
+        f32 xDir = (m_probeCorner == 0 || m_probeCorner == 3) ? -1.0f : 1.0f;
+        f32 yDir = (m_probeCorner == 0 || m_probeCorner == 1) ? -1.0f : 1.0f;
+        f32 toolR = m_probeToolDiameter * 0.5f;
+
+        // --- Command preview ---
+        ImGui::SeparatorText("Probe sequence");
+
+        ImGui::TextDisabled("G21 G91  (metric, incremental)");
+
+        switch (m_probeMode) {
+        case ProbeMode::ZOnly:
+            ImGui::TextDisabled("G38.2 Z-%.1f F%.0f  (fast)",
+                                static_cast<double>(m_probeSearchDist),
+                                static_cast<double>(m_probeFastSpeed));
+            ImGui::TextDisabled("G0 Z%.1f  (retract)",
+                                static_cast<double>(m_probeRetractDist));
+            ImGui::TextDisabled("G38.2 Z-%.1f F%.0f  (slow)",
+                                static_cast<double>(m_probeRetractDist + 1.0f),
+                                static_cast<double>(m_probeSlowSpeed));
+            ImGui::TextDisabled("G10 L20 P0 Z%.2f",
+                                static_cast<double>(m_probeZThickness));
+            break;
+
+        case ProbeMode::XOnly:
+            ImGui::TextDisabled("G38.2 X%.1f F%.0f  (fast)",
+                                static_cast<double>(xDir * m_probeSearchDist),
+                                static_cast<double>(m_probeFastSpeed));
+            ImGui::TextDisabled("G10 L20 P0 X%.3f  (wall + tool radius)",
+                                static_cast<double>(-xDir * (m_probeXYThickness + toolR)));
+            break;
+
+        case ProbeMode::YOnly:
+            ImGui::TextDisabled("G38.2 Y%.1f F%.0f  (fast)",
+                                static_cast<double>(yDir * m_probeSearchDist),
+                                static_cast<double>(m_probeFastSpeed));
+            ImGui::TextDisabled("G10 L20 P0 Y%.3f  (wall + tool radius)",
+                                static_cast<double>(-yDir * (m_probeXYThickness + toolR)));
+            break;
+
+        case ProbeMode::XYCorner:
+            ImGui::TextDisabled("Probe X -> set X offset");
+            ImGui::TextDisabled("Probe Y -> set Y offset");
+            ImGui::TextDisabled("Compensation: wall(%.1f) + radius(%.2f) = %.2f mm",
+                                static_cast<double>(m_probeXYThickness),
+                                static_cast<double>(toolR),
+                                static_cast<double>(m_probeXYThickness + toolR));
+            break;
+
+        case ProbeMode::XYZAuto:
+            ImGui::TextDisabled("1. Probe Z on top of block -> set Z");
+            ImGui::TextDisabled("2. Move past X edge, drop Z, probe X -> set X");
+            ImGui::TextDisabled("3. Move past Y edge, probe Y -> set Y");
+            ImGui::TextDisabled("4. Return to work zero");
+            ImGui::TextDisabled("Compensation: wall(%.1f) + radius(%.2f) = %.2f mm",
+                                static_cast<double>(m_probeXYThickness),
+                                static_cast<double>(toolR),
+                                static_cast<double>(m_probeXYThickness + toolR));
+            break;
+        }
+
+        ImGui::TextDisabled("G90  (restore absolute)");
+
+        ImGui::Spacing();
+
+        // --- Run Probe ---
+        bool canProbe = isIdle;
+        if (!canProbe) ImGui::BeginDisabled();
+
+        const char* probeLabel = "Run Probe";
+        float probeW = ImGui::CalcTextSize(probeLabel).x
+                       + ImGui::GetStyle().FramePadding.x * 4;
+        float probeH = ImGui::GetFrameHeight() * 1.5f;
+
+        if (ImGui::Button(probeLabel, ImVec2(probeW, probeH))) {
+            char cmd[256];
+            m_cnc->sendCommand("G21 G91");
+
+            switch (m_probeMode) {
+            case ProbeMode::ZOnly:
+                sendProbeZ(m_probeZThickness);
+                break;
+
+            case ProbeMode::XOnly:
+                sendProbeXY('X', xDir, m_probeXYThickness, toolR);
+                break;
+
+            case ProbeMode::YOnly:
+                sendProbeXY('Y', yDir, m_probeXYThickness, toolR);
+                break;
+
+            case ProbeMode::XYCorner:
+                sendProbeXY('X', xDir, m_probeXYThickness, toolR);
+                sendProbeXY('Y', yDir, m_probeXYThickness, toolR);
+                break;
+
+            case ProbeMode::XYZAuto: {
+                // Phase 1: Probe Z on top of block
+                sendProbeZ(m_probeZThickness);
+
+                // Phase 2: Move out past X edge, drop beside block, probe X
+                f32 clearance = m_probeXYThickness + m_probeRetractDist + toolR + 6.0f;
+                std::snprintf(cmd, sizeof(cmd), "G0 %c%.1f",
+                              'X', static_cast<double>(-xDir * clearance));
+                m_cnc->sendCommand(cmd);
+
+                f32 zDrop = m_probeZThickness + m_probeRetractDist + 2.0f;
+                std::snprintf(cmd, sizeof(cmd), "G0 Z-%.1f",
+                              static_cast<double>(zDrop));
+                m_cnc->sendCommand(cmd);
+
+                sendProbeXY('X', xDir, m_probeXYThickness, toolR);
+
+                // Phase 3: Move out past Y edge, return X, probe Y
+                std::snprintf(cmd, sizeof(cmd), "G0 %c%.1f",
+                              'Y', static_cast<double>(-yDir * clearance));
+                m_cnc->sendCommand(cmd);
+                std::snprintf(cmd, sizeof(cmd), "G0 %c%.1f",
+                              'X', static_cast<double>(xDir * clearance));
+                m_cnc->sendCommand(cmd);
+
+                sendProbeXY('Y', yDir, m_probeXYThickness, toolR);
+
+                // Phase 4: Raise and return to zero
+                std::snprintf(cmd, sizeof(cmd), "G0 Z%.1f",
+                              static_cast<double>(zDrop + m_probeRetractDist));
+                m_cnc->sendCommand(cmd);
+
+                m_cnc->sendCommand("G90");
+                m_cnc->sendCommand("G0 X0 Y0");
+                m_cnc->sendCommand("G91");
+                break;
+            }
+            }
+
+            m_cnc->sendCommand("G90");
+        }
+        if (!canProbe) ImGui::EndDisabled();
+
+        if (!isIdle && canSend) {
+            ImGui::TextColored(ImVec4(1, 0.5f, 0, 1),
+                               "Machine must be Idle to probe");
+        }
+        ImGui::Unindent();
+    }
 
     ImGui::Spacing();
     ImGui::Checkbox("Zero position is set and verified", &m_zeroConfirmed);

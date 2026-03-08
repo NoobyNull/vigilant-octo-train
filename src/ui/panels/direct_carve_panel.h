@@ -187,6 +187,24 @@ class DirectCarvePanel : public Panel {
     // Zero confirm state
     bool m_zeroConfirmed = false;
 
+    // Touch plate probe parameters
+    enum class ProbeMode { ZOnly, XOnly, YOnly, XYCorner, XYZAuto };
+    ProbeMode m_probeMode = ProbeMode::ZOnly;
+    int m_probeCorner = 0;               // 0=BL, 1=BR, 2=TR, 3=TL
+    f32 m_probeZThickness = 15.0f;       // Z plate thickness (mm)
+    f32 m_probeXYThickness = 10.0f;      // XY wall thickness (mm)
+    f32 m_probeFastSpeed = 150.0f;       // Fast seek speed (mm/min)
+    f32 m_probeSlowSpeed = 75.0f;        // Slow/accurate speed (mm/min)
+    f32 m_probeSearchDist = 30.0f;       // Max travel for probe seek (mm)
+    f32 m_probeRetractDist = 2.0f;       // Retract between passes (mm)
+    f32 m_probeToolDiameter = 0.0f;      // Tool diameter for XY compensation (mm)
+
+    // Probe helpers
+    void sendProbeAxis(char axis, f32 direction, f32 searchDist, f32 fastSpeed,
+                       f32 slowSpeed, f32 retractDist);
+    void sendProbeZ(f32 plateThickness);
+    void sendProbeXY(char axis, f32 direction, f32 xyThickness, f32 toolRadius);
+
     // Commit state
     bool m_commitConfirmed = false;
 

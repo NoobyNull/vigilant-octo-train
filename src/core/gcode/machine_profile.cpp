@@ -51,6 +51,24 @@ static DriveSystem driveSystemFromString(const std::string& s) {
     return DriveSystem::LeadScrew;
 }
 
+static const char* homeCornerToString(HomeCorner hc) {
+    switch (hc) {
+        case HomeCorner::BottomRight: return "BottomRight";
+        case HomeCorner::TopLeft:     return "TopLeft";
+        case HomeCorner::TopRight:    return "TopRight";
+        case HomeCorner::Center:      return "Center";
+        default:                      return "BottomLeft";
+    }
+}
+
+static HomeCorner homeCornerFromString(const std::string& s) {
+    if (s == "BottomRight") return HomeCorner::BottomRight;
+    if (s == "TopLeft")     return HomeCorner::TopLeft;
+    if (s == "TopRight")    return HomeCorner::TopRight;
+    if (s == "Center")      return HomeCorner::Center;
+    return HomeCorner::BottomLeft;
+}
+
 // --- JSON serialization ---
 
 std::string MachineProfile::toJsonString() const {
@@ -80,6 +98,8 @@ std::string MachineProfile::toJsonString() const {
         {"spindleReverse", spindleReverse},
         // Drive
         {"driveSystem", driveSystemToString(driveSystem)},
+        // Homing
+        {"homeCorner", homeCornerToString(homeCorner)},
         // Auxiliary
         {"hasDustCollection", hasDustCollection},
         {"hasCoolant", hasCoolant},
@@ -122,6 +142,8 @@ MachineProfile MachineProfile::fromJsonString(const std::string& jsonStr) {
     if (j.contains("spindleReverse")) p.spindleReverse = j["spindleReverse"].get<bool>();
     // Drive
     if (j.contains("driveSystem")) p.driveSystem = driveSystemFromString(j["driveSystem"].get<std::string>());
+    // Homing
+    if (j.contains("homeCorner")) p.homeCorner = homeCornerFromString(j["homeCorner"].get<std::string>());
     // Auxiliary
     if (j.contains("hasDustCollection")) p.hasDustCollection = j["hasDustCollection"].get<bool>();
     if (j.contains("hasCoolant")) p.hasCoolant = j["hasCoolant"].get<bool>();
