@@ -7,6 +7,7 @@
 
 #include <imgui.h>
 
+#include "../../core/carve/alignment_validator.h"
 #include "../../core/carve/model_fitter.h"
 #include "../../core/database/model_repository.h"
 #include "../../core/gcode/gcode_types.h"
@@ -137,6 +138,15 @@ class ViewportPanel : public Panel {
     // FitParams model matrix (identity when no alignment active)
     Mat4 m_modelMatrix{1.0f};
     bool m_hasFitParams = false;
+
+    // Alignment validation state
+    enum class AlignmentStatus { Unknown, Aligned, Misaligned };
+    AlignmentStatus m_alignmentStatus = AlignmentStatus::Unknown;
+    bool m_alignmentDirty = false;
+    carve::FitParams m_fitParams;
+    Vec3 m_fitBoundsMin{0.0f};
+    Vec3 m_fitBoundsMax{0.0f};
+    carve::StockDimensions m_fitStock;
 
     // --- Visibility toggles ---
     bool m_showModel = true;

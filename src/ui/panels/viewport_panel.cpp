@@ -170,11 +170,19 @@ void ViewportPanel::setFitParams(const carve::FitParams& params,
 
     m_modelMatrix = swapYZ * fitMat;
     m_hasFitParams = true;
+
+    // Store for alignment validation
+    m_fitParams = params;
+    m_fitBoundsMin = modelBoundsMin;
+    m_fitBoundsMax = modelBoundsMax;
+    m_fitStock = stock;
+    m_alignmentDirty = true;
 }
 
 void ViewportPanel::clearFitParams() {
     m_modelMatrix = Mat4(1.0f);
     m_hasFitParams = false;
+    m_alignmentStatus = AlignmentStatus::Unknown;
 }
 
 void ViewportPanel::clearMesh() {
@@ -533,6 +541,23 @@ void ViewportPanel::renderViewport() {
         m_camera.setViewport(width, height);
     }
 
+    // Run alignment validation when dirty (once, not every frame)
+    if (m_alignmentDirty && m_hasFitParams && m_mesh && hasGCode()) {
+        m_alignmentDirty = false;
+        carve::ModelFitter fitter;
+        fitter.setModelBounds(m_fitBoundsMin, m_fitBoundsMax);
+        fitter.setStock(m_fitStock);
+        auto result = carve::validateAlignment(
+            m_gcodeProgram, *m_mesh, fitter, m_fitParams);
+        if (result.valid) {
+            m_alignmentStatus = result.aligned
+                ? AlignmentStatus::Aligned
+                : AlignmentStatus::Misaligned;
+        } else {
+            m_alignmentStatus = AlignmentStatus::Unknown;
+        }
+    }
+
     // Render to framebuffer
     m_framebuffer.bind();
 
@@ -662,6 +687,22 @@ void ViewportPanel::renderToolbar() {
     ImGui::Checkbox("Model", &m_showModel);
     ImGui::SameLine();
     ImGui::Checkbox("Toolpath", &m_showToolpath);
+
+    // Alignment status indicator (only when FitParams are active)
+    if (m_hasFitParams && m_alignmentStatus != AlignmentStatus::Unknown) {
+        ImGui::SameLine();
+        ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+        ImGui::SameLine();
+        if (m_alignmentStatus == AlignmentStatus::Aligned) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.3f, 0.9f, 0.3f, 1.0f));
+            ImGui::Text("Aligned");
+            ImGui::PopStyleColor();
+        } else {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
+            ImGui::Text("Misaligned");
+            ImGui::PopStyleColor();
+        }
+    }
 
     // G-code move-type toggles (only when G-code loaded + toolpath visible)
     if (hasGCode() && m_showToolpath) {
@@ -906,6 +947,7 @@ void ViewportPanel::renderViewCube() {
 void ViewportPanel::setGCodeProgram(const gcode::Program& program) {
     m_gcodeProgram = program;
     m_gcodeDirty = true;
+    m_alignmentDirty = true;
 
     // Initialize Z-clip bounds from program
     m_zClipMaxBound = program.boundsMax.z;
@@ -929,6 +971,7 @@ void ViewportPanel::clearGCodeProgram() {
     m_zClipMaxBound = 100.0f;
     m_gcToolGroups.clear();
     destroyGCodeGeometry();
+    m_alignmentStatus = AlignmentStatus::Unknown;
 }
 
 void ViewportPanel::destroyGCodeGeometry() {
