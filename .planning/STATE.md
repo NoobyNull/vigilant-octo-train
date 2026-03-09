@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.5.5
 milestone_name: Unified 3D Viewport
 status: executing
-last_updated: "2026-03-09T15:17:55.000Z"
+last_updated: "2026-03-09T15:23:49.000Z"
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** A woodworker can go from selecting a piece of wood and a cutting tool to safely running a CNC job with optimized feeds and speeds -- all without leaving the application.
-**Current focus:** Milestone v0.5.5 Unified 3D Viewport -- Phase 33 in progress (33-01 complete, 33-02 next)
+**Current focus:** Milestone v0.5.5 Unified 3D Viewport -- Phase 33 complete, Phase 34 next
 
 ## Current Position
 
 Phase: 33 of 35 (Model-Toolpath Alignment)
-Plan: 1 of 2
-Status: Executing Phase 33
-Last activity: 2026-03-09 -- Completed 33-01-PLAN.md (FitParams Model Matrix)
+Plan: 2 of 2
+Status: Phase 33 Complete
+Last activity: 2026-03-09 -- Completed 33-02-PLAN.md (Point-Match Validation)
 
-Progress: [######....] 60%
+Progress: [########..] 80%
 
 ## Accumulated Context
 
@@ -49,6 +49,9 @@ Progress: [######....] 60%
 - Move-type filtering at geometry build time for GPU efficiency
 - Direct matrix construction for FitParams (single swapYZ * fitMat multiply, no chain)
 - Fire FitParams callback every frame in renderModelFit() -- matrix update is cheap
+- Brute-force point-to-triangle distance with 1% stride sampling for alignment validation
+- 70% near-ratio threshold for Aligned status (accounts for approach/retract segments)
+- Deterministic stride-based sampling for reproducible validation results
 
 ### Pending Todos
 None.
@@ -59,10 +62,10 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-09
-Stopped at: Completed 33-01-PLAN.md
+Stopped at: Completed 33-02-PLAN.md
 Resume file: None
-Next action: Execute 33-02-PLAN.md (Alignment Validation)
+Next action: Execute Phase 34
 
 ---
 *State initialized: 2026-02-27*
-*Last updated: 2026-03-09 -- 33-01 completed (FitParams Model Matrix)*
+*Last updated: 2026-03-09 -- 33-02 completed (Point-Match Validation)*

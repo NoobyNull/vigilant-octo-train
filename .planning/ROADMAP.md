@@ -77,7 +77,7 @@
 
 - [x] **Phase 31: Core Toolpath Rendering** - G-code lines render in ViewportPanel with height-based depth coloring and shared camera (completed 2026-03-09)
 - [x] **Phase 32: Viewport Toolbar & Toggles** - Toggle buttons and sliders for model, toolpath, move types, color-by-tool, and Z-clip (completed 2026-03-09)
-- [ ] **Phase 33: Model-Toolpath Alignment** - FitParams transform overlays model and G-code correctly with point-match validation
+- [x] **Phase 33: Model-Toolpath Alignment** - FitParams transform overlays model and G-code correctly with point-match validation (completed 2026-03-09)
 - [ ] **Phase 34: Simulation Playback** - Play/pause/scrub simulation with completed/current/cutter visualization in viewport
 - [ ] **Phase 35: GCodePanel Rendering Elimination** - Strip rendering infrastructure from GCodePanel, unify mouse interaction across layers
 
@@ -233,7 +233,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 31. Core Toolpath Rendering | 2/2 | Complete   | 2026-03-09 | - |
 | 32. Viewport Toolbar & Toggles | 1/1 | Complete   | 2026-03-09 | - |
-| 33. Model-Toolpath Alignment | 1/2 | In Progress|  | - |
+| 33. Model-Toolpath Alignment | 2/2 | Complete   | 2026-03-09 | - |
 | 34. Simulation Playback | v0.5.5 | 0/0 | Not started | - |
 | 35. GCodePanel Rendering Elimination | v0.5.5 | 0/0 | Not started | - |
 

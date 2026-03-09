@@ -20,7 +20,7 @@ Requirements for Unified 3D Viewport milestone. Each maps to roadmap phases.
 ### Alignment (ALN)
 
 - [x] **ALN-01**: Model transforms to machine space using FitParams so it overlays G-code correctly
-- [ ] **ALN-02**: System validates alignment by sampling ~1% of cutting points against mesh surface
+- [x] **ALN-02**: System validates alignment by sampling ~1% of cutting points against mesh surface
 - [x] **ALN-03**: External .nc files render in viewport standalone without requiring a model
 
 ### Simulation (SIM)
@@ -100,7 +100,7 @@ Requirements for Unified 3D Viewport milestone. Each maps to roadmap phases.
 | VPR-06 | Phase 32 | Complete |
 | VPR-07 | Phase 31 | Complete |
 | ALN-01 | Phase 33 | Complete |
-| ALN-02 | Phase 33 | Pending |
+| ALN-02 | Phase 33 | Complete |
 | ALN-03 | Phase 31 | Complete |
 | SIM-01 | Phase 34 | Pending |
 | SIM-02 | Phase 34 | Pending |
