@@ -134,11 +134,56 @@ void ViewportPanel::restoreCameraState(const CameraState& state) {
     m_viewCubeCache.valid = false;
 }
 
+void ViewportPanel::setFitParams(const carve::FitParams& params,
+                                  const Vec3& modelBoundsMin,
+                                  const Vec3& modelBoundsMax,
+                                  const carve::StockDimensions& stock) {
+    f32 modelExtX = modelBoundsMax.x - modelBoundsMin.x;
+    f32 modelExtY = modelBoundsMax.y - modelBoundsMin.y;
+    f32 modelExtZ = modelBoundsMax.z - modelBoundsMin.z;
+    f32 depth = (params.depthMm > 0.0f) ? params.depthMm : modelExtZ * params.scale;
+
+    f32 sx = (modelExtX > 1e-6f) ? params.scale : 1.0f;
+    f32 sy = (modelExtY > 1e-6f) ? params.scale : 1.0f;
+    f32 sz = (modelExtZ > 1e-6f) ? (depth / modelExtZ) : 1.0f;
+
+    f32 tx = params.offsetX - modelBoundsMin.x * sx;
+    f32 ty = params.offsetY - modelBoundsMin.y * sy;
+    f32 tz = (stock.thickness - depth) - modelBoundsMin.z * sz;
+
+    // Build transform in G-code space (Z-up)
+    Mat4 fitMat(1.0f);
+    fitMat[0][0] = sx;
+    fitMat[1][1] = sy;
+    fitMat[2][2] = sz;
+    fitMat[3][0] = tx;
+    fitMat[3][1] = ty;
+    fitMat[3][2] = tz;
+
+    // Apply Y<->Z swap for renderer (G-code Z-up -> renderer Y-up)
+    // Same swap used in buildGCodeGeometry: G-code (x,y,z) -> renderer (x,z,y)
+    Mat4 swapYZ(0.0f);
+    swapYZ[0][0] = 1.0f;  // X stays X
+    swapYZ[1][2] = 1.0f;  // renderer Y = G-code Z
+    swapYZ[2][1] = 1.0f;  // renderer Z = G-code Y
+    swapYZ[3][3] = 1.0f;
+
+    m_modelMatrix = swapYZ * fitMat;
+    m_hasFitParams = true;
+}
+
+void ViewportPanel::clearFitParams() {
+    m_modelMatrix = Mat4(1.0f);
+    m_hasFitParams = false;
+}
+
 void ViewportPanel::clearMesh() {
     m_mesh = nullptr;
     if (m_gpuMesh.vao != 0) {
         m_gpuMesh.destroy();
     }
+
+    clearFitParams();
 
     // Invalidate ViewCube cache
     m_viewCubeCache.valid = false;
@@ -500,7 +545,7 @@ void ViewportPanel::renderViewport() {
 
     // Render mesh (with material texture if assigned)
     if (m_showModel && m_gpuMesh.vao != 0) {
-        m_renderer.renderMesh(m_gpuMesh, m_materialTexture);
+        m_renderer.renderMesh(m_gpuMesh, m_materialTexture, m_modelMatrix);
     }
 
     // Render toolpath (if present and visible)

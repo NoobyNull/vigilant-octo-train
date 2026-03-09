@@ -7,6 +7,7 @@
 
 #include <imgui.h>
 
+#include "../../core/carve/model_fitter.h"
 #include "../../core/database/model_repository.h"
 #include "../../core/gcode/gcode_types.h"
 #include "../../render/camera.h"
@@ -70,6 +71,13 @@ class ViewportPanel : public Panel {
     void clearGCodeProgram();
     bool hasGCode() const { return !m_gcodeProgram.path.empty(); }
 
+    // FitParams-based model matrix for alignment overlay
+    void setFitParams(const carve::FitParams& params,
+                      const Vec3& modelBoundsMin,
+                      const Vec3& modelBoundsMax,
+                      const carve::StockDimensions& stock);
+    void clearFitParams();
+
     // Context menu manager integration
     void setContextMenuManager(ContextMenuManager* manager) { m_contextMenuManager = manager; }
 
@@ -125,6 +133,10 @@ class ViewportPanel : public Panel {
 
     // Context menu manager (not owned — managed by UIManager)
     ContextMenuManager* m_contextMenuManager = nullptr;
+
+    // FitParams model matrix (identity when no alignment active)
+    Mat4 m_modelMatrix{1.0f};
+    bool m_hasFitParams = false;
 
     // --- Visibility toggles ---
     bool m_showModel = true;
