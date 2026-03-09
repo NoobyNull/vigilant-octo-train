@@ -3,6 +3,7 @@
 #include <array>
 #include <memory>
 #include <optional>
+#include <vector>
 
 #include <imgui.h>
 
@@ -125,6 +126,19 @@ class ViewportPanel : public Panel {
     // Context menu manager (not owned — managed by UIManager)
     ContextMenuManager* m_contextMenuManager = nullptr;
 
+    // --- Visibility toggles ---
+    bool m_showModel = true;
+    bool m_showToolpath = true;
+    bool m_showRapids = false;
+    bool m_showCuts = true;
+    bool m_showPlunges = true;
+    bool m_showRetracts = true;
+    bool m_colorByTool = false;
+
+    // Z-clip state
+    float m_zClipMax = 100.0f;
+    float m_zClipMaxBound = 100.0f;
+
     // --- G-code line rendering ---
     void buildGCodeGeometry();
     void destroyGCodeGeometry();
@@ -138,6 +152,18 @@ class ViewportPanel : public Panel {
     u32 m_gcPlungeStart = 0, m_gcPlungeCount = 0;
     u32 m_gcRetractStart = 0, m_gcRetractCount = 0;
     bool m_gcodeDirty = false;
+
+    // Per-tool draw groups (used when m_colorByTool is true)
+    struct ToolGroup {
+        u32 start = 0;
+        u32 count = 0;
+        int toolNumber = 0;
+    };
+    std::vector<ToolGroup> m_gcToolGroups;
+
+    // Tool color palette
+    static constexpr int kNumToolColors = 8;
+    static Vec3 toolColor(int toolNum);
 };
 
 } // namespace dw

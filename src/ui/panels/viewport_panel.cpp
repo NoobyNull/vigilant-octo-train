@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <cstdio>
+#include <map>
 
 #include <imgui.h>
 
@@ -18,6 +19,21 @@ namespace dw {
 ViewportPanel::ViewportPanel() : Panel("Viewport") {
     m_renderer.initialize();
     m_camera.reset();
+}
+
+Vec3 ViewportPanel::toolColor(int toolNum) {
+    static const Vec3 palette[] = {
+        {0.2f, 0.6f, 1.0f},  // T1: Blue
+        {1.0f, 0.3f, 0.3f},  // T2: Red
+        {0.3f, 0.9f, 0.3f},  // T3: Green
+        {1.0f, 0.7f, 0.1f},  // T4: Orange
+        {0.8f, 0.3f, 0.9f},  // T5: Purple
+        {0.1f, 0.9f, 0.9f},  // T6: Cyan
+        {0.9f, 0.9f, 0.2f},  // T7: Yellow
+        {1.0f, 0.5f, 0.7f},  // T8: Pink
+    };
+    int idx = (toolNum > 0 ? toolNum - 1 : 0) % kNumToolColors;
+    return palette[idx];
 }
 
 void ViewportPanel::render() {
@@ -793,6 +809,10 @@ void ViewportPanel::setGCodeProgram(const gcode::Program& program) {
     m_gcodeProgram = program;
     m_gcodeDirty = true;
 
+    // Initialize Z-clip bounds from program
+    m_zClipMaxBound = program.boundsMax.z;
+    m_zClipMax = m_zClipMaxBound;
+
     // Fit camera to G-code bounds if no mesh is currently loaded
     if (!m_mesh) {
         // Swap Y<->Z: G-code uses Z-up, renderer uses Y-up
@@ -807,6 +827,9 @@ void ViewportPanel::setGCodeProgram(const gcode::Program& program) {
 
 void ViewportPanel::clearGCodeProgram() {
     m_gcodeProgram = gcode::Program{};
+    m_zClipMax = 100.0f;
+    m_zClipMaxBound = 100.0f;
+    m_gcToolGroups.clear();
     destroyGCodeGeometry();
 }
 
@@ -827,6 +850,7 @@ void ViewportPanel::destroyGCodeGeometry() {
 
 void ViewportPanel::buildGCodeGeometry() {
     destroyGCodeGeometry();
+    m_gcToolGroups.clear();
 
     if (m_gcodeProgram.path.empty()) {
         m_gcodeDirty = false;
@@ -834,7 +858,8 @@ void ViewportPanel::buildGCodeGeometry() {
     }
 
     // Lambda to push a segment's vertices with Y<->Z swap
-    auto addSegVerts = [](std::vector<f32>& verts, const gcode::PathSegment& seg) {
+    auto addSegVerts = [](std::vector<f32>& verts,
+                          const gcode::PathSegment& seg) {
         verts.push_back(seg.start.x);
         verts.push_back(seg.start.z); // G-code Z -> renderer Y
         verts.push_back(seg.start.y); // G-code Y -> renderer Z
@@ -843,50 +868,129 @@ void ViewportPanel::buildGCodeGeometry() {
         verts.push_back(seg.end.y);
     };
 
-    // Classify segments into four groups by move type
-    std::vector<f32> rapidVerts;
-    std::vector<f32> cutVerts;
-    std::vector<f32> plungeVerts;
-    std::vector<f32> retractVerts;
+    // Helper: classify non-rapid segment visibility
+    auto isVisibleNonRapid =
+        [this](const gcode::PathSegment& seg) -> bool {
+        float dz = seg.end.z - seg.start.z;
+        float dxy2 =
+            (seg.end.x - seg.start.x) * (seg.end.x - seg.start.x) +
+            (seg.end.y - seg.start.y) * (seg.end.y - seg.start.y);
+        bool zDominant = (dz * dz) > dxy2 * 0.25f;
 
-    for (const auto& seg : m_gcodeProgram.path) {
-        if (seg.isRapid) {
-            addSegVerts(rapidVerts, seg);
-        } else {
-            float dz = seg.end.z - seg.start.z;
-            float dxy2 = (seg.end.x - seg.start.x) * (seg.end.x - seg.start.x) +
-                          (seg.end.y - seg.start.y) * (seg.end.y - seg.start.y);
-            bool zDominant = (dz * dz) > dxy2 * 0.25f;
+        if (dz < -0.001f && zDominant) return m_showPlunges;
+        if (dz > 0.001f && zDominant) return m_showRetracts;
+        return m_showCuts;
+    };
 
-            if (dz < -0.001f && zDominant) {
-                addSegVerts(plungeVerts, seg);
-            } else if (dz > 0.001f && zDominant) {
-                addSegVerts(retractVerts, seg);
+    std::vector<f32> allVerts;
+
+    if (m_colorByTool) {
+        // Color-by-tool mode: group by tool number
+        std::vector<f32> rapidVerts;
+        std::map<int, std::vector<f32>> toolVerts;
+
+        for (const auto& seg : m_gcodeProgram.path) {
+            if (seg.end.z > m_zClipMax) continue;
+
+            if (seg.isRapid) {
+                if (m_showRapids) addSegVerts(rapidVerts, seg);
             } else {
-                addSegVerts(cutVerts, seg);
+                if (!isVisibleNonRapid(seg)) continue;
+                addSegVerts(toolVerts[seg.toolNumber], seg);
             }
         }
+
+        allVerts.reserve(rapidVerts.size());
+        for (auto& [tool, verts] : toolVerts)
+            allVerts.reserve(allVerts.capacity() + verts.size());
+
+        // Rapids first
+        m_gcRapidStart = 0;
+        m_gcRapidCount =
+            static_cast<u32>(rapidVerts.size() / 3);
+        allVerts.insert(
+            allVerts.end(), rapidVerts.begin(), rapidVerts.end());
+
+        // Zero out type-based groups (not used in tool mode)
+        m_gcCutStart = m_gcCutCount = 0;
+        m_gcPlungeStart = m_gcPlungeCount = 0;
+        m_gcRetractStart = m_gcRetractCount = 0;
+
+        // Tool groups
+        u32 offset = m_gcRapidCount;
+        for (auto& [tool, verts] : toolVerts) {
+            ToolGroup tg;
+            tg.toolNumber = tool;
+            tg.start = offset;
+            tg.count = static_cast<u32>(verts.size() / 3);
+            m_gcToolGroups.push_back(tg);
+            allVerts.insert(
+                allVerts.end(), verts.begin(), verts.end());
+            offset += tg.count;
+        }
+    } else {
+        // Standard mode: group by move type with filtering
+        std::vector<f32> rapidVerts;
+        std::vector<f32> cutVerts;
+        std::vector<f32> plungeVerts;
+        std::vector<f32> retractVerts;
+
+        for (const auto& seg : m_gcodeProgram.path) {
+            if (seg.end.z > m_zClipMax) continue;
+
+            if (seg.isRapid) {
+                if (!m_showRapids) continue;
+                addSegVerts(rapidVerts, seg);
+            } else {
+                float dz = seg.end.z - seg.start.z;
+                float dxy2 =
+                    (seg.end.x - seg.start.x) *
+                        (seg.end.x - seg.start.x) +
+                    (seg.end.y - seg.start.y) *
+                        (seg.end.y - seg.start.y);
+                bool zDominant = (dz * dz) > dxy2 * 0.25f;
+
+                if (dz < -0.001f && zDominant) {
+                    if (!m_showPlunges) continue;
+                    addSegVerts(plungeVerts, seg);
+                } else if (dz > 0.001f && zDominant) {
+                    if (!m_showRetracts) continue;
+                    addSegVerts(retractVerts, seg);
+                } else {
+                    if (!m_showCuts) continue;
+                    addSegVerts(cutVerts, seg);
+                }
+            }
+        }
+
+        allVerts.reserve(
+            rapidVerts.size() + cutVerts.size() +
+            plungeVerts.size() + retractVerts.size());
+
+        m_gcRapidStart = 0;
+        m_gcRapidCount =
+            static_cast<u32>(rapidVerts.size() / 3);
+        allVerts.insert(
+            allVerts.end(), rapidVerts.begin(), rapidVerts.end());
+
+        m_gcCutStart = m_gcRapidCount;
+        m_gcCutCount =
+            static_cast<u32>(cutVerts.size() / 3);
+        allVerts.insert(
+            allVerts.end(), cutVerts.begin(), cutVerts.end());
+
+        m_gcPlungeStart = m_gcCutStart + m_gcCutCount;
+        m_gcPlungeCount =
+            static_cast<u32>(plungeVerts.size() / 3);
+        allVerts.insert(
+            allVerts.end(), plungeVerts.begin(), plungeVerts.end());
+
+        m_gcRetractStart = m_gcPlungeStart + m_gcPlungeCount;
+        m_gcRetractCount =
+            static_cast<u32>(retractVerts.size() / 3);
+        allVerts.insert(
+            allVerts.end(), retractVerts.begin(), retractVerts.end());
     }
-
-    // Concatenate into a single buffer and record draw ranges
-    std::vector<f32> allVerts;
-    allVerts.reserve(rapidVerts.size() + cutVerts.size() + plungeVerts.size() + retractVerts.size());
-
-    m_gcRapidStart = 0;
-    m_gcRapidCount = static_cast<u32>(rapidVerts.size() / 3);
-    allVerts.insert(allVerts.end(), rapidVerts.begin(), rapidVerts.end());
-
-    m_gcCutStart = m_gcRapidCount;
-    m_gcCutCount = static_cast<u32>(cutVerts.size() / 3);
-    allVerts.insert(allVerts.end(), cutVerts.begin(), cutVerts.end());
-
-    m_gcPlungeStart = m_gcCutStart + m_gcCutCount;
-    m_gcPlungeCount = static_cast<u32>(plungeVerts.size() / 3);
-    allVerts.insert(allVerts.end(), plungeVerts.begin(), plungeVerts.end());
-
-    m_gcRetractStart = m_gcPlungeStart + m_gcPlungeCount;
-    m_gcRetractCount = static_cast<u32>(retractVerts.size() / 3);
-    allVerts.insert(allVerts.end(), retractVerts.begin(), retractVerts.end());
 
     if (allVerts.empty()) {
         m_gcodeDirty = false;
@@ -900,12 +1004,14 @@ void ViewportPanel::buildGCodeGeometry() {
     GL_CHECK(glBindVertexArray(m_gcodeVAO));
     GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, m_gcodeVBO));
     GL_CHECK(glBufferData(GL_ARRAY_BUFFER,
-                          static_cast<GLsizeiptr>(allVerts.size() * sizeof(f32)),
+                          static_cast<GLsizeiptr>(
+                              allVerts.size() * sizeof(f32)),
                           allVerts.data(),
                           GL_STATIC_DRAW));
 
     // Position attribute (location 0): vec3
-    GL_CHECK(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(f32), nullptr));
+    GL_CHECK(glVertexAttribPointer(
+        0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(f32), nullptr));
     GL_CHECK(glEnableVertexAttribArray(0));
 
     GL_CHECK(glBindVertexArray(0));
