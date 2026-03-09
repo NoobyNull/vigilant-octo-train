@@ -116,6 +116,14 @@ void Application::wireCncPanels() {
                 m_uiManager->showToolBrowser() = true;
             });
             dcarvep->setCutOptimizerPanel(m_uiManager->cutOptimizerPanel());
+            if (vpp) {
+                dcarvep->setOnFitParamsChanged(
+                    [vpp](const carve::FitParams& params,
+                          const Vec3& boundsMin, const Vec3& boundsMax,
+                          const carve::StockDimensions& stock) {
+                        vpp->setFitParams(params, boundsMin, boundsMax, stock);
+                    });
+            }
         }
 
         // Set CncController on CNC panels

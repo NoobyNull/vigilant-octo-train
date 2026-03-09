@@ -15,10 +15,11 @@
 #include "core/carve/carve_job.h"
 #include "core/carve/gcode_export.h"
 #include "core/carve/tool_recommender.h"
+#include "core/cnc/cnc_controller.h"
+#include "core/cnc/tool_calculator.h"
+#include "core/config/config.h"
 #include "core/project/project.h"
 #include "core/project/project_directory.h"
-#include "core/cnc/cnc_controller.h"
-#include "core/config/config.h"
 #include "core/database/tool_database.h"
 #include "core/database/toolbox_repository.h"
 #include "core/gcode/machine_profile.h"
@@ -39,6 +40,11 @@ static constexpr auto& kRed = colors::kError;
 static constexpr auto& kYellow = colors::kWarning;
 static constexpr auto& kDimmed = colors::kDimmed;
 static constexpr auto& kBright = colors::kInfo;
+
+// Return tool diameter in mm regardless of stored units.
+static f64 diameterMm(const VtdbToolGeometry& g) {
+    return (g.units == VtdbUnits::Imperial) ? g.diameter * 25.4 : g.diameter;
+}
 
 namespace {
 
@@ -91,7 +97,8 @@ void DirectCarvePanel::onModelLoaded(const std::vector<Vertex>& vertices,
                                       const Vec3& boundsMin,
                                       const Vec3& boundsMax,
                                       const std::string& modelName,
-                                      const Path& modelSourcePath) {
+                                      const Path& modelSourcePath,
+                                      u32 thumbnailTexture) {
     m_vertices = vertices;
     m_indices = indices;
     m_modelLoaded = true;
@@ -100,6 +107,12 @@ void DirectCarvePanel::onModelLoaded(const std::vector<Vertex>& vertices,
     m_fitter.setModelBounds(boundsMin, boundsMax);
     if (!modelName.empty()) m_modelName = modelName;
     if (!modelSourcePath.empty()) m_modelSourcePath = modelSourcePath;
+    m_modelThumbnail = thumbnailTexture;
+
+    // Fire FitParams callback with initial alignment if stock is configured
+    if (m_onFitParamsChanged && m_stock.width > 0.0f && m_stock.height > 0.0f) {
+        m_onFitParamsChanged(m_fitParams, m_modelBoundsMin, m_modelBoundsMax, m_stock);
+    }
 
     // Reset heightmap cache state for new model
     m_hmInitAttempted = false;
@@ -138,6 +151,34 @@ void DirectCarvePanel::render() {
     if (!ImGui::Begin(m_title.c_str(), &m_open)) { ImGui::End(); return; }
 
     renderStepIndicator();
+
+    // Model identity card
+    if (m_modelLoaded && !m_modelName.empty()) {
+        ImGui::Separator();
+        float thumbSize = ImGui::GetFrameHeight() * 2.5f;
+        ImVec2 startPos = ImGui::GetCursorPos();
+
+        if (m_modelThumbnail != 0) {
+            ImGui::Image(static_cast<ImTextureID>(static_cast<uintptr_t>(m_modelThumbnail)),
+                         ImVec2(thumbSize, thumbSize));
+            ImGui::SameLine();
+        }
+
+        ImGui::BeginGroup();
+        ImGui::Text("%s", m_modelName.c_str());
+        if (m_stock.width > 0.0f && m_stock.height > 0.0f) {
+            // Show configured stock dimensions (what the user set in ModelFit)
+            ImGui::TextDisabled("%.1f x %.1f x %.1f mm",
+                                m_stock.width, m_stock.height, m_stock.thickness);
+        } else {
+            Vec3 size = m_modelBoundsMax - m_modelBoundsMin;
+            ImGui::TextDisabled("%.1f x %.1f x %.1f mm", size.x, size.y, size.z);
+        }
+        if (!m_materialName.empty())
+            ImGui::TextDisabled("%s", m_materialName.c_str());
+        ImGui::EndGroup();
+    }
+
     ImGui::Separator();
     ImGui::Spacing();
 
@@ -446,6 +487,11 @@ void DirectCarvePanel::renderModelFit() {
     m_fitter.setMachineTravel(mp.maxTravelX, mp.maxTravelY, mp.maxTravelZ);
     carve::FitResult result = m_fitter.fit(m_fitParams);
 
+    // Notify viewport of FitParams changes for alignment overlay
+    if (m_onFitParamsChanged) {
+        m_onFitParamsChanged(m_fitParams, m_modelBoundsMin, m_modelBoundsMax, m_stock);
+    }
+
     ImGui::Spacing();
     Vec3 dim = result.modelMax - result.modelMin;
     ImGui::Text("After transform: %.1f x %.1f x %.1f mm",
@@ -606,7 +652,7 @@ void DirectCarvePanel::renderToolSelect() {
         default: break;
         }
         ImGui::TextColored(kGreen, "%s Finishing: %s  %.3gmm  %d flute%s",
-                           Icons::Check, typeStr, m_finishTool.diameter,
+                           Icons::Check, typeStr, diameterMm(m_finishTool),
                            m_finishTool.num_flutes,
                            m_finishTool.num_flutes != 1 ? "s" : "");
 
@@ -712,7 +758,7 @@ void DirectCarvePanel::renderToolSelect() {
                     const char* clrType = (m_clearTool.tool_type == VtdbToolType::EndMill)
                         ? "End Mill" : "Ball Nose";
                     ImGui::TextColored(kGreen, "%s Clearing: %s  %.3gmm",
-                                       Icons::Check, clrType, m_clearTool.diameter);
+                                       Icons::Check, clrType, diameterMm(m_clearTool));
                 }
             } else {
                 ImGui::TextColored(kGreen, "%s No islands detected - no roughing pass needed.",
@@ -782,7 +828,7 @@ void DirectCarvePanel::renderToolLibraryPicker() {
         ImGui::PopStyleColor(3);
 
         ImGui::SameLine();
-        ImGui::TextDisabled("%.3gmm", g.diameter);
+        ImGui::TextDisabled("%.3gmm", diameterMm(g));
 
         if (g.tool_type == VtdbToolType::VBit && g.included_angle > 0.0) {
             ImGui::SameLine();
@@ -887,35 +933,48 @@ void DirectCarvePanel::renderMaterialSetup() {
                         m_materialName = mat.name;
                         m_materialSelected = true;
 
-                        // Auto-calculate feed rates from Janka hardness + tool diameter
-                        if (mat.jankaHardness > 0.0f) {
-                            // Reference point: 1000 lbf Janka → 1000 mm/min base feed
-                            // with a 6mm tool. Scale inversely with hardness, proportionally
-                            // with tool diameter (larger tools handle more load).
-                            f32 janka = mat.jankaHardness;
-                            f32 toolDia = static_cast<f32>(m_finishTool.diameter);
-                            if (toolDia <= 0.0f) toolDia = 3.175f; // 1/8" fallback
-                            f32 refDia = 6.0f;
-                            f32 refJanka = 1000.0f;
-                            f32 refFeed = 1000.0f;
+                        // Auto-calculate feed rates using ToolCalculator
+                        {
+                            CalcInput ci;
+                            ci.diameter = m_finishTool.diameter;
+                            if (ci.diameter <= 0.0)
+                                ci.diameter = 3.175; // 1/8" fallback
+                            ci.num_flutes = m_finishTool.num_flutes;
+                            ci.tool_type = m_finishTool.tool_type;
+                            ci.units = m_finishTool.units;
+                            ci.janka_hardness = static_cast<f64>(mat.jankaHardness);
+                            ci.material_name = mat.name;
 
-                            // Softer wood → higher feed; harder → lower
-                            // Larger tool → higher feed; smaller → lower
-                            f32 hardnessRatio = refJanka / janka;
-                            f32 diameterRatio = toolDia / refDia;
-                            f32 feed = refFeed * hardnessRatio * diameterRatio;
+                            // Pull machine params from active Config profile
+                            const auto& mp = Config::instance().getActiveMachineProfile();
+                            ci.spindle_power_watts = static_cast<f64>(mp.spindlePower);
+                            ci.max_rpm = static_cast<int>(mp.spindleMaxRPM);
+                            switch (mp.driveSystem) {
+                            case gcode::DriveSystem::Belt:      ci.drive_type = DriveType::Belt; break;
+                            case gcode::DriveSystem::BallScrew: ci.drive_type = DriveType::BallScrew; break;
+                            default:                            ci.drive_type = DriveType::LeadScrew; break;
+                            }
 
-                            // Clamp to sane range
-                            feed = std::clamp(feed, 200.0f, 5000.0f);
+                            auto result = ToolCalculator::calculate(ci);
+
+                            // Result is in native units; convert to mm/min
+                            f64 feedMm = result.feed_rate;
+                            f64 plungeMm = result.plunge_rate;
+                            if (ci.units == VtdbUnits::Imperial) {
+                                feedMm *= 25.4;
+                                plungeMm *= 25.4;
+                            }
+
                             // Round to nearest 50
-                            feed = std::round(feed / 50.0f) * 50.0f;
-                            m_toolpathConfig.feedRateMmMin = feed;
+                            m_toolpathConfig.feedRateMmMin =
+                                std::round(static_cast<f32>(feedMm) / 50.0f) * 50.0f;
+                            m_toolpathConfig.plungeRateMmMin =
+                                std::round(static_cast<f32>(plungeMm) / 50.0f) * 50.0f;
 
-                            // Plunge rate: typically 30-50% of feed rate
-                            f32 plunge = feed * 0.3f;
-                            plunge = std::clamp(plunge, 100.0f, 1500.0f);
-                            plunge = std::round(plunge / 50.0f) * 50.0f;
-                            m_toolpathConfig.plungeRateMmMin = plunge;
+                            m_toolpathConfig.feedRateMmMin =
+                                std::clamp(m_toolpathConfig.feedRateMmMin, 100.0f, 10000.0f);
+                            m_toolpathConfig.plungeRateMmMin =
+                                std::clamp(m_toolpathConfig.plungeRateMmMin, 50.0f, 5000.0f);
                         }
                     }
                     if (selected) ImGui::SetItemDefaultFocus();
@@ -931,13 +990,25 @@ void DirectCarvePanel::renderMaterialSetup() {
         }
     }
 
-    // Show Janka hardness if selected
+    // Show Janka hardness + machine profile if selected
     if (m_selectedMaterialIdx >= 0) {
         const auto& mat = m_materialList[static_cast<size_t>(m_selectedMaterialIdx)];
         if (mat.jankaHardness > 0.0f) {
             ImGui::SameLine();
-            ImGui::TextDisabled("Janka: %.0f lbf", mat.jankaHardness);
+            ImGui::TextDisabled("Janka: %.0f lbf", static_cast<double>(mat.jankaHardness));
         }
+    }
+
+    // Show which machine profile is driving the calculation
+    {
+        const auto& mp = Config::instance().getActiveMachineProfile();
+        ImGui::TextDisabled("Machine: %s (%.0f RPM, %.0fW, %s)",
+                            mp.name.c_str(),
+                            static_cast<double>(mp.spindleMaxRPM),
+                            static_cast<double>(mp.spindlePower),
+                            mp.driveSystem == gcode::DriveSystem::Belt ? "Belt" :
+                            mp.driveSystem == gcode::DriveSystem::BallScrew ? "Ball Screw" :
+                            mp.driveSystem == gcode::DriveSystem::Acme ? "Acme" : "Lead Screw");
     }
 
     ImGui::Spacing();

@@ -50,6 +50,12 @@ class DirectCarvePanel : public Panel {
     void setOpenToolBrowserCallback(std::function<void()> cb);
     void setCutOptimizerPanel(class CutOptimizerPanel* cop);
 
+    // FitParams change notification (for viewport alignment overlay)
+    using FitParamsCallback = std::function<void(const carve::FitParams&,
+                                                  const Vec3&, const Vec3&,
+                                                  const carve::StockDimensions&)>;
+    void setOnFitParamsChanged(FitParamsCallback cb) { m_onFitParamsChanged = std::move(cb); }
+
     // Callbacks
     void onConnectionChanged(bool connected);
     void onStatusUpdate(const MachineStatus& status);
@@ -58,7 +64,8 @@ class DirectCarvePanel : public Panel {
                        const Vec3& boundsMin,
                        const Vec3& boundsMax,
                        const std::string& modelName = "",
-                       const Path& modelSourcePath = "");
+                       const Path& modelSourcePath = "",
+                       u32 thumbnailTexture = 0);
 
   private:
     enum class Step {
@@ -219,11 +226,13 @@ class DirectCarvePanel : public Panel {
     // Model/tool info for summary card
     std::string m_modelName;
     std::string m_materialName;
+    u32 m_modelThumbnail = 0;  // GL texture ID from library panel
 
     // Project directory support
     ProjectManager* m_projectManager = nullptr;
     CutOptimizerPanel* m_cutOptimizer = nullptr;
     std::function<void()> m_openToolBrowser;
+    FitParamsCallback m_onFitParamsChanged;
     Path m_modelSourcePath;
 
     // Project-aware save helpers
