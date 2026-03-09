@@ -2,7 +2,6 @@
 
 #include <vector>
 
-#include "../core/mesh/hash.h"
 #include "../core/utils/log.h"
 #include "gl_utils.h"
 #include "shader_sources.h"
@@ -96,9 +95,10 @@ void Renderer::renderMesh(const GPUMesh& gpuMesh, const Mat4& modelMatrix) {
 void Renderer::renderMesh(const Mesh& mesh,
                           const Texture* materialTexture,
                           const Mat4& modelMatrix) {
-    u64 key = hash::fromHex(hash::computeMesh(mesh));
+    u64 key = mesh.geometryHash();
     auto it = m_meshCache.find(key);
     if (it == m_meshCache.end()) {
+        evictMeshCache();
         it = m_meshCache.emplace(key, uploadMesh(mesh)).first;
     }
     renderMesh(it->second, materialTexture, modelMatrix);
@@ -169,9 +169,10 @@ void Renderer::renderToolpath(const Mesh& toolpathMesh, const Mat4& modelMatrix)
     }
 
     // Upload or get cached GPU mesh
-    u64 key = hash::fromHex(hash::computeMesh(toolpathMesh));
+    u64 key = toolpathMesh.geometryHash();
     auto it = m_meshCache.find(key);
     if (it == m_meshCache.end()) {
+        evictMeshCache();
         it = m_meshCache.emplace(key, uploadMesh(toolpathMesh)).first;
     }
 
@@ -417,6 +418,20 @@ void Renderer::clearMeshCache() {
     m_meshCache.clear();
 }
 
+void Renderer::evictMeshCache() {
+    if (m_meshCache.size() < MAX_CACHED_MESHES)
+        return;
+    // Simple eviction: drop half the cache when full.
+    // More sophisticated LRU would require access tracking.
+    size_t toRemove = m_meshCache.size() / 2;
+    auto it = m_meshCache.begin();
+    while (toRemove > 0 && it != m_meshCache.end()) {
+        it->second.destroy();
+        it = m_meshCache.erase(it);
+        --toRemove;
+    }
+}
+
 bool Renderer::createShaders() {
     if (!m_meshShader.compile(shaders::MESH_VERTEX, shaders::MESH_FRAGMENT)) {
         log::error("Renderer", "Failed to compile mesh shader");
@@ -430,6 +445,11 @@ bool Renderer::createShaders() {
 
     if (!m_gridShader.compile(shaders::GRID_VERTEX, shaders::GRID_FRAGMENT)) {
         log::error("Renderer", "Failed to compile grid shader");
+        return false;
+    }
+
+    if (!m_heightLineShader.compile(shaders::HEIGHT_LINE_VERTEX, shaders::HEIGHT_LINE_FRAGMENT)) {
+        log::error("Renderer", "Failed to compile height-line shader");
         return false;
     }
 

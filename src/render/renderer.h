@@ -89,6 +89,9 @@ class Renderer {
     // Access flat shader for custom line drawing (position-only VAO + uMVP + uColor)
     Shader& flatShader() { return m_flatShader; }
 
+    // Access height-line shader for G-code depth coloring (position-only VAO + uMVP + uYMin/uYMax + uColorLow/uColorHigh)
+    Shader& heightLineShader() { return m_heightLineShader; }
+
     // Settings
     RenderSettings& settings() { return m_settings; }
     const RenderSettings& settings() const { return m_settings; }
@@ -107,6 +110,7 @@ class Renderer {
     Shader m_meshShader;
     Shader m_flatShader;
     Shader m_gridShader;
+    Shader m_heightLineShader;
 
     GPUMesh m_gridMesh;
     GPUMesh m_axisMesh;
@@ -119,8 +123,10 @@ class Renderer {
     // Wire box rendering (lazy-init)
     GLuint m_wireBoxVAO = 0, m_wireBoxVBO = 0;
 
-    // Mesh cache: hash -> uploaded GPU mesh
+    // Mesh cache: hash -> uploaded GPU mesh (bounded)
+    static constexpr size_t MAX_CACHED_MESHES = 32;
     std::unordered_map<u64, GPUMesh> m_meshCache;
+    void evictMeshCache();
 };
 
 } // namespace dw
