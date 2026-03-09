@@ -25,8 +25,8 @@ Requirements for Unified 3D Viewport milestone. Each maps to roadmap phases.
 
 ### Simulation (SIM)
 
-- [ ] **SIM-01**: User can play/pause/scrub simulation playback in the viewport
-- [ ] **SIM-02**: Simulation shows completed path (green), current segment (yellow), and cutter position (red dot)
+- [x] **SIM-01**: User can play/pause/scrub simulation playback in the viewport
+- [x] **SIM-02**: Simulation shows completed path (green), current segment (yellow), and cutter position (red dot)
 
 ### Code Elimination (ELM)
 
@@ -102,8 +102,8 @@ Requirements for Unified 3D Viewport milestone. Each maps to roadmap phases.
 | ALN-01 | Phase 33 | Complete |
 | ALN-02 | Phase 33 | Complete |
 | ALN-03 | Phase 31 | Complete |
-| SIM-01 | Phase 34 | Pending |
-| SIM-02 | Phase 34 | Pending |
+| SIM-01 | Phase 34 | Complete |
+| SIM-02 | Phase 34 | Complete |
 | ELM-01 | Phase 35 | Pending |
 | ELM-02 | Phase 35 | Pending |
 | ELM-03 | Phase 35 | Pending |

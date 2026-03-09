@@ -78,7 +78,7 @@
 - [x] **Phase 31: Core Toolpath Rendering** - G-code lines render in ViewportPanel with height-based depth coloring and shared camera (completed 2026-03-09)
 - [x] **Phase 32: Viewport Toolbar & Toggles** - Toggle buttons and sliders for model, toolpath, move types, color-by-tool, and Z-clip (completed 2026-03-09)
 - [x] **Phase 33: Model-Toolpath Alignment** - FitParams transform overlays model and G-code correctly with point-match validation (completed 2026-03-09)
-- [ ] **Phase 34: Simulation Playback** - Play/pause/scrub simulation with completed/current/cutter visualization in viewport
+- [x] **Phase 34: Simulation Playback** - Play/pause/scrub simulation with completed/current/cutter visualization in viewport (completed 2026-03-09)
 - [ ] **Phase 35: GCodePanel Rendering Elimination** - Strip rendering infrastructure from GCodePanel, unify mouse interaction across layers
 
 ## Phase Details (v0.5.0)
@@ -204,7 +204,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 34-01-PLAN.md — Simulation state, overlay rendering, toolbar controls, and wiring
+- [x] 34-01-PLAN.md — Simulation state, overlay rendering, toolbar controls, and wiring
 
 ### Phase 35: GCodePanel Rendering Elimination
 **Goal**: GCodePanel no longer contains any 3D rendering infrastructure -- all viewport rendering is owned by ViewportPanel, and mouse interaction is unified across all visible layers
@@ -215,7 +215,10 @@ Plans:
   2. GCodePanel still provides its text-based G-code listing, file statistics, CNC sender controls, and file open/save functionality -- no non-rendering features are lost
   3. Mouse interaction (orbit, pan, zoom) in the viewport behaves identically whether the user is viewing model-only, toolpath-only, or both layers together -- no mode-dependent input differences
   4. The overall line count of gcode_panel.cpp decreases significantly from its pre-milestone size due to removed rendering code
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 35-01-PLAN.md — Strip rendering infrastructure from GCodePanel, add G-code text listing
 
 ## Progress (v0.5.0)
 
@@ -237,9 +240,9 @@ Plans:
 | 31. Core Toolpath Rendering | 2/2 | Complete   | 2026-03-09 | - |
 | 32. Viewport Toolbar & Toggles | 1/1 | Complete   | 2026-03-09 | - |
 | 33. Model-Toolpath Alignment | 2/2 | Complete   | 2026-03-09 | - |
-| 34. Simulation Playback | v0.5.5 | 0/1 | Not started | - |
-| 35. GCodePanel Rendering Elimination | v0.5.5 | 0/0 | Not started | - |
+| 34. Simulation Playback | 1/1 | Complete   | 2026-03-09 | - |
+| 35. GCodePanel Rendering Elimination | v0.5.5 | 0/1 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-24*
-*Last updated: 2026-03-09 -- Phase 34 planned (1 plan)*
+*Last updated: 2026-03-09 -- Phase 35 planned (1 plan)*

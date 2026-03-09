@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.5.5
 milestone_name: Unified 3D Viewport
 status: executing
-last_updated: "2026-03-09T15:23:49.000Z"
+last_updated: "2026-03-09T15:37:54.000Z"
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
+  completed_phases: 4
+  total_plans: 6
+  completed_plans: 6
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** A woodworker can go from selecting a piece of wood and a cutting tool to safely running a CNC job with optimized feeds and speeds -- all without leaving the application.
-**Current focus:** Milestone v0.5.5 Unified 3D Viewport -- Phase 33 complete, Phase 34 next
+**Current focus:** Milestone v0.5.5 Unified 3D Viewport -- Phase 34 complete, Phase 35 next
 
 ## Current Position
 
-Phase: 33 of 35 (Model-Toolpath Alignment)
-Plan: 2 of 2
-Status: Phase 33 Complete
-Last activity: 2026-03-09 -- Completed 33-02-PLAN.md (Point-Match Validation)
+Phase: 34 of 35 (Simulation Playback)
+Plan: 1 of 1
+Status: Phase 34 Complete
+Last activity: 2026-03-09 -- Completed 34-01-PLAN.md (Simulation Playback)
 
-Progress: [########..] 80%
+Progress: [########=.] 90%
 
 ## Accumulated Context
 
@@ -52,6 +52,9 @@ Progress: [########..] 80%
 - Brute-force point-to-triangle distance with 1% stride sampling for alignment validation
 - 70% near-ratio threshold for Aligned status (accounts for approach/retract segments)
 - Deterministic stride-based sampling for reproducible validation results
+- VPSimState enum separate from GCodePanel SimState to avoid viewport-gcode_panel header coupling
+- Scrubbing auto-transitions Stopped->Paused so slider drag shows live overlay
+- Statistics computed via gcode::Analyzer in wiring callback for independent viewport simulation
 
 ### Pending Todos
 None.
@@ -62,10 +65,10 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-09
-Stopped at: Completed 33-02-PLAN.md
+Stopped at: Completed 34-01-PLAN.md
 Resume file: None
-Next action: Execute Phase 34
+Next action: Execute Phase 35
 
 ---
 *State initialized: 2026-02-27*
-*Last updated: 2026-03-09 -- 33-02 completed (Point-Match Validation)*
+*Last updated: 2026-03-09 -- 34-01 completed (Simulation Playback)*
