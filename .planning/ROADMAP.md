@@ -75,7 +75,7 @@
 
 **Milestone Goal:** Merge G-code preview rendering into the main ViewportPanel so all 3D content (model mesh, toolpath lines) shares one camera, one renderer, and one set of controls -- eliminating duplicated rendering code and unifying user interaction.
 
-- [ ] **Phase 31: Core Toolpath Rendering** - G-code lines render in ViewportPanel with height-based depth coloring and shared camera
+- [x] **Phase 31: Core Toolpath Rendering** - G-code lines render in ViewportPanel with height-based depth coloring and shared camera (completed 2026-03-09)
 - [ ] **Phase 32: Viewport Toolbar & Toggles** - Toggle buttons and sliders for model, toolpath, move types, color-by-tool, and Z-clip
 - [ ] **Phase 33: Model-Toolpath Alignment** - FitParams transform overlays model and G-code correctly with point-match validation
 - [ ] **Phase 34: Simulation Playback** - Play/pause/scrub simulation with completed/current/cutter visualization in viewport
@@ -158,7 +158,11 @@ Plans:
   2. G-code cutting paths display a height-based color gradient showing carving depth (the height-line shader from GCodePanel works in ViewportPanel)
   3. Opening an external .nc file without a loaded model renders the toolpath in the viewport on its own -- no model is required
   4. Toolpath line geometry uploads to GPU via the existing m_gpuToolpath infrastructure in ViewportPanel
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [x] 31-01-PLAN.md — Height-line shader and G-code line rendering pipeline
+- [x] 31-02-PLAN.md — GCode-to-Viewport callback wiring
 
 ### Phase 32: Viewport Toolbar & Toggles
 **Goal**: User has fine-grained control over what is visible in the unified viewport through toolbar buttons and sliders
@@ -170,7 +174,10 @@ Plans:
   3. User can independently toggle rapids, cuts, plunges, and retracts on/off -- each move type appears or disappears without affecting other types
   4. User can toggle color-by-tool mode that colors toolpath segments by their tool number for multi-tool G-code files
   5. User can drag a Z-clip slider that hides toolpath geometry above or below a chosen depth -- only the selected depth range is visible
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 32-01-PLAN.md — Filter state, toolbar UI, conditional rendering, color-by-tool, Z-clip
 
 ### Phase 33: Model-Toolpath Alignment
 **Goal**: Model and toolpath overlay correctly in the viewport using FitParams, with point-match validation confirming the alignment is accurate
@@ -220,12 +227,12 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 31. Core Toolpath Rendering | 1/2 | In Progress|  | - |
-| 32. Viewport Toolbar & Toggles | v0.5.5 | 0/0 | Not started | - |
+| 31. Core Toolpath Rendering | 2/2 | Complete   | 2026-03-09 | - |
+| 32. Viewport Toolbar & Toggles | v0.5.5 | 0/1 | Planned | - |
 | 33. Model-Toolpath Alignment | v0.5.5 | 0/0 | Not started | - |
 | 34. Simulation Playback | v0.5.5 | 0/0 | Not started | - |
 | 35. GCodePanel Rendering Elimination | v0.5.5 | 0/0 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-24*
-*Last updated: 2026-03-09 -- v0.5.5 phases 31-35 added*
+*Last updated: 2026-03-09 -- Phase 32 planned (1 plan)*
