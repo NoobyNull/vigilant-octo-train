@@ -89,7 +89,7 @@ class Renderer {
     // Access flat shader for custom line drawing (position-only VAO + uMVP + uColor)
     Shader& flatShader() { return m_flatShader; }
 
-    // Access height-line shader for G-code depth coloring (position-only VAO + uMVP + uYMin/uYMax + uColorLow/uColorHigh)
+    // Access height-line shader for G-code depth coloring
     Shader& heightLineShader() { return m_heightLineShader; }
 
     // Settings

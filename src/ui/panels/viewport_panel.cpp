@@ -10,6 +10,7 @@
 #include "../../core/config/config.h"
 #include "../../core/config/input_binding.h"
 #include "../../core/mesh/mesh.h"
+#include "../../render/gl_utils.h"
 #include "../context_menu_manager.h"
 
 namespace dw {
@@ -490,6 +491,12 @@ void ViewportPanel::renderViewport() {
         m_renderer.renderToolpath(*m_toolpathMesh);
     }
 
+    // Render G-code line geometry (if present)
+    if (m_gcodeDirty) {
+        buildGCodeGeometry();
+    }
+    renderGCodeLines();
+
     // Live CNC tool position and work envelope
     if (m_cncConnected) {
         auto& cfg = Config::instance();
@@ -778,6 +785,191 @@ void ViewportPanel::renderViewCube() {
         m_camera.setYaw(f.yaw);
         m_camera.setPitch(f.pitch);
     }
+}
+
+// --- G-code line rendering ---
+
+void ViewportPanel::setGCodeProgram(const gcode::Program& program) {
+    m_gcodeProgram = program;
+    m_gcodeDirty = true;
+
+    // Fit camera to G-code bounds if no mesh is currently loaded
+    if (!m_mesh) {
+        // Swap Y<->Z: G-code uses Z-up, renderer uses Y-up
+        Vec3 bMin{program.boundsMin.x, program.boundsMin.z, program.boundsMin.y};
+        Vec3 bMax{program.boundsMax.x, program.boundsMax.z, program.boundsMax.y};
+        m_camera.fitToBounds(bMin, bMax);
+    }
+
+    // Invalidate ViewCube cache
+    m_viewCubeCache.valid = false;
+}
+
+void ViewportPanel::clearGCodeProgram() {
+    m_gcodeProgram = gcode::Program{};
+    destroyGCodeGeometry();
+}
+
+void ViewportPanel::destroyGCodeGeometry() {
+    if (m_gcodeVBO != 0) {
+        glDeleteBuffers(1, &m_gcodeVBO);
+        m_gcodeVBO = 0;
+    }
+    if (m_gcodeVAO != 0) {
+        glDeleteVertexArrays(1, &m_gcodeVAO);
+        m_gcodeVAO = 0;
+    }
+    m_gcRapidStart = m_gcRapidCount = 0;
+    m_gcCutStart = m_gcCutCount = 0;
+    m_gcPlungeStart = m_gcPlungeCount = 0;
+    m_gcRetractStart = m_gcRetractCount = 0;
+}
+
+void ViewportPanel::buildGCodeGeometry() {
+    destroyGCodeGeometry();
+
+    if (m_gcodeProgram.path.empty()) {
+        m_gcodeDirty = false;
+        return;
+    }
+
+    // Lambda to push a segment's vertices with Y<->Z swap
+    auto addSegVerts = [](std::vector<f32>& verts, const gcode::PathSegment& seg) {
+        verts.push_back(seg.start.x);
+        verts.push_back(seg.start.z); // G-code Z -> renderer Y
+        verts.push_back(seg.start.y); // G-code Y -> renderer Z
+        verts.push_back(seg.end.x);
+        verts.push_back(seg.end.z);
+        verts.push_back(seg.end.y);
+    };
+
+    // Classify segments into four groups by move type
+    std::vector<f32> rapidVerts;
+    std::vector<f32> cutVerts;
+    std::vector<f32> plungeVerts;
+    std::vector<f32> retractVerts;
+
+    for (const auto& seg : m_gcodeProgram.path) {
+        if (seg.isRapid) {
+            addSegVerts(rapidVerts, seg);
+        } else {
+            float dz = seg.end.z - seg.start.z;
+            float dxy2 = (seg.end.x - seg.start.x) * (seg.end.x - seg.start.x) +
+                          (seg.end.y - seg.start.y) * (seg.end.y - seg.start.y);
+            bool zDominant = (dz * dz) > dxy2 * 0.25f;
+
+            if (dz < -0.001f && zDominant) {
+                addSegVerts(plungeVerts, seg);
+            } else if (dz > 0.001f && zDominant) {
+                addSegVerts(retractVerts, seg);
+            } else {
+                addSegVerts(cutVerts, seg);
+            }
+        }
+    }
+
+    // Concatenate into a single buffer and record draw ranges
+    std::vector<f32> allVerts;
+    allVerts.reserve(rapidVerts.size() + cutVerts.size() + plungeVerts.size() + retractVerts.size());
+
+    m_gcRapidStart = 0;
+    m_gcRapidCount = static_cast<u32>(rapidVerts.size() / 3);
+    allVerts.insert(allVerts.end(), rapidVerts.begin(), rapidVerts.end());
+
+    m_gcCutStart = m_gcRapidCount;
+    m_gcCutCount = static_cast<u32>(cutVerts.size() / 3);
+    allVerts.insert(allVerts.end(), cutVerts.begin(), cutVerts.end());
+
+    m_gcPlungeStart = m_gcCutStart + m_gcCutCount;
+    m_gcPlungeCount = static_cast<u32>(plungeVerts.size() / 3);
+    allVerts.insert(allVerts.end(), plungeVerts.begin(), plungeVerts.end());
+
+    m_gcRetractStart = m_gcPlungeStart + m_gcPlungeCount;
+    m_gcRetractCount = static_cast<u32>(retractVerts.size() / 3);
+    allVerts.insert(allVerts.end(), retractVerts.begin(), retractVerts.end());
+
+    if (allVerts.empty()) {
+        m_gcodeDirty = false;
+        return;
+    }
+
+    // Upload to GPU
+    GL_CHECK(glGenVertexArrays(1, &m_gcodeVAO));
+    GL_CHECK(glGenBuffers(1, &m_gcodeVBO));
+
+    GL_CHECK(glBindVertexArray(m_gcodeVAO));
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, m_gcodeVBO));
+    GL_CHECK(glBufferData(GL_ARRAY_BUFFER,
+                          static_cast<GLsizeiptr>(allVerts.size() * sizeof(f32)),
+                          allVerts.data(),
+                          GL_STATIC_DRAW));
+
+    // Position attribute (location 0): vec3
+    GL_CHECK(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(f32), nullptr));
+    GL_CHECK(glEnableVertexAttribArray(0));
+
+    GL_CHECK(glBindVertexArray(0));
+
+    m_gcodeDirty = false;
+}
+
+void ViewportPanel::renderGCodeLines() {
+    if (m_gcodeVAO == 0) {
+        return;
+    }
+
+    Shader& flat = m_renderer.flatShader();
+    Shader& heightShader = m_renderer.heightLineShader();
+    Mat4 mvp = m_camera.viewProjectionMatrix();
+
+    // Y bounds in renderer space (G-code Z -> renderer Y after swap)
+    float yMin = m_gcodeProgram.boundsMin.z;
+    float yMax = m_gcodeProgram.boundsMax.z;
+
+    glDisable(GL_CULL_FACE);
+    glLineWidth(1.5f);
+    glBindVertexArray(m_gcodeVAO);
+
+    // Rapids: dim gray
+    flat.bind();
+    flat.setMat4("uMVP", mvp);
+    if (m_gcRapidCount > 0) {
+        flat.setVec4("uColor", Vec4{0.4f, 0.4f, 0.4f, 0.5f});
+        glDrawArrays(GL_LINES, static_cast<GLint>(m_gcRapidStart),
+                     static_cast<GLsizei>(m_gcRapidCount));
+    }
+
+    // Cuts: height-colored (deep blue -> bright cyan)
+    if (m_gcCutCount > 0) {
+        heightShader.bind();
+        heightShader.setMat4("uMVP", mvp);
+        heightShader.setFloat("uYMin", yMin);
+        heightShader.setFloat("uYMax", yMax);
+        heightShader.setVec4("uColorLow", Vec4{0.05f, 0.15f, 0.5f, 1.0f});
+        heightShader.setVec4("uColorHigh", Vec4{0.3f, 0.8f, 1.0f, 1.0f});
+        glDrawArrays(GL_LINES, static_cast<GLint>(m_gcCutStart),
+                     static_cast<GLsizei>(m_gcCutCount));
+        // Re-bind flat shader for remaining groups
+        flat.bind();
+        flat.setMat4("uMVP", mvp);
+    }
+
+    // Plunges: orange
+    if (m_gcPlungeCount > 0) {
+        flat.setVec4("uColor", Vec4{1.0f, 0.5f, 0.1f, 1.0f});
+        glDrawArrays(GL_LINES, static_cast<GLint>(m_gcPlungeStart),
+                     static_cast<GLsizei>(m_gcPlungeCount));
+    }
+
+    // Retracts: green
+    if (m_gcRetractCount > 0) {
+        flat.setVec4("uColor", Vec4{0.3f, 0.8f, 0.3f, 0.6f});
+        glDrawArrays(GL_LINES, static_cast<GLint>(m_gcRetractStart),
+                     static_cast<GLsizei>(m_gcRetractCount));
+    }
+
+    glBindVertexArray(0);
+    glEnable(GL_CULL_FACE);
 }
 
 void ViewportPanel::renderCncDro() {

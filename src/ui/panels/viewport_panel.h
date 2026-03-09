@@ -7,6 +7,7 @@
 #include <imgui.h>
 
 #include "../../core/database/model_repository.h"
+#include "../../core/gcode/gcode_types.h"
 #include "../../render/camera.h"
 #include "../../render/framebuffer.h"
 #include "../../render/renderer.h"
@@ -63,6 +64,11 @@ class ViewportPanel : public Panel {
     void onCncStatusUpdate(const MachineStatus& status) { m_machineStatus = status; }
     void setCncConnected(bool connected) { m_cncConnected = connected; }
 
+    // G-code line rendering
+    void setGCodeProgram(const gcode::Program& program);
+    void clearGCodeProgram();
+    bool hasGCode() const { return !m_gcodeProgram.path.empty(); }
+
     // Context menu manager integration
     void setContextMenuManager(ContextMenuManager* manager) { m_contextMenuManager = manager; }
 
@@ -118,6 +124,20 @@ class ViewportPanel : public Panel {
 
     // Context menu manager (not owned — managed by UIManager)
     ContextMenuManager* m_contextMenuManager = nullptr;
+
+    // --- G-code line rendering ---
+    void buildGCodeGeometry();
+    void destroyGCodeGeometry();
+    void renderGCodeLines();
+
+    gcode::Program m_gcodeProgram;
+    GLuint m_gcodeVAO = 0;
+    GLuint m_gcodeVBO = 0;
+    u32 m_gcRapidStart = 0, m_gcRapidCount = 0;
+    u32 m_gcCutStart = 0, m_gcCutCount = 0;
+    u32 m_gcPlungeStart = 0, m_gcPlungeCount = 0;
+    u32 m_gcRetractStart = 0, m_gcRetractCount = 0;
+    bool m_gcodeDirty = false;
 };
 
 } // namespace dw
