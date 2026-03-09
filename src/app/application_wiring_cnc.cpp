@@ -79,6 +79,16 @@ void Application::wireCncPanels() {
         gcp->setCncController(m_cncController.get());
         gcp->setToolDatabase(m_toolDatabase.get());
 
+        // Forward program load/clear to viewport for toolpath rendering
+        gcp->setOnProgramLoaded([this](const gcode::Program& prog) {
+            if (auto* vp = m_uiManager->viewportPanel())
+                vp->setGCodeProgram(prog);
+        });
+        gcp->setOnProgramCleared([this]() {
+            if (auto* vp = m_uiManager->viewportPanel())
+                vp->clearGCodeProgram();
+        });
+
         // Gather CNC panel pointers
         auto* csp = m_uiManager->cncStatusPanel();
         auto* jogp = m_uiManager->cncJogPanel();
