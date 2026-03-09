@@ -190,8 +190,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 33-01-PLAN.md — FitParams model matrix computation, DirectCarvePanel callback, wiring
-- [ ] 33-02-PLAN.md — AlignmentValidator utility and toolbar pass/fail indicator
+- [x] 33-01-PLAN.md — FitParams model matrix computation, DirectCarvePanel callback, wiring
+- [x] 33-02-PLAN.md — AlignmentValidator utility and toolbar pass/fail indicator
 
 ### Phase 34: Simulation Playback
 **Goal**: User can play back the cutting simulation in the unified viewport with transport controls and visual progress feedback
@@ -201,7 +201,10 @@ Plans:
   1. User can play, pause, and scrub (seek via slider) through the G-code simulation in the viewport -- playback advances through toolpath segments at a controllable speed
   2. Completed path segments render in green, the currently executing segment renders in yellow, and a red dot marks the cutter position -- all three are visually distinct during playback
   3. Simulation controls are accessible from the viewport toolbar area -- the user does not need to switch to GCodePanel to start or control simulation
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 34-01-PLAN.md — Simulation state, overlay rendering, toolbar controls, and wiring
 
 ### Phase 35: GCodePanel Rendering Elimination
 **Goal**: GCodePanel no longer contains any 3D rendering infrastructure -- all viewport rendering is owned by ViewportPanel, and mouse interaction is unified across all visible layers
@@ -234,9 +237,9 @@ Plans:
 | 31. Core Toolpath Rendering | 2/2 | Complete   | 2026-03-09 | - |
 | 32. Viewport Toolbar & Toggles | 1/1 | Complete   | 2026-03-09 | - |
 | 33. Model-Toolpath Alignment | 2/2 | Complete   | 2026-03-09 | - |
-| 34. Simulation Playback | v0.5.5 | 0/0 | Not started | - |
+| 34. Simulation Playback | v0.5.5 | 0/1 | Not started | - |
 | 35. GCodePanel Rendering Elimination | v0.5.5 | 0/0 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-24*
-*Last updated: 2026-03-09 -- Phase 33 planned (2 plans)*
+*Last updated: 2026-03-09 -- Phase 34 planned (1 plan)*
