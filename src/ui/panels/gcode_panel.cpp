@@ -17,6 +17,7 @@
 #include "../../core/cnc/serial_port.h"
 #include "../../core/utils/file_utils.h"
 #include "../../render/gl_utils.h"
+#include "../../render/shader_sources.h"
 #include "../dialogs/file_dialog.h"
 #include "../icons.h"
 #include "../ui_colors.h"
@@ -65,10 +66,11 @@ constexpr int GCodePanel::BAUD_RATES[];
 
 GCodePanel::GCodePanel() : Panel("G-code") {
     m_pathRenderer.initialize();
+    m_heightLineShader.compile(shaders::HEIGHT_LINE_VERTEX, shaders::HEIGHT_LINE_FRAGMENT);
     m_pathCamera.reset();
-    // Start with top-down view (familiar 2D-like default)
-    m_pathCamera.setYaw(0.0f);
-    m_pathCamera.setPitch(89.0f);
+    // Start with isometric view so depth is visible
+    m_pathCamera.setYaw(-30.0f);
+    m_pathCamera.setPitch(55.0f);
     m_availablePorts = listSerialPorts();
 }
 
@@ -268,6 +270,8 @@ bool GCodePanel::loadFile(const std::string& path) {
                 m_currentGCodeId = existing.front().id;
         }
 
+        if (m_onProgramLoaded) m_onProgramLoaded(m_program);
+
         return true;
     }
 
@@ -294,6 +298,8 @@ void GCodePanel::clear() {
     m_segmentTimeCumulative.clear();
     m_lastAckedLine = -1;
     m_streamProgress = {};
+
+    if (m_onProgramCleared) m_onProgramCleared();
 }
 
 void GCodePanel::renderToolbar() {
@@ -1320,9 +1326,6 @@ void GCodePanel::renderPathView() {
     if (m_pathDirty)
         buildPathGeometry();
 
-    // Handle orbit/pan/zoom input
-    handlePathInput();
-
     // --- Render to framebuffer ---
     m_pathFramebuffer.bind();
 
@@ -1336,10 +1339,14 @@ void GCodePanel::renderPathView() {
     // Draw toolpath lines
     if (m_pathVAO != 0) {
         Shader& flat = m_pathRenderer.flatShader();
-        flat.bind();
-        flat.setMat4("uMVP", m_pathCamera.viewProjectionMatrix());
+        Mat4 mvp = m_pathCamera.viewProjectionMatrix();
+
+        // Y bounds in renderer space (G-code Z → renderer Y after swap)
+        float yMin = m_program.boundsMin.z;
+        float yMax = m_program.boundsMax.z;
 
         glDisable(GL_CULL_FACE);
+        glLineWidth(1.5f);
         glBindVertexArray(m_pathVAO);
 
         bool simActive = m_simState != SimState::Stopped;
@@ -1347,6 +1354,8 @@ void GCodePanel::renderPathView() {
         // In simulation mode, draw all base geometry as dim ghost lines (future path)
         // In view mode, draw per-category colors
         if (simActive) {
+            flat.bind();
+            flat.setMat4("uMVP", mvp);
             // Draw entire base geometry as dim ghost
             u32 totalVerts = m_retractStart + m_retractCount;
             if (totalVerts > 0) {
@@ -1354,21 +1363,36 @@ void GCodePanel::renderPathView() {
                 glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(totalVerts));
             }
         } else if (m_colorByTool && !m_toolGroups.empty()) {
-            // Color-by-tool mode: rapids gray, then each tool with its color
+            // Color-by-tool mode: rapids gray, then each tool with height shading
+            flat.bind();
+            flat.setMat4("uMVP", mvp);
             if (m_rapidCount > 0) {
                 flat.setVec4("uColor", Vec4{0.4f, 0.4f, 0.4f, 0.5f});
                 glDrawArrays(GL_LINES, static_cast<GLint>(m_rapidStart),
                              static_cast<GLsizei>(m_rapidCount));
             }
+            // Tool groups use height shader for depth visualization
+            m_heightLineShader.bind();
+            m_heightLineShader.setMat4("uMVP", mvp);
+            m_heightLineShader.setFloat("uYMin", yMin);
+            m_heightLineShader.setFloat("uYMax", yMax);
             for (const auto& tg : m_toolGroups) {
                 if (tg.count == 0) continue;
                 Vec3 tc = toolColor(tg.toolNumber);
-                flat.setVec4("uColor", Vec4{tc.x, tc.y, tc.z, 1.0f});
+                // Low = darker version of tool color, High = bright tool color
+                m_heightLineShader.setVec4("uColorLow",
+                    Vec4{tc.x * 0.3f, tc.y * 0.3f, tc.z * 0.3f, 1.0f});
+                m_heightLineShader.setVec4("uColorHigh",
+                    Vec4{tc.x, tc.y, tc.z, 1.0f});
                 glDrawArrays(GL_LINES, static_cast<GLint>(tg.start),
                              static_cast<GLsizei>(tg.count));
             }
         } else {
-            // Standard mode: color by move type
+            // Standard mode: rapids and plunge/retract use flat color,
+            // cutting paths use height-based coloring for depth visibility.
+            flat.bind();
+            flat.setMat4("uMVP", mvp);
+
             // Rapid: dim gray
             if (m_rapidCount > 0) {
                 flat.setVec4("uColor", Vec4{0.4f, 0.4f, 0.4f, 0.5f});
@@ -1376,11 +1400,20 @@ void GCodePanel::renderPathView() {
                              static_cast<GLsizei>(m_rapidCount));
             }
 
-            // Cut: blue
+            // Cut: height-colored (deep blue → bright cyan)
             if (m_cutCount > 0) {
-                flat.setVec4("uColor", Vec4{0.2f, 0.6f, 1.0f, 1.0f});
+                m_heightLineShader.bind();
+                m_heightLineShader.setMat4("uMVP", mvp);
+                m_heightLineShader.setFloat("uYMin", yMin);
+                m_heightLineShader.setFloat("uYMax", yMax);
+                m_heightLineShader.setVec4("uColorLow",
+                    Vec4{0.05f, 0.15f, 0.5f, 1.0f});
+                m_heightLineShader.setVec4("uColorHigh",
+                    Vec4{0.3f, 0.8f, 1.0f, 1.0f});
                 glDrawArrays(GL_LINES, static_cast<GLint>(m_cutStart),
                              static_cast<GLsizei>(m_cutCount));
+                flat.bind();
+                flat.setMat4("uMVP", mvp);
             }
 
             // Plunge: orange
@@ -1400,6 +1433,8 @@ void GCodePanel::renderPathView() {
 
         // --- Simulation overlay: completed + current segment ---
         if (simActive) {
+            flat.bind();
+            flat.setMat4("uMVP", mvp);
             std::vector<f32> simVerts;
             simVerts.reserve((m_simSegmentIndex + 1) * 6);
 
@@ -1472,6 +1507,7 @@ void GCodePanel::renderPathView() {
         }
 
         glBindVertexArray(0);
+        glLineWidth(1.0f);
         glEnable(GL_CULL_FACE);
     }
 
@@ -1517,6 +1553,9 @@ void GCodePanel::renderPathView() {
                  contentSize,
                  ImVec2(0, 1),
                  ImVec2(1, 0));
+
+    // Handle orbit/pan/zoom input after Image so hover state is correct
+    handlePathInput();
 
     // Live DRO overlay
     if (m_cncConnected && Config::instance().getCncShowDroOverlay()) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <deque>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -53,6 +54,10 @@ class GCodePanel : public Panel {
     void setCncController(CncController* ctrl) { m_cnc = ctrl; }
     void setJobRepository(JobRepository* repo) { m_jobRepo = repo; }
     void setToolDatabase(ToolDatabase* db) { m_toolDatabase = db; }
+
+    // Callback notifications for program load/clear
+    void setOnProgramLoaded(std::function<void(const gcode::Program&)> cb) { m_onProgramLoaded = std::move(cb); }
+    void setOnProgramCleared(std::function<void()> cb) { m_onProgramCleared = std::move(cb); }
 
     // Load G-code from file
     bool loadFile(const std::string& path);
@@ -114,6 +119,10 @@ class GCodePanel : public Panel {
     void addConsoleLine(const std::string& text, ConsoleLine::Type type);
     void buildSendProgram();
 
+    // Program load/clear callbacks
+    std::function<void(const gcode::Program&)> m_onProgramLoaded;
+    std::function<void()> m_onProgramCleared;
+
     FileDialog* m_fileDialog = nullptr;
 
     gcode::Program m_program;
@@ -148,6 +157,7 @@ class GCodePanel : public Panel {
 
     // 3D rendering pipeline
     Renderer m_pathRenderer;
+    Shader m_heightLineShader;
     Camera m_pathCamera;
     Framebuffer m_pathFramebuffer;
     int m_pathViewWidth = 1;
