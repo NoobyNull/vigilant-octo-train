@@ -220,7 +220,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 31. Core Toolpath Rendering | v0.5.5 | 0/0 | Not started | - |
+| 31. Core Toolpath Rendering | 1/2 | In Progress|  | - |
 | 32. Viewport Toolbar & Toggles | v0.5.5 | 0/0 | Not started | - |
 | 33. Model-Toolpath Alignment | v0.5.5 | 0/0 | Not started | - |
 | 34. Simulation Playback | v0.5.5 | 0/0 | Not started | - |
