@@ -8,6 +8,7 @@
 #include "core/cnc/macro_manager.h"
 #include "core/cnc/unified_settings.h"
 #include "core/config/config.h"
+#include "core/gcode/gcode_analyzer.h"
 #include "core/database/gcode_repository.h"
 #include "core/database/job_repository.h"
 #include "core/database/tool_database.h"
@@ -79,10 +80,16 @@ void Application::wireCncPanels() {
         gcp->setCncController(m_cncController.get());
         gcp->setToolDatabase(m_toolDatabase.get());
 
-        // Forward program load/clear to viewport for toolpath rendering
+        // Forward program load/clear to viewport for toolpath rendering + simulation
         gcp->setOnProgramLoaded([this](const gcode::Program& prog) {
-            if (auto* vp = m_uiManager->viewportPanel())
+            if (auto* vp = m_uiManager->viewportPanel()) {
                 vp->setGCodeProgram(prog);
+                // Compute segment times for viewport simulation
+                gcode::Analyzer analyzer;
+                analyzer.setMachineProfile(Config::instance().getActiveMachineProfile());
+                auto stats = analyzer.analyze(prog);
+                vp->setGCodeStatistics(stats);
+            }
         });
         gcp->setOnProgramCleared([this]() {
             if (auto* vp = m_uiManager->viewportPanel())

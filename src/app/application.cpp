@@ -56,6 +56,7 @@
 #include "managers/file_io_manager.h"
 #include "managers/ui_manager.h"
 #include "render/thumbnail_generator.h"
+#include "ui/dialogs/message_dialog.h"
 #include "ui/panels/gcode_panel.h"
 #include "ui/panels/library_panel.h"
 #include "ui/panels/viewport_panel.h"
@@ -383,6 +384,28 @@ void Application::quit() {
         m_uiManager->showTaggerShutdownDialog(&m_backgroundTagger->progress());
         return;
     }
+
+    // Check for unsaved temporary project
+    auto project = m_projectManager ? m_projectManager->currentProject() : nullptr;
+    if (project && project->isTemporary()) {
+        SavePromptDialog::prompt(
+            "Unsaved Project",
+            "The project \"" + project->name() +
+                "\" has not been saved. Save before quitting?",
+            [this](DialogResult result) {
+                if (result == DialogResult::Yes) {
+                    if (m_projectManager->saveTemporaryProject())
+                        m_running = false;
+                    // If save failed, stay open
+                } else if (result == DialogResult::No) {
+                    m_projectManager->discardTemporaryProject();
+                    m_running = false;
+                }
+                // Cancel: do nothing, stay running
+            });
+        return;
+    }
+
     m_running = false;
 }
 
@@ -434,6 +457,10 @@ void Application::update() {
     // Update simulation in gcode panel each frame
     if (m_uiManager && m_uiManager->gcodePanel())
         m_uiManager->gcodePanel()->updateSimulation(ImGui::GetIO().DeltaTime);
+
+    // Update simulation in viewport panel each frame
+    if (m_uiManager && m_uiManager->viewportPanel())
+        m_uiManager->viewportPanel()->updateSimulation(ImGui::GetIO().DeltaTime);
 
     // Poll gamepad input each frame
     if (m_gamepadInput)
