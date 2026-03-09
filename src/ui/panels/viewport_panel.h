@@ -72,6 +72,10 @@ class ViewportPanel : public Panel {
     void clearGCodeProgram();
     bool hasGCode() const { return !m_gcodeProgram.path.empty(); }
 
+    // Simulation playback
+    void updateSimulation(float dt);
+    void setGCodeStatistics(const gcode::Statistics& stats);
+
     // FitParams-based model matrix for alignment overlay
     void setFitParams(const carve::FitParams& params,
                       const Vec3& modelBoundsMin,
@@ -186,6 +190,25 @@ class ViewportPanel : public Panel {
     // Tool color palette
     static constexpr int kNumToolColors = 8;
     static Vec3 toolColor(int toolNum);
+
+    // --- Simulation playback state ---
+    enum class VPSimState { Stopped, Playing, Paused };
+
+    VPSimState m_simState = VPSimState::Stopped;
+    float m_simTime = 0.0f;
+    float m_simSpeed = 1.0f;
+    float m_simTotalTime = 0.0f;
+    size_t m_simSegmentIndex = 0;
+    float m_simSegmentProgress = 0.0f;
+
+    std::vector<float> m_segmentTimes;
+    std::vector<float> m_segmentTimeCumulative;
+
+    GLuint m_simVAO = 0;
+    GLuint m_simVBO = 0;
+
+    void renderSimControls();
+    void destroySimGeometry();
 };
 
 } // namespace dw

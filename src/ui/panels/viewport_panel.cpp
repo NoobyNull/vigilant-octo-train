@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdio>
 #include <map>
+#include <numeric>
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -965,6 +966,29 @@ void ViewportPanel::setGCodeProgram(const gcode::Program& program) {
     m_viewCubeCache.valid = false;
 }
 
+void ViewportPanel::setGCodeStatistics(const gcode::Statistics& stats) {
+    // Precompute segment times from Statistics (convert minutes -> seconds)
+    m_segmentTimes.resize(stats.segmentTimes.size());
+    for (size_t i = 0; i < stats.segmentTimes.size(); ++i)
+        m_segmentTimes[i] = stats.segmentTimes[i] * 60.0f;
+
+    // Build cumulative sum for O(log n) binary search during scrubbing
+    m_segmentTimeCumulative.resize(m_segmentTimes.size());
+    if (!m_segmentTimes.empty()) {
+        std::partial_sum(m_segmentTimes.begin(), m_segmentTimes.end(),
+                         m_segmentTimeCumulative.begin());
+        m_simTotalTime = m_segmentTimeCumulative.back();
+    } else {
+        m_simTotalTime = 0.0f;
+    }
+
+    // Reset simulation state
+    m_simState = VPSimState::Stopped;
+    m_simTime = 0.0f;
+    m_simSegmentIndex = 0;
+    m_simSegmentProgress = 0.0f;
+}
+
 void ViewportPanel::clearGCodeProgram() {
     m_gcodeProgram = gcode::Program{};
     m_zClipMax = 100.0f;
@@ -972,6 +996,15 @@ void ViewportPanel::clearGCodeProgram() {
     m_gcToolGroups.clear();
     destroyGCodeGeometry();
     m_alignmentStatus = AlignmentStatus::Unknown;
+
+    // Reset simulation state
+    m_simState = VPSimState::Stopped;
+    m_simTime = 0.0f;
+    m_simSegmentIndex = 0;
+    m_simSegmentProgress = 0.0f;
+    m_segmentTimes.clear();
+    m_segmentTimeCumulative.clear();
+    destroySimGeometry();
 }
 
 void ViewportPanel::destroyGCodeGeometry() {
@@ -987,6 +1020,50 @@ void ViewportPanel::destroyGCodeGeometry() {
     m_gcCutStart = m_gcCutCount = 0;
     m_gcPlungeStart = m_gcPlungeCount = 0;
     m_gcRetractStart = m_gcRetractCount = 0;
+    destroySimGeometry();
+}
+
+void ViewportPanel::destroySimGeometry() {
+    if (m_simVBO != 0) {
+        glDeleteBuffers(1, &m_simVBO);
+        m_simVBO = 0;
+    }
+    if (m_simVAO != 0) {
+        glDeleteVertexArrays(1, &m_simVAO);
+        m_simVAO = 0;
+    }
+}
+
+void ViewportPanel::updateSimulation(float dt) {
+    if (m_simState != VPSimState::Playing || m_gcodeProgram.path.empty())
+        return;
+
+    m_simTime += dt * m_simSpeed;
+
+    if (m_segmentTimeCumulative.empty()) {
+        m_simState = VPSimState::Stopped;
+        return;
+    }
+
+    if (m_simTime >= m_simTotalTime) {
+        // Past end -- stop
+        m_simSegmentIndex = m_gcodeProgram.path.size();
+        m_simSegmentProgress = 0.0f;
+        m_simState = VPSimState::Stopped;
+        return;
+    }
+
+    // O(log n) binary search on cumulative time array
+    auto it = std::lower_bound(m_segmentTimeCumulative.begin(),
+                                m_segmentTimeCumulative.end(), m_simTime);
+    size_t idx = static_cast<size_t>(it - m_segmentTimeCumulative.begin());
+    if (idx >= m_gcodeProgram.path.size())
+        idx = m_gcodeProgram.path.size() - 1;
+
+    float segStart = (idx > 0) ? m_segmentTimeCumulative[idx - 1] : 0.0f;
+    float segDur = m_segmentTimes[idx];
+    m_simSegmentIndex = idx;
+    m_simSegmentProgress = (segDur > 0.0f) ? (m_simTime - segStart) / segDur : 0.0f;
 }
 
 void ViewportPanel::buildGCodeGeometry() {
@@ -1173,11 +1250,29 @@ void ViewportPanel::renderGCodeLines() {
     float yMin = m_gcodeProgram.boundsMin.z;
     float yMax = m_gcodeProgram.boundsMax.z;
 
+    bool simActive = m_simState != VPSimState::Stopped;
+
     glDisable(GL_CULL_FACE);
     glLineWidth(1.5f);
     glBindVertexArray(m_gcodeVAO);
 
-    if (m_colorByTool && !m_gcToolGroups.empty()) {
+    if (simActive) {
+        // During simulation: draw ALL base geometry as dim ghost lines
+        u32 totalVerts = m_gcRapidCount + m_gcCutCount +
+                         m_gcPlungeCount + m_gcRetractCount;
+        if (!m_gcToolGroups.empty()) {
+            for (const auto& tg : m_gcToolGroups)
+                totalVerts += tg.count;
+            // Subtract the type-based counts since tool groups replace them
+            totalVerts = m_gcRapidCount;
+            for (const auto& tg : m_gcToolGroups)
+                totalVerts += tg.count;
+        }
+        flat.bind();
+        flat.setMat4("uMVP", mvp);
+        flat.setVec4("uColor", Vec4{0.3f, 0.3f, 0.35f, 0.35f});
+        glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(totalVerts));
+    } else if (m_colorByTool && !m_gcToolGroups.empty()) {
         // Color-by-tool mode: rapids gray, then each tool group
         flat.bind();
         flat.setMat4("uMVP", mvp);
@@ -1263,7 +1358,83 @@ void ViewportPanel::renderGCodeLines() {
         }
     }
 
+    // --- Simulation overlay: completed + current segment ---
+    if (simActive) {
+        flat.bind();
+        flat.setMat4("uMVP", mvp);
+        std::vector<f32> simVerts;
+        simVerts.reserve((m_simSegmentIndex + 1) * 6);
+
+        for (size_t si = 0; si < m_simSegmentIndex && si < m_gcodeProgram.path.size(); ++si) {
+            const auto& seg = m_gcodeProgram.path[si];
+            if (seg.end.z > m_zClipMax) continue;
+            // Swap Y<->Z for Y-up renderer
+            simVerts.push_back(seg.start.x);
+            simVerts.push_back(seg.start.z);
+            simVerts.push_back(seg.start.y);
+            simVerts.push_back(seg.end.x);
+            simVerts.push_back(seg.end.z);
+            simVerts.push_back(seg.end.y);
+        }
+
+        u32 completedVertCount = static_cast<u32>(simVerts.size() / 3);
+
+        // Current segment partial
+        if (m_simSegmentIndex < m_gcodeProgram.path.size()) {
+            const auto& cur = m_gcodeProgram.path[m_simSegmentIndex];
+            float t = std::clamp(m_simSegmentProgress, 0.0f, 1.0f);
+            float ex = cur.start.x + (cur.end.x - cur.start.x) * t;
+            float ey = cur.start.y + (cur.end.y - cur.start.y) * t;
+            float ez = cur.start.z + (cur.end.z - cur.start.z) * t;
+            // Swap Y<->Z
+            simVerts.push_back(cur.start.x);
+            simVerts.push_back(cur.start.z);
+            simVerts.push_back(cur.start.y);
+            simVerts.push_back(ex);
+            simVerts.push_back(ez);
+            simVerts.push_back(ey);
+        }
+
+        if (!simVerts.empty()) {
+            // Create/update sim VBO
+            if (m_simVAO == 0) {
+                GL_CHECK(glGenVertexArrays(1, &m_simVAO));
+                GL_CHECK(glGenBuffers(1, &m_simVBO));
+                GL_CHECK(glBindVertexArray(m_simVAO));
+                GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, m_simVBO));
+                GL_CHECK(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(f32), nullptr));
+                GL_CHECK(glEnableVertexAttribArray(0));
+            } else {
+                GL_CHECK(glBindVertexArray(m_simVAO));
+                GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, m_simVBO));
+            }
+
+            GL_CHECK(glBufferData(GL_ARRAY_BUFFER,
+                                  static_cast<GLsizeiptr>(simVerts.size() * sizeof(f32)),
+                                  simVerts.data(),
+                                  GL_DYNAMIC_DRAW));
+
+            // Draw completed in bright green
+            if (completedVertCount > 0) {
+                flat.setVec4("uColor", Vec4{0.1f, 0.85f, 0.1f, 1.0f});
+                glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(completedVertCount));
+            }
+
+            // Draw current segment in yellow
+            if (m_simSegmentIndex < m_gcodeProgram.path.size()) {
+                flat.setVec4("uColor", Vec4{1.0f, 0.85f, 0.2f, 1.0f});
+                glDrawArrays(GL_LINES, static_cast<GLint>(completedVertCount), 2);
+
+                // Cutter dot at current position
+                flat.setVec4("uColor", Vec4{1.0f, 0.2f, 0.2f, 1.0f});
+                glPointSize(8.0f);
+                glDrawArrays(GL_POINTS, static_cast<GLint>(completedVertCount) + 1, 1);
+            }
+        }
+    }
+
     glBindVertexArray(0);
+    glLineWidth(1.0f);
     glEnable(GL_CULL_FACE);
 }
 
