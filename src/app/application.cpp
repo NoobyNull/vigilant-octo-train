@@ -454,10 +454,6 @@ void Application::update() {
                                              [this](bool show) {
                                                  m_uiManager->showStartPage() = show;
                                              });
-    // Update simulation in gcode panel each frame
-    if (m_uiManager && m_uiManager->gcodePanel())
-        m_uiManager->gcodePanel()->updateSimulation(ImGui::GetIO().DeltaTime);
-
     // Update simulation in viewport panel each frame
     if (m_uiManager && m_uiManager->viewportPanel())
         m_uiManager->viewportPanel()->updateSimulation(ImGui::GetIO().DeltaTime);
