@@ -3,8 +3,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
-#include <map>
-#include <numeric>
 
 #include <imgui.h>
 
@@ -16,8 +14,6 @@
 #include "../../core/project/project.h"
 #include "../../core/cnc/serial_port.h"
 #include "../../core/utils/file_utils.h"
-#include "../../render/gl_utils.h"
-#include "../../render/shader_sources.h"
 #include "../dialogs/file_dialog.h"
 #include "../icons.h"
 #include "../ui_colors.h"
@@ -65,17 +61,7 @@ static LongPressButton s_startLongPress;
 constexpr int GCodePanel::BAUD_RATES[];
 
 GCodePanel::GCodePanel() : Panel("G-code") {
-    m_pathRenderer.initialize();
-    m_heightLineShader.compile(shaders::HEIGHT_LINE_VERTEX, shaders::HEIGHT_LINE_FRAGMENT);
-    m_pathCamera.reset();
-    // Start with isometric view so depth is visible
-    m_pathCamera.setYaw(-30.0f);
-    m_pathCamera.setPitch(55.0f);
     m_availablePorts = listSerialPorts();
-}
-
-GCodePanel::~GCodePanel() {
-    destroyPathGeometry();
 }
 
 void GCodePanel::render() {
@@ -148,13 +134,11 @@ void GCodePanel::render() {
                     renderCarveProgress();
                     renderFeedOverride();
                 }
-            } else if (m_mode == GCodePanelMode::View) {
-                renderSimulationControls();
             }
 
             ImGui::Separator();
 
-            // Main content area: stats + path view
+            // Main content area: stats + G-code text listing
             float availWidth = ImGui::GetContentRegionAvail().x;
 
             if (availWidth < 420.0f) {
@@ -163,8 +147,27 @@ void GCodePanel::render() {
                 renderStatistics();
                 ImGui::EndChild();
 
-                ImGui::BeginChild("PathView", ImVec2(0, 0), true);
-                renderPathView();
+                ImGui::BeginChild("GCodeListing", ImVec2(0, 0), true);
+                if (hasGCode()) {
+                    ImGuiListClipper clipper;
+                    clipper.Begin(static_cast<int>(m_program.commands.size()));
+                    while (clipper.Step()) {
+                        for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i) {
+                            const auto& cmd = m_program.commands[static_cast<size_t>(i)];
+                            bool isAcked = m_cncConnected && i <= m_lastAckedLine;
+                            if (isAcked)
+                                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.3f, 0.8f, 0.3f, 1.0f));
+                            ImGui::Text("%6d  %s", i + 1, cmd.raw.c_str());
+                            if (isAcked)
+                                ImGui::PopStyleColor();
+                        }
+                    }
+                    if (m_scrollToLine >= 0 && m_scrollToLine < static_cast<int>(m_program.commands.size())) {
+                        float lineH = ImGui::GetTextLineHeightWithSpacing();
+                        ImGui::SetScrollY(static_cast<float>(m_scrollToLine) * lineH);
+                        m_scrollToLine = -1;
+                    }
+                }
                 ImGui::EndChild();
             } else {
                 float statsWidth = availWidth * 0.35f;
@@ -182,8 +185,27 @@ void GCodePanel::render() {
 
                 ImGui::SameLine();
 
-                ImGui::BeginChild("PathView", ImVec2(availWidth - statsWidth - spacing, 0), true);
-                renderPathView();
+                ImGui::BeginChild("GCodeListing", ImVec2(availWidth - statsWidth - spacing, 0), true);
+                if (hasGCode()) {
+                    ImGuiListClipper clipper;
+                    clipper.Begin(static_cast<int>(m_program.commands.size()));
+                    while (clipper.Step()) {
+                        for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i) {
+                            const auto& cmd = m_program.commands[static_cast<size_t>(i)];
+                            bool isAcked = m_cncConnected && i <= m_lastAckedLine;
+                            if (isAcked)
+                                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.3f, 0.8f, 0.3f, 1.0f));
+                            ImGui::Text("%6d  %s", i + 1, cmd.raw.c_str());
+                            if (isAcked)
+                                ImGui::PopStyleColor();
+                        }
+                    }
+                    if (m_scrollToLine >= 0 && m_scrollToLine < static_cast<int>(m_program.commands.size())) {
+                        float lineH = ImGui::GetTextLineHeightWithSpacing();
+                        ImGui::SetScrollY(static_cast<float>(m_scrollToLine) * lineH);
+                        m_scrollToLine = -1;
+                    }
+                }
                 ImGui::EndChild();
             }
         } else {
@@ -236,29 +258,6 @@ bool GCodePanel::loadFile(const std::string& path) {
         analyzer.setMachineProfile(Config::instance().getActiveMachineProfile());
         m_stats = analyzer.analyze(m_program);
 
-        if (!m_program.path.empty()) {
-            m_maxLayer = m_program.boundsMax.z;
-            m_currentLayer = m_maxLayer;
-        }
-
-        // Build precomputed segment times from trapezoidal planner (convert min->sec)
-        m_segmentTimes.resize(m_stats.segmentTimes.size());
-        for (size_t i = 0; i < m_stats.segmentTimes.size(); ++i)
-            m_segmentTimes[i] = m_stats.segmentTimes[i] * 60.0f;
-
-        // Build cumulative sum for O(log n) binary search
-        m_segmentTimeCumulative.resize(m_segmentTimes.size());
-        if (!m_segmentTimes.empty()) {
-            std::partial_sum(m_segmentTimes.begin(), m_segmentTimes.end(),
-                             m_segmentTimeCumulative.begin());
-            m_simTotalTime = m_segmentTimeCumulative.back();
-        } else {
-            m_simTotalTime = 0.0f;
-        }
-
-        m_pathDirty = true;
-        m_needsCameraFit = true;
-
         m_currentGCodeId = -1;
         if (m_gcodeRepo) {
             std::string filename = path;
@@ -285,17 +284,7 @@ void GCodePanel::clear() {
     m_program = gcode::Program{};
     m_stats = gcode::Statistics{};
     m_filePath.clear();
-    m_currentLayer = 0.0f;
-    m_maxLayer = 100.0f;
-    destroyPathGeometry();
-    m_pathDirty = true;
     m_currentGCodeId = -1;
-    m_simState = SimState::Stopped;
-    m_simTime = 0.0f;
-    m_simSegmentIndex = 0;
-    m_simSegmentProgress = 0.0f;
-    m_segmentTimes.clear();
-    m_segmentTimeCumulative.clear();
     m_lastAckedLine = -1;
     m_streamProgress = {};
 
@@ -331,29 +320,6 @@ void GCodePanel::renderToolbar() {
         if (ImGui::Button("Close")) {
             clear();
         }
-
-        ImGui::SameLine();
-        ImGui::Separator();
-        ImGui::SameLine();
-
-        float availWidth = ImGui::GetContentRegionAvail().x;
-        if (availWidth < 350.0f)
-            ImGui::NewLine();
-
-        if (ImGui::Checkbox("Rapid", &m_showRapid))
-            m_pathDirty = true;
-        ImGui::SameLine();
-        if (ImGui::Checkbox("Cut", &m_showCut))
-            m_pathDirty = true;
-        ImGui::SameLine();
-        if (ImGui::Checkbox("Plunge", &m_showPlunge))
-            m_pathDirty = true;
-        ImGui::SameLine();
-        if (ImGui::Checkbox("Retract", &m_showRetract))
-            m_pathDirty = true;
-        ImGui::SameLine();
-        if (ImGui::Checkbox("Color by Tool", &m_colorByTool))
-            m_pathDirty = true;
 
         if (m_projectManager && m_projectManager->currentProject() && m_currentGCodeId > 0) {
             ImGui::SameLine();
@@ -522,28 +488,6 @@ void GCodePanel::reanalyze() {
     gcode::Analyzer analyzer;
     analyzer.setMachineProfile(Config::instance().getActiveMachineProfile());
     m_stats = analyzer.analyze(m_program);
-
-    // Rebuild segment times (min->sec)
-    m_segmentTimes.resize(m_stats.segmentTimes.size());
-    for (size_t i = 0; i < m_stats.segmentTimes.size(); ++i)
-        m_segmentTimes[i] = m_stats.segmentTimes[i] * 60.0f;
-
-    m_segmentTimeCumulative.resize(m_segmentTimes.size());
-    if (!m_segmentTimes.empty()) {
-        std::partial_sum(m_segmentTimes.begin(), m_segmentTimes.end(),
-                         m_segmentTimeCumulative.begin());
-        m_simTotalTime = m_segmentTimeCumulative.back();
-    } else {
-        m_simTotalTime = 0.0f;
-    }
-
-    // Reset simulation state
-    m_simState = SimState::Stopped;
-    m_simTime = 0.0f;
-    m_simSegmentIndex = 0;
-    m_simSegmentProgress = 0.0f;
-
-    m_pathDirty = true;
 }
 
 // --- Connection bar (Send mode) ---
@@ -924,652 +868,6 @@ void GCodePanel::renderConsole() {
     if (m_consoleAutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
         ImGui::SetScrollHereY(1.0f);
     ImGui::EndChild();
-}
-
-// --- Simulation controls ---
-
-void GCodePanel::renderSimulationControls() {
-    if (!hasGCode())
-        return;
-
-    // Play / Pause / Reset
-    if (m_simState == SimState::Stopped || m_simState == SimState::Paused) {
-        if (ImGui::Button("Play")) {
-            m_simState = SimState::Playing;
-        }
-    } else {
-        if (ImGui::Button("Pause")) {
-            m_simState = SimState::Paused;
-        }
-    }
-
-    ImGui::SameLine();
-    if (ImGui::Button("Reset")) {
-        m_simState = SimState::Stopped;
-        m_simTime = 0.0f;
-        m_simSegmentIndex = 0;
-        m_simSegmentProgress = 0.0f;
-    }
-
-    // Speed selector
-    ImGui::SameLine(0, ImGui::GetStyle().ItemSpacing.x * 3);
-    ImGui::Text("Speed:");
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(ImGui::CalcTextSize("000000").x + ImGui::GetStyle().FramePadding.x * 2);
-    static const float speeds[] = {0.5f, 1.0f, 2.0f, 5.0f, 10.0f};
-    static const char* speedLabels[] = {"0.5x", "1x", "2x", "5x", "10x"};
-    int currentSpeedIdx = 1;
-    for (int i = 0; i < 5; ++i) {
-        if (m_simSpeed == speeds[i])
-            currentSpeedIdx = i;
-    }
-    if (ImGui::BeginCombo("##SimSpeed", speedLabels[currentSpeedIdx])) {
-        for (int i = 0; i < 5; ++i) {
-            if (ImGui::Selectable(speedLabels[i], i == currentSpeedIdx))
-                m_simSpeed = speeds[i];
-        }
-        ImGui::EndCombo();
-    }
-
-    // Scrub slider
-    ImGui::Text("Progress:");
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(-1);
-    float scrubFrac = (m_simTotalTime > 0.0f) ? (m_simTime / m_simTotalTime) : 0.0f;
-    if (ImGui::SliderFloat("##SimScrub", &scrubFrac, 0.0f, 1.0f, "%.1f%%")) {
-        m_simTime = scrubFrac * m_simTotalTime;
-        // O(log n) binary search to find segment from time
-        if (!m_segmentTimeCumulative.empty()) {
-            auto it = std::lower_bound(m_segmentTimeCumulative.begin(),
-                                        m_segmentTimeCumulative.end(), m_simTime);
-            size_t idx = static_cast<size_t>(it - m_segmentTimeCumulative.begin());
-            if (idx >= m_program.path.size())
-                idx = m_program.path.size() - 1;
-            float segStart = (idx > 0) ? m_segmentTimeCumulative[idx - 1] : 0.0f;
-            float segDur = m_segmentTimes[idx];
-            m_simSegmentIndex = idx;
-            m_simSegmentProgress = (segDur > 0.0f) ? (m_simTime - segStart) / segDur : 0.0f;
-        } else {
-            m_simSegmentIndex = 0;
-            m_simSegmentProgress = 0.0f;
-        }
-    }
-}
-
-void GCodePanel::updateSimulation(float dt) {
-    // Live CNC tracking: when streaming, drive the 3D visualization from acked line index
-    if (m_cncConnected && m_lastAckedLine >= 0 && !m_program.path.empty() &&
-        m_streamProgress.totalLines > 0) {
-        // Find the last path segment whose lineNumber <= m_lastAckedLine
-        size_t bestIdx = 0;
-        for (size_t i = 0; i < m_program.path.size(); ++i) {
-            if (m_program.path[i].lineNumber <= m_lastAckedLine)
-                bestIdx = i + 1; // +1 because simSegmentIndex is the *next* segment to animate
-        }
-        m_simSegmentIndex = bestIdx;
-        m_simSegmentProgress = 0.0f;
-        return;
-    }
-
-    if (m_simState != SimState::Playing || m_program.path.empty())
-        return;
-
-    m_simTime += dt * m_simSpeed;
-
-    if (m_segmentTimeCumulative.empty()) {
-        m_simState = SimState::Stopped;
-        return;
-    }
-
-    if (m_simTime >= m_simTotalTime) {
-        // Past end - stop
-        m_simSegmentIndex = m_program.path.size();
-        m_simSegmentProgress = 0.0f;
-        m_simState = SimState::Stopped;
-        return;
-    }
-
-    // O(log n) binary search on cumulative time array
-    auto it = std::lower_bound(m_segmentTimeCumulative.begin(),
-                                m_segmentTimeCumulative.end(), m_simTime);
-    size_t idx = static_cast<size_t>(it - m_segmentTimeCumulative.begin());
-    if (idx >= m_program.path.size())
-        idx = m_program.path.size() - 1;
-
-    float segStart = (idx > 0) ? m_segmentTimeCumulative[idx - 1] : 0.0f;
-    float segDur = m_segmentTimes[idx];
-    m_simSegmentIndex = idx;
-    m_simSegmentProgress = (segDur > 0.0f) ? (m_simTime - segStart) / segDur : 0.0f;
-}
-
-// --- 3D Path Geometry ---
-
-void GCodePanel::buildPathGeometry() {
-    destroyPathGeometry();
-    m_toolGroups.clear();
-
-    if (m_program.path.empty()) {
-        m_pathDirty = false;
-        return;
-    }
-
-    // Helper: add segment vertices (Y↔Z swap: G-code Z-up, renderer Y-up)
-    auto addSegVerts = [](std::vector<f32>& verts, const gcode::PathSegment& seg) {
-        verts.push_back(seg.start.x);
-        verts.push_back(seg.start.z);
-        verts.push_back(seg.start.y);
-        verts.push_back(seg.end.x);
-        verts.push_back(seg.end.z);
-        verts.push_back(seg.end.y);
-    };
-
-    // Helper: classify non-rapid segment (returns false if filtered out)
-    auto isVisibleNonRapid = [this](const gcode::PathSegment& seg) -> bool {
-        float dz = seg.end.z - seg.start.z;
-        float dxy2 = (seg.end.x - seg.start.x) * (seg.end.x - seg.start.x) +
-                      (seg.end.y - seg.start.y) * (seg.end.y - seg.start.y);
-        bool zDominant = (dz * dz) > dxy2 * 0.25f;
-
-        if (dz < -0.001f && zDominant) return m_showPlunge;
-        if (dz > 0.001f && zDominant) return m_showRetract;
-        return m_showCut;
-    };
-
-    std::vector<f32> allVerts;
-
-    if (m_colorByTool) {
-        // --- Color by tool mode: group by tool number ---
-        // First pass: collect rapids
-        std::vector<f32> rapidVerts;
-        // Collect non-rapid segments grouped by tool
-        std::map<int, std::vector<f32>> toolVerts;
-
-        for (const auto& seg : m_program.path) {
-            if (seg.end.z > m_currentLayer) continue;
-
-            if (seg.isRapid) {
-                if (m_showRapid) addSegVerts(rapidVerts, seg);
-            } else {
-                if (!isVisibleNonRapid(seg)) continue;
-                addSegVerts(toolVerts[seg.toolNumber], seg);
-            }
-        }
-
-        allVerts.reserve(rapidVerts.size());
-        for (auto& [tool, verts] : toolVerts)
-            allVerts.reserve(allVerts.capacity() + verts.size());
-
-        // Rapids first
-        m_rapidStart = 0;
-        m_rapidCount = static_cast<u32>(rapidVerts.size() / 3);
-        allVerts.insert(allVerts.end(), rapidVerts.begin(), rapidVerts.end());
-
-        // Zero out type-based groups (not used in tool mode)
-        m_cutStart = m_cutCount = 0;
-        m_plungeStart = m_plungeCount = 0;
-        m_retractStart = m_retractCount = 0;
-
-        // Tool groups
-        u32 offset = m_rapidCount;
-        for (auto& [tool, verts] : toolVerts) {
-            ToolGroup tg;
-            tg.toolNumber = tool;
-            tg.start = offset;
-            tg.count = static_cast<u32>(verts.size() / 3);
-            m_toolGroups.push_back(tg);
-            allVerts.insert(allVerts.end(), verts.begin(), verts.end());
-            offset += tg.count;
-        }
-    } else {
-        // --- Standard mode: group by move type ---
-        std::vector<f32> rapidVerts;
-        std::vector<f32> cutVerts;
-        std::vector<f32> plungeVerts;
-        std::vector<f32> retractVerts;
-
-        for (const auto& seg : m_program.path) {
-            if (seg.end.z > m_currentLayer) continue;
-
-            std::vector<f32>* target = nullptr;
-
-            if (seg.isRapid) {
-                if (!m_showRapid) continue;
-                target = &rapidVerts;
-            } else {
-                float dz = seg.end.z - seg.start.z;
-                float dxy2 = (seg.end.x - seg.start.x) * (seg.end.x - seg.start.x) +
-                              (seg.end.y - seg.start.y) * (seg.end.y - seg.start.y);
-                bool zDominant = (dz * dz) > dxy2 * 0.25f;
-
-                if (dz < -0.001f && zDominant) {
-                    if (!m_showPlunge) continue;
-                    target = &plungeVerts;
-                } else if (dz > 0.001f && zDominant) {
-                    if (!m_showRetract) continue;
-                    target = &retractVerts;
-                } else {
-                    if (!m_showCut) continue;
-                    target = &cutVerts;
-                }
-            }
-
-            addSegVerts(*target, seg);
-        }
-
-        allVerts.reserve(rapidVerts.size() + cutVerts.size() + plungeVerts.size() + retractVerts.size());
-
-        m_rapidStart = 0;
-        m_rapidCount = static_cast<u32>(rapidVerts.size() / 3);
-        allVerts.insert(allVerts.end(), rapidVerts.begin(), rapidVerts.end());
-
-        m_cutStart = m_rapidCount;
-        m_cutCount = static_cast<u32>(cutVerts.size() / 3);
-        allVerts.insert(allVerts.end(), cutVerts.begin(), cutVerts.end());
-
-        m_plungeStart = m_cutStart + m_cutCount;
-        m_plungeCount = static_cast<u32>(plungeVerts.size() / 3);
-        allVerts.insert(allVerts.end(), plungeVerts.begin(), plungeVerts.end());
-
-        m_retractStart = m_plungeStart + m_plungeCount;
-        m_retractCount = static_cast<u32>(retractVerts.size() / 3);
-        allVerts.insert(allVerts.end(), retractVerts.begin(), retractVerts.end());
-    }
-
-    if (allVerts.empty()) {
-        m_pathDirty = false;
-        return;
-    }
-
-    // Upload to GPU
-    GL_CHECK(glGenVertexArrays(1, &m_pathVAO));
-    GL_CHECK(glGenBuffers(1, &m_pathVBO));
-
-    GL_CHECK(glBindVertexArray(m_pathVAO));
-    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, m_pathVBO));
-    GL_CHECK(glBufferData(GL_ARRAY_BUFFER,
-                          static_cast<GLsizeiptr>(allVerts.size() * sizeof(f32)),
-                          allVerts.data(),
-                          GL_STATIC_DRAW));
-
-    // Position attribute (location 0): vec3
-    GL_CHECK(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(f32), nullptr));
-    GL_CHECK(glEnableVertexAttribArray(0));
-
-    GL_CHECK(glBindVertexArray(0));
-
-    // Fit camera to toolpath bounds only on first load (not on filter/clip changes)
-    if (m_needsCameraFit) {
-        // Swap Y↔Z to match renderer's Y-up convention
-        Vec3 bMin{m_program.boundsMin.x, m_program.boundsMin.z, m_program.boundsMin.y};
-        Vec3 bMax{m_program.boundsMax.x, m_program.boundsMax.z, m_program.boundsMax.y};
-        m_pathCamera.fitToBounds(bMin, bMax);
-        m_needsCameraFit = false;
-    }
-
-    m_pathDirty = false;
-}
-
-void GCodePanel::destroyPathGeometry() {
-    if (m_pathVBO != 0) {
-        glDeleteBuffers(1, &m_pathVBO);
-        m_pathVBO = 0;
-    }
-    if (m_pathVAO != 0) {
-        glDeleteVertexArrays(1, &m_pathVAO);
-        m_pathVAO = 0;
-    }
-    if (m_simVBO != 0) {
-        glDeleteBuffers(1, &m_simVBO);
-        m_simVBO = 0;
-    }
-    if (m_simVAO != 0) {
-        glDeleteVertexArrays(1, &m_simVAO);
-        m_simVAO = 0;
-    }
-    m_rapidCount = m_cutCount = m_plungeCount = m_retractCount = 0;
-}
-
-void GCodePanel::handlePathInput() {
-    if (!ImGui::IsWindowHovered())
-        return;
-
-    ImGuiIO& io = ImGui::GetIO();
-    auto& cfg = Config::instance();
-    NavStyle nav = cfg.getNavStyle();
-    f32 orbitSignX = cfg.getInvertOrbitX() ? 1.0f : -1.0f;
-    f32 orbitSignY = cfg.getInvertOrbitY() ? 1.0f : -1.0f;
-
-    // Mouse wheel zoom (all styles)
-    if (io.MouseWheel != 0.0f) {
-        m_pathCamera.zoom(io.MouseWheel * 0.5f);
-    }
-
-    switch (nav) {
-    case NavStyle::CAD:
-        if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle)) {
-            ImVec2 delta = io.MouseDelta;
-            if (io.KeyShift) {
-                m_pathCamera.pan(-delta.x, delta.y);
-            } else {
-                m_pathCamera.orbit(orbitSignX * delta.x, orbitSignY * delta.y);
-            }
-        }
-        if (ImGui::IsMouseDragging(ImGuiMouseButton_Right)) {
-            ImVec2 delta = io.MouseDelta;
-            m_pathCamera.pan(-delta.x, delta.y);
-        }
-        break;
-
-    case NavStyle::Maya:
-        if (io.KeyAlt) {
-            if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-                ImVec2 delta = io.MouseDelta;
-                m_pathCamera.orbit(orbitSignX * delta.x, orbitSignY * delta.y);
-            }
-            if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle)) {
-                ImVec2 delta = io.MouseDelta;
-                m_pathCamera.pan(-delta.x, delta.y);
-            }
-            if (ImGui::IsMouseDragging(ImGuiMouseButton_Right)) {
-                ImVec2 delta = io.MouseDelta;
-                m_pathCamera.zoom(delta.y * 0.01f);
-            }
-        }
-        break;
-
-    default: // NavStyle::Default
-        if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-            ImVec2 delta = io.MouseDelta;
-            if (io.KeyShift) {
-                m_pathCamera.pan(-delta.x, delta.y);
-            } else {
-                m_pathCamera.orbit(orbitSignX * delta.x, orbitSignY * delta.y);
-            }
-        }
-        if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle)) {
-            ImVec2 delta = io.MouseDelta;
-            m_pathCamera.pan(-delta.x, delta.y);
-        }
-        if (ImGui::IsMouseDragging(ImGuiMouseButton_Right)) {
-            ImVec2 delta = io.MouseDelta;
-            m_pathCamera.zoom(delta.y * 0.01f);
-        }
-        break;
-    }
-}
-
-// --- 3D Path View ---
-
-void GCodePanel::renderPathView() {
-    if (!hasGCode())
-        return;
-
-    renderZClipSlider();
-    ImGui::Separator();
-
-    ImVec2 contentSize = ImGui::GetContentRegionAvail();
-    int width = static_cast<int>(contentSize.x);
-    int height = static_cast<int>(contentSize.y);
-
-    if (width <= 0 || height <= 0)
-        return;
-
-    // Resize framebuffer + camera viewport if dimensions changed
-    if (width != m_pathViewWidth || height != m_pathViewHeight) {
-        m_pathViewWidth = width;
-        m_pathViewHeight = height;
-        m_pathFramebuffer.resize(width, height);
-        m_pathCamera.setViewport(width, height);
-    }
-
-    // Rebuild geometry if dirty
-    if (m_pathDirty)
-        buildPathGeometry();
-
-    // --- Render to framebuffer ---
-    m_pathFramebuffer.bind();
-
-    m_pathRenderer.beginFrame(Color{0.12f, 0.12f, 0.14f, 1.0f});
-    m_pathRenderer.setCamera(m_pathCamera);
-
-    // Grid and axis
-    m_pathRenderer.renderGrid(20.0f, 1.0f);
-    m_pathRenderer.renderAxis(2.0f);
-
-    // Draw toolpath lines
-    if (m_pathVAO != 0) {
-        Shader& flat = m_pathRenderer.flatShader();
-        Mat4 mvp = m_pathCamera.viewProjectionMatrix();
-
-        // Y bounds in renderer space (G-code Z → renderer Y after swap)
-        float yMin = m_program.boundsMin.z;
-        float yMax = m_program.boundsMax.z;
-
-        glDisable(GL_CULL_FACE);
-        glLineWidth(1.5f);
-        glBindVertexArray(m_pathVAO);
-
-        bool simActive = m_simState != SimState::Stopped;
-
-        // In simulation mode, draw all base geometry as dim ghost lines (future path)
-        // In view mode, draw per-category colors
-        if (simActive) {
-            flat.bind();
-            flat.setMat4("uMVP", mvp);
-            // Draw entire base geometry as dim ghost
-            u32 totalVerts = m_retractStart + m_retractCount;
-            if (totalVerts > 0) {
-                flat.setVec4("uColor", Vec4{0.3f, 0.3f, 0.35f, 0.35f});
-                glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(totalVerts));
-            }
-        } else if (m_colorByTool && !m_toolGroups.empty()) {
-            // Color-by-tool mode: rapids gray, then each tool with height shading
-            flat.bind();
-            flat.setMat4("uMVP", mvp);
-            if (m_rapidCount > 0) {
-                flat.setVec4("uColor", Vec4{0.4f, 0.4f, 0.4f, 0.5f});
-                glDrawArrays(GL_LINES, static_cast<GLint>(m_rapidStart),
-                             static_cast<GLsizei>(m_rapidCount));
-            }
-            // Tool groups use height shader for depth visualization
-            m_heightLineShader.bind();
-            m_heightLineShader.setMat4("uMVP", mvp);
-            m_heightLineShader.setFloat("uYMin", yMin);
-            m_heightLineShader.setFloat("uYMax", yMax);
-            for (const auto& tg : m_toolGroups) {
-                if (tg.count == 0) continue;
-                Vec3 tc = toolColor(tg.toolNumber);
-                // Low = darker version of tool color, High = bright tool color
-                m_heightLineShader.setVec4("uColorLow",
-                    Vec4{tc.x * 0.3f, tc.y * 0.3f, tc.z * 0.3f, 1.0f});
-                m_heightLineShader.setVec4("uColorHigh",
-                    Vec4{tc.x, tc.y, tc.z, 1.0f});
-                glDrawArrays(GL_LINES, static_cast<GLint>(tg.start),
-                             static_cast<GLsizei>(tg.count));
-            }
-        } else {
-            // Standard mode: rapids and plunge/retract use flat color,
-            // cutting paths use height-based coloring for depth visibility.
-            flat.bind();
-            flat.setMat4("uMVP", mvp);
-
-            // Rapid: dim gray
-            if (m_rapidCount > 0) {
-                flat.setVec4("uColor", Vec4{0.4f, 0.4f, 0.4f, 0.5f});
-                glDrawArrays(GL_LINES, static_cast<GLint>(m_rapidStart),
-                             static_cast<GLsizei>(m_rapidCount));
-            }
-
-            // Cut: height-colored (deep blue → bright cyan)
-            if (m_cutCount > 0) {
-                m_heightLineShader.bind();
-                m_heightLineShader.setMat4("uMVP", mvp);
-                m_heightLineShader.setFloat("uYMin", yMin);
-                m_heightLineShader.setFloat("uYMax", yMax);
-                m_heightLineShader.setVec4("uColorLow",
-                    Vec4{0.05f, 0.15f, 0.5f, 1.0f});
-                m_heightLineShader.setVec4("uColorHigh",
-                    Vec4{0.3f, 0.8f, 1.0f, 1.0f});
-                glDrawArrays(GL_LINES, static_cast<GLint>(m_cutStart),
-                             static_cast<GLsizei>(m_cutCount));
-                flat.bind();
-                flat.setMat4("uMVP", mvp);
-            }
-
-            // Plunge: orange
-            if (m_plungeCount > 0) {
-                flat.setVec4("uColor", Vec4{1.0f, 0.5f, 0.1f, 1.0f});
-                glDrawArrays(GL_LINES, static_cast<GLint>(m_plungeStart),
-                             static_cast<GLsizei>(m_plungeCount));
-            }
-
-            // Retract: green
-            if (m_retractCount > 0) {
-                flat.setVec4("uColor", Vec4{0.3f, 0.8f, 0.3f, 0.6f});
-                glDrawArrays(GL_LINES, static_cast<GLint>(m_retractStart),
-                             static_cast<GLsizei>(m_retractCount));
-            }
-        }
-
-        // --- Simulation overlay: completed + current segment ---
-        if (simActive) {
-            flat.bind();
-            flat.setMat4("uMVP", mvp);
-            std::vector<f32> simVerts;
-            simVerts.reserve((m_simSegmentIndex + 1) * 6);
-
-            for (size_t si = 0; si < m_simSegmentIndex && si < m_program.path.size(); ++si) {
-                const auto& seg = m_program.path[si];
-                if (seg.end.z > m_currentLayer) continue;
-                // Swap Y↔Z for Y-up renderer
-                simVerts.push_back(seg.start.x);
-                simVerts.push_back(seg.start.z);
-                simVerts.push_back(seg.start.y);
-                simVerts.push_back(seg.end.x);
-                simVerts.push_back(seg.end.z);
-                simVerts.push_back(seg.end.y);
-            }
-
-            u32 completedVertCount = static_cast<u32>(simVerts.size() / 3);
-
-            // Current segment partial
-            if (m_simSegmentIndex < m_program.path.size()) {
-                const auto& cur = m_program.path[m_simSegmentIndex];
-                float t = std::clamp(m_simSegmentProgress, 0.0f, 1.0f);
-                float ex = cur.start.x + (cur.end.x - cur.start.x) * t;
-                float ey = cur.start.y + (cur.end.y - cur.start.y) * t;
-                float ez = cur.start.z + (cur.end.z - cur.start.z) * t;
-                // Swap Y↔Z
-                simVerts.push_back(cur.start.x);
-                simVerts.push_back(cur.start.z);
-                simVerts.push_back(cur.start.y);
-                simVerts.push_back(ex);
-                simVerts.push_back(ez);
-                simVerts.push_back(ey);
-            }
-
-            if (!simVerts.empty()) {
-                // Create/update sim VBO
-                if (m_simVAO == 0) {
-                    GL_CHECK(glGenVertexArrays(1, &m_simVAO));
-                    GL_CHECK(glGenBuffers(1, &m_simVBO));
-                    GL_CHECK(glBindVertexArray(m_simVAO));
-                    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, m_simVBO));
-                    GL_CHECK(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(f32), nullptr));
-                    GL_CHECK(glEnableVertexAttribArray(0));
-                } else {
-                    GL_CHECK(glBindVertexArray(m_simVAO));
-                    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, m_simVBO));
-                }
-
-                GL_CHECK(glBufferData(GL_ARRAY_BUFFER,
-                                      static_cast<GLsizeiptr>(simVerts.size() * sizeof(f32)),
-                                      simVerts.data(),
-                                      GL_DYNAMIC_DRAW));
-
-                // Draw completed in bright green
-                if (completedVertCount > 0) {
-                    flat.setVec4("uColor", Vec4{0.1f, 0.85f, 0.1f, 1.0f});
-                    glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(completedVertCount));
-                }
-
-                // Draw current segment in yellow
-                if (m_simSegmentIndex < m_program.path.size()) {
-                    flat.setVec4("uColor", Vec4{1.0f, 0.85f, 0.2f, 1.0f});
-                    glDrawArrays(GL_LINES, static_cast<GLint>(completedVertCount), 2);
-
-                    // Cutter dot at current position
-                    flat.setVec4("uColor", Vec4{1.0f, 0.2f, 0.2f, 1.0f});
-                    glPointSize(8.0f);
-                    glDrawArrays(GL_POINTS, static_cast<GLint>(completedVertCount) + 1, 1);
-                }
-            }
-        }
-
-        glBindVertexArray(0);
-        glLineWidth(1.0f);
-        glEnable(GL_CULL_FACE);
-    }
-
-    // Live CNC tool position (when connected, regardless of G-code loaded)
-    if (m_cncConnected) {
-        auto& cfg = Config::instance();
-        Vec3 wp = m_machineStatus.workPos;
-        Vec3 renderPos{wp.x, wp.z, wp.y};
-
-        // Expand far plane to encompass the work envelope
-        f32 savedFar = m_pathCamera.farPlane();
-        if (cfg.getCncShowWorkEnvelope()) {
-            const auto& profile = cfg.getActiveMachineProfile();
-            f32 envExtent = std::max({profile.maxTravelX, profile.maxTravelY,
-                                      profile.maxTravelZ});
-            f32 needed = (m_pathCamera.distance() + envExtent) * 2.0f;
-            if (needed > savedFar) {
-                m_pathCamera.setFarPlane(needed);
-                m_pathRenderer.setCamera(m_pathCamera);
-            }
-        }
-
-        if (cfg.getCncShowToolDot()) {
-            m_pathRenderer.renderPoint(renderPos, cfg.getCncToolDotSize(), cfg.getCncToolDotColor());
-        }
-        if (cfg.getCncShowWorkEnvelope()) {
-            const auto& profile = cfg.getActiveMachineProfile();
-            Vec3 envMax{profile.maxTravelX, profile.maxTravelZ, profile.maxTravelY};
-            m_pathRenderer.renderWireBox(Vec3{0, 0, 0}, envMax, cfg.getCncEnvelopeColor());
-        }
-
-        // Restore original far plane
-        if (m_pathCamera.farPlane() != savedFar) {
-            m_pathCamera.setFarPlane(savedFar);
-        }
-    }
-
-    m_pathRenderer.endFrame();
-    m_pathFramebuffer.unbind();
-
-    // Display framebuffer texture in ImGui
-    ImGui::Image(static_cast<ImTextureID>(m_pathFramebuffer.colorTexture()),
-                 contentSize,
-                 ImVec2(0, 1),
-                 ImVec2(1, 0));
-
-    // Handle orbit/pan/zoom input after Image so hover state is correct
-    handlePathInput();
-
-    // Live DRO overlay
-    if (m_cncConnected && Config::instance().getCncShowDroOverlay()) {
-        renderLiveDro();
-    }
-}
-
-void GCodePanel::renderZClipSlider() {
-    ImGui::Text("Show Z up to:");
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(-1);
-    if (ImGui::SliderFloat("##ZRange", &m_currentLayer, m_program.boundsMin.z, m_maxLayer, "%.2f mm")) {
-        m_pathDirty = true;
-    }
 }
 
 // --- GRBL event callbacks ---
@@ -1958,39 +1256,6 @@ void GCodePanel::renderJobHistory() {
     }
     ImGui::EndChild();
     ImGui::Separator();
-}
-
-void GCodePanel::renderLiveDro() {
-    ImVec2 rectMin = ImGui::GetItemRectMin();
-    ImVec2 rectMax = ImGui::GetItemRectMax();
-    ImDrawList* dl = ImGui::GetWindowDrawList();
-
-    const auto& wp = m_machineStatus.workPos;
-    bool metric = Config::instance().getDisplayUnitsMetric();
-    const char* unit = metric ? "mm" : "in";
-    f32 scale = metric ? 1.0f : (1.0f / 25.4f);
-
-    char xBuf[32], yBuf[32], zBuf[32];
-    std::snprintf(xBuf, sizeof(xBuf), "X: %8.3f %s", static_cast<double>(wp.x * scale), unit);
-    std::snprintf(yBuf, sizeof(yBuf), "Y: %8.3f %s", static_cast<double>(wp.y * scale), unit);
-    std::snprintf(zBuf, sizeof(zBuf), "Z: %8.3f %s", static_cast<double>(wp.z * scale), unit);
-
-    f32 lineH = ImGui::GetTextLineHeightWithSpacing();
-    f32 padding = ImGui::GetStyle().FramePadding.x;
-    f32 textW = ImGui::CalcTextSize(xBuf).x;
-    f32 boxW = textW + padding * 2.0f;
-    f32 boxH = lineH * 3.0f + padding * 2.0f;
-
-    ImVec2 boxMin = {rectMin.x + padding, rectMax.y - boxH - padding};
-    ImVec2 boxMax = {boxMin.x + boxW, boxMin.y + boxH};
-
-    dl->AddRectFilled(boxMin, boxMax, IM_COL32(0, 0, 0, 160), 4.0f);
-
-    f32 textX = boxMin.x + padding;
-    f32 textY = boxMin.y + padding;
-    dl->AddText({textX, textY}, IM_COL32(255, 80, 80, 255), xBuf);
-    dl->AddText({textX, textY + lineH}, IM_COL32(80, 255, 80, 255), yBuf);
-    dl->AddText({textX, textY + lineH * 2.0f}, IM_COL32(80, 130, 255, 255), zBuf);
 }
 
 } // namespace dw
