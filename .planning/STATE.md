@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.5.5
 milestone_name: Unified 3D Viewport
 status: executing
-last_updated: "2026-03-09T14:50:03.000Z"
+last_updated: "2026-03-09T15:04:06.000Z"
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  completed_phases: 2
+  total_plans: 3
+  completed_plans: 3
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** A woodworker can go from selecting a piece of wood and a cutting tool to safely running a CNC job with optimized feeds and speeds -- all without leaving the application.
-**Current focus:** Milestone v0.5.5 Unified 3D Viewport -- Phase 31 complete, Phase 32 next
+**Current focus:** Milestone v0.5.5 Unified 3D Viewport -- Phase 32 complete, Phase 33 next
 
 ## Current Position
 
-Phase: 32 of 35 (Alignment Overlay)
-Plan: 1 of ?
-Status: Phase 31 Complete
-Last activity: 2026-03-09 -- Completed 31-02-PLAN.md (GCode-to-Viewport Callback Wiring)
+Phase: 32 of 35 (Viewport Toolbar & Toggles)
+Plan: 1 of 1
+Status: Phase 32 Complete
+Last activity: 2026-03-09 -- Completed 32-01-PLAN.md (Viewport Toolbar & Toggles)
 
-Progress: [##........] 20%
+Progress: [####......] 40%
 
 ## Accumulated Context
 
@@ -44,6 +44,9 @@ Progress: [##........] 20%
 - G-code lines are separate rendering layer from existing toolpath mesh
 - Callback wiring in application_wiring_cnc.cpp alongside existing GCodePanel setup
 - Null-check on viewportPanel() pointer for safety against panel ordering changes
+- Reused GCodePanel's 8-color toolColor palette and ToolGroup pattern for consistency
+- Z-clip filtering in G-code space (not renderer Y-up space) matching GCodePanel convention
+- Move-type filtering at geometry build time for GPU efficiency
 
 ### Pending Todos
 None.
@@ -54,10 +57,10 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-09
-Stopped at: Completed 31-02-PLAN.md
+Stopped at: Completed 32-01-PLAN.md
 Resume file: None
-Next action: Plan Phase 32 (Alignment Overlay)
+Next action: Plan Phase 33 (Alignment Overlay)
 
 ---
 *State initialized: 2026-02-27*
-*Last updated: 2026-03-09 -- 31-02 completed (GCode-to-Viewport callback wiring)*
+*Last updated: 2026-03-09 -- 32-01 completed (Viewport Toolbar & Toggles)*

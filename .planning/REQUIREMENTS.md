@@ -10,11 +10,11 @@ Requirements for Unified 3D Viewport milestone. Each maps to roadmap phases.
 ### Viewport Rendering (VPR)
 
 - [x] **VPR-01**: User can see 3D model mesh and G-code toolpath lines in the same viewport with a single shared camera
-- [ ] **VPR-02**: User can toggle model visibility on/off via a toolbar button
-- [ ] **VPR-03**: User can toggle toolpath visibility on/off via a toolbar button
-- [ ] **VPR-04**: User can toggle individual move types (rapids, cuts, plunges, retracts) on/off
-- [ ] **VPR-05**: User can toggle color-by-tool mode for multi-tool G-code
-- [ ] **VPR-06**: User can filter visible toolpath depth with a Z-clip slider
+- [x] **VPR-02**: User can toggle model visibility on/off via a toolbar button
+- [x] **VPR-03**: User can toggle toolpath visibility on/off via a toolbar button
+- [x] **VPR-04**: User can toggle individual move types (rapids, cuts, plunges, retracts) on/off
+- [x] **VPR-05**: User can toggle color-by-tool mode for multi-tool G-code
+- [x] **VPR-06**: User can filter visible toolpath depth with a Z-clip slider
 - [x] **VPR-07**: G-code cutting paths render with height-based color gradient showing depth
 
 ### Alignment (ALN)
@@ -93,11 +93,11 @@ Requirements for Unified 3D Viewport milestone. Each maps to roadmap phases.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | VPR-01 | Phase 31 | Complete |
-| VPR-02 | Phase 32 | Pending |
-| VPR-03 | Phase 32 | Pending |
-| VPR-04 | Phase 32 | Pending |
-| VPR-05 | Phase 32 | Pending |
-| VPR-06 | Phase 32 | Pending |
+| VPR-02 | Phase 32 | Complete |
+| VPR-03 | Phase 32 | Complete |
+| VPR-04 | Phase 32 | Complete |
+| VPR-05 | Phase 32 | Complete |
+| VPR-06 | Phase 32 | Complete |
 | VPR-07 | Phase 31 | Complete |
 | ALN-01 | Phase 33 | Pending |
 | ALN-02 | Phase 33 | Pending |

@@ -76,7 +76,7 @@
 **Milestone Goal:** Merge G-code preview rendering into the main ViewportPanel so all 3D content (model mesh, toolpath lines) shares one camera, one renderer, and one set of controls -- eliminating duplicated rendering code and unifying user interaction.
 
 - [x] **Phase 31: Core Toolpath Rendering** - G-code lines render in ViewportPanel with height-based depth coloring and shared camera (completed 2026-03-09)
-- [ ] **Phase 32: Viewport Toolbar & Toggles** - Toggle buttons and sliders for model, toolpath, move types, color-by-tool, and Z-clip
+- [x] **Phase 32: Viewport Toolbar & Toggles** - Toggle buttons and sliders for model, toolpath, move types, color-by-tool, and Z-clip (completed 2026-03-09)
 - [ ] **Phase 33: Model-Toolpath Alignment** - FitParams transform overlays model and G-code correctly with point-match validation
 - [ ] **Phase 34: Simulation Playback** - Play/pause/scrub simulation with completed/current/cutter visualization in viewport
 - [ ] **Phase 35: GCodePanel Rendering Elimination** - Strip rendering infrastructure from GCodePanel, unify mouse interaction across layers
@@ -177,7 +177,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 32-01-PLAN.md — Filter state, toolbar UI, conditional rendering, color-by-tool, Z-clip
+- [x] 32-01-PLAN.md — Filter state, toolbar UI, conditional rendering, color-by-tool, Z-clip
 
 ### Phase 33: Model-Toolpath Alignment
 **Goal**: Model and toolpath overlay correctly in the viewport using FitParams, with point-match validation confirming the alignment is accurate
@@ -187,7 +187,11 @@ Plans:
   1. When a Direct Carve workflow has computed FitParams (scale, offsetX, offsetY, depthMm), the model mesh transforms to machine space so it visually overlays the G-code toolpath at the correct position and scale
   2. System samples approximately 1% of cutting points from the toolpath and validates they lie on or near the mesh surface -- a pass/fail indicator shows whether model and toolpath correspond
   3. Alignment updates live when FitParams change (e.g., user adjusts stock dimensions in Direct Carve) -- the model repositions without requiring a manual refresh
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 33-01-PLAN.md — FitParams model matrix computation, DirectCarvePanel callback, wiring
+- [ ] 33-02-PLAN.md — AlignmentValidator utility and toolbar pass/fail indicator
 
 ### Phase 34: Simulation Playback
 **Goal**: User can play back the cutting simulation in the unified viewport with transport controls and visual progress feedback
@@ -228,11 +232,11 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 31. Core Toolpath Rendering | 2/2 | Complete   | 2026-03-09 | - |
-| 32. Viewport Toolbar & Toggles | v0.5.5 | 0/1 | Planned | - |
-| 33. Model-Toolpath Alignment | v0.5.5 | 0/0 | Not started | - |
+| 32. Viewport Toolbar & Toggles | 1/1 | Complete   | 2026-03-09 | - |
+| 33. Model-Toolpath Alignment | v0.5.5 | 0/2 | Not started | - |
 | 34. Simulation Playback | v0.5.5 | 0/0 | Not started | - |
 | 35. GCodePanel Rendering Elimination | v0.5.5 | 0/0 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-24*
-*Last updated: 2026-03-09 -- Phase 32 planned (1 plan)*
+*Last updated: 2026-03-09 -- Phase 33 planned (2 plans)*
