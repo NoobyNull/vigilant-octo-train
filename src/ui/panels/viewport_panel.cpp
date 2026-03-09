@@ -7,6 +7,7 @@
 #include <map>
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
 #include "../../core/config/config.h"
 #include "../../core/config/input_binding.h"
@@ -498,20 +499,22 @@ void ViewportPanel::renderViewport() {
     m_renderer.renderAxis(2.0f);
 
     // Render mesh (with material texture if assigned)
-    if (m_gpuMesh.vao != 0) {
+    if (m_showModel && m_gpuMesh.vao != 0) {
         m_renderer.renderMesh(m_gpuMesh, m_materialTexture);
     }
 
-    // Render toolpath (if present)
-    if (m_gpuToolpath.vao != 0) {
+    // Render toolpath (if present and visible)
+    if (m_showToolpath && m_gpuToolpath.vao != 0) {
         m_renderer.renderToolpath(*m_toolpathMesh);
     }
 
-    // Render G-code line geometry (if present)
-    if (m_gcodeDirty) {
-        buildGCodeGeometry();
+    // Render G-code line geometry (if present and visible)
+    if (m_showToolpath) {
+        if (m_gcodeDirty) {
+            buildGCodeGeometry();
+        }
+        renderGCodeLines();
     }
-    renderGCodeLines();
 
     // Live CNC tool position and work envelope
     if (m_cncConnected) {
@@ -577,8 +580,12 @@ void ViewportPanel::renderViewport() {
 
 void ViewportPanel::renderToolbar() {
     auto& style = ImGui::GetStyle();
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(style.ItemSpacing.y, style.ItemSpacing.y));
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(style.FramePadding.x, style.FramePadding.y));
+    ImGui::PushStyleVar(
+        ImGuiStyleVar_ItemSpacing,
+        ImVec2(style.ItemSpacing.y, style.ItemSpacing.y));
+    ImGui::PushStyleVar(
+        ImGuiStyleVar_FramePadding,
+        ImVec2(style.FramePadding.x, style.FramePadding.y));
 
     if (ImGui::Button("Reset")) {
         resetView();
@@ -601,6 +608,52 @@ void ViewportPanel::renderToolbar() {
     bool wireframe = m_renderer.settings().wireframe;
     if (ImGui::Checkbox("Wireframe", &wireframe)) {
         m_renderer.settings().wireframe = wireframe;
+    }
+
+    // Master visibility toggles (always visible)
+    ImGui::SameLine();
+    ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+    ImGui::SameLine();
+    ImGui::Checkbox("Model", &m_showModel);
+    ImGui::SameLine();
+    ImGui::Checkbox("Toolpath", &m_showToolpath);
+
+    // G-code move-type toggles (only when G-code loaded + toolpath visible)
+    if (hasGCode() && m_showToolpath) {
+        ImGui::SameLine();
+        ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+        ImGui::SameLine();
+
+        if (ImGui::GetContentRegionAvail().x < 350.0f) {
+            ImGui::NewLine();
+        }
+
+        if (ImGui::Checkbox("Rapid", &m_showRapids))
+            m_gcodeDirty = true;
+        ImGui::SameLine();
+        if (ImGui::Checkbox("Cut", &m_showCuts))
+            m_gcodeDirty = true;
+        ImGui::SameLine();
+        if (ImGui::Checkbox("Plunge", &m_showPlunges))
+            m_gcodeDirty = true;
+        ImGui::SameLine();
+        if (ImGui::Checkbox("Retract", &m_showRetracts))
+            m_gcodeDirty = true;
+        ImGui::SameLine();
+        if (ImGui::Checkbox("Color by Tool", &m_colorByTool))
+            m_gcodeDirty = true;
+
+        // Z-clip slider
+        ImGui::Text("Z clip:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(
+            ImGui::GetContentRegionAvail().x);
+        if (ImGui::SliderFloat(
+                "##VPZClip", &m_zClipMax,
+                m_gcodeProgram.boundsMin.z,
+                m_zClipMaxBound, "%.2f mm")) {
+            m_gcodeDirty = true;
+        }
     }
 
     ImGui::PopStyleVar(2);
@@ -1028,7 +1081,7 @@ void ViewportPanel::renderGCodeLines() {
     Shader& heightShader = m_renderer.heightLineShader();
     Mat4 mvp = m_camera.viewProjectionMatrix();
 
-    // Y bounds in renderer space (G-code Z -> renderer Y after swap)
+    // Y bounds in renderer space (G-code Z -> renderer Y)
     float yMin = m_gcodeProgram.boundsMin.z;
     float yMax = m_gcodeProgram.boundsMax.z;
 
@@ -1036,42 +1089,90 @@ void ViewportPanel::renderGCodeLines() {
     glLineWidth(1.5f);
     glBindVertexArray(m_gcodeVAO);
 
-    // Rapids: dim gray
-    flat.bind();
-    flat.setMat4("uMVP", mvp);
-    if (m_gcRapidCount > 0) {
-        flat.setVec4("uColor", Vec4{0.4f, 0.4f, 0.4f, 0.5f});
-        glDrawArrays(GL_LINES, static_cast<GLint>(m_gcRapidStart),
-                     static_cast<GLsizei>(m_gcRapidCount));
-    }
+    if (m_colorByTool && !m_gcToolGroups.empty()) {
+        // Color-by-tool mode: rapids gray, then each tool group
+        flat.bind();
+        flat.setMat4("uMVP", mvp);
+        if (m_gcRapidCount > 0) {
+            flat.setVec4("uColor",
+                Vec4{0.4f, 0.4f, 0.4f, 0.5f});
+            glDrawArrays(
+                GL_LINES,
+                static_cast<GLint>(m_gcRapidStart),
+                static_cast<GLsizei>(m_gcRapidCount));
+        }
 
-    // Cuts: height-colored (deep blue -> bright cyan)
-    if (m_gcCutCount > 0) {
+        // Tool groups use height shader for depth
         heightShader.bind();
         heightShader.setMat4("uMVP", mvp);
         heightShader.setFloat("uYMin", yMin);
         heightShader.setFloat("uYMax", yMax);
-        heightShader.setVec4("uColorLow", Vec4{0.05f, 0.15f, 0.5f, 1.0f});
-        heightShader.setVec4("uColorHigh", Vec4{0.3f, 0.8f, 1.0f, 1.0f});
-        glDrawArrays(GL_LINES, static_cast<GLint>(m_gcCutStart),
-                     static_cast<GLsizei>(m_gcCutCount));
-        // Re-bind flat shader for remaining groups
+        for (const auto& tg : m_gcToolGroups) {
+            if (tg.count == 0) continue;
+            Vec3 tc = toolColor(tg.toolNumber);
+            heightShader.setVec4("uColorLow",
+                Vec4{tc.x * 0.3f, tc.y * 0.3f,
+                     tc.z * 0.3f, 1.0f});
+            heightShader.setVec4("uColorHigh",
+                Vec4{tc.x, tc.y, tc.z, 1.0f});
+            glDrawArrays(
+                GL_LINES,
+                static_cast<GLint>(tg.start),
+                static_cast<GLsizei>(tg.count));
+        }
+    } else {
+        // Standard mode: 4-group rendering
         flat.bind();
         flat.setMat4("uMVP", mvp);
-    }
 
-    // Plunges: orange
-    if (m_gcPlungeCount > 0) {
-        flat.setVec4("uColor", Vec4{1.0f, 0.5f, 0.1f, 1.0f});
-        glDrawArrays(GL_LINES, static_cast<GLint>(m_gcPlungeStart),
-                     static_cast<GLsizei>(m_gcPlungeCount));
-    }
+        // Rapids: dim gray
+        if (m_gcRapidCount > 0) {
+            flat.setVec4("uColor",
+                Vec4{0.4f, 0.4f, 0.4f, 0.5f});
+            glDrawArrays(
+                GL_LINES,
+                static_cast<GLint>(m_gcRapidStart),
+                static_cast<GLsizei>(m_gcRapidCount));
+        }
 
-    // Retracts: green
-    if (m_gcRetractCount > 0) {
-        flat.setVec4("uColor", Vec4{0.3f, 0.8f, 0.3f, 0.6f});
-        glDrawArrays(GL_LINES, static_cast<GLint>(m_gcRetractStart),
-                     static_cast<GLsizei>(m_gcRetractCount));
+        // Cuts: height-colored (deep blue -> bright cyan)
+        if (m_gcCutCount > 0) {
+            heightShader.bind();
+            heightShader.setMat4("uMVP", mvp);
+            heightShader.setFloat("uYMin", yMin);
+            heightShader.setFloat("uYMax", yMax);
+            heightShader.setVec4("uColorLow",
+                Vec4{0.05f, 0.15f, 0.5f, 1.0f});
+            heightShader.setVec4("uColorHigh",
+                Vec4{0.3f, 0.8f, 1.0f, 1.0f});
+            glDrawArrays(
+                GL_LINES,
+                static_cast<GLint>(m_gcCutStart),
+                static_cast<GLsizei>(m_gcCutCount));
+            // Re-bind flat shader for remaining groups
+            flat.bind();
+            flat.setMat4("uMVP", mvp);
+        }
+
+        // Plunges: orange
+        if (m_gcPlungeCount > 0) {
+            flat.setVec4("uColor",
+                Vec4{1.0f, 0.5f, 0.1f, 1.0f});
+            glDrawArrays(
+                GL_LINES,
+                static_cast<GLint>(m_gcPlungeStart),
+                static_cast<GLsizei>(m_gcPlungeCount));
+        }
+
+        // Retracts: green
+        if (m_gcRetractCount > 0) {
+            flat.setVec4("uColor",
+                Vec4{0.3f, 0.8f, 0.3f, 0.6f});
+            glDrawArrays(
+                GL_LINES,
+                static_cast<GLint>(m_gcRetractStart),
+                static_cast<GLsizei>(m_gcRetractCount));
+        }
     }
 
     glBindVertexArray(0);
