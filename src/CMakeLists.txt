@@ -43,6 +43,7 @@ set(DW_SOURCES
     core/config/config_watcher.cpp
     core/config/input_binding.cpp
     core/config/layout_preset.cpp
+    core/config/settings_archive.cpp
 
     # Database
     core/database/database.cpp
@@ -131,6 +132,7 @@ set(DW_SOURCES
     # Carve (Direct Carve pipeline)
     core/carve/heightmap.cpp
     core/carve/model_fitter.cpp
+    core/carve/alignment_validator.cpp
     core/carve/carve_job.cpp
     core/carve/surface_analysis.cpp
     core/carve/island_detector.cpp
@@ -191,6 +193,7 @@ set(DW_SOURCES
     ui/panels/cnc_settings_panel.cpp
     ui/panels/cnc_macro_panel.cpp
     ui/panels/direct_carve_panel.cpp
+    ui/panels/group_panel.cpp
 
     # UI Widgets
     ui/widgets/binding_recorder.cpp
@@ -200,6 +203,7 @@ set(DW_SOURCES
 
     # UI Dialogs
     ui/dialogs/message_dialog.cpp
+    ui/dialogs/settings_import_dialog.cpp
     ui/dialogs/file_dialog.cpp
     ui/dialogs/lighting_dialog.cpp
     ui/dialogs/machine_profile_dialog.cpp

@@ -233,7 +233,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 31. Core Toolpath Rendering | 2/2 | Complete   | 2026-03-09 | - |
 | 32. Viewport Toolbar & Toggles | 1/1 | Complete   | 2026-03-09 | - |
-| 33. Model-Toolpath Alignment | v0.5.5 | 0/2 | Not started | - |
+| 33. Model-Toolpath Alignment | 1/2 | In Progress|  | - |
 | 34. Simulation Playback | v0.5.5 | 0/0 | Not started | - |
 | 35. GCodePanel Rendering Elimination | v0.5.5 | 0/0 | Not started | - |
 

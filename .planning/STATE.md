@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.5.5
 milestone_name: Unified 3D Viewport
 status: executing
-last_updated: "2026-03-09T15:04:06.000Z"
+last_updated: "2026-03-09T15:17:55.000Z"
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 5
+  completed_plans: 4
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** A woodworker can go from selecting a piece of wood and a cutting tool to safely running a CNC job with optimized feeds and speeds -- all without leaving the application.
-**Current focus:** Milestone v0.5.5 Unified 3D Viewport -- Phase 32 complete, Phase 33 next
+**Current focus:** Milestone v0.5.5 Unified 3D Viewport -- Phase 33 in progress (33-01 complete, 33-02 next)
 
 ## Current Position
 
-Phase: 32 of 35 (Viewport Toolbar & Toggles)
-Plan: 1 of 1
-Status: Phase 32 Complete
-Last activity: 2026-03-09 -- Completed 32-01-PLAN.md (Viewport Toolbar & Toggles)
+Phase: 33 of 35 (Model-Toolpath Alignment)
+Plan: 1 of 2
+Status: Executing Phase 33
+Last activity: 2026-03-09 -- Completed 33-01-PLAN.md (FitParams Model Matrix)
 
-Progress: [####......] 40%
+Progress: [######....] 60%
 
 ## Accumulated Context
 
@@ -47,6 +47,8 @@ Progress: [####......] 40%
 - Reused GCodePanel's 8-color toolColor palette and ToolGroup pattern for consistency
 - Z-clip filtering in G-code space (not renderer Y-up space) matching GCodePanel convention
 - Move-type filtering at geometry build time for GPU efficiency
+- Direct matrix construction for FitParams (single swapYZ * fitMat multiply, no chain)
+- Fire FitParams callback every frame in renderModelFit() -- matrix update is cheap
 
 ### Pending Todos
 None.
@@ -57,10 +59,10 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-09
-Stopped at: Completed 32-01-PLAN.md
+Stopped at: Completed 33-01-PLAN.md
 Resume file: None
-Next action: Plan Phase 33 (Alignment Overlay)
+Next action: Execute 33-02-PLAN.md (Alignment Validation)
 
 ---
 *State initialized: 2026-02-27*
-*Last updated: 2026-03-09 -- 32-01 completed (Viewport Toolbar & Toggles)*
+*Last updated: 2026-03-09 -- 33-01 completed (FitParams Model Matrix)*
