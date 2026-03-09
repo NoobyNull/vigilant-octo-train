@@ -3,7 +3,7 @@
 **Defined:** 2026-03-09
 **Core Value:** A woodworker can go from selecting a piece of wood and a cutting tool to safely running a CNC job with optimized feeds and speeds -- all without leaving the application.
 
-## v0.6.0 Requirements
+## v0.5.5 Requirements
 
 Requirements for Unified 3D Viewport milestone. Each maps to roadmap phases.
 
@@ -92,27 +92,27 @@ Requirements for Unified 3D Viewport milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VPR-01 | TBD | Pending |
-| VPR-02 | TBD | Pending |
-| VPR-03 | TBD | Pending |
-| VPR-04 | TBD | Pending |
-| VPR-05 | TBD | Pending |
-| VPR-06 | TBD | Pending |
-| VPR-07 | TBD | Pending |
-| ALN-01 | TBD | Pending |
-| ALN-02 | TBD | Pending |
-| ALN-03 | TBD | Pending |
-| SIM-01 | TBD | Pending |
-| SIM-02 | TBD | Pending |
-| ELM-01 | TBD | Pending |
-| ELM-02 | TBD | Pending |
-| ELM-03 | TBD | Pending |
+| VPR-01 | Phase 31 | Pending |
+| VPR-02 | Phase 32 | Pending |
+| VPR-03 | Phase 32 | Pending |
+| VPR-04 | Phase 32 | Pending |
+| VPR-05 | Phase 32 | Pending |
+| VPR-06 | Phase 32 | Pending |
+| VPR-07 | Phase 31 | Pending |
+| ALN-01 | Phase 33 | Pending |
+| ALN-02 | Phase 33 | Pending |
+| ALN-03 | Phase 31 | Pending |
+| SIM-01 | Phase 34 | Pending |
+| SIM-02 | Phase 34 | Pending |
+| ELM-01 | Phase 35 | Pending |
+| ELM-02 | Phase 35 | Pending |
+| ELM-03 | Phase 35 | Pending |
 
 **Coverage:**
-- v0.6.0 requirements: 15 total
-- Mapped to phases: 0
-- Unmapped: 15
+- v0.5.5 requirements: 15 total
+- Mapped to phases: 15
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-09*
-*Last updated: 2026-03-09 after initial definition*
+*Last updated: 2026-03-09 after roadmap creation (traceability populated)*
