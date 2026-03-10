@@ -15,13 +15,18 @@ void signalHandler(int /*sig*/) {
 } // namespace
 
 int main(int argc, char* argv[]) {
-    // Enable console log output only with --verbose / -v / -V
+    bool diagnosticMode = false;
+
+    // Parse command line arguments
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "--verbose") == 0 ||
             std::strcmp(argv[i], "-v") == 0 ||
             std::strcmp(argv[i], "-V") == 0) {
             dw::log::setConsoleOutput(true);
-            break;
+        } else if (std::strcmp(argv[i], "--diagnostic") == 0 ||
+                   std::strcmp(argv[i], "-d") == 0) {
+            diagnosticMode = true;
+            dw::log::setConsoleOutput(true);
         }
     }
 
@@ -31,8 +36,12 @@ int main(int argc, char* argv[]) {
     std::signal(SIGTERM, signalHandler);
     std::signal(SIGINT, signalHandler);
 
-    if (!app.init()) {
+    if (!app.init(diagnosticMode)) {
         return 1;
+    }
+
+    if (diagnosticMode) {
+        return 0;  // Exit after successful initialization
     }
 
     int result = app.run();

@@ -51,6 +51,7 @@
 #include "core/threading/main_thread_queue.h"
 #include "core/threading/thread_pool.h"
 #include "core/utils/log.h"
+#include "core/utils/startup_timer.h"
 #include "core/utils/thread_utils.h"
 #include "managers/config_manager.h"
 #include "managers/file_io_manager.h"
@@ -73,294 +74,345 @@ Application::~Application() {
 }
 
 bool Application::init() {
+    return init(false);
+}
+
+bool Application::init(bool diagnosticMode) {
     if (m_initialized)
         return true;
 
-    paths::ensureDirectoriesExist();
-    Config::instance().load();
-    log::setLevel(static_cast<log::Level>(Config::instance().getLogLevel()));
-
-    // Multi-viewport requires X11 — Wayland SDL2 backend lacks platform viewport support
-#ifdef __linux__
-    if (Config::instance().getEnableFloatingWindows()) {
-        SDL_SetHint(SDL_HINT_VIDEODRIVER, "x11");
-    }
-#endif
-
-    // Request per-monitor DPI awareness on Windows
-    SDL_SetHint(SDL_HINT_WINDOWS_DPI_AWARENESS, "permonitorv2");
-
-    // Initialize SDL2
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0) {
-        std::fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
-        return false;
-    }
-
-    // OpenGL 3.3 Core profile
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-
-    // Create window (restore size from config)
+    StartupTimer timer;
     auto& cfg = Config::instance();
-    int startWidth = cfg.getWindowWidth();
-    int startHeight = cfg.getWindowHeight();
-    if (startWidth <= 0)
-        startWidth = DEFAULT_WIDTH;
-    if (startHeight <= 0)
-        startHeight = DEFAULT_HEIGHT;
 
-    auto windowFlags = static_cast<SDL_WindowFlags>(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE |
-                                                    SDL_WINDOW_ALLOW_HIGHDPI);
-    m_window = SDL_CreateWindow(WINDOW_TITLE,
-                                SDL_WINDOWPOS_CENTERED,
-                                SDL_WINDOWPOS_CENTERED,
-                                startWidth,
-                                startHeight,
-                                windowFlags);
-    if (m_window == nullptr) {
-        std::fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
-        return false;
-    }
-    if (cfg.getWindowMaximized())
-        SDL_MaximizeWindow(m_window);
-
-    // Create OpenGL context
-    m_glContext = SDL_GL_CreateContext(m_window);
-    if (m_glContext == nullptr) {
-        std::fprintf(stderr, "SDL_GL_CreateContext failed: %s\n", SDL_GetError());
-        return false;
-    }
-    SDL_GL_MakeCurrent(m_window, m_glContext);
-    SDL_GL_SetSwapInterval(1);
-
-    int gladVersion = gladLoadGL(reinterpret_cast<GLADloadfunc>(SDL_GL_GetProcAddress));
-    if (gladVersion == 0) {
-        std::fprintf(stderr, "gladLoadGL failed\n");
-        return false;
-    }
-    log::infof("Application", "OpenGL %s", glGetString(GL_VERSION));
-
-    // Setup ImGui
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    auto& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    if (Config::instance().getEnableFloatingWindows()) {
-        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-    }
-    static std::string imguiIniPath = (paths::getConfigDir() / "imgui.ini").string();
-    io.IniFilename = imguiIniPath.c_str();
-
-    // Detect DPI scale and combine with user's UI scale setting
-    m_dpiScale = detectDpiScale();
-    m_uiScale = m_dpiScale * cfg.getUiScale();
-    m_displayIndex = SDL_GetWindowDisplayIndex(m_window);
-
-    // Load fonts at scaled size
-    rebuildFontAtlas(m_uiScale);
-
-    ImGui_ImplSDL2_InitForOpenGL(m_window, m_glContext);
-    ImGui_ImplOpenGL3_Init("#version 330");
-
-    if (Config::instance().getEnableFloatingWindows()) {
-        bool platformOk = (io.BackendFlags & ImGuiBackendFlags_PlatformHasViewports) != 0;
-        bool rendererOk = (io.BackendFlags & ImGuiBackendFlags_RendererHasViewports) != 0;
-        if (!platformOk || !rendererOk) {
-            log::errorf("Application",
-                        "Floating windows: platform=%s renderer=%s — viewports disabled",
-                        platformOk ? "ok" : "NO",
-                        rendererOk ? "ok" : "NO");
-            io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
-        }
-    }
-
-    // Initialize core systems
-    dw::threading::initMainThread();
-    m_mainThreadQueue = std::make_unique<MainThreadQueue>();
-
-    m_database = std::make_unique<Database>();
-    if (!m_database->open(paths::getDatabasePath())) {
-        std::fprintf(stderr, "Failed to open database\n");
-        return false;
-    }
-    if (!Schema::initialize(*m_database)) {
-        std::fprintf(stderr, "Failed to initialize database schema\n");
-        return false;
-    }
-
-    // Size ConnectionPool for parallel workers + main thread
-    // Calculate max thread count from config, add 2 for main thread + overhead
-    auto tier = Config::instance().getParallelismTier();
-    size_t maxWorkers = calculateThreadCount(tier);
-    size_t poolSize = std::max(static_cast<size_t>(4), maxWorkers + 2);
-    m_connectionPool = std::make_unique<ConnectionPool>(paths::getDatabasePath(), poolSize);
-
-    // Initialize GraphQLite extension for Cypher graph queries (ORG-03/04/05)
-    m_graphManager = std::make_unique<GraphManager>(*m_database);
     {
-        // Resolve extension directory relative to the running executable
-        std::error_code ec;
-        Path exeDir;
+        TIME_STARTUP(timer, "Config Loading");
+        cfg.load();
+        log::setLevel(static_cast<log::Level>(cfg.getLogLevel()));
+    }
+
+    {
+        TIME_STARTUP(timer, "Directory Creation");
+        paths::ensureDirectoriesExist();
+    }
+
+    {
+        TIME_STARTUP(timer, "SDL2 Initialization");
+        // Multi-viewport requires X11 — Wayland SDL2 backend lacks platform viewport support
 #ifdef __linux__
-        Path exePath = std::filesystem::read_symlink("/proc/self/exe", ec);
-        if (!ec)
-            exeDir = exePath.parent_path();
+        if (Config::instance().getEnableFloatingWindows()) {
+            SDL_SetHint(SDL_HINT_VIDEODRIVER, "x11");
+        }
 #endif
-        if (exeDir.empty())
-            exeDir = std::filesystem::current_path();
 
-        if (!m_graphManager->initialize(exeDir)) {
-            log::warning("Application",
-                         "GraphQLite extension not available -- graph queries disabled");
+        // Request per-monitor DPI awareness on Windows
+        SDL_SetHint(SDL_HINT_WINDOWS_DPI_AWARENESS, "permonitorv2");
+
+        // Initialize SDL2
+        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0) {
+            std::fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
+            return false;
         }
     }
 
-    m_libraryManager = std::make_unique<LibraryManager>(*m_database);
-    m_libraryManager->setGraphManager(m_graphManager.get());
-    m_projectManager = std::make_unique<ProjectManager>(*m_database);
-    m_materialManager = std::make_unique<MaterialManager>(*m_database);
-    m_materialManager->seedDefaults();
-    m_modelRepo = std::make_unique<ModelRepository>(*m_database);
-    m_gcodeRepo = std::make_unique<GCodeRepository>(*m_database);
-    m_jobRepo = std::make_unique<JobRepository>(*m_database);
-    m_cutPlanRepo = std::make_unique<CutPlanRepository>(*m_database);
-    // Mark any 'running' jobs as interrupted (app crashed during previous session)
     {
-        auto running = m_jobRepo->findByStatus("running");
-        for (auto& job : running) {
-            m_jobRepo->finishJob(
-                job.id, "interrupted", job.lastAckedLine, job.elapsedSeconds, job.errorCount, job.modalState);
+        TIME_STARTUP(timer, "OpenGL Window Setup");
+        // OpenGL 3.3 Core profile
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+        SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+        SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+        SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+
+        // Create window (restore size from config)
+        int startWidth = cfg.getWindowWidth();
+        int startHeight = cfg.getWindowHeight();
+        if (startWidth <= 0)
+            startWidth = DEFAULT_WIDTH;
+        if (startHeight <= 0)
+            startHeight = DEFAULT_HEIGHT;
+
+        auto windowFlags = static_cast<SDL_WindowFlags>(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE |
+                                                        SDL_WINDOW_ALLOW_HIGHDPI);
+        m_window = SDL_CreateWindow(WINDOW_TITLE,
+                                    SDL_WINDOWPOS_CENTERED,
+                                    SDL_WINDOWPOS_CENTERED,
+                                    startWidth,
+                                    startHeight,
+                                    windowFlags);
+        if (m_window == nullptr) {
+            std::fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
+            return false;
         }
-        if (!running.empty())
-            log::infof("App", "Marked %zu interrupted job(s) from prior session", running.size());
+        if (cfg.getWindowMaximized())
+            SDL_MaximizeWindow(m_window);
+
+        // Create OpenGL context
+        m_glContext = SDL_GL_CreateContext(m_window);
+        if (m_glContext == nullptr) {
+            std::fprintf(stderr, "SDL_GL_CreateContext failed: %s\n", SDL_GetError());
+            return false;
+        }
+        SDL_GL_MakeCurrent(m_window, m_glContext);
+        SDL_GL_SetSwapInterval(1);
+
+        int gladVersion = gladLoadGL(reinterpret_cast<GLADloadfunc>(SDL_GL_GetProcAddress));
+        if (gladVersion == 0) {
+            std::fprintf(stderr, "gladLoadGL failed\n");
+            return false;
+        }
+        log::infof("Application", "OpenGL %s", glGetString(GL_VERSION));
     }
 
-    m_cutListFile = std::make_unique<CutListFile>();
-    m_cutListFile->setDirectory(paths::getDataDir() / "cutlists");
-    m_costRepo = std::make_unique<CostRepository>(*m_database);
-    m_rateCatRepo = std::make_unique<RateCategoryRepository>(*m_database);
-    m_geminiService = std::make_unique<GeminiMaterialService>();
-    m_descriptorService = std::make_unique<GeminiDescriptorService>();
-    m_workspace = std::make_unique<Workspace>();
+    {
+        TIME_STARTUP(timer, "ImGui Setup and Fonts");
+        // Setup ImGui
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        auto& io = ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+        if (Config::instance().getEnableFloatingWindows()) {
+            io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+        }
+        static std::string imguiIniPath = (paths::getConfigDir() / "imgui.ini").string();
+        io.IniFilename = imguiIniPath.c_str();
 
-    m_thumbnailGenerator = std::make_unique<ThumbnailGenerator>();
-    if (m_thumbnailGenerator->initialize()) {
-        m_libraryManager->setThumbnailGenerator(m_thumbnailGenerator.get());
+        // Detect DPI scale and combine with user's UI scale setting
+        m_dpiScale = detectDpiScale();
+        m_uiScale = m_dpiScale * cfg.getUiScale();
+        m_displayIndex = SDL_GetWindowDisplayIndex(m_window);
+
+        // Load fonts at scaled size
+        rebuildFontAtlas(m_uiScale);
+
+        ImGui_ImplSDL2_InitForOpenGL(m_window, m_glContext);
+        ImGui_ImplOpenGL3_Init("#version 330");
+
+        if (Config::instance().getEnableFloatingWindows()) {
+            bool platformOk = (io.BackendFlags & ImGuiBackendFlags_PlatformHasViewports) != 0;
+            bool rendererOk = (io.BackendFlags & ImGuiBackendFlags_RendererHasViewports) != 0;
+            if (!platformOk || !rendererOk) {
+                log::errorf("Application",
+                            "Floating windows: platform=%s renderer=%s — viewports disabled",
+                            platformOk ? "ok" : "NO",
+                            rendererOk ? "ok" : "NO");
+                io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
+            }
+        }
     }
 
-    // Content-addressable blob store (STOR-01/02/03)
-    m_storageManager = std::make_unique<StorageManager>(
-        Config::instance().getSupportDir() / "blobs");
+    {
+        TIME_STARTUP(timer, "Threading and Database Setup");
+        // Initialize core systems
+        dw::threading::initMainThread();
+        m_mainThreadQueue = std::make_unique<MainThreadQueue>();
 
-    // Clean up orphaned temp files from prior crashes (STOR-03)
-    int orphansCleaned = m_storageManager->cleanupOrphanedTempFiles();
-    if (orphansCleaned > 0) {
-        log::infof("App", "Cleaned up %d orphaned temp file(s) from prior session", orphansCleaned);
+        m_database = std::make_unique<Database>();
+        if (!m_database->open(paths::getDatabasePath())) {
+            std::fprintf(stderr, "Failed to open database\n");
+            return false;
+        }
+        if (!Schema::initialize(*m_database)) {
+            std::fprintf(stderr, "Failed to initialize database schema\n");
+            return false;
+        }
+
+        // Size ConnectionPool for parallel workers + main thread
+        // Calculate max thread count from config, add 2 for main thread + overhead
+        auto tier = Config::instance().getParallelismTier();
+        size_t maxWorkers = calculateThreadCount(tier);
+        size_t poolSize = std::max(static_cast<size_t>(4), maxWorkers + 2);
+        m_connectionPool = std::make_unique<ConnectionPool>(paths::getDatabasePath(), poolSize);
     }
 
-    // Project export/import manager (.dwproj archives) (EXPORT-01/02)
-    m_projectExportManager = std::make_unique<ProjectExportManager>(*m_database);
+    {
+        TIME_STARTUP(timer, "GraphManager Extension");
+        // Initialize GraphQLite extension for Cypher graph queries (ORG-03/04/05)
+        m_graphManager = std::make_unique<GraphManager>(*m_database);
+        {
+            // Resolve extension directory relative to the running executable
+            std::error_code ec;
+            Path exeDir;
+#ifdef __linux__
+            Path exePath = std::filesystem::read_symlink("/proc/self/exe", ec);
+            if (!ec)
+                exeDir = exePath.parent_path();
+#endif
+            if (exeDir.empty())
+                exeDir = std::filesystem::current_path();
 
-    // My Toolbox (curated tool subset from .vtdb library)
-    m_toolboxRepo = std::make_unique<ToolboxRepository>(*m_database);
-
-    // CNC tool database (Vectric .vtdb format)
-    m_toolDatabase = std::make_unique<ToolDatabase>();
-    if (!m_toolDatabase->open(paths::getToolDatabasePath())) {
-        log::error("Application", "Failed to open tool database");
-        return false;
+            if (!m_graphManager->initialize(exeDir)) {
+                log::warning("Application",
+                             "GraphQLite extension not available -- graph queries disabled");
+            }
+        }
     }
 
-    // CNC controller (multi-firmware support: GRBL, grblHAL, FluidNC, Smoothieware)
-    m_cncController = std::make_unique<CncController>(m_mainThreadQueue.get());
+    {
+        TIME_STARTUP(timer, "Managers and Repositories");
+        m_libraryManager = std::make_unique<LibraryManager>(*m_database);
+        m_libraryManager->setGraphManager(m_graphManager.get());
+        m_projectManager = std::make_unique<ProjectManager>(*m_database);
+        m_materialManager = std::make_unique<MaterialManager>(*m_database);
+        m_materialManager->seedDefaults();
+        m_modelRepo = std::make_unique<ModelRepository>(*m_database);
+        m_gcodeRepo = std::make_unique<GCodeRepository>(*m_database);
+        m_jobRepo = std::make_unique<JobRepository>(*m_database);
+        m_cutPlanRepo = std::make_unique<CutPlanRepository>(*m_database);
+        // Mark any 'running' jobs as interrupted (app crashed during previous session)
+        {
+            auto running = m_jobRepo->findByStatus("running");
+            for (auto& job : running) {
+                m_jobRepo->finishJob(
+                    job.id, "interrupted", job.lastAckedLine, job.elapsedSeconds, job.errorCount, job.modalState);
+            }
+            if (!running.empty())
+                log::infof("App", "Marked %zu interrupted job(s) from prior session", running.size());
+        }
+    }
 
-    // CNC macro manager (SQLite-backed macro storage)
-    m_macroManager = std::make_unique<MacroManager>(paths::getMacroDatabasePath().string());
-    m_macroManager->ensureBuiltIns();
+    {
+        TIME_STARTUP(timer, "Storage and Tool Systems");
+        m_cutListFile = std::make_unique<CutListFile>();
+        m_cutListFile->setDirectory(paths::getDataDir() / "cutlists");
+        m_costRepo = std::make_unique<CostRepository>(*m_database);
+        m_rateCatRepo = std::make_unique<RateCategoryRepository>(*m_database);
+        m_geminiService = std::make_unique<GeminiMaterialService>();
+        m_descriptorService = std::make_unique<GeminiDescriptorService>();
+        m_workspace = std::make_unique<Workspace>();
 
-    // CNC gamepad input (SDL_GameController for jog/actions)
-    m_gamepadInput = std::make_unique<GamepadInput>();
-    m_gamepadInput->setCncController(m_cncController.get());
+        m_thumbnailGenerator = std::make_unique<ThumbnailGenerator>();
+        if (m_thumbnailGenerator->initialize()) {
+            m_libraryManager->setThumbnailGenerator(m_thumbnailGenerator.get());
+        }
 
-    // Direct Carve job (heightmap, analysis, toolpath generation, streaming)
-    m_carveJob = std::make_unique<carve::CarveJob>();
+        // Content-addressable blob store (STOR-01/02/03)
+        m_storageManager = std::make_unique<StorageManager>(
+            Config::instance().getSupportDir() / "blobs");
 
-    m_importQueue = std::make_unique<ImportQueue>(*m_connectionPool,
-                                                  m_libraryManager.get(),
-                                                  m_storageManager.get());
+        // Clean up orphaned temp files from prior crashes (STOR-03)
+        int orphansCleaned = m_storageManager->cleanupOrphanedTempFiles();
+        if (orphansCleaned > 0) {
+            log::infof("App", "Cleaned up %d orphaned temp file(s) from prior session", orphansCleaned);
+        }
 
-    m_importLog = std::make_unique<ImportLog>(Config::instance().getSupportDir() / ".import-log");
-    m_importQueue->setImportLog(m_importLog.get());
+        // Project export/import manager (.dwproj archives) (EXPORT-01/02)
+        m_projectExportManager = std::make_unique<ProjectExportManager>(*m_database);
 
-    m_backgroundTagger = std::make_unique<BackgroundTagger>(
-        *m_connectionPool, m_libraryManager.get(), m_descriptorService.get());
+        // My Toolbox (curated tool subset from .vtdb library)
+        m_toolboxRepo = std::make_unique<ToolboxRepository>(*m_database);
 
-    // Initialize managers
-    m_uiManager = std::make_unique<UIManager>();
-    m_uiManager->init(
-        m_libraryManager.get(), m_projectManager.get(), m_materialManager.get(),
-        m_costRepo.get(), m_rateCatRepo.get(), m_modelRepo.get(), m_gcodeRepo.get(),
-        m_cutPlanRepo.get());
+        // CNC tool database (Vectric .vtdb format)
+        m_toolDatabase = std::make_unique<ToolDatabase>();
+        if (!m_toolDatabase->open(paths::getToolDatabasePath())) {
+            log::error("Application", "Failed to open tool database");
+            return false;
+        }
+    }
 
-    m_fileIOManager = std::make_unique<FileIOManager>(m_database.get(),
+    {
+        TIME_STARTUP(timer, "CNC and Background Systems");
+        // CNC controller (multi-firmware support: GRBL, grblHAL, FluidNC, Smoothieware)
+        m_cncController = std::make_unique<CncController>(m_mainThreadQueue.get());
+
+        // CNC macro manager (SQLite-backed macro storage)
+        m_macroManager = std::make_unique<MacroManager>(paths::getMacroDatabasePath().string());
+        m_macroManager->ensureBuiltIns();
+
+        // CNC gamepad input (SDL_GameController for jog/actions)
+        m_gamepadInput = std::make_unique<GamepadInput>();
+        m_gamepadInput->setCncController(m_cncController.get());
+
+        // Direct Carve job (heightmap, analysis, toolpath generation, streaming)
+        m_carveJob = std::make_unique<carve::CarveJob>();
+
+        m_importQueue = std::make_unique<ImportQueue>(*m_connectionPool,
                                                       m_libraryManager.get(),
-                                                      m_projectManager.get(),
-                                                      m_importQueue.get(),
-                                                      m_workspace.get(),
-                                                      m_uiManager->fileDialog(),
-                                                      m_thumbnailGenerator.get(),
-                                                      m_projectExportManager.get());
-    m_fileIOManager->setProgressDialog(m_uiManager->progressDialog());
-    m_fileIOManager->setMainThreadQueue(m_mainThreadQueue.get());
+                                                      m_storageManager.get());
 
-    m_fileIOManager->setThumbnailCallback(
-        [this](int64_t modelId, Mesh& mesh) { return generateMaterialThumbnail(modelId, mesh); });
+        m_importLog = std::make_unique<ImportLog>(Config::instance().getSupportDir() / ".import-log");
+        m_importQueue->setImportLog(m_importLog.get());
 
-    m_fileIOManager->setGCodeCallback([this](const std::string& path) {
-        if (auto* gcp = m_uiManager->gcodePanel()) {
-            gcp->setOpen(true);
-            gcp->loadFile(path);
-        }
-    });
-
-    m_configManager = std::make_unique<ConfigManager>(m_uiManager.get());
-    m_configManager->init(m_window);
-    m_configManager->setQuitCallback([this]() { quit(); });
-
-    // Wire all panel callbacks, menu actions, dialog setup
-    initWiring();
-
-    // Restore workspace state
-    m_uiManager->restoreVisibilityFromConfig();
-    i64 lastModelId = cfg.getLastSelectedModelId();
-    if (lastModelId > 0 && m_libraryManager) {
-        auto record = m_libraryManager->getModel(lastModelId);
-        if (record) {
-            onModelSelected(lastModelId);
-            if (m_uiManager->libraryPanel())
-                m_uiManager->libraryPanel()->setSelectedModelId(lastModelId);
-        }
+        m_backgroundTagger = std::make_unique<BackgroundTagger>(
+            *m_connectionPool, m_libraryManager.get(), m_descriptorService.get());
     }
 
-    // Detect incomplete import from prior session
-    if (m_importLog->exists()) {
-        m_mainThreadQueue->enqueue([]() {
-            log::info("App", "Previous import log found — resume available from library panel");
+    {
+        TIME_STARTUP(timer, "UI and File IO Managers");
+        // Initialize managers
+        m_uiManager = std::make_unique<UIManager>();
+        m_uiManager->init(
+            m_libraryManager.get(), m_projectManager.get(), m_materialManager.get(),
+            m_costRepo.get(), m_rateCatRepo.get(), m_modelRepo.get(), m_gcodeRepo.get(),
+            m_cutPlanRepo.get());
+
+        m_fileIOManager = std::make_unique<FileIOManager>(m_database.get(),
+                                                          m_libraryManager.get(),
+                                                          m_projectManager.get(),
+                                                          m_importQueue.get(),
+                                                          m_workspace.get(),
+                                                          m_uiManager->fileDialog(),
+                                                          m_thumbnailGenerator.get(),
+                                                          m_projectExportManager.get());
+        m_fileIOManager->setProgressDialog(m_uiManager->progressDialog());
+        m_fileIOManager->setMainThreadQueue(m_mainThreadQueue.get());
+
+        m_fileIOManager->setThumbnailCallback(
+            [this](int64_t modelId, Mesh& mesh) { return generateMaterialThumbnail(modelId, mesh); });
+
+        m_fileIOManager->setGCodeCallback([this](const std::string& path) {
+            if (auto* gcp = m_uiManager->gcodePanel()) {
+                gcp->setOpen(true);
+                gcp->loadFile(path);
+            }
         });
+
+        m_configManager = std::make_unique<ConfigManager>(m_uiManager.get());
+        m_configManager->init(m_window);
+        m_configManager->setQuitCallback([this]() { quit(); });
     }
 
-    // Auto-start CNC simulator (always-connected mode)
-    m_cncController->connectSimulator();
-    m_uiManager->showCncPanels(true);
+    {
+        TIME_STARTUP(timer, "Wiring and Final Setup");
+        // Wire all panel callbacks, menu actions, dialog setup
+        initWiring();
+
+        // Restore workspace state
+        m_uiManager->restoreVisibilityFromConfig();
+        i64 lastModelId = cfg.getLastSelectedModelId();
+        if (lastModelId > 0 && m_libraryManager) {
+            auto record = m_libraryManager->getModel(lastModelId);
+            if (record) {
+                onModelSelected(lastModelId);
+                if (m_uiManager->libraryPanel())
+                    m_uiManager->libraryPanel()->setSelectedModelId(lastModelId);
+            }
+        }
+
+        // Detect incomplete import from prior session
+        if (m_importLog->exists()) {
+            m_mainThreadQueue->enqueue([]() {
+                log::info("App", "Previous import log found — resume available from library panel");
+            });
+        }
+
+        // Auto-start CNC simulator (always-connected mode)
+        m_cncController->connectSimulator();
+        m_uiManager->showCncPanels(true);
+    }
+
+    timer.printReport();
 
     m_initialized = true;
     std::printf("Digital Workshop %s initialized\n", VERSION);
+
+    if (diagnosticMode) {
+        std::printf("Diagnostic mode: Exiting after initialization\n");
+        return true;
+    }
+
     return true;
 }
 

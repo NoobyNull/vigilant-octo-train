@@ -77,6 +77,9 @@ class Application {
     // Initialize SDL2, OpenGL, ImGui
     bool init();
 
+    // Initialize with diagnostic mode (exits after init)
+    bool init(bool diagnosticMode);
+
     // Main loop - returns exit code
     int run();
 
