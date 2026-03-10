@@ -1,6 +1,8 @@
 #include "cnc_tool.h"
 
+#include <cmath>
 #include <cstdio>
+#include <string>
 
 namespace dw {
 
@@ -21,11 +23,43 @@ const char* toolTypeName(VtdbToolType t) {
     }
 }
 
+// Try to express a decimal as a fraction with denominator up to 64.
+// Returns "" if no clean fraction found.
+std::string tryFraction(f64 val) {
+    if (val <= 0.0) return "";
+    // Check denominators 2, 4, 8, 16, 32, 64
+    static const int denoms[] = {2, 4, 8, 16, 32, 64};
+    for (int d : denoms) {
+        double numer = val * d;
+        int n = static_cast<int>(numer + 0.5);
+        if (std::abs(numer - n) < 0.001) {
+            // Reduce the fraction
+            int a = n, b = d;
+            while (b != 0) { int t = b; b = a % b; a = t; }
+            int gcd = a;
+            n /= gcd;
+            int rd = d / gcd;
+            if (rd == 1)
+                return std::to_string(n);
+            return std::to_string(n) + "/" + std::to_string(rd);
+        }
+    }
+    return "";
+}
+
 // Format a double value with an optional format specifier.
-// "|.0" → 0 decimal places, "|.1" → 1, "|.2" → 2, "|F" or empty → %g
+// "|.0" → 0 decimal places, "|.1" → 1, "|.2" → 2
+// "|F"  → fractional inches (Vectric convention: 0.25 → "1/4", 0.125 → "1/8")
+// empty → %g
 std::string formatValue(f64 val, const std::string& spec) {
     char buf[64];
-    if (spec.empty() || spec == "F") {
+    if (spec == "F") {
+        // Vectric F spec: try fractional representation
+        std::string frac = tryFraction(val);
+        if (!frac.empty()) return frac;
+        // Fall through to decimal if no clean fraction
+        std::snprintf(buf, sizeof(buf), "%g", val);
+    } else if (spec.empty()) {
         std::snprintf(buf, sizeof(buf), "%g", val);
     } else if (spec == ".0") {
         std::snprintf(buf, sizeof(buf), "%.0f", val);
@@ -47,8 +81,9 @@ std::string resolveToolNameFormat(const VtdbToolGeometry& g) {
     if (g.name_format.empty()) {
         // Fallback: generate a simple name
         char buf[128];
-        std::snprintf(buf, sizeof(buf), "%s %gmm %d-flute",
-                      toolTypeName(g.tool_type), g.diameter, g.num_flutes);
+        double diam = (g.units == VtdbUnits::Imperial) ? g.diameter * 25.4 : g.diameter;
+        std::snprintf(buf, sizeof(buf), "%s %.3gmm %d-flute",
+                      toolTypeName(g.tool_type), diam, g.num_flutes);
         return buf;
     }
 

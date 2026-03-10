@@ -43,7 +43,7 @@ LayoutPreset LayoutPreset::fromJsonString(const std::string& jsonStr) {
 
 LayoutPreset LayoutPreset::modelDefault() {
     LayoutPreset p;
-    p.name = "Modeling";
+    p.name = "Workshop";
     p.builtIn = true;
     p.visibility = {
         {"viewport", true},       {"library", true},

@@ -13,9 +13,12 @@
 #include "core/materials/material_manager.h"
 #include "core/paths/path_resolver.h"
 #include "core/threading/main_thread_queue.h"
+#include <glad/gl.h>
+
 #include "managers/ui_manager.h"
 #include "render/texture.h"
 #include "ui/panels/direct_carve_panel.h"
+#include "ui/panels/library_panel.h"
 #include "ui/panels/materials_panel.h"
 #include "ui/panels/properties_panel.h"
 #include "ui/panels/viewport_panel.h"
@@ -97,11 +100,16 @@ void Application::onModelSelected(int64_t modelId) {
                     m_uiManager->propertiesPanel()->setMesh(mesh, name);
                 if (m_uiManager->materialsPanel())
                     m_uiManager->materialsPanel()->setModelLoaded(true);
-                if (m_uiManager->directCarvePanel() && mesh)
+                if (m_uiManager->directCarvePanel() && mesh) {
+                    GLuint thumb = 0;
+                    if (m_uiManager->libraryPanel())
+                        thumb = m_uiManager->libraryPanel()->getThumbnailTextureForModel(
+                            m_focusedModelId);
                     m_uiManager->directCarvePanel()->onModelLoaded(
                         mesh->vertices(), mesh->indices(),
                         mesh->bounds().min, mesh->bounds().max,
-                        name, filePath);
+                        name, filePath, thumb);
+                }
             });
         });
 }

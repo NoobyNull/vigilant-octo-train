@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 #include "../utils/log.h"
 
@@ -17,6 +18,38 @@ void Mesh::clear() {
     m_indices.clear();
     m_bounds.reset();
     m_name.clear();
+    m_hashCached = false;
+}
+
+u64 Mesh::geometryHash() const {
+    if (m_hashCached)
+        return m_geometryHash;
+
+    constexpr u64 FNV_OFFSET = 14695981039346656037ULL;
+    constexpr u64 FNV_PRIME = 1099511628211ULL;
+
+    u64 h = FNV_OFFSET;
+    u32 vc = vertexCount();
+    auto mix = [&](const void* data, size_t size) {
+        const u8* p = static_cast<const u8*>(data);
+        for (size_t i = 0; i < size; ++i) {
+            h ^= p[i];
+            h *= FNV_PRIME;
+        }
+    };
+
+    mix(&vc, sizeof(vc));
+    for (const auto& v : m_vertices) {
+        mix(&v.position.x, sizeof(f32) * 3);
+    }
+    for (u32 idx : m_indices) {
+        h ^= idx;
+        h *= FNV_PRIME;
+    }
+
+    m_geometryHash = h;
+    m_hashCached = true;
+    return h;
 }
 
 void Mesh::recalculateBounds() {
@@ -63,6 +96,7 @@ void Mesh::recalculateNormals() {
 }
 
 void Mesh::transform(const Mat4& matrix) {
+    m_hashCached = false;
     // Normal matrix (inverse transpose of upper 3x3)
     // For simple transforms, we can use the matrix directly
     for (auto& vertex : m_vertices) {
@@ -200,6 +234,7 @@ void Mesh::revertAutoOrient() {
 }
 
 void Mesh::merge(const Mesh& other) {
+    m_hashCached = false;
     u32 vertexOffset = static_cast<u32>(m_vertices.size());
 
     // Add vertices
@@ -449,12 +484,14 @@ void Mesh::reserve(u32 vertexCount, u32 indexCount) {
 void Mesh::addVertex(const Vertex& vertex) {
     m_vertices.push_back(vertex);
     m_bounds.expand(vertex.position);
+    m_hashCached = false;
 }
 
 void Mesh::addTriangle(u32 v0, u32 v1, u32 v2) {
     m_indices.push_back(v0);
     m_indices.push_back(v1);
     m_indices.push_back(v2);
+    m_hashCached = false;
 }
 
 } // namespace dw

@@ -128,6 +128,9 @@ bool ProjectDirectory::open(const Path& root) {
         return false;
     }
 
+    // Ensure subdirectories exist (may have been deleted or never created)
+    createSubdirs();
+
     log::infof(kLogModule, "Opened project: %s at %s", m_name.c_str(), m_root.c_str());
     return true;
 }

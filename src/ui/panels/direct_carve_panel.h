@@ -14,6 +14,7 @@
 #include "core/materials/material.h"
 #include "core/mesh/vertex.h"
 #include "core/types.h"
+#include "ui/dialogs/machine_profile_dialog.h"
 
 namespace dw {
 
@@ -69,13 +70,15 @@ class DirectCarvePanel : public Panel {
 
   private:
     enum class Step {
-        MachineCheck,  // Verify connection, homing, profile
+        // --- Planning (no machine required) ---
         ModelFit,      // Scale, position, depth adjustment
         ToolSelect,    // Review/accept tool recommendations
         MaterialSetup, // Material selection, feeds confirmation
         Preview,       // Toolpath preview with time estimate
-        OutlineTest,   // Run perimeter trace at safe Z
+        // --- Machine (CNC required) ---
+        MachineCheck,  // Verify connection, homing, profile
         ZeroConfirm,   // Verify zero position
+        OutlineTest,   // Run perimeter trace at safe Z
         Commit,        // Final confirmation
         Running        // Job in progress
     };
@@ -111,7 +114,7 @@ class DirectCarvePanel : public Panel {
     static const char* stepLabel(Step step);
 
     // State
-    Step m_currentStep = Step::MachineCheck;
+    Step m_currentStep = Step::ModelFit;
     CncController* m_cnc = nullptr;
     ToolDatabase* m_toolDb = nullptr;
     ToolboxRepository* m_toolboxRepo = nullptr;
@@ -174,6 +177,12 @@ class DirectCarvePanel : public Panel {
     bool m_hmRegenConfirm = false;    // Regenerate confirmation popup open
     std::string m_hmMissingPath;      // Path of the missing .dwhm file
 
+    // Heightmap preview texture
+    u32 m_hmPreviewTex = 0;
+    int m_hmPreviewW = 0;
+    int m_hmPreviewH = 0;
+    void uploadHeightmapPreview();
+
     // Preview state
     bool m_toolpathGenerated = false;
     int m_settingsVersion = 0;       // Bumped when toolpath-affecting settings change
@@ -234,6 +243,7 @@ class DirectCarvePanel : public Panel {
     std::function<void()> m_openToolBrowser;
     FitParamsCallback m_onFitParamsChanged;
     Path m_modelSourcePath;
+    MachineProfileDialog m_profileDialog;
 
     // Project-aware save helpers
     void saveHeightmapToProject();

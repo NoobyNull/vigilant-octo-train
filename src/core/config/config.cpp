@@ -323,7 +323,12 @@ void Config::loadApi(const std::string& key, const std::string& value) {
 void Config::loadRecent(const std::string& key, const std::string& value) {
     if (str::startsWith(key, "project")) {
         if (!value.empty() && file::exists(value)) {
-            m_recentProjects.push_back(value);
+            Path p(value);
+            // Deduplicate — skip if already loaded
+            if (std::find(m_recentProjects.begin(), m_recentProjects.end(), p) ==
+                m_recentProjects.end()) {
+                m_recentProjects.push_back(p);
+            }
         }
     }
 }
@@ -397,6 +402,24 @@ void Config::loadCnc(const std::string& key, const std::string& value) {
         str::parseFloat(value, m_cncEnvelopeColor.z);
     } else if (key == "envelope_color_a") {
         str::parseFloat(value, m_cncEnvelopeColor.w);
+    } else if (key == "show_model_bounds") {
+        m_cncShowModelBounds = (value == "true" || value == "1");
+    } else if (key == "model_bounds_in_color_r") {
+        str::parseFloat(value, m_cncModelBoundsInColor.x);
+    } else if (key == "model_bounds_in_color_g") {
+        str::parseFloat(value, m_cncModelBoundsInColor.y);
+    } else if (key == "model_bounds_in_color_b") {
+        str::parseFloat(value, m_cncModelBoundsInColor.z);
+    } else if (key == "model_bounds_in_color_a") {
+        str::parseFloat(value, m_cncModelBoundsInColor.w);
+    } else if (key == "model_bounds_out_color_r") {
+        str::parseFloat(value, m_cncModelBoundsOutColor.x);
+    } else if (key == "model_bounds_out_color_g") {
+        str::parseFloat(value, m_cncModelBoundsOutColor.y);
+    } else if (key == "model_bounds_out_color_b") {
+        str::parseFloat(value, m_cncModelBoundsOutColor.z);
+    } else if (key == "model_bounds_out_color_a") {
+        str::parseFloat(value, m_cncModelBoundsOutColor.w);
     }
 }
 
@@ -741,6 +764,15 @@ void Config::saveCnc(std::ostringstream& ss) const {
     ss << "envelope_color_g=" << m_cncEnvelopeColor.y << "\n";
     ss << "envelope_color_b=" << m_cncEnvelopeColor.z << "\n";
     ss << "envelope_color_a=" << m_cncEnvelopeColor.w << "\n";
+    ss << "show_model_bounds=" << (m_cncShowModelBounds ? "true" : "false") << "\n";
+    ss << "model_bounds_in_color_r=" << m_cncModelBoundsInColor.x << "\n";
+    ss << "model_bounds_in_color_g=" << m_cncModelBoundsInColor.y << "\n";
+    ss << "model_bounds_in_color_b=" << m_cncModelBoundsInColor.z << "\n";
+    ss << "model_bounds_in_color_a=" << m_cncModelBoundsInColor.w << "\n";
+    ss << "model_bounds_out_color_r=" << m_cncModelBoundsOutColor.x << "\n";
+    ss << "model_bounds_out_color_g=" << m_cncModelBoundsOutColor.y << "\n";
+    ss << "model_bounds_out_color_b=" << m_cncModelBoundsOutColor.z << "\n";
+    ss << "model_bounds_out_color_a=" << m_cncModelBoundsOutColor.w << "\n";
     ss << "\n";
 }
 

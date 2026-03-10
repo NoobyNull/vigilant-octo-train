@@ -10,6 +10,7 @@
 
 #include "app/workspace.h"
 #include "core/config/config.h"
+#include "core/config/settings_archive.h"
 #include "core/database/connection_pool.h"
 #include "core/database/cut_plan_repository.h"
 #include "core/database/gcode_repository.h"
@@ -36,6 +37,7 @@
 #include "ui/dialogs/maintenance_dialog.h"
 #include "ui/dialogs/progress_dialog.h"
 #include "ui/dialogs/tag_image_dialog.h"
+#include "ui/dialogs/settings_import_dialog.h"
 #include "ui/dialogs/tagger_shutdown_dialog.h"
 #include "ui/panels/cost_panel.h"
 #include "ui/panels/library_panel.h"
@@ -576,6 +578,35 @@ void Application::wireToolsMenu() {
     }
     m_uiManager->setOnRelocateWorkspace([this]() { handleRelocateWorkspace(); });
     m_uiManager->setOnLocateMissingFiles([this]() { handleLocateMissingFiles(); });
+
+    // Settings export/import
+    m_uiManager->setOnExportSettings([this]() {
+        m_uiManager->fileDialog()->showSave(
+            "Export Settings",
+            {{"DW Settings", "*.dwsettings"}},
+            "digital_workshop.dwsettings",
+            [](const std::string& path) {
+                if (path.empty())
+                    return;
+                if (exportSettings(Path(path))) {
+                    ToastManager::instance().show(ToastType::Success, "Settings exported");
+                } else {
+                    ToastManager::instance().show(ToastType::Error,
+                                                  "Failed to export settings");
+                }
+            });
+    });
+
+    m_uiManager->setOnImportSettings([this]() {
+        m_uiManager->fileDialog()->showOpen(
+            "Import Settings",
+            {{"DW Settings", "*.dwsettings"}},
+            [this](const std::string& path) {
+                if (path.empty())
+                    return;
+                m_uiManager->settingsImportDialog()->open(path);
+            });
+    });
 }
 
 void Application::handleRelocateWorkspace() {

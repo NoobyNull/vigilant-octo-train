@@ -86,6 +86,20 @@ class ToolBrowserPanel : public Panel {
     // Toolbox state
     std::set<std::string> m_toolboxIds;
 
+    // Search/filter state
+    char m_filterBuf[128] = {};
+    std::set<std::string> m_filterMatchIds;  // Entry IDs that match filter
+    void updateFilter();
+
+    // Context menu state
+    std::string m_contextMenuEntryId;
+    std::string m_contextMenuGeomId;
+    bool m_showRenamePopup = false;
+    char m_renameBuf[128] = {};
+    bool m_showDeleteConfirm = false;
+
+    void duplicateTool(const std::string& treeEntryId);
+
     bool m_needsRefresh = true;
 };
 

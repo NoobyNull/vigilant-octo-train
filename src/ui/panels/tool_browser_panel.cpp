@@ -6,8 +6,11 @@
 
 #include <imgui.h>
 
+#include "core/config/config.h"
 #include "core/database/tool_database.h"
 #include "core/database/toolbox_repository.h"
+#include "core/utils/uuid.h"
+#include "core/gcode/machine_profile.h"
 #include "core/materials/material_manager.h"
 #include "core/utils/log.h"
 #include "ui/dialogs/file_dialog.h"
@@ -31,11 +34,17 @@ static const char* toolTypeName(VtdbToolType type) {
     }
 }
 
-// Auto-format a display name from tool geometry when tree entry name is empty
+// Auto-format a display name from tool geometry when tree entry name is empty.
+// Prefers the resolved name_format (which may contain the manufacturer part number),
+// falling back to a generic "Type Xmm N-flute" label.
 static std::string autoFormatToolName(const VtdbToolGeometry& g) {
+    std::string resolved = resolveToolNameFormat(g);
+    if (!resolved.empty())
+        return resolved;
     char buf[128];
+    f64 diam = (g.units == VtdbUnits::Imperial) ? g.diameter * 25.4 : g.diameter;
     std::snprintf(buf, sizeof(buf), "%s %.3gmm %d-flute",
-                  toolTypeName(g.tool_type), g.diameter, g.num_flutes);
+                  toolTypeName(g.tool_type), diam, g.num_flutes);
     return buf;
 }
 
@@ -60,6 +69,7 @@ void ToolBrowserPanel::render() {
     if (m_needsRefresh && m_toolDatabase) {
         loadData();
         m_needsRefresh = false;
+        if (m_filterBuf[0] != '\0') updateFilter();
     }
 
     applyMinSize(22, 10);
@@ -75,6 +85,12 @@ void ToolBrowserPanel::render() {
     }
 
     renderToolbar();
+
+    // Search / filter bar
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    if (ImGui::InputTextWithHint("##toolFilter", "Search tools...",
+                                  m_filterBuf, sizeof(m_filterBuf)))
+        updateFilter();
     ImGui::Separator();
 
     // Two-column layout: tree (left) | detail (right)
@@ -118,7 +134,12 @@ void ToolBrowserPanel::render() {
     float treeWidth = std::clamp(maxLabelW + scrollbarW, minTreeW, maxTreeW);
 
     if (ImGui::BeginChild("ToolTree", ImVec2(treeWidth, avail.y), ImGuiChildFlags_Borders)) {
-        renderTree();
+        bool hasFilter = m_filterBuf[0] != '\0';
+        if (hasFilter && m_filterMatchIds.empty()) {
+            ImGui::TextDisabled("No tools matching \"%s\"", m_filterBuf);
+        } else {
+            renderTree();
+        }
     }
     ImGui::EndChild();
 
@@ -206,24 +227,45 @@ void ToolBrowserPanel::renderToolbar() {
     }
 }
 
+// Context menu action requested by tree rendering
+struct TreeContextAction {
+    std::string entryId;
+    std::string geomId;
+    enum Action { None, Rename, Duplicate, Toolbox, Delete } action = None;
+};
+
 // Recursive tree rendering helper
 static void renderTreeNode(const std::vector<VtdbTreeEntry>& entries,
                            const std::vector<VtdbToolGeometry>& geometries,
                            const std::set<std::string>& toolboxIds,
+                           const std::set<std::string>& filterIds,
+                           bool filtering,
+                           ToolboxRepository* toolboxRepo,
                            const std::string& parentId,
                            std::string& selectedId,
-                           std::string& selectedGeomId) {
+                           std::string& selectedGeomId,
+                           TreeContextAction& ctxAction) {
     for (const auto& entry : entries) {
         if (entry.parent_group_id != parentId) continue;
+
+        // Skip entries that don't match the filter
+        if (filtering && filterIds.count(entry.id) == 0) continue;
 
         bool isGroup = entry.tool_geometry_id.empty();
         bool isSelected = (entry.id == selectedId);
 
-        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
+        ImGuiTreeNodeFlags flags =
+            ImGuiTreeNodeFlags_OpenOnArrow
+            | ImGuiTreeNodeFlags_SpanAvailWidth;
         if (isSelected) flags |= ImGuiTreeNodeFlags_Selected;
-        if (!isGroup) flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+        if (!isGroup)
+            flags |= ImGuiTreeNodeFlags_Leaf
+                   | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+        // Auto-open groups when filtering
+        if (filtering && isGroup)
+            flags |= ImGuiTreeNodeFlags_DefaultOpen;
 
-        // Resolve display name — auto-format from geometry when entry name is empty
+        // Resolve display name
         std::string displayName = entry.name;
         if (displayName.empty() && !entry.tool_geometry_id.empty()) {
             for (const auto& g : geometries) {
@@ -236,19 +278,36 @@ static void renderTreeNode(const std::vector<VtdbTreeEntry>& entries,
         }
 
         const char* icon = isGroup ? Icons::Folder : Icons::Settings;
-        bool inToolbox = !isGroup && toolboxIds.count(entry.tool_geometry_id) > 0;
+        bool inToolbox = !isGroup
+            && toolboxIds.count(entry.tool_geometry_id) > 0;
         std::string prefix = std::string(icon);
         if (inToolbox) prefix += " " + std::string(Icons::Star);
-        std::string label = prefix + " " + displayName + "###" + entry.id;
+        std::string label = prefix + " " + displayName
+                          + "###" + entry.id;
 
         if (isGroup) {
             bool nodeOpen = ImGui::TreeNodeEx(label.c_str(), flags);
-            if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
+            if (ImGui::IsItemClicked()
+                && !ImGui::IsItemToggledOpen()) {
                 selectedId = entry.id;
                 selectedGeomId.clear();
             }
+            // Context menu for groups
+            if (ImGui::BeginPopupContextItem()) {
+                if (ImGui::MenuItem("Rename"))
+                    ctxAction = {entry.id, "",
+                                 TreeContextAction::Rename};
+                if (ImGui::MenuItem("Delete"))
+                    ctxAction = {entry.id, "",
+                                 TreeContextAction::Delete};
+                ImGui::EndPopup();
+            }
             if (nodeOpen) {
-                renderTreeNode(entries, geometries, toolboxIds, entry.id, selectedId, selectedGeomId);
+                renderTreeNode(entries, geometries, toolboxIds,
+                               filterIds, filtering,
+                               toolboxRepo, entry.id,
+                               selectedId, selectedGeomId,
+                               ctxAction);
                 ImGui::TreePop();
             }
         } else {
@@ -257,13 +316,207 @@ static void renderTreeNode(const std::vector<VtdbTreeEntry>& entries,
                 selectedId = entry.id;
                 selectedGeomId = entry.tool_geometry_id;
             }
+            // Context menu for tools
+            if (ImGui::BeginPopupContextItem()) {
+                if (ImGui::MenuItem("Rename"))
+                    ctxAction = {entry.id,
+                                 entry.tool_geometry_id,
+                                 TreeContextAction::Rename};
+                if (ImGui::MenuItem("Duplicate"))
+                    ctxAction = {entry.id,
+                                 entry.tool_geometry_id,
+                                 TreeContextAction::Duplicate};
+                if (toolboxRepo) {
+                    const char* tbLabel = inToolbox
+                        ? "Remove from My Toolbox"
+                        : "Add to My Toolbox";
+                    if (ImGui::MenuItem(tbLabel))
+                        ctxAction = {entry.id,
+                                     entry.tool_geometry_id,
+                                     TreeContextAction::Toolbox};
+                }
+                ImGui::Separator();
+                if (ImGui::MenuItem("Delete"))
+                    ctxAction = {entry.id,
+                                 entry.tool_geometry_id,
+                                 TreeContextAction::Delete};
+                ImGui::EndPopup();
+            }
+        }
+    }
+}
+
+// Case-insensitive substring match
+static bool containsCI(const std::string& haystack, const std::string& needle) {
+    if (needle.empty()) return true;
+    auto it = std::search(
+        haystack.begin(), haystack.end(),
+        needle.begin(), needle.end(),
+        [](char a, char b) {
+            return std::tolower(static_cast<unsigned char>(a))
+                == std::tolower(static_cast<unsigned char>(b));
+        });
+    return it != haystack.end();
+}
+
+void ToolBrowserPanel::updateFilter() {
+    m_filterMatchIds.clear();
+    std::string query(m_filterBuf);
+    if (query.empty()) return;
+
+    // Match tools against name, type, diameter, notes
+    for (const auto& entry : m_treeEntries) {
+        if (entry.tool_geometry_id.empty()) continue; // skip groups
+
+        // Build searchable text from entry name + geometry fields
+        std::string text = entry.name;
+        for (const auto& g : m_geometries) {
+            if (g.id != entry.tool_geometry_id) continue;
+            if (text.empty()) text = autoFormatToolName(g);
+            text += " " + std::string(toolTypeName(g.tool_type));
+            char diaBuf[32];
+            std::snprintf(diaBuf, sizeof(diaBuf), " %.4g", g.diameter);
+            text += diaBuf;
+            if (!g.notes.empty()) text += " " + g.notes;
+            if (!g.name_format.empty()) text += " " + g.name_format;
+            break;
+        }
+
+        if (containsCI(text, query)) {
+            // Add this entry and all its ancestors (so the tree path is visible)
+            m_filterMatchIds.insert(entry.id);
+            std::string pid = entry.parent_group_id;
+            while (!pid.empty()) {
+                m_filterMatchIds.insert(pid);
+                bool found = false;
+                for (const auto& e : m_treeEntries) {
+                    if (e.id == pid) {
+                        pid = e.parent_group_id;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) break;
+            }
         }
     }
 }
 
 void ToolBrowserPanel::renderTree() {
+    TreeContextAction ctxAction;
+    bool filtering = m_filterBuf[0] != '\0'
+                     && !m_filterMatchIds.empty();
     renderTreeNode(m_treeEntries, m_geometries, m_toolboxIds,
-                   "", m_selectedTreeEntryId, m_selectedGeometryId);
+                   m_filterMatchIds, filtering,
+                   m_toolboxRepo, "",
+                   m_selectedTreeEntryId, m_selectedGeometryId,
+                   ctxAction);
+
+    // Handle context menu actions
+    switch (ctxAction.action) {
+    case TreeContextAction::Rename:
+        m_contextMenuEntryId = ctxAction.entryId;
+        m_contextMenuGeomId = ctxAction.geomId;
+        m_showRenamePopup = true;
+        // Pre-fill rename buffer with current name
+        m_renameBuf[0] = '\0';
+        for (const auto& e : m_treeEntries) {
+            if (e.id == ctxAction.entryId) {
+                std::string name = e.name;
+                if (name.empty() && !e.tool_geometry_id.empty()) {
+                    for (const auto& g : m_geometries) {
+                        if (g.id == e.tool_geometry_id) {
+                            name = autoFormatToolName(g);
+                            break;
+                        }
+                    }
+                }
+                std::strncpy(m_renameBuf, name.c_str(),
+                             sizeof(m_renameBuf) - 1);
+                break;
+            }
+        }
+        ImGui::OpenPopup("Rename##ctx");
+        break;
+
+    case TreeContextAction::Duplicate:
+        duplicateTool(ctxAction.entryId);
+        break;
+
+    case TreeContextAction::Toolbox:
+        if (m_toolboxRepo && !ctxAction.geomId.empty()) {
+            if (m_toolboxIds.count(ctxAction.geomId) > 0) {
+                m_toolboxRepo->removeTool(ctxAction.geomId);
+                m_toolboxIds.erase(ctxAction.geomId);
+            } else {
+                m_toolboxRepo->addTool(ctxAction.geomId);
+                m_toolboxIds.insert(ctxAction.geomId);
+            }
+        }
+        break;
+
+    case TreeContextAction::Delete:
+        m_contextMenuEntryId = ctxAction.entryId;
+        m_contextMenuGeomId = ctxAction.geomId;
+        m_showDeleteConfirm = true;
+        ImGui::OpenPopup("Delete Tool?##ctx");
+        break;
+
+    case TreeContextAction::None:
+        break;
+    }
+
+    // --- Rename popup ---
+    if (ImGui::BeginPopup("Rename##ctx")) {
+        ImGui::Text("Rename:");
+        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 16);
+        bool enter = ImGui::InputText("##renameBuf", m_renameBuf,
+                         sizeof(m_renameBuf),
+                         ImGuiInputTextFlags_EnterReturnsTrue);
+        if (m_showRenamePopup) {
+            ImGui::SetKeyboardFocusHere(-1);
+            m_showRenamePopup = false;
+        }
+        ImGui::SameLine();
+        if (enter || ImGui::Button("OK")) {
+            // Apply rename to tree entry
+            for (auto& e : m_treeEntries) {
+                if (e.id == m_contextMenuEntryId) {
+                    e.name = m_renameBuf;
+                    if (m_toolDatabase)
+                        m_toolDatabase->updateTreeEntry(e);
+                    break;
+                }
+            }
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel"))
+            ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
+
+    // --- Delete confirmation popup ---
+    if (ImGui::BeginPopup("Delete Tool?##ctx")) {
+        ImGui::Text("Delete this item?");
+        ImGui::TextDisabled("This cannot be undone.");
+        ImGui::Spacing();
+        if (ImGui::Button("Delete", ImVec2(80, 0))) {
+            // Temporarily set selection to perform delete
+            std::string prevSelId = m_selectedTreeEntryId;
+            m_selectedTreeEntryId = m_contextMenuEntryId;
+            deleteSelected();
+            if (m_selectedTreeEntryId.empty()
+                && prevSelId != m_contextMenuEntryId) {
+                m_selectedTreeEntryId = prevSelId;
+            }
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(80, 0)))
+            ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
 }
 
 void ToolBrowserPanel::renderToolDetail() {
@@ -706,8 +959,8 @@ void ToolBrowserPanel::renderCalculator() {
 
     ImGui::InputFloat("Janka Hardness (lbf)", &m_calcJanka, 10.0f, 100.0f, "%.0f");
 
-    // Machine selector for calculator
-    std::string machLabel = "(No machine selected)";
+    // Machine display — .vtdb machine if selected, otherwise active Config profile
+    std::string machLabel;
     VtdbMachine selectedMach;
     bool hasMachine = false;
     if (!m_selectedMachineId.empty()) {
@@ -719,6 +972,20 @@ void ToolBrowserPanel::renderCalculator() {
                 break;
             }
         }
+    }
+    // Fall back to active Config machine profile
+    if (!hasMachine) {
+        const auto& mp = Config::instance().getActiveMachineProfile();
+        machLabel = mp.name;
+        selectedMach.name = mp.name;
+        selectedMach.spindle_power_watts = static_cast<f64>(mp.spindlePower);
+        selectedMach.max_rpm = static_cast<int>(mp.spindleMaxRPM);
+        switch (mp.driveSystem) {
+        case gcode::DriveSystem::Belt:      selectedMach.drive_type = DriveType::Belt; break;
+        case gcode::DriveSystem::BallScrew: selectedMach.drive_type = DriveType::BallScrew; break;
+        default:                            selectedMach.drive_type = DriveType::LeadScrew; break;
+        }
+        hasMachine = true;
     }
     ImGui::Text("Machine: %s", machLabel.c_str());
     if (hasMachine) {
@@ -859,18 +1126,85 @@ void ToolBrowserPanel::runCalculation() {
     input.janka_hardness = m_calcJanka;
     input.material_name = m_calcMaterialName;
 
-    // Get machine params
+    // Get machine params from .vtdb machine if selected
+    bool foundMachine = false;
     for (const auto& mach : m_machines) {
         if (mach.id == m_selectedMachineId) {
             input.spindle_power_watts = mach.spindle_power_watts;
             input.max_rpm = mach.max_rpm;
             input.drive_type = mach.drive_type;
+            foundMachine = true;
             break;
+        }
+    }
+
+    // Fall back to active Config machine profile
+    if (!foundMachine) {
+        const auto& mp = Config::instance().getActiveMachineProfile();
+        input.spindle_power_watts = static_cast<f64>(mp.spindlePower);
+        input.max_rpm = static_cast<int>(mp.spindleMaxRPM);
+        switch (mp.driveSystem) {
+        case gcode::DriveSystem::Belt:      input.drive_type = DriveType::Belt; break;
+        case gcode::DriveSystem::BallScrew: input.drive_type = DriveType::BallScrew; break;
+        default:                            input.drive_type = DriveType::LeadScrew; break;
         }
     }
 
     m_calcResult = ToolCalculator::calculate(input);
     m_hasCalcResult = true;
+}
+
+void ToolBrowserPanel::duplicateTool(const std::string& treeEntryId) {
+    if (!m_toolDatabase) return;
+
+    // Find source tree entry
+    const VtdbTreeEntry* srcEntry = nullptr;
+    for (const auto& e : m_treeEntries) {
+        if (e.id == treeEntryId) { srcEntry = &e; break; }
+    }
+    if (!srcEntry || srcEntry->tool_geometry_id.empty()) return;
+
+    // Find source geometry
+    const VtdbToolGeometry* srcGeom = nullptr;
+    for (const auto& g : m_geometries) {
+        if (g.id == srcEntry->tool_geometry_id) { srcGeom = &g; break; }
+    }
+    if (!srcGeom) return;
+
+    // Duplicate geometry with new ID
+    VtdbToolGeometry newGeom = *srcGeom;
+    newGeom.id = uuid::generate();
+    m_toolDatabase->insertGeometry(newGeom);
+
+    // Duplicate all entities + cutting data
+    auto entities = m_toolDatabase->findEntitiesForGeometry(srcGeom->id);
+    for (const auto& ent : entities) {
+        auto cd = m_toolDatabase->findCuttingDataById(
+            ent.tool_cutting_data_id);
+        VtdbCuttingData newCd = cd ? *cd : VtdbCuttingData{};
+        newCd.id = uuid::generate();
+        m_toolDatabase->insertCuttingData(newCd);
+
+        VtdbToolEntity newEnt = ent;
+        newEnt.id = uuid::generate();
+        newEnt.tool_geometry_id = newGeom.id;
+        newEnt.tool_cutting_data_id = newCd.id;
+        m_toolDatabase->insertEntity(newEnt);
+    }
+
+    // Duplicate tree entry (same parent, append " (Copy)")
+    VtdbTreeEntry newEntry = *srcEntry;
+    newEntry.id = uuid::generate();
+    newEntry.tool_geometry_id = newGeom.id;
+    std::string srcName = srcEntry->name;
+    if (srcName.empty()) srcName = autoFormatToolName(*srcGeom);
+    newEntry.name = srcName + " (Copy)";
+    m_toolDatabase->insertTreeEntry(newEntry);
+
+    // Select the new tool
+    m_selectedTreeEntryId = newEntry.id;
+    m_selectedGeometryId = newGeom.id;
+    refresh();
 }
 
 void ToolBrowserPanel::deleteSelected() {

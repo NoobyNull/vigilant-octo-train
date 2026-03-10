@@ -271,6 +271,16 @@ class Config {
     Vec4 getCncEnvelopeColor() const { return m_cncEnvelopeColor; }
     void setCncEnvelopeColor(const Vec4& v) { m_cncEnvelopeColor = v; }
 
+    // Model bounds overlay (shows model size relative to machine work envelope)
+    bool getCncShowModelBounds() const { return m_cncShowModelBounds; }
+    void setCncShowModelBounds(bool v) { m_cncShowModelBounds = v; }
+
+    Vec4 getCncModelBoundsInColor() const { return m_cncModelBoundsInColor; }
+    void setCncModelBoundsInColor(const Vec4& v) { m_cncModelBoundsInColor = v; }
+
+    Vec4 getCncModelBoundsOutColor() const { return m_cncModelBoundsOutColor; }
+    void setCncModelBoundsOutColor(const Vec4& v) { m_cncModelBoundsOutColor = v; }
+
     // CNC settings
     int getStatusPollIntervalMs() const { return m_statusPollIntervalMs; }
     void setStatusPollIntervalMs(int ms) { m_statusPollIntervalMs = std::clamp(ms, 50, 200); }
@@ -500,6 +510,9 @@ class Config {
     f32 m_cncToolDotSize = 8.0f;
     Vec4 m_cncToolDotColor{1.0f, 0.2f, 0.2f, 1.0f};
     Vec4 m_cncEnvelopeColor{1.0f, 0.67f, 0.2f, 0.6f};
+    bool m_cncShowModelBounds = true;
+    Vec4 m_cncModelBoundsInColor{0.2f, 1.0f, 0.2f, 0.8f};    // Green for within bounds
+    Vec4 m_cncModelBoundsOutColor{1.0f, 0.2f, 0.2f, 0.8f};   // Red for exceeding bounds
 
     // CNC settings
     int m_statusPollIntervalMs = 200;

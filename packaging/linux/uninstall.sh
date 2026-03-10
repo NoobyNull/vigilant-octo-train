@@ -22,6 +22,11 @@ if [ "$1" = "--system" ]; then
     DESKTOP_DIR="/usr/share/applications"
 fi
 
+ICON_DIR="$HOME/.local/share/icons/hicolor"
+if [ "$1" = "--system" ]; then
+    ICON_DIR="/usr/share/icons/hicolor"
+fi
+
 echo "Uninstalling $APP_NAME from $PREFIX..."
 
 # Remove binaries
@@ -31,9 +36,16 @@ rm -f "$BIN_DIR/$SETTINGS_BIN"
 # Remove desktop entry
 rm -f "$DESKTOP_DIR/$DESKTOP_ID.desktop"
 
+# Remove icons
+rm -f "$ICON_DIR/512x512/apps/$DESKTOP_ID.png"
+rm -f "$ICON_DIR/1024x1024/apps/$DESKTOP_ID.png"
+
 # Update desktop database if available
 if command -v update-desktop-database > /dev/null 2>&1; then
     update-desktop-database "$DESKTOP_DIR" 2>/dev/null || true
+fi
+if command -v gtk-update-icon-cache > /dev/null 2>&1; then
+    gtk-update-icon-cache -f -t "$ICON_DIR" 2>/dev/null || true
 fi
 
 echo "$APP_NAME uninstalled successfully."

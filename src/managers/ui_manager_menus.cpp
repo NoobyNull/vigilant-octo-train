@@ -10,6 +10,7 @@
 
 #include "core/config/config.h"
 #include "ui/dialogs/lighting_dialog.h"
+#include "ui/icons.h"
 #include "ui/panels/cnc_jog_panel.h"
 #include "ui/ui_colors.h"
 #include "version.h"
@@ -23,11 +24,39 @@ void UIManager::renderMenuBar() {
         renderEditMenu();
         renderToolsMenu();
         renderHelpMenu();
+
+        renderToolbar();
+
         renderPresetSelector();
         renderCncMenuBarStatus();
         ImGui::EndMainMenuBar();
     }
     renderSavePresetPopup();
+}
+
+void UIManager::renderToolbar() {
+    // Separator between menus and toolbar icons
+    ImGui::SameLine(0, ImGui::GetStyle().ItemSpacing.x * 3.0f);
+    ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+    ImGui::TextUnformatted("|");
+    ImGui::PopStyleColor();
+    ImGui::SameLine(0, ImGui::GetStyle().ItemSpacing.x * 2.0f);
+
+    float btnH = ImGui::GetFrameHeight();
+
+    // New Project
+    if (ImGui::Button(Icons::New, ImVec2(btnH, btnH)) && m_onNewProject)
+        m_onNewProject();
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("New Project (Ctrl+N)");
+
+    ImGui::SameLine(0, ImGui::GetStyle().ItemSpacing.x * 0.5f);
+
+    // Save Project
+    if (ImGui::Button(Icons::Save, ImVec2(btnH, btnH)) && m_onSaveProject)
+        m_onSaveProject();
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Save Project (Ctrl+S)");
 }
 
 void UIManager::renderCncMenuBarStatus() {
@@ -97,6 +126,11 @@ void UIManager::renderFileMenu() {
     if (ImGui::MenuItem("Import .dwproj...") && m_onImportProjectArchive)
         m_onImportProjectArchive();
     ImGui::Separator();
+    if (ImGui::MenuItem("Export Settings...") && m_onExportSettings)
+        m_onExportSettings();
+    if (ImGui::MenuItem("Import Settings...") && m_onImportSettings)
+        m_onImportSettings();
+    ImGui::Separator();
     if (ImGui::MenuItem("Exit", "Alt+F4") && m_onQuit)
         m_onQuit();
     ImGui::EndMenu();
@@ -122,6 +156,9 @@ void UIManager::renderViewMenu() {
         renderSenderSubmenu();
         ImGui::EndMenu();
     }
+    ImGui::Separator();
+    if (ImGui::MenuItem("Add Group Panel"))
+        addGroupPanel();
     ImGui::Separator();
     if (ImGui::MenuItem("Lighting Settings", "Ctrl+L") && m_lightingDialog)
         m_lightingDialog->open();

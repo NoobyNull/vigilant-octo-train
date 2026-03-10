@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cfloat>
 #include <cmath>
 #include <cstdio>
 #include <map>
@@ -372,6 +373,14 @@ void ViewportPanel::registerContextMenuEntries() {
     };
     entries.push_back(envelopeEntry);
 
+    ContextMenuEntry modelBoundsEntry;
+    modelBoundsEntry.label = "Show Model Bounds";
+    modelBoundsEntry.action = []() {
+        auto& cfg = Config::instance();
+        cfg.setCncShowModelBounds(!cfg.getCncShowModelBounds());
+    };
+    entries.push_back(modelBoundsEntry);
+
     entries.push_back(ContextMenuEntry::separator());
 
     // Lighting
@@ -580,44 +589,102 @@ void ViewportPanel::renderViewport() {
     }
 
     // Render G-code line geometry (if present and visible)
-    if (m_showToolpath) {
+    if (m_showGCode) {
         if (m_gcodeDirty) {
             buildGCodeGeometry();
         }
         renderGCodeLines();
     }
 
-    // Live CNC tool position and work envelope
-    if (m_cncConnected) {
-        auto& cfg = Config::instance();
-        const Vec3& renderPos = m_machineStatus.workPos;
+    // CNC overlays (work envelope and model bounds)
+    auto& cfg = Config::instance();
+    const auto& profile = cfg.getActiveMachineProfile();
 
-        // Expand far plane to encompass the work envelope (may exceed model-fitted frustum)
-        f32 savedFar = m_camera.farPlane();
-        if (cfg.getCncShowWorkEnvelope()) {
-            const auto& profile = cfg.getActiveMachineProfile();
-            f32 envExtent = std::max({profile.maxTravelX, profile.maxTravelY,
-                                      profile.maxTravelZ});
-            f32 needed = (m_camera.distance() + envExtent) * 2.0f;
-            if (needed > savedFar) {
-                m_camera.setFarPlane(needed);
-                m_renderer.setCamera(m_camera);
-            }
+    // Expand far plane to encompass overlays (may exceed model-fitted frustum)
+    f32 savedFar = m_camera.farPlane();
+    bool needsExtendedFar = cfg.getCncShowWorkEnvelope() || cfg.getCncShowModelBounds();
+    if (needsExtendedFar) {
+        f32 envExtent = std::max({profile.maxTravelX, profile.maxTravelY, profile.maxTravelZ});
+        f32 needed = (m_camera.distance() + envExtent) * 2.0f;
+        if (needed > savedFar) {
+            m_camera.setFarPlane(needed);
+            m_renderer.setCamera(m_camera);
         }
+    }
+
+    // Work envelope (blue box showing machine limits)
+    if (cfg.getCncShowWorkEnvelope()) {
+        Vec3 envMax{profile.maxTravelX, profile.maxTravelY, profile.maxTravelZ};
+        m_renderer.renderWireBox(Vec3{0, 0, 0}, envMax, cfg.getCncEnvelopeColor());
+    }
+
+    // Model bounds overlay — shows model size relative to machine envelope
+    if (cfg.getCncShowModelBounds() && m_mesh && m_mesh->isValid()) {
+        const AABB& rawBounds = m_mesh->bounds();
+
+        // Transform bounds through model matrix (same as mesh rendering)
+        Vec3 transformedMin, transformedMax;
+        if (m_hasFitParams) {
+            // Apply fit transformation to bounds corners to get accurate AABB
+            Vec3 corners[8] = {
+                {rawBounds.min.x, rawBounds.min.y, rawBounds.min.z},
+                {rawBounds.max.x, rawBounds.min.y, rawBounds.min.z},
+                {rawBounds.min.x, rawBounds.max.y, rawBounds.min.z},
+                {rawBounds.max.x, rawBounds.max.y, rawBounds.min.z},
+                {rawBounds.min.x, rawBounds.min.y, rawBounds.max.z},
+                {rawBounds.max.x, rawBounds.min.y, rawBounds.max.z},
+                {rawBounds.min.x, rawBounds.max.y, rawBounds.max.z},
+                {rawBounds.max.x, rawBounds.max.y, rawBounds.max.z}
+            };
+
+            transformedMin = Vec3(FLT_MAX);
+            transformedMax = Vec3(-FLT_MAX);
+
+            for (int i = 0; i < 8; i++) {
+                Vec4 corner4 = m_modelMatrix * Vec4(corners[i].x, corners[i].y, corners[i].z, 1.0f);
+                Vec3 transformedCorner = Vec3(corner4.x, corner4.y, corner4.z);
+
+                transformedMin.x = std::min(transformedMin.x, transformedCorner.x);
+                transformedMin.y = std::min(transformedMin.y, transformedCorner.y);
+                transformedMin.z = std::min(transformedMin.z, transformedCorner.z);
+                transformedMax.x = std::max(transformedMax.x, transformedCorner.x);
+                transformedMax.y = std::max(transformedMax.y, transformedCorner.y);
+                transformedMax.z = std::max(transformedMax.z, transformedCorner.z);
+            }
+        } else {
+            // No fit params, use mesh bounds as-is (already auto-oriented)
+            transformedMin = rawBounds.min;
+            transformedMax = rawBounds.max;
+        }
+
+        // Check if model fits within machine envelope
+        bool fitsX = transformedMax.x <= profile.maxTravelX;
+        bool fitsY = transformedMax.y <= profile.maxTravelY;
+        bool fitsZ = transformedMax.z <= profile.maxTravelZ;
+        bool modelFits = fitsX && fitsY && fitsZ &&
+                       transformedMin.x >= 0.0f &&
+                       transformedMin.y >= 0.0f &&
+                       transformedMin.z >= 0.0f;
+
+        // Choose color: Green if model fits within bounds, Red if it exceeds
+        Vec4 color = modelFits ? cfg.getCncModelBoundsInColor() : cfg.getCncModelBoundsOutColor();
+
+        // Render transformed model bounds box
+        m_renderer.renderWireBox(transformedMin, transformedMax, color);
+    }
+
+    // Live CNC tool position (only when connected)
+    if (m_cncConnected) {
+        const Vec3& renderPos = m_machineStatus.workPos;
 
         if (cfg.getCncShowToolDot()) {
             m_renderer.renderPoint(renderPos, cfg.getCncToolDotSize(), cfg.getCncToolDotColor());
         }
-        if (cfg.getCncShowWorkEnvelope()) {
-            const auto& profile = cfg.getActiveMachineProfile();
-            Vec3 envMax{profile.maxTravelX, profile.maxTravelY, profile.maxTravelZ};
-            m_renderer.renderWireBox(Vec3{0, 0, 0}, envMax, cfg.getCncEnvelopeColor());
-        }
+    }
 
-        // Restore original far plane
-        if (m_camera.farPlane() != savedFar) {
-            m_camera.setFarPlane(savedFar);
-        }
+    // Restore original far plane
+    if (m_camera.farPlane() != savedFar) {
+        m_camera.setFarPlane(savedFar);
     }
 
     m_renderer.endFrame();
@@ -686,8 +753,15 @@ void ViewportPanel::renderToolbar() {
     ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
     ImGui::SameLine();
     ImGui::Checkbox("Model", &m_showModel);
-    ImGui::SameLine();
-    ImGui::Checkbox("Toolpath", &m_showToolpath);
+    if (m_gpuToolpath.vao != 0) {
+        ImGui::SameLine();
+        ImGui::Checkbox("Toolpath", &m_showToolpath);
+    }
+    if (hasGCode()) {
+        ImGui::SameLine();
+        if (ImGui::Checkbox("G-code", &m_showGCode))
+            m_gcodeDirty = true;
+    }
 
     // Alignment status indicator (only when FitParams are active)
     if (m_hasFitParams && m_alignmentStatus != AlignmentStatus::Unknown) {
@@ -705,8 +779,8 @@ void ViewportPanel::renderToolbar() {
         }
     }
 
-    // G-code move-type toggles (only when G-code loaded + toolpath visible)
-    if (hasGCode() && m_showToolpath) {
+    // G-code move-type toggles (only when G-code loaded + G-code visible)
+    if (hasGCode() && m_showGCode) {
         ImGui::SameLine();
         ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
         ImGui::SameLine();

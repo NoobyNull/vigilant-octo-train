@@ -2,11 +2,14 @@
 
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 
 #include <imgui.h>
+#include <nlohmann/json.hpp>
 
 #include "../../core/config/config.h"
 #include "../../core/paths/app_paths.h"
+#include "../../core/utils/file_utils.h"
 #include "version.h"
 
 namespace dw {
@@ -114,7 +117,7 @@ void StartPage::renderSetup() {
 
     // Start mode selection
     ImGui::TextDisabled("Start In");
-    if (ImGui::RadioButton("Modeling / Projects", m_startMode == 0)) {
+    if (ImGui::RadioButton("Workshop / Projects", m_startMode == 0)) {
         m_startMode = 0;
         if (m_onWorkspaceModeChanged)
             m_onWorkspaceModeChanged(0);
@@ -127,11 +130,38 @@ void StartPage::renderSetup() {
     }
 }
 
+void StartPage::refreshRecentNames() {
+    const auto& recentProjects = Config::instance().getRecentProjects();
+    m_recentNames.clear();
+    m_recentNames.reserve(recentProjects.size());
+    for (const auto& projectPath : recentProjects) {
+        std::string name;
+        Path manifestPath = projectPath / "project.json";
+        if (file::exists(manifestPath)) {
+            try {
+                std::ifstream ifs(manifestPath.string());
+                auto j = nlohmann::json::parse(ifs);
+                name = j.value("name", "");
+            } catch (...) {}
+        }
+        if (name.empty())
+            name = projectPath.stem().string();
+        if (name.empty())
+            name = projectPath.filename().string();
+        m_recentNames.push_back(std::move(name));
+    }
+    m_recentNamesCount = recentProjects.size();
+}
+
 void StartPage::renderRecentProjects() {
     ImGui::Text("Recent Projects");
     ImGui::Spacing();
 
     const auto& recentProjects = Config::instance().getRecentProjects();
+
+    // Refresh cached names when list changes
+    if (recentProjects.size() != m_recentNamesCount)
+        refreshRecentNames();
 
     if (recentProjects.empty()) {
         ImGui::TextDisabled("No recent projects.");
@@ -141,10 +171,9 @@ void StartPage::renderRecentProjects() {
             const auto& projectPath = recentProjects[i];
             ImGui::PushID(static_cast<int>(i));
 
-            std::string name = projectPath.stem().string();
-            if (name.empty()) {
-                name = projectPath.filename().string();
-            }
+            std::string name = (i < m_recentNames.size())
+                                   ? m_recentNames[i]
+                                   : projectPath.stem().string();
 
             float rowH = ImGui::GetTextLineHeightWithSpacing();
             if (ImGui::Selectable(name.c_str(), false, ImGuiSelectableFlags_None,

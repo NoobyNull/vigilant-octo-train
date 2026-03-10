@@ -24,6 +24,7 @@
 #include "ui/dialogs/message_dialog.h"
 #include "ui/dialogs/progress_dialog.h"
 #include "ui/dialogs/tag_image_dialog.h"
+#include "ui/dialogs/settings_import_dialog.h"
 #include "ui/dialogs/tagger_shutdown_dialog.h"
 #include "ui/panels/cnc_console_panel.h"
 #include "ui/panels/cnc_jog_panel.h"
@@ -37,6 +38,7 @@
 #include "ui/panels/cost_panel.h"
 #include "ui/panels/cut_optimizer_panel.h"
 #include "ui/panels/direct_carve_panel.h"
+#include "ui/panels/group_panel.h"
 #include "ui/panels/gcode_panel.h"
 #include "ui/panels/library_panel.h"
 #include "ui/panels/materials_panel.h"
@@ -94,6 +96,7 @@ void UIManager::init(LibraryManager* libraryManager,
     m_tagImageDialog = std::make_unique<TagImageDialog>();
     m_maintenanceDialog = std::make_unique<MaintenanceDialog>();
     m_taggerShutdownDialog = std::make_unique<TaggerShutdownDialog>();
+    m_settingsImportDialog = std::make_unique<SettingsImportDialog>();
     m_statusBar = std::make_unique<StatusBar>();
     m_contextMenuManager = std::make_unique<ContextMenuManager>();
 
@@ -128,10 +131,14 @@ void UIManager::shutdown() {
     m_progressDialog.reset();
     m_tagImageDialog.reset();
     m_taggerShutdownDialog.reset();
+    m_settingsImportDialog.reset();
     m_maintenanceDialog.reset();
 
     // Destroy widgets
     m_statusBar.reset();
+
+    // Destroy group panels
+    m_groupPanels.clear();
 
     // Destroy panels
     m_viewportPanel.reset();
@@ -223,6 +230,19 @@ void UIManager::renderPanels() {
         }
     }
 
+    // Render group panels and check for close → layout reset
+    bool groupClosed = false;
+    for (auto& gp : m_groupPanels) {
+        gp->render();
+        if (gp->wasClosed())
+            groupClosed = true;
+    }
+    if (groupClosed) {
+        m_groupPanels.clear();
+        ImGuiID dockId = ImGui::GetID("MainDockSpace");
+        setupDefaultDockLayout(dockId);
+    }
+
     // Auto-context: detect focused panel and trigger preset switch
     if (!m_suppressAutoContext) {
         ImGuiWindow* navWin = GImGui->NavWindow;
@@ -256,10 +276,14 @@ void UIManager::renderBackgroundUI(float deltaTime, const LoadingState* loadingS
         m_progressDialog->render();
 
     MessageDialog::renderGlobal();
+    SavePromptDialog::renderGlobal();
     ToastManager::instance().render(deltaTime);
 
     if (m_importSummaryDialog)
         m_importSummaryDialog->render();
+
+    if (m_settingsImportDialog)
+        m_settingsImportDialog->render();
 }
 
 void UIManager::setImportProgress(const ImportProgress* progress) {
@@ -280,6 +304,14 @@ void UIManager::setImportCancelCallback(std::function<void()> callback) {
 void UIManager::showTaggerShutdownDialog(const TaggerProgress* progress) {
     if (m_taggerShutdownDialog)
         m_taggerShutdownDialog->open(progress);
+}
+
+SettingsImportDialog* UIManager::settingsImportDialog() const {
+    return m_settingsImportDialog.get();
+}
+
+void UIManager::addGroupPanel() {
+    m_groupPanels.push_back(std::make_unique<GroupPanel>(m_nextGroupId++));
 }
 
 void UIManager::showCncPanels(bool show) {

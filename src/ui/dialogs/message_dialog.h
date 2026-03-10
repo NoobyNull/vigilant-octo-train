@@ -61,4 +61,28 @@ class ConfirmDialog : public Dialog {
     std::function<void(bool)> m_callback;
 };
 
+// Save/Don't Save/Cancel dialog for unsaved changes
+class SavePromptDialog : public Dialog {
+  public:
+    SavePromptDialog();
+    ~SavePromptDialog() override = default;
+
+    void render() override;
+
+    // callback receives: DialogResult::Yes (Save), No (Don't Save), Cancel
+    void show(const std::string& title,
+              const std::string& message,
+              std::function<void(DialogResult)> callback);
+
+    static SavePromptDialog& instance();
+    static void renderGlobal();
+    static void prompt(const std::string& title,
+                       const std::string& message,
+                       std::function<void(DialogResult)> callback);
+
+  private:
+    std::string m_message;
+    std::function<void(DialogResult)> m_callback;
+};
+
 } // namespace dw

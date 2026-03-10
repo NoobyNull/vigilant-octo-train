@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <filesystem>
 
+#include <glad/gl.h>
 #include <imgui.h>
 
 #include "core/carve/analysis_overlay.h"
@@ -76,7 +77,10 @@ void statusBullet(bool ok, const char* label) {
 
 DirectCarvePanel::DirectCarvePanel() : Panel("Direct Carve") {}
 
-DirectCarvePanel::~DirectCarvePanel() = default;
+DirectCarvePanel::~DirectCarvePanel() {
+    if (m_hmPreviewTex != 0)
+        glDeleteTextures(1, &m_hmPreviewTex);
+}
 
 void DirectCarvePanel::setCncController(CncController* cnc) { m_cnc = cnc; }
 void DirectCarvePanel::setToolDatabase(ToolDatabase* db) { m_toolDb = db; }
@@ -109,7 +113,24 @@ void DirectCarvePanel::onModelLoaded(const std::vector<Vertex>& vertices,
     if (!modelSourcePath.empty()) m_modelSourcePath = modelSourcePath;
     m_modelThumbnail = thumbnailTexture;
 
-    // Fire FitParams callback with initial alignment if stock is configured
+    // Initialize stock from machine profile if not yet configured
+    if (m_stock.width <= 0.0f || m_stock.height <= 0.0f) {
+        const auto& prof = Config::instance().getActiveMachineProfile();
+        m_stock.width = prof.maxTravelX;
+        m_stock.height = prof.maxTravelY;
+        m_stock.thickness = prof.maxTravelZ;
+    }
+
+    // Auto-fit model to stock
+    m_fitter.setStock(m_stock);
+    m_fitParams.scale = m_fitter.autoScale();
+
+    // Update window title with model name (###ID keeps ImGui window identity stable)
+    if (!m_modelName.empty()) {
+        m_title = m_modelName + "###Direct Carve";
+    }
+
+    // Fire FitParams callback with initial alignment
     if (m_onFitParamsChanged && m_stock.width > 0.0f && m_stock.height > 0.0f) {
         m_onFitParamsChanged(m_fitParams, m_modelBoundsMin, m_modelBoundsMax, m_stock);
     }
@@ -120,6 +141,7 @@ void DirectCarvePanel::onModelLoaded(const std::vector<Vertex>& vertices,
     m_heightmapSaved = false;
     m_hmRegenConfirm = false;
     m_hmMissingPath.clear();
+    if (m_hmPreviewTex != 0) { glDeleteTextures(1, &m_hmPreviewTex); m_hmPreviewTex = 0; }
 }
 
 std::string DirectCarvePanel::formatTime(f32 seconds) {
@@ -132,13 +154,13 @@ std::string DirectCarvePanel::formatTime(f32 seconds) {
 
 const char* DirectCarvePanel::stepLabel(Step step) {
     switch (step) {
-    case Step::MachineCheck: return "Machine";
     case Step::ModelFit:     return "Model";
     case Step::ToolSelect:   return "Tool";
     case Step::MaterialSetup:return "Material";
     case Step::Preview:      return "Preview";
-    case Step::OutlineTest:  return "Outline";
+    case Step::MachineCheck: return "Machine";
     case Step::ZeroConfirm:  return "Zero";
+    case Step::OutlineTest:  return "Outline";
     case Step::Commit:       return "Confirm";
     case Step::Running:      return "Running";
     }
@@ -151,45 +173,17 @@ void DirectCarvePanel::render() {
     if (!ImGui::Begin(m_title.c_str(), &m_open)) { ImGui::End(); return; }
 
     renderStepIndicator();
-
-    // Model identity card
-    if (m_modelLoaded && !m_modelName.empty()) {
-        ImGui::Separator();
-        float thumbSize = ImGui::GetFrameHeight() * 2.5f;
-        ImVec2 startPos = ImGui::GetCursorPos();
-
-        if (m_modelThumbnail != 0) {
-            ImGui::Image(static_cast<ImTextureID>(static_cast<uintptr_t>(m_modelThumbnail)),
-                         ImVec2(thumbSize, thumbSize));
-            ImGui::SameLine();
-        }
-
-        ImGui::BeginGroup();
-        ImGui::Text("%s", m_modelName.c_str());
-        if (m_stock.width > 0.0f && m_stock.height > 0.0f) {
-            // Show configured stock dimensions (what the user set in ModelFit)
-            ImGui::TextDisabled("%.1f x %.1f x %.1f mm",
-                                m_stock.width, m_stock.height, m_stock.thickness);
-        } else {
-            Vec3 size = m_modelBoundsMax - m_modelBoundsMin;
-            ImGui::TextDisabled("%.1f x %.1f x %.1f mm", size.x, size.y, size.z);
-        }
-        if (!m_materialName.empty())
-            ImGui::TextDisabled("%s", m_materialName.c_str());
-        ImGui::EndGroup();
-    }
-
     ImGui::Separator();
     ImGui::Spacing();
 
     switch (m_currentStep) {
-    case Step::MachineCheck:  renderMachineCheck();  break;
     case Step::ModelFit:      renderModelFit();      break;
     case Step::ToolSelect:    renderToolSelect();    break;
     case Step::MaterialSetup: renderMaterialSetup(); break;
     case Step::Preview:       renderPreview();       break;
-    case Step::OutlineTest:   renderOutlineTest();   break;
+    case Step::MachineCheck:  renderMachineCheck();  break;
     case Step::ZeroConfirm:   renderZeroConfirm();   break;
+    case Step::OutlineTest:   renderOutlineTest();   break;
     case Step::Commit:        renderCommit();        break;
     case Step::Running:       renderRunning();       break;
     }
@@ -198,6 +192,10 @@ void DirectCarvePanel::render() {
     ImGui::Separator();
     renderNavButtons();
     ImGui::End();
+
+    // Render floating dialogs owned by this panel
+    if (m_profileDialog.isOpen())
+        m_profileDialog.render();
 }
 
 void DirectCarvePanel::renderStepIndicator() {
@@ -266,7 +264,7 @@ void DirectCarvePanel::renderStepIndicator() {
 void DirectCarvePanel::renderNavButtons() {
     float fontSize = ImGui::GetFontSize();
     float bw = fontSize * 6.0f;
-    bool isFirst = (m_currentStep == Step::MachineCheck);
+    bool isFirst = (m_currentStep == Step::ModelFit);
     bool isRunning = (m_currentStep == Step::Running);
     bool isCommit = (m_currentStep == Step::Commit);
 
@@ -283,7 +281,7 @@ void DirectCarvePanel::renderNavButtons() {
     ImGui::SameLine();
     if (isRunning) ImGui::BeginDisabled();
     if (ImGui::Button("Cancel", ImVec2(bw, 0))) {
-        m_currentStep = Step::MachineCheck;
+        m_currentStep = Step::ModelFit;
         m_safeZConfirmed = false;
         m_finishingToolSelected = false;
         m_materialSelected = false;
@@ -301,14 +299,16 @@ void DirectCarvePanel::renderNavButtons() {
 
 bool DirectCarvePanel::canAdvance() const {
     switch (m_currentStep) {
-    case Step::MachineCheck:  return validateMachineReady();
+    // Planning steps — no machine required
     case Step::ModelFit:      return m_modelLoaded;
     case Step::ToolSelect:    return m_finishingToolSelected;
     case Step::MaterialSetup: return m_materialSelected;
     case Step::Preview:       return m_toolpathGenerated
                                      && (m_generatedAtVersion == m_settingsVersion);
-    case Step::OutlineTest:   return m_outlineCompleted || m_outlineSkipped;
+    // Machine steps — CNC required
+    case Step::MachineCheck:  return validateMachineReady();
     case Step::ZeroConfirm:   return m_zeroConfirmed;
+    case Step::OutlineTest:   return m_outlineCompleted || m_outlineSkipped;
     case Step::Commit:        return m_commitConfirmed;
     case Step::Running:       return false;
     }
@@ -334,11 +334,11 @@ bool DirectCarvePanel::validateMachineReady() const {
 }
 
 void DirectCarvePanel::renderMachineCheck() {
-    ImGui::TextUnformatted("Machine Readiness Check");
+    ImGui::TextUnformatted("Machine Checklist");
     ImGui::Spacing();
 
     bool connected = m_cncConnected;
-    bool homed = (m_machineStatus.state == MachineState::Idle);
+    bool idle = (m_machineStatus.state == MachineState::Idle);
     bool notAlarm = (m_machineStatus.state != MachineState::Alarm &&
                      m_machineStatus.state != MachineState::Unknown);
     auto& cfg = Config::instance();
@@ -346,15 +346,38 @@ void DirectCarvePanel::renderMachineCheck() {
     bool profileOk = (profile.maxTravelX > 0.0f && profile.maxTravelY > 0.0f &&
                       profile.maxTravelZ > 0.0f);
 
+    // Show detected machine
+    if (connected && profileOk) {
+        ImGui::Text("Machine: %s", profile.name.c_str());
+    } else if (connected) {
+        ImGui::TextColored(kYellow, "Machine: Connected (no profile configured)");
+    } else {
+        ImGui::TextColored(kRed, "Machine: Not connected");
+    }
+    ImGui::Spacing();
+
+    // Checklist
     statusBullet(connected, "CNC connected");
-    statusBullet(homed && notAlarm, "Machine homed (idle, no alarm)");
-    statusBullet(profileOk, "Machine profile configured (travel limits set)");
+    statusBullet(notAlarm, "No alarm");
+    statusBullet(idle, "Machine idle");
+    statusBullet(profileOk, "Machine profile configured");
     statusBullet(m_safeZConfirmed, "Safe Z verified");
     ImGui::Spacing();
 
-    if (connected && homed) {
-        float fs = ImGui::GetFontSize();
-        float bw = fs * 10.0f;
+    bool canSend = (m_cnc != nullptr && connected);
+    float fs = ImGui::GetFontSize();
+    float bw = fs * 10.0f;
+
+    // Homing
+    if (!canSend) ImGui::BeginDisabled();
+    if (ImGui::Button("Home Machine", ImVec2(bw, 0))) {
+        m_cnc->sendCommand("$H");
+    }
+    if (!canSend) ImGui::EndDisabled();
+
+    // Safe Z test
+    ImGui::Spacing();
+    if (connected && idle) {
         if (ImGui::Button("Test Safe Z", ImVec2(bw, 0))) {
             if (m_cnc) {
                 char cmd[64];
@@ -372,25 +395,55 @@ void DirectCarvePanel::renderMachineCheck() {
     if (m_machineStatus.state == MachineState::Alarm) {
         ImGui::Spacing();
         ImGui::PushStyleColor(ImGuiCol_Text, kRed);
-        ImGui::TextWrapped("Machine is in ALARM state. Clear the alarm and home.");
+        ImGui::TextWrapped("Machine is in ALARM state. Unlock or reset before continuing.");
         ImGui::PopStyleColor();
+        if (canSend) {
+            if (ImGui::Button("Unlock ($X)", ImVec2(bw, 0)))
+                m_cnc->sendCommand("$X");
+        }
     }
 }
 
 // --- renderModelFit (18-02): Stock dims, scale/depth/position, live fit, heightmap gen ---
 
 void DirectCarvePanel::renderModelFit() {
-    ImGui::TextUnformatted("Model Fitting");
-    ImGui::Spacing();
-
     if (!m_modelLoaded) {
         ImGui::TextColored(kYellow, "No model loaded. Load an STL model first.");
         return;
     }
 
-    // Stock dimensions
+    float totalW = ImGui::GetContentRegionAvail().x;
+    float spacing = ImGui::GetStyle().ItemSpacing.x;
+    float thumbW = (totalW - spacing) / 3.0f;
+    float controlsW = totalW - thumbW - spacing;
+
+    // Left column: thumbnail filling 1/3 width
+    ImGui::BeginChild("##thumb_col", ImVec2(thumbW, 0), false);
+    if (m_modelThumbnail != 0) {
+        // Square thumbnail filling the column width
+        ImGui::Image(static_cast<ImTextureID>(static_cast<uintptr_t>(m_modelThumbnail)),
+                     ImVec2(thumbW, thumbW));
+    }
+    // Model name + natural dimensions below thumbnail
+    ImGui::TextWrapped("%s", m_modelName.c_str());
+    Vec3 natSize = m_modelBoundsMax - m_modelBoundsMin;
+    ImGui::TextDisabled("%.1f x %.1f x %.1f mm",
+                        static_cast<double>(natSize.x),
+                        static_cast<double>(natSize.y),
+                        static_cast<double>(natSize.z));
+    if (!m_materialName.empty())
+        ImGui::TextDisabled("%s", m_materialName.c_str());
+    ImGui::EndChild();
+
+    ImGui::SameLine();
+
+    // Right column: all controls in 2/3 width
+    ImGui::BeginChild("##controls_col", ImVec2(controlsW, 0), false);
+
+    // Stock dimensions — auto-fit recalculates whenever stock changes
     float iw = ImGui::GetFontSize() * 8.0f;
     ImGui::Text("Stock Dimensions:");
+    auto prevStock = m_stock;
     ImGui::SetNextItemWidth(iw);
     ImGui::InputFloat("Width (X) mm", &m_stock.width, 1.0f, 10.0f, "%.1f");
     m_stock.width = std::clamp(m_stock.width, 1.0f, 2000.0f);
@@ -400,6 +453,9 @@ void DirectCarvePanel::renderModelFit() {
     ImGui::SetNextItemWidth(iw);
     ImGui::InputFloat("Thickness (Z) mm", &m_stock.thickness, 0.5f, 5.0f, "%.1f");
     m_stock.thickness = std::clamp(m_stock.thickness, 0.5f, 200.0f);
+    bool stockChanged = (m_stock.width != prevStock.width ||
+                         m_stock.height != prevStock.height ||
+                         m_stock.thickness != prevStock.thickness);
 
     float fs = ImGui::GetFontSize();
     float bw = fs * 12.0f;
@@ -408,6 +464,17 @@ void DirectCarvePanel::renderModelFit() {
         m_stock.width = prof.maxTravelX;
         m_stock.height = prof.maxTravelY;
         m_stock.thickness = prof.maxTravelZ;
+        stockChanged = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Edit Profile")) {
+        m_profileDialog.setOnProfileChanged([this]() {
+            const auto& prof = Config::instance().getActiveMachineProfile();
+            m_stock.width = prof.maxTravelX;
+            m_stock.height = prof.maxTravelY;
+            m_stock.thickness = prof.maxTravelZ;
+        });
+        m_profileDialog.open();
     }
 
     // Cut list integration
@@ -432,6 +499,7 @@ void DirectCarvePanel::renderModelFit() {
                     if (ImGui::Selectable(label)) {
                         m_stock.width = p.width;
                         m_stock.height = p.height;
+                        stockChanged = true;
                         ImGui::CloseCurrentPopup();
                     }
                 }
@@ -440,21 +508,24 @@ void DirectCarvePanel::renderModelFit() {
         }
     }
 
+    // Auto-fit whenever stock dimensions change
+    if (stockChanged) {
+        m_fitter.setStock(m_stock);
+        m_fitParams.scale = m_fitter.autoScale();
+    }
+
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
-    // Scale slider with dynamic max derived from stock/model ratio
-    f32 extX = std::max(1.0f, m_modelBoundsMax.x - m_modelBoundsMin.x);
-    f32 maxScale = std::max(1.0f, m_stock.width / extX) * 2.0f;
+    // Scale slider: 10% .. 100% (never upscale beyond original model size)
+    // Internal value is 0..1 factor; display as percentage
+    f32 scalePct = m_fitParams.scale * 100.0f;
     ImGui::SetNextItemWidth(iw);
-    ImGui::SliderFloat("Scale", &m_fitParams.scale, 0.1f, maxScale, "%.3f");
+    if (ImGui::SliderFloat("Scale", &scalePct, 10.0f, 100.0f, "%.1f %%"))
+        m_fitParams.scale = scalePct / 100.0f;
     ImGui::SameLine();
     if (ImGui::Button("Auto Fit")) {
         m_fitter.setStock(m_stock);
         m_fitParams.scale = m_fitter.autoScale();
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("1:1")) {
-        m_fitParams.scale = 1.0f;
     }
 
     f32 depthMax = std::max(m_stock.thickness, 1.0f);
@@ -535,6 +606,8 @@ void DirectCarvePanel::renderModelFit() {
                                 usedPct, scrapArea, '\xB2');
         }
     }
+
+    ImGui::EndChild(); // ##controls_col
 }
 
 void DirectCarvePanel::renderToolSelect() {
@@ -1182,6 +1255,7 @@ void DirectCarvePanel::renderPreview() {
             if (ImGui::Button("Continue", ImVec2(bw, 0))) {
                 m_hmFileMissing = false;
                 m_heightmapSaved = false;
+                if (m_hmPreviewTex != 0) { glDeleteTextures(1, &m_hmPreviewTex); m_hmPreviewTex = 0; }
                 m_fitter.setStock(m_stock);
                 carve::HeightmapConfig hmCfg;
                 m_carveJob->startHeightmap(m_vertices, m_indices, m_fitter,
@@ -1217,10 +1291,24 @@ void DirectCarvePanel::renderPreview() {
                 m_heightmapSaved = true;
             }
 
+            // Upload preview texture once when heightmap becomes ready
+            if (m_hmPreviewTex == 0)
+                uploadHeightmapPreview();
+
             const auto& hm = m_carveJob->heightmap();
             ImGui::TextColored(kGreen, "1. Heightmap: Ready");
             ImGui::SameLine();
             ImGui::TextDisabled("(%dx%d, %.2f mm/px)", hm.cols(), hm.rows(), hm.resolution());
+
+            // Heightmap preview image (fit to available width, preserve aspect)
+            if (m_hmPreviewTex != 0 && m_hmPreviewW > 0 && m_hmPreviewH > 0) {
+                f32 availW = ImGui::GetContentRegionAvail().x;
+                f32 aspect = static_cast<f32>(m_hmPreviewH) / static_cast<f32>(m_hmPreviewW);
+                f32 dispW = std::min(availW, static_cast<f32>(m_hmPreviewW));
+                f32 dispH = dispW * aspect;
+                ImGui::Image(static_cast<ImTextureID>(static_cast<uintptr_t>(m_hmPreviewTex)),
+                             ImVec2(dispW, dispH));
+            }
 
             // Export + Regenerate buttons
             if (ImGui::Button("Export Image")) saveImageToProject();
@@ -1239,6 +1327,7 @@ void DirectCarvePanel::renderPreview() {
                     m_heightmapSaved = false;
                     m_toolpathGenerated = false;  // Hard reset: heightmap changed
                     ++m_settingsVersion;
+                    if (m_hmPreviewTex != 0) { glDeleteTextures(1, &m_hmPreviewTex); m_hmPreviewTex = 0; }
                     m_fitter.setStock(m_stock);
                     carve::HeightmapConfig hmCfg;
                     m_carveJob->startHeightmap(m_vertices, m_indices, m_fitter,
@@ -2020,6 +2109,48 @@ void DirectCarvePanel::saveImageToProject() {
         ToastManager::instance().show(ToastType::Error,
             "Export Failed", "Could not write " + destPath.string());
     }
+}
+
+void DirectCarvePanel::uploadHeightmapPreview() {
+    if (!m_carveJob) return;
+    const auto& hm = m_carveJob->heightmap();
+    if (hm.empty()) return;
+
+    int w = hm.cols();
+    int h = hm.rows();
+    f32 range = hm.maxZ() - hm.minZ();
+    if (range < 1e-6f) range = 1.0f;
+
+    // Build RGBA pixels (grayscale mapped to a warm depth palette)
+    std::vector<u8> pixels(static_cast<size_t>(w * h * 4));
+    for (int r = 0; r < h; ++r) {
+        for (int c = 0; c < w; ++c) {
+            f32 z = hm.at(c, r);
+            f32 t = std::clamp((z - hm.minZ()) / range, 0.0f, 1.0f);
+            // Deep = dark blue, surface = bright white-gold
+            u8 rv = static_cast<u8>(std::clamp(t * 255.0f, 0.0f, 255.0f));
+            u8 gv = static_cast<u8>(std::clamp(t * 240.0f, 0.0f, 255.0f));
+            u8 bv = static_cast<u8>(std::clamp((0.3f + t * 0.7f) * 200.0f, 0.0f, 255.0f));
+            size_t idx = static_cast<size_t>((r * w + c) * 4);
+            pixels[idx + 0] = rv;
+            pixels[idx + 1] = gv;
+            pixels[idx + 2] = bv;
+            pixels[idx + 3] = 255;
+        }
+    }
+
+    if (m_hmPreviewTex == 0)
+        glGenTextures(1, &m_hmPreviewTex);
+
+    glBindTexture(GL_TEXTURE_2D, m_hmPreviewTex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    m_hmPreviewW = w;
+    m_hmPreviewH = h;
 }
 
 void DirectCarvePanel::saveGCodeToProject() {

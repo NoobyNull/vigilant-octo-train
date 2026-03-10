@@ -1,6 +1,8 @@
 #pragma once
 
 #include <functional>
+#include <string>
+#include <vector>
 
 #include "../../core/types.h"
 #include "panel.h"
@@ -42,6 +44,11 @@ class StartPage : public Panel {
     char m_workspaceRoot[512]{};
     bool m_workspaceRootLoaded = false;
     int m_startMode = 0; // 0=Modeling, 1=CNC Sender
+
+    // Cached recent project display names (resolved from project.json)
+    std::vector<std::string> m_recentNames;
+    size_t m_recentNamesCount = 0; // tracks staleness
+    void refreshRecentNames();
 };
 
 } // namespace dw

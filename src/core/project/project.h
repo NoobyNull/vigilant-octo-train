@@ -46,6 +46,10 @@ class Project {
     bool isModified() const { return m_modified; }
     void clearModified() { m_modified = false; }
 
+    // Temporary project (lives in system temp, not saved to permanent location)
+    bool isTemporary() const { return m_temporary; }
+    void setTemporary(bool temp) { m_temporary = temp; }
+
     // Internal record access
     const ProjectRecord& record() const { return m_record; }
     ProjectRecord& record() { return m_record; }
@@ -54,6 +58,7 @@ class Project {
     ProjectRecord m_record;
     std::vector<i64> m_modelIds;
     bool m_modified = false;
+    bool m_temporary = false;
 };
 
 // Project manager - handles project lifecycle
@@ -76,10 +81,16 @@ class ProjectManager {
     std::shared_ptr<Project> currentProject() const { return m_currentProject; }
     void setCurrentProject(std::shared_ptr<Project> project) { m_currentProject = project; }
 
-    // On-disk project directory
+    // On-disk project directory (created in system temp for new projects)
     std::shared_ptr<ProjectDirectory> ensureProjectForModel(
         const std::string& modelName, const Path& modelSourcePath);
     std::shared_ptr<ProjectDirectory> currentDirectory() const { return m_currentDir; }
+
+    // Promote a temporary project to permanent storage
+    bool saveTemporaryProject();
+
+    // Clean up temporary project directory (call on discard)
+    void discardTemporaryProject();
 
     // Model operations within current project
     bool addModelToProject(i64 modelId);

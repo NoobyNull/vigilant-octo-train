@@ -31,10 +31,10 @@ protected:
 };
 
 TEST_F(ModelFitterTest, AutoScale) {
-    // Model is 20x10, stock is 200x200
-    // Scale to fill: min(200/20, 200/10) = min(10, 20) = 10
+    // Model is 20x10x5, stock is 200x200x25
+    // Scale capped at 1.0 (never upscale beyond original model size)
     const f32 scale = fitter.autoScale();
-    EXPECT_NEAR(scale, 10.0f, 0.001f);
+    EXPECT_NEAR(scale, 1.0f, 0.001f);
 }
 
 TEST_F(ModelFitterTest, FitsStock) {
@@ -157,7 +157,33 @@ TEST_F(ModelFitterTest, AutoScaleWithAsymmetricStock) {
     narrow.thickness = 25.0f;
     fitter.setStock(narrow);
 
-    // Model 20x10 -> min(100/20, 30/10) = min(5, 3) = 3
+    // Model 20x10x5 fits within 100x30x25 stock, capped at 1.0
     const f32 scale = fitter.autoScale();
-    EXPECT_NEAR(scale, 3.0f, 0.001f);
+    EXPECT_NEAR(scale, 1.0f, 0.001f);
+}
+
+TEST_F(ModelFitterTest, AutoScaleDownscalesLargeModel) {
+    // Model larger than stock in Y: 20x10 model vs 15-wide stock
+    StockDimensions tiny;
+    tiny.width = 40.0f;   // 40/20 = 2.0
+    tiny.height = 5.0f;   // 5/10 = 0.5 (limiting)
+    tiny.thickness = 25.0f;
+    fitter.setStock(tiny);
+
+    // min(1.0, 2.0, 0.5, 5.0) = 0.5
+    const f32 scale = fitter.autoScale();
+    EXPECT_NEAR(scale, 0.5f, 0.001f);
+}
+
+TEST_F(ModelFitterTest, AutoScaleRespectsThickness) {
+    // Stock thickness is the limiting factor
+    StockDimensions thin;
+    thin.width = 200.0f;
+    thin.height = 200.0f;
+    thin.thickness = 2.0f;  // 2/5 = 0.4 (limiting)
+    fitter.setStock(thin);
+
+    // min(1.0, 10.0, 20.0, 0.4) = 0.4
+    const f32 scale = fitter.autoScale();
+    EXPECT_NEAR(scale, 0.4f, 0.001f);
 }

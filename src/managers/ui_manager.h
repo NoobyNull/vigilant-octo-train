@@ -47,6 +47,7 @@ class MaterialsPanel;
 class StartPage;
 class ToolBrowserPanel;
 class DirectCarvePanel;
+class GroupPanel;
 
 // Forward declarations - dialogs
 class FileDialog;
@@ -57,6 +58,7 @@ class ProgressDialog;
 class TagImageDialog;
 class MaintenanceDialog;
 class TaggerShutdownDialog;
+class SettingsImportDialog;
 
 // Forward declarations - core
 struct LoadingState;
@@ -194,6 +196,9 @@ class UIManager {
     void deletePreset(int index);
     int activePresetIndex() const { return m_activePresetIndex; }
 
+    // Group panels
+    void addGroupPanel();
+
     // --- Action callbacks (set by Application) ---
     void setOnNewProject(ActionCallback cb) { m_onNewProject = std::move(cb); }
     void setOnOpenProject(ActionCallback cb) { m_onOpenProject = std::move(cb); }
@@ -207,6 +212,11 @@ class UIManager {
     void setOnLibraryMaintenance(ActionCallback cb) { m_onLibraryMaintenance = std::move(cb); }
     void setOnRelocateWorkspace(ActionCallback cb) { m_onRelocateWorkspace = std::move(cb); }
     void setOnLocateMissingFiles(ActionCallback cb) { m_onLocateMissingFiles = std::move(cb); }
+    void setOnExportSettings(ActionCallback cb) { m_onExportSettings = std::move(cb); }
+    void setOnImportSettings(ActionCallback cb) { m_onImportSettings = std::move(cb); }
+
+    // Settings import dialog
+    SettingsImportDialog* settingsImportDialog() const;
 
     // CNC menu bar callbacks
     using ConnectCallback = std::function<void(const std::string& port)>;
@@ -281,6 +291,10 @@ class UIManager {
     bool m_showDirectCarve = false;
     bool m_showStartPage = true;
 
+    // Group panels (blank dockable containers)
+    std::vector<std::unique_ptr<GroupPanel>> m_groupPanels;
+    int m_nextGroupId = 1;
+
     // Panel registry — maps panel keys to visibility, rendering, and config
     struct PanelEntry {
         const char* key;         // Preset key (e.g. "cnc_status")
@@ -317,6 +331,7 @@ class UIManager {
     std::unique_ptr<TagImageDialog> m_tagImageDialog;
     std::unique_ptr<MaintenanceDialog> m_maintenanceDialog;
     std::unique_ptr<TaggerShutdownDialog> m_taggerShutdownDialog;
+    std::unique_ptr<SettingsImportDialog> m_settingsImportDialog;
 
     // Widgets
     std::unique_ptr<StatusBar> m_statusBar;
@@ -330,7 +345,8 @@ class UIManager {
     // First frame flag for dock layout
     bool m_firstFrame = true;
 
-    // Menu rendering helpers (in ui_manager_menus.cpp)
+    // Toolbar and menu rendering helpers (in ui_manager_menus.cpp)
+    void renderToolbar();
     void renderFileMenu();
     void renderViewMenu();
     void renderSenderSubmenu();
@@ -353,6 +369,8 @@ class UIManager {
     ActionCallback m_onLibraryMaintenance;
     ActionCallback m_onRelocateWorkspace;
     ActionCallback m_onLocateMissingFiles;
+    ActionCallback m_onExportSettings;
+    ActionCallback m_onImportSettings;
 
     // CNC menu bar callbacks
     ConnectCallback m_onConnect;

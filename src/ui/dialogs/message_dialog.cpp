@@ -187,4 +187,93 @@ void ConfirmDialog::show(const std::string& title,
     m_open = true;
 }
 
+// SavePromptDialog
+
+SavePromptDialog::SavePromptDialog() : Dialog("Save Changes") {}
+
+void SavePromptDialog::render() {
+    if (!m_open)
+        return;
+
+    ImGui::OpenPopup(m_title.c_str());
+
+    const auto* viewport = ImGui::GetMainViewport();
+    ImVec2 center = viewport->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x * 0.3f, 0), ImGuiCond_Appearing);
+
+    if (ImGui::BeginPopupModal(m_title.c_str(), &m_open,
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.6f, 0.3f, 1.0f));
+        ImGui::Text("%s", Icons::Warning);
+        ImGui::PopStyleColor();
+
+        ImGui::SameLine();
+        ImGui::TextWrapped("%s", m_message.c_str());
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        float padding = ImGui::GetStyle().FramePadding.x * 2.0f;
+        float saveW = ImGui::CalcTextSize("Save").x + padding * 2;
+        float dontSaveW = ImGui::CalcTextSize("Don't Save").x + padding * 2;
+        float cancelW = ImGui::CalcTextSize("Cancel").x + padding * 2;
+        float spacing = ImGui::GetStyle().ItemSpacing.x;
+        float totalW = saveW + dontSaveW + cancelW + spacing * 2;
+        float contentWidth = ImGui::GetContentRegionAvail().x;
+
+        ImGui::SetCursorPosX((contentWidth - totalW) * 0.5f);
+
+        if (ImGui::Button("Save", ImVec2(saveW, 0))) {
+            m_open = false;
+            if (m_callback)
+                m_callback(DialogResult::Yes);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Don't Save", ImVec2(dontSaveW, 0))) {
+            m_open = false;
+            if (m_callback)
+                m_callback(DialogResult::No);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(cancelW, 0))) {
+            m_open = false;
+            if (m_callback)
+                m_callback(DialogResult::Cancel);
+        }
+
+        ImGui::EndPopup();
+    } else {
+        // Popup was closed via X button — treat as Cancel
+        if (m_callback)
+            m_callback(DialogResult::Cancel);
+        m_open = false;
+    }
+}
+
+void SavePromptDialog::show(const std::string& title,
+                            const std::string& message,
+                            std::function<void(DialogResult)> callback) {
+    m_title = title;
+    m_message = message;
+    m_callback = std::move(callback);
+    m_open = true;
+}
+
+SavePromptDialog& SavePromptDialog::instance() {
+    static SavePromptDialog dialog;
+    return dialog;
+}
+
+void SavePromptDialog::renderGlobal() {
+    instance().render();
+}
+
+void SavePromptDialog::prompt(const std::string& title,
+                              const std::string& message,
+                              std::function<void(DialogResult)> callback) {
+    instance().show(title, message, std::move(callback));
+}
+
 } // namespace dw

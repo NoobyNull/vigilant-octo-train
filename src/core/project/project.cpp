@@ -1,6 +1,7 @@
 #include "project.h"
 
 #include <algorithm>
+#include <filesystem>
 
 #include "project_directory.h"
 #include "../config/config.h"
@@ -183,20 +184,60 @@ std::shared_ptr<ProjectDirectory> ProjectManager::ensureProjectForModel(
     const std::string& modelName, const Path& modelSourcePath) {
 
     std::string dirName = ProjectDirectory::sanitizeName(modelName);
-    Path projectRoot = Config::instance().getProjectsDir() / dirName;
+
+    // Check if a permanent project already exists for this model
+    Path permanentRoot = Config::instance().getProjectsDir() / dirName;
+    if (file::isDirectory(permanentRoot) && file::exists(permanentRoot / "project.json")) {
+        auto dir = std::make_shared<ProjectDirectory>();
+        if (!dir->open(permanentRoot)) {
+            log::errorf("Project", "Failed to open existing project dir: %s",
+                        permanentRoot.c_str());
+            return nullptr;
+        }
+
+        // Sync with SQLite
+        auto records = m_projectRepo.findAll();
+        std::shared_ptr<Project> project;
+        for (const auto& rec : records) {
+            if (rec.filePath == permanentRoot) {
+                project = open(rec.id);
+                break;
+            }
+        }
+        if (!project) {
+            project = create(modelName);
+            if (project) {
+                project->setFilePath(permanentRoot);
+                save(*project);
+            }
+        }
+        if (project) {
+            m_currentProject = project;
+        }
+        m_currentDir = dir;
+        return dir;
+    }
+
+    // If the current temp dir already matches this model, reuse it
+    if (m_currentDir && m_currentDir->name() == modelName && m_currentProject &&
+        m_currentProject->isTemporary()) {
+        return m_currentDir;
+    }
+
+    // Create directly in the projects directory (same location as permanent projects)
+    Path tempRoot = Config::instance().getProjectsDir() / dirName;
 
     auto dir = std::make_shared<ProjectDirectory>();
-
-    if (file::isDirectory(projectRoot) && file::exists(projectRoot / "project.json")) {
-        if (!dir->open(projectRoot)) {
-            log::errorf("Project", "Failed to open existing project dir: %s",
-                        projectRoot.c_str());
+    if (file::isDirectory(tempRoot) && file::exists(tempRoot / "project.json")) {
+        if (!dir->open(tempRoot)) {
+            log::errorf("Project", "Failed to open temp project dir: %s",
+                        tempRoot.c_str());
             return nullptr;
         }
     } else {
-        if (!dir->create(projectRoot, modelName)) {
-            log::errorf("Project", "Failed to create project dir: %s",
-                        projectRoot.c_str());
+        if (!dir->create(tempRoot, modelName)) {
+            log::errorf("Project", "Failed to create temp project dir: %s",
+                        tempRoot.c_str());
             return nullptr;
         }
         if (!modelSourcePath.empty() && file::isFile(modelSourcePath)) {
@@ -205,30 +246,90 @@ std::shared_ptr<ProjectDirectory> ProjectManager::ensureProjectForModel(
         }
     }
 
-    // Sync with SQLite — find or create a ProjectRecord with matching filePath
-    auto records = m_projectRepo.findAll();
-    std::shared_ptr<Project> project;
-    for (const auto& rec : records) {
-        if (rec.filePath == projectRoot) {
-            project = open(rec.id);
-            break;
-        }
-    }
-    if (!project) {
-        project = create(modelName);
-        if (project) {
-            project->setFilePath(projectRoot);
-            save(*project);
-        }
-    }
-
+    // Create a lightweight DB record but mark as temporary
+    auto project = create(modelName);
     if (project) {
+        project->setFilePath(tempRoot);
+        project->setTemporary(true);
+        save(*project);
         m_currentProject = project;
     }
     m_currentDir = dir;
 
-    Config::instance().addRecentProject(projectRoot);
+    // Don't add temp projects to recent projects list
     return dir;
+}
+
+bool ProjectManager::saveTemporaryProject() {
+    if (!m_currentProject || !m_currentProject->isTemporary() || !m_currentDir)
+        return false;
+
+    std::string dirName = ProjectDirectory::sanitizeName(m_currentProject->name());
+    Path permanentRoot = Config::instance().getProjectsDir() / dirName;
+    Path tempRoot = m_currentDir->root();
+
+    // Move temp directory to permanent location
+    std::error_code ec;
+    std::filesystem::create_directories(permanentRoot.parent_path(), ec);
+    if (ec) {
+        log::errorf("Project", "Failed to create parent dir: %s", ec.message().c_str());
+        return false;
+    }
+
+    // If permanent already exists (race), remove it first
+    if (std::filesystem::exists(permanentRoot)) {
+        std::filesystem::remove_all(permanentRoot, ec);
+    }
+
+    std::filesystem::rename(tempRoot, permanentRoot, ec);
+    if (ec) {
+        // rename fails across filesystems — fall back to copy+delete
+        std::filesystem::copy(tempRoot, permanentRoot,
+                              std::filesystem::copy_options::recursive, ec);
+        if (ec) {
+            log::errorf("Project", "Failed to copy project to permanent: %s",
+                        ec.message().c_str());
+            return false;
+        }
+        std::filesystem::remove_all(tempRoot, ec);
+    }
+
+    // Update project record to point to permanent location
+    m_currentProject->setFilePath(permanentRoot);
+    m_currentProject->setTemporary(false);
+    save(*m_currentProject);
+
+    // Re-open directory at new location
+    m_currentDir = std::make_shared<ProjectDirectory>();
+    m_currentDir->open(permanentRoot);
+
+    // Now add to recent projects
+    Config::instance().addRecentProject(permanentRoot);
+    Config::instance().save();
+
+    log::infof("Project", "Saved temporary project to: %s", permanentRoot.c_str());
+    return true;
+}
+
+void ProjectManager::discardTemporaryProject() {
+    if (!m_currentProject || !m_currentProject->isTemporary())
+        return;
+
+    Path tempRoot;
+    if (m_currentDir)
+        tempRoot = m_currentDir->root();
+
+    // Remove from DB
+    remove(m_currentProject->id());
+
+    m_currentProject.reset();
+    m_currentDir.reset();
+
+    // Clean up temp files
+    if (!tempRoot.empty()) {
+        std::error_code ec;
+        std::filesystem::remove_all(tempRoot, ec);
+    }
 }
 
 } // namespace dw

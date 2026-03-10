@@ -6,7 +6,9 @@
 #include <imgui.h>
 
 #include "core/cnc/tool_calculator.h"
+#include "core/config/config.h"
 #include "core/database/tool_database.h"
+#include "core/gcode/machine_profile.h"
 #include "core/materials/material_manager.h"
 #include "core/utils/log.h"
 #include "ui/icons.h"
@@ -264,7 +266,11 @@ void CncToolPanel::renderMachineInfo() {
         }
     }
     if (!found) {
-        ImGui::TextDisabled("Defaults: Belt drive, 24000 RPM, no power limit");
+        const auto& mp = Config::instance().getActiveMachineProfile();
+        ImGui::TextDisabled("Using profile: %s  |  %.0f RPM  |  %.0f W",
+                            mp.name.c_str(),
+                            static_cast<double>(mp.spindleMaxRPM),
+                            static_cast<double>(mp.spindlePower));
     }
 
     ImGui::Spacing();
@@ -293,13 +299,27 @@ void CncToolPanel::recalculate() {
     input.janka_hardness = m_selectedJanka;
     input.material_name = m_selectedMaterialNameForCalc;
 
-    // Get machine parameters
+    // Get machine parameters from .vtdb machine if selected
+    bool foundMachine = false;
     for (const auto& mach : m_machines) {
         if (mach.id == m_selectedMachineId) {
             input.spindle_power_watts = mach.spindle_power_watts;
             input.max_rpm = mach.max_rpm;
             input.drive_type = mach.drive_type;
+            foundMachine = true;
             break;
+        }
+    }
+
+    // Fall back to active Config machine profile
+    if (!foundMachine) {
+        const auto& mp = Config::instance().getActiveMachineProfile();
+        input.spindle_power_watts = static_cast<f64>(mp.spindlePower);
+        input.max_rpm = static_cast<int>(mp.spindleMaxRPM);
+        switch (mp.driveSystem) {
+        case gcode::DriveSystem::Belt:      input.drive_type = DriveType::Belt; break;
+        case gcode::DriveSystem::BallScrew: input.drive_type = DriveType::BallScrew; break;
+        default:                            input.drive_type = DriveType::LeadScrew; break;
         }
     }
 

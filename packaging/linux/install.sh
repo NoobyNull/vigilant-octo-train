@@ -22,12 +22,33 @@ if [ "$1" = "--system" ]; then
     DESKTOP_DIR="/usr/share/applications"
 fi
 
+ICON_DIR="$HOME/.local/share/icons/hicolor"
+if [ "$1" = "--system" ]; then
+    ICON_DIR="/usr/share/icons/hicolor"
+fi
+
 echo "Installing $APP_NAME to $PREFIX..."
 
 # Install binaries
 mkdir -p "$BIN_DIR"
 install -m 755 bin/$BIN_NAME "$BIN_DIR/$BIN_NAME"
 install -m 755 bin/$SETTINGS_BIN "$BIN_DIR/$SETTINGS_BIN"
+
+# Install icons
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ICON_SRC="$SCRIPT_DIR/resources/icons"
+if [ ! -d "$ICON_SRC" ]; then
+    ICON_SRC="$(dirname "$SCRIPT_DIR")/resources/icons"
+fi
+
+if [ -f "$ICON_SRC/statue.png" ]; then
+    mkdir -p "$ICON_DIR/512x512/apps"
+    install -m 644 "$ICON_SRC/statue.png" "$ICON_DIR/512x512/apps/$DESKTOP_ID.png"
+fi
+if [ -f "$ICON_SRC/Digital Workshop.png" ]; then
+    mkdir -p "$ICON_DIR/1024x1024/apps"
+    install -m 644 "$ICON_SRC/Digital Workshop.png" "$ICON_DIR/1024x1024/apps/$DESKTOP_ID.png"
+fi
 
 # Install desktop entry
 mkdir -p "$DESKTOP_DIR"
@@ -37,6 +58,7 @@ Type=Application
 Name=$APP_NAME
 Comment=3D model management, G-code analysis, and 2D cut optimization
 Exec=$BIN_DIR/$BIN_NAME %f
+Icon=$DESKTOP_ID
 Terminal=false
 Categories=Graphics;3DGraphics;Engineering;
 MimeType=model/stl;model/obj;application/vnd.ms-package.3dmanufacturing-3dmodel+xml;

@@ -81,6 +81,10 @@ class Mesh {
     // Returns true if mesh can be safely rendered.
     bool validateGeometry() const;
 
+    // Geometry hash (cached, lazily computed)
+    u64 geometryHash() const;
+    void invalidateHash() { m_hashCached = false; }
+
     // Reserve memory
     void reserve(u32 vertexCount, u32 indexCount);
 
@@ -96,6 +100,9 @@ class Mesh {
 
     Mat4 m_orientMatrix; // Permutation applied by autoOrient()
     bool m_autoOriented = false;
+
+    mutable u64 m_geometryHash = 0;
+    mutable bool m_hashCached = false;
 };
 
 // Shared mesh pointer type

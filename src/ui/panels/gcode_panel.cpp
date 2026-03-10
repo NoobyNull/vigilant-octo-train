@@ -58,8 +58,6 @@ struct LongPressButton {
 static LongPressButton s_startLongPress;
 } // namespace
 
-constexpr int GCodePanel::BAUD_RATES[];
-
 GCodePanel::GCodePanel() : Panel("G-code") {
     m_availablePorts = listSerialPorts();
 }
@@ -155,11 +153,11 @@ void GCodePanel::render() {
                         for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i) {
                             const auto& cmd = m_program.commands[static_cast<size_t>(i)];
                             bool isAcked = m_cncConnected && i <= m_lastAckedLine;
-                            if (isAcked)
-                                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.3f, 0.8f, 0.3f, 1.0f));
-                            ImGui::Text("%6d  %s", i + 1, cmd.raw.c_str());
-                            if (isAcked)
-                                ImGui::PopStyleColor();
+                            if (isAcked) {
+                                ImGui::TextColored(ImVec4(0.3f, 0.8f, 0.3f, 1.0f), "%6d  %s", i + 1, cmd.raw.c_str());
+                            } else {
+                                ImGui::Text("%6d  %s", i + 1, cmd.raw.c_str());
+                            }
                         }
                     }
                     if (m_scrollToLine >= 0 && m_scrollToLine < static_cast<int>(m_program.commands.size())) {
@@ -193,11 +191,11 @@ void GCodePanel::render() {
                         for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i) {
                             const auto& cmd = m_program.commands[static_cast<size_t>(i)];
                             bool isAcked = m_cncConnected && i <= m_lastAckedLine;
-                            if (isAcked)
-                                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.3f, 0.8f, 0.3f, 1.0f));
-                            ImGui::Text("%6d  %s", i + 1, cmd.raw.c_str());
-                            if (isAcked)
-                                ImGui::PopStyleColor();
+                            if (isAcked) {
+                                ImGui::TextColored(ImVec4(0.3f, 0.8f, 0.3f, 1.0f), "%6d  %s", i + 1, cmd.raw.c_str());
+                            } else {
+                                ImGui::Text("%6d  %s", i + 1, cmd.raw.c_str());
+                            }
                         }
                     }
                     if (m_scrollToLine >= 0 && m_scrollToLine < static_cast<int>(m_program.commands.size())) {

@@ -244,11 +244,12 @@ std::string ToolRecommender::buildReasoning(
         }
     } else {
         // Clearing
+        f64 dMm = (geom.units == VtdbUnits::Imperial) ? geom.diameter * 25.4 : geom.diameter;
         if (geom.tool_type == VtdbToolType::EndMill) {
-            oss << "Flat end mill " << geom.diameter << "mm";
+            oss << "Flat end mill " << dMm << "mm";
             oss << " -- fast island clearing with flat bottom";
         } else {
-            oss << "Ball nose " << geom.diameter << "mm";
+            oss << "Ball nose " << dMm << "mm";
             oss << " -- island clearing with rounded profile";
         }
         int clearable = 0;

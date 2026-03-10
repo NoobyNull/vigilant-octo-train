@@ -155,6 +155,7 @@ class ViewportPanel : public Panel {
     // --- Visibility toggles ---
     bool m_showModel = true;
     bool m_showToolpath = true;
+    bool m_showGCode = true;
     bool m_showRapids = false;
     bool m_showCuts = true;
     bool m_showPlunges = true;

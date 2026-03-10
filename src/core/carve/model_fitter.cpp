@@ -103,14 +103,20 @@ f32 ModelFitter::autoScale() const
     const f32 modelExtX = m_modelMax.x - m_modelMin.x;
     const f32 modelExtY = m_modelMax.y - m_modelMin.y;
 
+    const f32 modelExtZ = m_modelMax.z - m_modelMin.z;
+
     if (modelExtX <= 0.0f || modelExtY <= 0.0f ||
         m_stock.width <= 0.0f || m_stock.height <= 0.0f) {
         return 1.0f;
     }
 
-    // Fit to stock while maintaining aspect ratio
-    return std::min(m_stock.width / modelExtX,
-                    m_stock.height / modelExtY);
+    // Fit to stock (XY + Z thickness) while maintaining aspect ratio, capped at 1.0
+    f32 scaleXY = std::min(m_stock.width / modelExtX,
+                           m_stock.height / modelExtY);
+    f32 scaleZ = (modelExtZ > 0.0f && m_stock.thickness > 0.0f)
+                     ? m_stock.thickness / modelExtZ
+                     : scaleXY;
+    return std::min({1.0f, scaleXY, scaleZ});
 }
 
 f32 ModelFitter::autoDepth() const

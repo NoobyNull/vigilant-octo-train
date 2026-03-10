@@ -167,7 +167,10 @@ void MachineProfileDialog::render() {
                 case gcode::HomeCorner::BottomLeft:  homeX = 0.0f; homeY = 0.0f; break;
                 case gcode::HomeCorner::BottomRight: homeX = m_editProfile.maxTravelX; homeY = 0.0f; break;
                 case gcode::HomeCorner::TopLeft:     homeX = 0.0f; homeY = m_editProfile.maxTravelY; break;
-                case gcode::HomeCorner::TopRight:    homeX = m_editProfile.maxTravelX; homeY = m_editProfile.maxTravelY; break;
+                case gcode::HomeCorner::TopRight:
+                    homeX = m_editProfile.maxTravelX;
+                    homeY = m_editProfile.maxTravelY;
+                    break;
                 case gcode::HomeCorner::Center:
                     homeX = m_editProfile.maxTravelX * 0.5f;
                     homeY = m_editProfile.maxTravelY * 0.5f;
