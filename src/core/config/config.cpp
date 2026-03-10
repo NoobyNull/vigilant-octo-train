@@ -436,7 +436,7 @@ void Config::loadWcsAliases(const std::string& key, const std::string& value) {
 
 void Config::loadRecentGCode(const std::string& key, const std::string& value) {
     if (str::startsWith(key, "file")) {
-        if (!value.empty()) {
+        if (!value.empty() && static_cast<int>(m_recentGCodeFiles.size()) < MAX_RECENT_GCODE) {
             m_recentGCodeFiles.push_back(value);
         }
     }
